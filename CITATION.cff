@@ -1,0 +1,48 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying paper (see preferred-citation)."
+title: "brain-states-friends: Brain-state analysis for longitudinal Friends fMRI data"
+abstract: >-
+  Analysis code for quantifying context-invariant and context-variant brain
+  states during longitudinal naturalistic TV viewing (the TV show "Friends")
+  using sticky Hierarchical Dirichlet Process Hidden Markov Models (sHDP-HMM).
+type: software
+authors:
+  - family-names: Chen
+    given-names: Yibei
+    affiliation: Massachusetts Institute of Technology
+  - family-names: Ghavami
+    given-names: Matin
+  - family-names: St-Laurent
+    given-names: Marie
+  - family-names: Bellec
+    given-names: Lune
+  - family-names: Ghosh
+    given-names: Satrajit S.
+    affiliation: Massachusetts Institute of Technology
+version: "0.1.0"
+license: MIT
+repository-code: "https://github.com/yibeichan/brain-states-friends"
+keywords:
+  - fMRI
+  - naturalistic viewing
+  - brain states
+  - hidden Markov model
+  - HDP-HMM
+preferred-citation:
+  type: article
+  title: "Brain states recur across diverse narrative contexts during longitudinal viewing"
+  authors:
+    - family-names: Chen
+      given-names: Yibei
+    - family-names: Ghavami
+      given-names: Matin
+    - family-names: St-Laurent
+      given-names: Marie
+    - family-names: Bellec
+      given-names: Lune
+    - family-names: Ghosh
+      given-names: Satrajit S.
+  year: 2026
+  journal: "bioRxiv"
+  doi: "10.64898/2026.05.31.729141"
+  notes: "Preprint"

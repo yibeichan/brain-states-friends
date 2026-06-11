@@ -1,0 +1,17 @@
+name: friends-states
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - uv
+  - marimo
+
+# This file is intentionally minimal:
+# - micromamba bootstraps Python + uv
+# - Python dependencies are managed by pyproject.toml via uv
+#
+# Setup:
+#   micromamba env create -f environment.yml
+#   micromamba activate friends-states
+#   uv sync

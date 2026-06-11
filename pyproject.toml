@@ -1,0 +1,50 @@
+[project]
+name = "brain-states-friends"
+version = "0.1.0"
+description = "Brain-state analysis for longitudinal Friends fMRI data"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "numpy",
+  "scipy",
+  "pandas",
+  "matplotlib",
+  "seaborn",
+  "scikit-learn",
+  "joblib",
+  "hmmlearn",
+  "nibabel",
+  "nilearn",
+  "python-dotenv",
+  "tqdm",
+  "psutil",
+  "hcp-utils",
+  "neuromaps",
+  "surfplot",
+  "pyvista",
+  "marimo",
+  "yabplot",
+  "pyzmq>=27.1.0",
+  "statsmodels>=0.13.5",
+  "networkx",
+]
+
+[project.optional-dependencies]
+gpu = [
+  "jax[cuda12]>=0.4.30",
+  "dynamax>=0.1.4",
+]
+torch = [
+  "torch>=2.5",
+  "torchaudio>=2.5",
+  "torchcodec>=0.11",
+  "torchvision>=0.20",
+  "transformers>=4.45",
+  "accelerate>=0.30",
+  "ffmpeg-python>=0.2",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+yabplot = { git = "https://github.com/yibeichan/yabplot.git" }

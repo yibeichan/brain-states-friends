@@ -1,0 +1,18 @@
+# Output Dataset Configuration
+# Analysis outputs are versioned with DataLad and synced to persistent storage.
+# The paths below are site-specific — set them to your own RIA store and
+# scratch clone location.
+
+dataset_type: datalad
+ria_store: "ria+file:///path/to/ria-store/brain-states-friends-outputs"
+scratch_clone: "${SCRATCH_DIR}/output"
+
+# --- Recovery after scratch purge ---
+# cd "${SCRATCH_DIR}"
+# datalad clone "ria+file:///path/to/ria-store/brain-states-friends-outputs" output
+# cd output
+# datalad get 04_combined_hdphmm/           # get specific directories as needed
+# datalad get .                                 # or get everything
+
+# --- Save after pipeline run ---
+# bash script/utils/datalad_save.sh --stage 03d --subject sub-01
