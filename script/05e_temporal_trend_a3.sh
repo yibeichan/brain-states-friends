@@ -15,8 +15,8 @@
 # within scanning sessions using a random-intercept linear mixed-effects model
 # with permutation-based inference.
 #
-# See also: 05e_temporal_trend_a1.sh — cross-episode temporal trends
-#           05e_temporal_trend_a2.sh — within-run temporal position
+# See also: 05e_temporal_trend_a1.sh - cross-episode temporal trends
+#           05e_temporal_trend_a2.sh - within-run temporal position
 #
 # Prerequisites:
 #   - Step 04 completed in 'select' mode (decoded_states.pkl)

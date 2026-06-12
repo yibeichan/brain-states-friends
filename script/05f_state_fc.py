@@ -7,7 +7,7 @@ timeseries, using decoded state assignments from the combined HDP-HMM as labels.
 For each state k, all TRs assigned to that state are pooled across runs and a
 Ledoit-Wolf shrinkage covariance is estimated, then converted to correlation.
 
-This is genuine state-conditioned FC — parcel-pair correlations computed from
+This is genuine state-conditioned FC - parcel-pair correlations computed from
 data, not implied by PCA loading structure.
 
 Adapted from mario-rSLDS/scripts/05d_state_fc.py.
@@ -229,7 +229,7 @@ def plot_fc_similarity_heatmap(rv_mat, active_states, state_flags, output_dir):
     plot_cats = [c for c, keep in zip(categories, keep_mask) if keep]
 
     if len(plot_states) == 0:
-        logger.warning("No states remain after filtering — skipping FC heatmap")
+        logger.warning("No states remain after filtering - skipping FC heatmap")
         return
 
     # Sort by category priority, then state index
@@ -277,7 +277,7 @@ def plot_fc_similarity_heatmap(rv_mat, active_states, state_flags, output_dir):
 
     plt.colorbar(im, ax=ax_main, label="RV coefficient", shrink=0.8)
 
-    # Category colour bar — attached to left of heatmap for pixel-perfect alignment
+    # Category colour bar - attached to left of heatmap for pixel-perfect alignment
     divider = make_axes_locatable(ax_main)
     ax_cat = divider.append_axes("left", size="3%", pad=0.02)
     cat_img = np.arange(n).reshape(-1, 1)

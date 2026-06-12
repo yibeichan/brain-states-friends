@@ -9,16 +9,16 @@
 #SBATCH --array=0-5
 
 # =============================================================================
-# 08g — Transformer convergence analyses
+# 08g - Transformer convergence analyses
 # =============================================================================
 # D5 (08b ↔ 08d per-state), cross-modality dissociation (Friends/Movie10),
 # and recurrence × depth interaction. Depends on 08b and 08d outputs already
 # existing for the relevant (subject, stimulus, model) combinations.
 #
 # Required exports:
-#   MODELS   — space-separated model list (default: "w2v-bert-2.0 dinov2-large llama-3.2-3b")
-#   VT       — 05e_a4 VT suffix (default: 0.95)
-#   N_PERMS  — permutation count for D5 (default: 1000)
+#   MODELS   - space-separated model list (default: "w2v-bert-2.0 dinov2-large llama-3.2-3b")
+#   VT       - 05e_a4 VT suffix (default: 0.95)
+#   N_PERMS  - permutation count for D5 (default: 1000)
 # =============================================================================
 
 set -e
@@ -42,7 +42,7 @@ SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"
 
 echo "=============================================="
-echo "08g — Transformer convergence"
+echo "08g - Transformer convergence"
 echo "=============================================="
 echo "Subject:   ${SUB_ID}"
 echo "Models:    ${MODELS}"

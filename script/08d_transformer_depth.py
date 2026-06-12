@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-08d_transformer_depth.py — within-stimulus layer-depth analyses for the
+08d_transformer_depth.py - within-stimulus layer-depth analyses for the
 transformer-state correspondence sweep.
 
 Analyses (per subject × stimulus × model):
 
-    D1 main               — per-layer, per-lag LORO RidgeClassifier on
+    D1 main               - per-layer, per-lag LORO RidgeClassifier on
                             ``content_eligible`` states. Circular-shift null,
                             global BH-FDR across the full layers × lags grid.
                             Lag grid is [0..8] (~0–12 s) to cover both the
@@ -13,25 +13,25 @@ Analyses (per subject × stimulus × model):
                             delays; lag=0 is kept as a synchrony /
                             autocorrelation diagnostic but excluded from the
                             peak-lag search (see :data:`PEAK_LAG_EXCLUDE`).
-    D1 negative control   — same decoder on ``run_onset_anchored`` states. A
+    D1 negative control   - same decoder on ``run_onset_anchored`` states. A
                             statistical gate at the D1-main peak cell
                             records ``neg_control_passed`` plus
                             ``delta_peak`` / ``p_main`` / ``p_neg`` in
                             ``D1_neg_control_gate.json`` for downstream
                             consumption.
-    D1 confound baseline  — RidgeClassifier using 6 timing regressors
+    D1 confound baseline  - RidgeClassifier using 6 timing regressors
                             (run_onset, tr_since_onset_norm + quadratic /
                             cubic drift, episode_idx, season_idx) on the
                             ``content_eligible`` TR subset. Gives a
                             timing-only accuracy floor that also absorbs
                             within-run drift.
-    D1-net                — same D1 machinery applied per group in a
+    D1-net                - same D1 machinery applied per group in a
                             ``NETWORK_ORDER × {+, −}`` stratification. A
                             state with strong DMN *deactivation* lands in
                             ``DMN_neg``, separate from DMN activation
                             states in ``DMN_pos``. Uses the best lag from
                             D1 main (with lag=0 excluded).
-    D2                    — per-state, per-layer LORO Logistic+AUC on the
+    D2                    - per-state, per-layer LORO Logistic+AUC on the
                             ``content_eligible`` state set (FO ≥ 1%). Null
                             via precomputed circular-shift sequences.
                             Selectivity flags the canonical threshold
@@ -51,13 +51,13 @@ Prerequisites
 * ``08c`` raw features under
   ``{SCRATCH_DIR}/output/08c_transformer_features/{stimulus}/{model}/layer_NN/{run}_raw.npy``
   (for cross-stimulus runs, the corresponding Friends features are ALSO
-  required — they drive the shared PCA basis)
+  required - they drive the shared PCA basis)
 * ``04_combined_hdphmm/{parc}/{sub}/final/[vt*/]decoded_states.pkl``
   (and ``state_means_parcel.npy`` for D1-net)
 * ``05e_temporal_trend_a4/{parc}/{sub}/[vt*/]state_flags.csv`` (falls back to
   05a sub-HRF with a warning)
 * ``03a_pca4combined_hmm/{parc}/{sub}/splits/primary.json`` (for PCA training
-  split; required for BOTH Friends and cross-stimulus invocations — the
+  split; required for BOTH Friends and cross-stimulus invocations - the
   training split is always defined relative to Friends)
 """
 
@@ -115,7 +115,7 @@ logger = logging.getLogger("08d_transformer_depth")
 # Constants
 # ---------------------------------------------------------------------------
 
-LAGS_TO_TEST = [0, 1, 2, 3, 4, 5, 6, 7, 8]   # TRs — ~0–12s HRF window.
+LAGS_TO_TEST = [0, 1, 2, 3, 4, 5, 6, 7, 8]   # TRs - ~0–12s HRF window.
 #   Lag 0 is retained as an autocorrelation / stimulus–state synchrony
 #   diagnostic, but it is excluded from the *peak-lag* search used by
 #   D1-net, D1-confound, and D2 (see PEAK_LAG_EXCLUDE and
@@ -207,7 +207,7 @@ def _episode_season_indices(run_ids):
     if parse_failures:
         logger.warning(
             "_episode_season_indices: could not parse season for %d/%d runs "
-            "(e.g. %s). Falling back to season=0 and run-index order — "
+            "(e.g. %s). Falling back to season=0 and run-index order - "
             "the D1 confound baseline will under-represent actual episode "
             "structure for these runs.",
             len(parse_failures), len(run_ids), parse_failures[:3],
@@ -239,17 +239,17 @@ def _build_confound_design_matrix(run_ids, decoded_states):
 
     Columns (in order, see :data:`CONFOUND_FEATURE_NAMES`):
 
-    * ``run_onset_indicator`` — 1.0 at the first TR of each run, else 0.
-    * ``tr_since_onset_norm`` — linear within-run position, normalized to
+    * ``run_onset_indicator`` - 1.0 at the first TR of each run, else 0.
+    * ``tr_since_onset_norm`` - linear within-run position, normalized to
       ``[0, 1]``.
-    * ``tr_since_onset_norm_sq`` / ``_cu`` — quadratic and cubic polynomial
+    * ``tr_since_onset_norm_sq`` / ``_cu`` - quadratic and cubic polynomial
       drift terms. Added in the 2026-04 refactor to soak up scan-time /
       narrative-position drift that the linear term alone misses
       (previously, any state tracking "climax scenes happen late in a run"
       could beat the 4-feature baseline despite being a timing confound).
-    * ``episode_idx_norm`` — run-index over the subject's episodes,
+    * ``episode_idx_norm`` - run-index over the subject's episodes,
       normalized to ``[0, 1]``.
-    * ``season_idx_norm`` — parsed from the BIDS ``task-sNNeMM`` token,
+    * ``season_idx_norm`` - parsed from the BIDS ``task-sNNeMM`` token,
       normalized to ``[0, 1]``.
     """
     episode_idx_arr, season_idx_arr = _episode_season_indices(run_ids)
@@ -322,7 +322,7 @@ def _pca_cache_dir(scratch_dir, parcellation, sub_id, model_key, stimulus,
 
     Shared across all 9 same-stimulus lag jobs. The stimulus is included in
     the path even though the cache is currently only used for Friends fits
-    (in-stim Friends D1 and cross-stim Friends-fit on shared basis) — this
+    (in-stim Friends D1 and cross-stim Friends-fit on shared basis) - this
     makes the directory structure robust against a future caller that
     accidentally passes a different stimulus.
 
@@ -361,7 +361,7 @@ def _d1_one_layer(
     eligible_mask, y_full, null_y_masked, folds, label,
 ):
     """Process a single layer for D1 decoding.  Designed to be called from
-    ``joblib.Parallel`` — all arguments are read-only numpy arrays or small
+    ``joblib.Parallel`` - all arguments are read-only numpy arrays or small
     Python objects so that the loky backend can serialise them efficiently.
 
     Returns ``(layer_idx, result_dict)`` or ``(layer_idx, None)`` on skip.
@@ -439,19 +439,19 @@ def _run_d1_decoder_set(
     """
     state_subset_set = set(int(s) for s in state_subset)
     if not state_subset_set:
-        logger.warning("%s: empty state subset — skipping", label)
+        logger.warning("%s: empty state subset - skipping", label)
         return {}
 
     eligible_mask = np.array(
         [int(s) in state_subset_set for s in all_states], dtype=bool,
     )
     if eligible_mask.sum() == 0:
-        logger.warning("%s: 0 eligible TRs — skipping", label)
+        logger.warning("%s: 0 eligible TRs - skipping", label)
         return {}
 
     folds = build_loro_folds(run_boundaries, eligible_mask=eligible_mask)
     if len(folds) < 3:
-        logger.warning("%s: < 3 usable LORO folds — skipping", label)
+        logger.warning("%s: < 3 usable LORO folds - skipping", label)
         return {}
 
     y_full = all_states.astype(np.int8)
@@ -491,7 +491,7 @@ def _run_d1_decoder_set(
         # so shifted labels can only come from the intended class set.
         # The prior pattern (precompute on full y_full, then mask by
         # original positions) leaked non-eligible classes into the null
-        # training labels and depressed null_mean below true chance —
+        # training labels and depressed null_mean below true chance -
         # see 2026-04-10 null-leakage plan.
         null_y_masked = precompute_eligible_null_state_sequences(
             y_full, run_boundaries, eligible_mask, n_perm,
@@ -526,7 +526,7 @@ def _run_d1_decoder_set(
                 chunk_results = Parallel(n_jobs=n_jobs)(
                     # Pass only the worker's own layer, not the full all-layer
                     # dict: shipping ~47G to each of n_jobs workers OOM-killed
-                    # n_jobs>2 at startup (fixed 2026-05-29). Result-neutral —
+                    # n_jobs>2 at startup (fixed 2026-05-29). Result-neutral -
                     # _d1_one_layer reads only features_by_layer.get(idx).
                     delayed(_d1_one_layer)(
                         idx, {idx: features_by_layer.get(idx, {})},
@@ -630,7 +630,7 @@ def _write_deprecated_gate(out_dir):
 
 
 def _compute_neg_control_gate(d1_main, d1_neg):
-    """DEPRECATED (2026-05-31) — no longer called; retained for reference only.
+    """DEPRECATED (2026-05-31) - no longer called; retained for reference only.
 
     The run-onset negative control was dropped from the manuscript (see
     ``_GATE_DEPRECATED``). This function's raw-balanced-accuracy comparison was
@@ -645,7 +645,7 @@ def _compute_neg_control_gate(d1_main, d1_neg):
     downstream peak search), look up the matching layer in the neg-control
     results at the *same lag*. The test passes iff D1 main beats the neg
     control by more than half the random-null standard deviation of
-    D1 main at that cell — a cheap proxy for a permutation-based
+    D1 main at that cell - a cheap proxy for a permutation-based
     ``Δ > 0`` test that avoids holding the full null distributions in
     memory. We also record ``p_main`` (content-eligible p_perm) and
     ``p_neg`` (design-driven p_perm) at the peak so downstream tools can
@@ -874,7 +874,7 @@ def _plot_d2_heatmap(d2_results, n_layers, out_path):
 
 
 # ---------------------------------------------------------------------------
-# D2 — per-state layer AUC
+# D2 - per-state layer AUC
 # ---------------------------------------------------------------------------
 
 
@@ -971,7 +971,7 @@ def _build_d2_folds(
     Replaces 292-fold LORO with 10-fold-by-run, stratified by season. Each run
     lives entirely in one fold (groups=run-idx), and folds are balanced across
     the 6 Friends seasons (y=season-id). Empirically validated 2026-04-28 to
-    yield ~700 positives/fold for FO≈5% states vs ~22 in LORO — lower per-fold
+    yield ~700 positives/fold for FO≈5% states vs ~22 in LORO - lower per-fold
     AUC variance and methodologically superior for binary AUC (Stats C2,
     Neuro A1 of 2026-04-28 D2 review).
 
@@ -1090,7 +1090,7 @@ def _run_d2(
         return {}
 
     # Build folds in eligible-only index space (so we can pass X[eligible_mask]
-    # and folds together — matches build_loro_folds convention).
+    # and folds together - matches build_loro_folds convention).
     folds = _build_d2_folds(
         run_ids, run_boundaries, total_trs, eligible_mask=eligible_mask,
     )
@@ -1117,7 +1117,7 @@ def _run_d2(
     partial_path = out_path + ".partial"
 
     # Resume logic. Schema-version mismatch (e.g. v2 from 04-28) force-discards
-    # the partial — confirmed by 04-30 Coding A3 that this is the right behaviour.
+    # the partial - confirmed by 04-30 Coding A3 that this is the right behaviour.
     completed_layers: dict[int, dict] = {}  # layer_idx -> per-state AUC + null AUC
     if force and os.path.exists(partial_path):
         os.remove(partial_path)
@@ -1151,13 +1151,13 @@ def _run_d2(
                 )
             else:
                 logger.warning(
-                    "D2 .partial mismatch (schema=%s eligible_hash=%s best_lag=%s n_perm=%s engine=%s) — discarding",
+                    "D2 .partial mismatch (schema=%s eligible_hash=%s best_lag=%s n_perm=%s engine=%s) - discarding",
                     prior.get("schema_version"), prior.get("eligible_hash"),
                     prior.get("best_lag"), prior.get("n_perm"), prior.get("engine"),
                 )
                 os.remove(partial_path)
         except (OSError, ValueError, json.JSONDecodeError) as exc:
-            logger.warning("D2 .partial unreadable (%s) — discarding", exc)
+            logger.warning("D2 .partial unreadable (%s) - discarding", exc)
             try:
                 os.remove(partial_path)
             except OSError:
@@ -1311,7 +1311,7 @@ def _run_d2(
                     (round(float(v), 4) if v is not None and np.isfinite(v) else None))
                 for k, v in selectivity.items()
             },
-            # Continuous selectivity score (Neuro N3) — for 08g/08f to use
+            # Continuous selectivity score (Neuro N3) - for 08g/08f to use
             # instead of (or alongside) the binary non_selective flag.
             "selectivity_score": (
                 round(float(m_minus_med), 4)
@@ -1361,7 +1361,7 @@ def _run_d1_net(
 
     state_means_path = os.path.join(final_dir, "state_means_parcel.npy")
     if not os.path.exists(state_means_path):
-        logger.warning("state_means_parcel.npy missing at %s — skipping D1-net",
+        logger.warning("state_means_parcel.npy missing at %s - skipping D1-net",
                        state_means_path)
         return {}
 
@@ -1376,7 +1376,7 @@ def _run_d1_net(
             include_sign=True,
         )
     except RuntimeError as exc:
-        logger.warning("%s — skipping D1-net", exc)
+        logger.warning("%s - skipping D1-net", exc)
         return {}
 
     results: dict[str, dict] = {}
@@ -1392,7 +1392,7 @@ def _run_d1_net(
             state_ids = [int(s) for s in groups.get((net_name, polarity), [])]
             if len(state_ids) < D1NET_MIN_STATES:
                 logger.info(
-                    "  D1-net[%s]: only %d states — skipping",
+                    "  D1-net[%s]: only %d states - skipping",
                     group_key, len(state_ids),
                 )
                 results[group_key] = {
@@ -1408,7 +1408,7 @@ def _run_d1_net(
             n_trs_mask = int(mask.sum())
             if n_trs_mask < D1NET_MIN_TRS:
                 logger.info(
-                    "  D1-net[%s]: only %d TRs — skipping",
+                    "  D1-net[%s]: only %d TRs - skipping",
                     group_key, n_trs_mask,
                 )
                 results[group_key] = {
@@ -1453,7 +1453,7 @@ def _run_d1_net(
             for chunk_start in range(0, len(layers_all), chunk_size_net):
                 chunk = layers_all[chunk_start:chunk_start + chunk_size_net]
                 chunk_results = Parallel(n_jobs=n_jobs)(
-                    # Per-layer slice only (see D1_main note above) — avoids
+                    # Per-layer slice only (see D1_main note above) - avoids
                     # shipping the full all-layer dict to every worker.
                     delayed(_d1_one_layer)(
                         idx, {idx: features_by_layer.get(idx, {})},
@@ -1674,7 +1674,7 @@ def main():
             if os.environ.get(var) not in (None, "1"):
                 break
         else:
-            # None of the threading env vars are set to 1 — set them.
+            # None of the threading env vars are set to 1 - set them.
             for var in ("OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "OMP_NUM_THREADS"):
                 os.environ.setdefault(var, "1")
             logger.info(
@@ -1733,7 +1733,7 @@ def main():
                 "ensure D1 has been run previously."
             )
         logger.info(
-            "D1 checkpointed — will load best (lag, layer) from %s",
+            "D1 checkpointed - will load best (lag, layer) from %s",
             d1_checkpoint_path,
         )
 
@@ -1758,10 +1758,10 @@ def main():
         len(eligibility["run_onset_anchored"]),
     )
     if not eligibility["content_eligible"]:
-        logger.error("No content_eligible states — exiting")
+        logger.error("No content_eligible states - exiting")
         sys.exit(1)
 
-    # D1merge only needs eligibility metadata — skip heavy feature loading.
+    # D1merge only needs eligibility metadata - skip heavy feature loading.
     d1merge_only = to_run == ["D1merge"]
     if d1merge_only:
         # Jump directly to the D1merge block (and downstream best_lag).
@@ -1800,7 +1800,7 @@ def main():
                 continue
             all_lags_main[f"lag_{lag}"] = {int(k): v for k, v in results.items()}
 
-            # Neg-control partial (exploratory only — the run-onset negative
+            # Neg-control partial (exploratory only - the run-onset negative
             # control was dropped from the manuscript 2026-05-31). It does NOT
             # gate the merge: include only COMPLETE neg lags so the neg BH-FDR
             # pool (m) is consistent; skip incomplete/missing neg with a
@@ -1816,7 +1816,7 @@ def main():
                 if (not neg_total) or len(neg_results) < neg_total:
                     logger.warning(
                         "D1merge: neg lag=%d incomplete or missing layer count "
-                        "(%d/%s layers) — excluding from exploratory neg output "
+                        "(%d/%s layers) - excluding from exploratory neg output "
                         "(non-blocking)",
                         lag, len(neg_results), neg_total or "?",
                     )
@@ -1859,7 +1859,7 @@ def main():
         _plot_depth_profile(
             {"content_eligible": all_lags_main, "run_onset_anchored": all_lags_neg},
             os.path.join(out_dir, "D1_depth_profile.png"),
-            f"D1 — {stimulus}/{model_key}",
+            f"D1 - {stimulus}/{model_key}",
         )
 
         # Neg-control gate dropped 2026-05-31 (see _GATE_DEPRECATED).
@@ -1874,7 +1874,7 @@ def main():
     # ── Features + PCA (streamed per layer, drift-aware) ──────────────
     # `stream_pca_features` loads one layer at a time, fits PCA on the
     # training split, projects all runs, and discards raw layer data
-    # before moving to the next layer — peak memory ≈ one raw layer +
+    # before moving to the next layer - peak memory ≈ one raw layer +
     # accumulated PCA'd output (~2.4 GB for Friends × llama vs. ~46 GB
     # for the old load-everything approach).
     #
@@ -1919,7 +1919,7 @@ def main():
             extraction_subdir_suffix=args.features_subdir_suffix,
         )
     else:
-        # Fit on Friends first (discard the projected Friends features —
+        # Fit on Friends first (discard the projected Friends features -
         # we only need the PCA basis), then project the test stimulus
         # through the Friends-fit PCA. Uses the shared PCA cache so
         # cross-stim runs skip the ~90 min LLaMA refit entirely.
@@ -1959,7 +1959,7 @@ def main():
             variance_threshold=PCA_VARIANCE_THRESHOLD,
             extraction_subdir_suffix=args.features_subdir_suffix,
         )
-        # Drop the Friends projections immediately — 08d cross-stim only
+        # Drop the Friends projections immediately - 08d cross-stim only
         # decodes on the test stimulus, so carrying them would waste RAM.
         del _friends_features, friends_decoded
 
@@ -1988,7 +1988,7 @@ def main():
         )
 
     if not effective_n_trs:
-        logger.error("No features loaded — exiting")
+        logger.error("No features loaded - exiting")
         sys.exit(1)
 
     # Truncate decoded_states to the effective per-run TR count, then
@@ -2052,13 +2052,13 @@ def main():
                 n_jobs=args.n_jobs,
             )
         else:
-            logger.warning("No run_onset_anchored states available — skipping D1 neg control")
+            logger.warning("No run_onset_anchored states available - skipping D1 neg control")
 
         if per_lag_mode:
             # Per-lag mode: partials saved by _run_d1_decoder_set.
             # Canonical files, plot, and gate are deferred to D1merge.
             logger.info(
-                "D1 per-lag partials saved to %s — run D1merge after "
+                "D1 per-lag partials saved to %s - run D1merge after "
                 "all lags complete to produce canonical outputs.",
                 partials_dir,
             )
@@ -2085,7 +2085,7 @@ def main():
             _plot_depth_profile(
                 {"content_eligible": d1_main, "run_onset_anchored": d1_neg},
                 os.path.join(out_dir, "D1_depth_profile.png"),
-                f"D1 — {stimulus}/{model_key}",
+                f"D1 - {stimulus}/{model_key}",
             )
 
             # Neg-control gate dropped 2026-05-31 (see _GATE_DEPRECATED).
@@ -2136,7 +2136,7 @@ def main():
                 if (not neg_total) or len(neg_results) < neg_total:
                     logger.warning(
                         "D1merge: neg lag=%d incomplete or missing layer count "
-                        "(%d/%s layers) — excluding from exploratory neg output "
+                        "(%d/%s layers) - excluding from exploratory neg output "
                         "(non-blocking)",
                         lag, len(neg_results), neg_total or "?",
                     )
@@ -2183,7 +2183,7 @@ def main():
         _plot_depth_profile(
             {"content_eligible": all_lags_main, "run_onset_anchored": all_lags_neg},
             os.path.join(out_dir, "D1_depth_profile.png"),
-            f"D1 — {stimulus}/{model_key}",
+            f"D1 - {stimulus}/{model_key}",
         )
 
         # Neg-control gate dropped 2026-05-31 (see _GATE_DEPRECATED).
@@ -2209,7 +2209,7 @@ def main():
                 best_lag_key, best_layer_val, best_acc,
             )
     elif os.path.exists(d1_checkpoint_path):
-        # D1 was checkpointed — load best (lag, layer) from saved JSON.
+        # D1 was checkpointed - load best (lag, layer) from saved JSON.
         with open(d1_checkpoint_path) as f:
             d1_saved = json.load(f)
         d1_main_saved = d1_saved.get("results", {})

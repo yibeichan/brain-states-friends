@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_gpu_cpu_equivalence.py — Compare JAX/GPU vs numpy/CPU HDP-HMM on real data.
+test_gpu_cpu_equivalence.py - Compare JAX/GPU vs numpy/CPU HDP-HMM on real data.
 
 Loads existing CPU-fitted model (seed 0) for a fast config (vt0.80_covdiag_nc60_g5),
 fits the same config with JAX on GPU, and compares:
@@ -276,7 +276,7 @@ def compare_models(cpu_model, jax_model, X_valid, lengths_valid, cpu_meta):
     logger.info("  Adjusted Rand Index: %.4f", ari)
 
     if ari < 0.5:
-        logger.warning("  WARN: low ARI (%.4f) — state solutions may differ", ari)
+        logger.warning("  WARN: low ARI (%.4f) - state solutions may differ", ari)
     else:
         logger.info("  PASS: decode ARI > 0.5")
 
@@ -287,9 +287,9 @@ def compare_models(cpu_model, jax_model, X_valid, lengths_valid, cpu_meta):
     # =========================================================================
     logger.info("\n" + "=" * 60)
     if all_pass:
-        logger.info("OVERALL: PASS — GPU/JAX produces equivalent results to CPU/numpy")
+        logger.info("OVERALL: PASS - GPU/JAX produces equivalent results to CPU/numpy")
     else:
-        logger.warning("OVERALL: SOME CHECKS FAILED — investigate differences")
+        logger.warning("OVERALL: SOME CHECKS FAILED - investigate differences")
     logger.info("=" * 60)
 
     return results, all_pass
@@ -311,7 +311,7 @@ def main():
     args = parser.parse_args()
 
     logger.info("=" * 60)
-    logger.info("GPU vs CPU Equivalence Test — Real Data")
+    logger.info("GPU vs CPU Equivalence Test - Real Data")
     logger.info("=" * 60)
     logger.info("Subject:    %s", args.sub_id)
     logger.info("Config:     %s", args.config_name)
@@ -324,9 +324,9 @@ def main():
         devices = jax.devices()
         logger.info("JAX backend: %s, devices: %s", backend, devices)
         if backend != 'gpu':
-            logger.warning("JAX is NOT using GPU — comparison will be CPU vs CPU!")
+            logger.warning("JAX is NOT using GPU - comparison will be CPU vs CPU!")
     except ImportError:
-        logger.error("JAX not available — cannot run GPU equivalence test")
+        logger.error("JAX not available - cannot run GPU equivalence test")
         sys.exit(1)
 
     # Load CPU model

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launch fresh 08d D1 LLaMA jobs for ORPHANED (subject,lag) cells — incomplete cells
+# Launch fresh 08d D1 LLaMA jobs for ORPHANED (subject,lag) cells - incomplete cells
 # that have NO currently-running job (chain_08d_successors.sh only continues running ones).
 # Per-layer checkpointing means each task resumes from the saved partials.
 #

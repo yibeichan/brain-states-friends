@@ -1,4 +1,4 @@
-"""Figure S6 (supplementary) — Cross-stimulus validity & repertoire presence.
+"""Figure S6 (supplementary) - Cross-stimulus validity & repertoire presence.
 
 Supports the reframed R5 (graded generalization along similarity-to-Friends;
 see decision memory #611). Three validity/robustness views that are NOT main
@@ -8,7 +8,7 @@ findings and that explicitly disclose the fit confound behind R5:
 |---|---|---|
 | A | PCA subspace transfer: per (subject, stimulus) gap = Friends R² − stimulus R². Near-zero and uniform (~0.95 R² everywhere) → the Friends low-dimensional subspace generalizes to all stimuli; the transfer differences are NOT a subspace-fit artifact. | point-1D strip |
 | B | HMM model-fit vs transfer: per-condition transfer ρ against the HMM log-likelihood gap (held-out-Friends − stimulus LL/sample). Within Movie10, ρ declines as fit worsens (the confound); Harry Potter is an OUTLIER (best fit, modest ρ), so transfer is not a single function of fit. Disclosure panel for the "within-film grading is fit-confounded" caveat. | scatter |
-| C | Repertoire presence, gapped radial-gauge grid: 3 rows (M10/HP/PP) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward — this is a descriptive existence view, not a clean transfer test. | pie / donut |
+| C | Repertoire presence, gapped radial-gauge grid: 3 rows (M10/HP/PP) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
 
 Run:
     marimo edit script/fig_S6_cross_stimulus_validity.py
@@ -115,7 +115,7 @@ def load_data(SUBJECTS, REC_DIR, FLAGS_DIR, DEC, VT, PRESENCE_FO,
 @app.cell
 def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
                          SUBJECT_MARKERS, SUBJECT_NEUTRAL):
-    """Panel A — PCA subspace transfer gap per (subject, condition), per Movie10
+    """Panel A - PCA subspace transfer gap per (subject, condition), per Movie10
     film + HP + PP (parallel to Panel B). Near-zero everywhere ⇒ the Friends
     subspace captures every condition comparably; the transfer-ρ gradient is NOT
     a subspace-fit artifact (even the documentary and PP, which transfer least,
@@ -183,7 +183,7 @@ def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
 @app.cell
 def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
                             glob, json, np, plt):
-    """Panel B — transfer ρ vs HMM log-likelihood gap, per condition.
+    """Panel B - transfer ρ vs HMM log-likelihood gap, per condition.
 
     Within Movie10 ρ declines as the LL gap grows (the fit confound); Harry
     Potter is an outlier (best fit, modest ρ), so transfer is not a single
@@ -256,11 +256,11 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
 @app.cell
 def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
                            TAXONOMY_ORDER, TAXONOMY_COLORS):
-    """Panel C — repertoire presence, gapped radial-gauge grid (3 stimuli × 6 subjects).
+    """Panel C - repertoire presence, gapped radial-gauge grid (3 stimuli × 6 subjects).
 
     Arc width = subject's Friends count for the category; outlined to full
     extent, filled for the present fraction. Caveat (caption): Viterbi forces
-    every TR onto a state, so presence is biased upward — a descriptive existence
+    every TR onto a state, so presence is biased upward - a descriptive existence
     view, not a clean transfer test.
     """
     from matplotlib.patches import Wedge as _Wedge

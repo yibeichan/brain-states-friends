@@ -9,7 +9,7 @@
 #SBATCH --array=0-59
 
 # =============================================================================
-# Annotated brain plot — batch over all states (legacy pipeline)
+# Annotated brain plot - batch over all states (legacy pipeline)
 # =============================================================================
 # Generates annotated brain surface plots + parcel tables for every state.
 # Uses SLURM array jobs (one task per state) for parallel execution.

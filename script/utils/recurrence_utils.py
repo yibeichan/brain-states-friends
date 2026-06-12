@@ -140,7 +140,7 @@ def compute_specificity_index(season_recurrence):
     seasons = sorted(season_recurrence.keys())
     if len(seasons) < 2:
         logger.warning(
-            "compute_specificity_index: fewer than 2 seasons — returning zeros"
+            "compute_specificity_index: fewer than 2 seasons - returning zeros"
         )
         return np.zeros(len(next(iter(season_recurrence.values()))))
     stack = np.stack([season_recurrence[s] for s in seasons])  # (n_seasons, n_states)

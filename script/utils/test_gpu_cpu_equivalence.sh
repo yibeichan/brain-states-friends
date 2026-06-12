@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# GPU vs CPU Equivalence Test — SLURM Wrapper
+# GPU vs CPU Equivalence Test - SLURM Wrapper
 # =============================================================================
 #
 # Usage:

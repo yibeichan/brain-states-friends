@@ -6,15 +6,15 @@ Reads all config_summary.json files for a given subject + vt, computes a battery
 of selection metrics beyond BIC, and produces a CSV + JSON + multi-panel figure
 for side-by-side comparison.
 
-No model pickles are loaded — only JSON files. Fast, runs on a login node.
+No model pickles are loaded - only JSON files. Fast, runs on a login node.
 
 Metrics computed (all "higher is better"):
-  M1. valid_ll           — Raw validation LL/sample (baseline reference)
-  M2. bic                — BIC on training LL with effective-K (existing 04 logic)
-  M3. reflected_valid    — 2*valid_ll - train_ll, penalizes overfitting (0 free params)
-  M4. ll_per_active      — valid_ll / K_active, rewards efficiency per state
-  M5. gap_penalized_ll   — valid_ll - λ*(train_ll - valid_ll), tunable λ
-  M6. season_worst       — min(valid_ll_per_season), robust to seasonal outliers
+  M1. valid_ll           - Raw validation LL/sample (baseline reference)
+  M2. bic                - BIC on training LL with effective-K (existing 04 logic)
+  M3. reflected_valid    - 2*valid_ll - train_ll, penalizes overfitting (0 free params)
+  M4. ll_per_active      - valid_ll / K_active, rewards efficiency per state
+  M5. gap_penalized_ll   - valid_ll - λ*(train_ll - valid_ll), tunable λ
+  M6. season_worst       - min(valid_ll_per_season), robust to seasonal outliers
 
 Elbow analysis: marginal LL gain per additional active state (per gamma group).
 
@@ -423,7 +423,7 @@ def plot_selection_panels(df, gains_df, out_path, sub_id, vt):
         # (we stored valid_ll but not season breakdown in the DataFrame)
         pass
 
-    # Rebuild season matrix from the summaries — need to pass summaries through
+    # Rebuild season matrix from the summaries - need to pass summaries through
     # For now, show marginal LL gain curves instead
     if not gains_df.empty:
         for gamma_val in sorted(gains_df['gamma'].unique()):
@@ -606,7 +606,7 @@ def main():
         logger.info(f"  Saved JSON: {json_path}")
 
         # Print summary table
-        logger.info(f"\n  === {sub_id} vt={vt} — Metric Rankings ===")
+        logger.info(f"\n  === {sub_id} vt={vt} - Metric Rankings ===")
         metric_cols = [c for c in df.columns if c.startswith('M')]
         rank_cols = [c for c in df.columns if c.startswith('R')]
         summary_cols = ['short_label', 'nc', 'K_best_valid', 'inactive_frac',

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-transformer_analysis.py — shared analysis helpers for the 08d/08e/08f/08g
+transformer_analysis.py - shared analysis helpers for the 08d/08e/08f/08g
 transformer-state correspondence scripts and the refactored 08b.
 
 This module consolidates logic that used to live duplicated in 08b and the old
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 #
 # These constants were previously defined in 08d / 08e module scope and are
 # now hoisted here so 08d, 08e, 08f, and 08g all import the same source of
-# truth. Don't duplicate the numeric values in any downstream script — import
+# truth. Don't duplicate the numeric values in any downstream script - import
 # from here instead.
 
 #: Minimum per-stimulus fractional occupancy (fraction of TRs) required for
@@ -118,19 +118,19 @@ def load_content_eligibility(sub_id, parcellation, scratch_dir, vt=None):
     dict
         Keys:
 
-        - ``content_eligible``: list[int] — states with
+        - ``content_eligible``: list[int] - states with
           ``summary_category == 'eligible_for_content_analysis'``
-        - ``run_onset_anchored``: list[int] — states in ``run_onset_anchored`` (used as
+        - ``run_onset_anchored``: list[int] - states in ``run_onset_anchored`` (used as
           a negative control in D1)
-        - ``season_temporal``: list[int] — ``season_temporal`` states
-          (excluded from content analyses; never used as a control — they are
+        - ``season_temporal``: list[int] - ``season_temporal`` states
+          (excluded from content analyses; never used as a control - they are
           confounded with episode-order drift)
-        - ``basic_sub_hrf``: list[int] — the looser sub-HRF filter from 05a;
+        - ``basic_sub_hrf``: list[int] - the looser sub-HRF filter from 05a;
           populated only when 05e_a4's CSV is missing and used as a fallback
           for ``content_eligible``. Consumers should check
           ``eligibility_source`` to tell whether the main set was derived from
           05e_a4 or this fallback.
-        - ``eligibility_source``: str — either ``'05e_a4'`` or
+        - ``eligibility_source``: str - either ``'05e_a4'`` or
           ``'sub_hrf_fallback'``.
     """
     from utils.state_flags_io import load_state_flags
@@ -171,12 +171,12 @@ def load_content_eligibility(sub_id, parcellation, scratch_dir, vt=None):
 
     # ── Fallback: 05a sub-HRF filter ────────────────────────────────────
     # Logged at ERROR (not WARNING) so the fallback is unmissable in
-    # SLURM logs — content-eligibility claims downstream of this fallback
+    # SLURM logs - content-eligibility claims downstream of this fallback
     # are unreliable and the user must rerun 05e_a4 before interpretation.
     # The output JSON still records ``eligibility_source = sub_hrf_fallback``
     # for downstream auditing, but the log line is the primary signal.
     logger.error(
-        "state_flags.csv missing for %s / %s%s — falling back to 05a "
+        "state_flags.csv missing for %s / %s%s - falling back to 05a "
         "sub-HRF filter. Content-eligibility claims from downstream analyses "
         "will be UNRELIABLE: rerun 05e_a4 before interpreting results.",
         sub_id, parcellation, f"/vt{vt}" if vt is not None else "",
@@ -234,7 +234,7 @@ def load_recurrence_scores(sub_id, parcellation, scratch_dir, vt=None):
         with :func:`load_content_eligibility`.
     """
     # Local imports keep the helper free of cross-module top-level coupling
-    # — `utils.common.resolve_stage_file` is the same lookup used by 08f
+    # - `utils.common.resolve_stage_file` is the same lookup used by 08f
     # and matches the legacy ``_load_recurrence`` behaviour.
     import json
     import os
@@ -368,7 +368,7 @@ def precompute_eligible_null_state_sequences(
     restricted to eligible TRs and ready to be passed to a classifier fit
     on ``X_elig`` without any further masking.
 
-    Background — the label-space leakage bug this fixes
+    Background - the label-space leakage bug this fixes
     ----------------------------------------------------
     The prior pattern (used throughout 08d and 08e for multi-class decoders)
     was to precompute null sequences from the **full** multi-class
@@ -380,7 +380,7 @@ def precompute_eligible_null_state_sequences(
     + leaked non-eligible classes), its predictions land in that mixed
     space, and ``sklearn.metrics.balanced_accuracy_score`` with the default
     ``labels=None`` averages per-class TPR over ``np.union1d(y_true, y_pred)``
-    — a denominator larger than the intended ``n_classes``, which depresses
+    - a denominator larger than the intended ``n_classes``, which depresses
     the null mean below the true ``1/n_classes`` chance level. For an 08e
     smoke run this manifested as ``null_mean ≈ 0.012`` when chance should
     have been ``1/29 ≈ 0.0345``.
@@ -473,7 +473,7 @@ def precompute_eligible_null_state_sequences(
 #
 # Immutability guarantee (per 2026-04-23 08b per-state redesign §8.1b V2):
 # ``build_epoch_run_position_design`` and ``partial_effect_residualize`` NEVER
-# mutate their inputs — they build new arrays (``np.full_like``,
+# mutate their inputs - they build new arrays (``np.full_like``,
 # ``np.column_stack``, ``y2[finite] - D[finite] @ beta``) and return fresh
 # results. This is what makes ``prefer="threads"`` safe for the per-state /
 # per-feature parallel loops in 08b A1/A3. See
@@ -491,7 +491,7 @@ def build_epoch_run_position_design(block_records, degree=3, intercept=True):
     Parameters
     ----------
     block_records : sequence of dict
-        Output of :func:`utils.state_blocks.extract_state_block_records` —
+        Output of :func:`utils.state_blocks.extract_state_block_records` -
         each record must carry ``start_tr``, ``end_tr``, ``episode_length_tr``.
     degree : int, default 3
         Polynomial degree. Cubic matches ``_build_confound_design_matrix`` in
@@ -558,7 +558,7 @@ def partial_effect_residualize(y, D):
 
     if finite.sum() <= D.shape[1]:
         # Underdetermined (<) or exactly determined (==): OLS residuals are
-        # either non-unique or identically zero on the finite rows — either
+        # either non-unique or identically zero on the finite rows - either
         # case would produce degenerate downstream KW input, so fall back to
         # the raw values and let the caller's finite-check drop NaNs.
         return y.copy()
@@ -720,7 +720,7 @@ def stream_pca_features(
     ------
     ValueError
         If both ``pca_models`` is ``None`` and ``train_run_ids`` is ``None``
-        (or empty) — callers must be explicit about PCA fit vs. project.
+        (or empty) - callers must be explicit about PCA fit vs. project.
     """
     import os
 
@@ -754,7 +754,7 @@ def stream_pca_features(
     #
     # All layers for a given run come from the same forward pass, so they
     # share the same n_trs. We still probe every existing layer to guard
-    # against corrupted / partial writes — np.load(mmap_mode='r') only
+    # against corrupted / partial writes - np.load(mmap_mode='r') only
     # reads the header (~microseconds per file), so 8k probes for
     # Friends × llama cost ≈ a few seconds total.
     # ------------------------------------------------------------------
@@ -850,7 +850,7 @@ def stream_pca_features(
                 # layer's length already. Guard defensively and skip.
                 logger.warning(
                     "Layer %d, run %s: feature length (%d) < effective (%d) "
-                    "— skipping this (run, layer)",
+                    "- skipping this (run, layer)",
                     layer_idx, run_id, arr.shape[0], eff,
                 )
                 continue
@@ -876,7 +876,7 @@ def stream_pca_features(
 
             if not train_data:
                 logger.warning(
-                    "Layer %d: no training runs found for PCA — using all runs",
+                    "Layer %d: no training runs found for PCA - using all runs",
                     layer_idx,
                 )
                 train_data = list(raw_per_run.values())
@@ -936,7 +936,7 @@ def stream_pca_features(
 
 
 # ---------------------------------------------------------------------------
-# PCA cache (file-lock, cross-job) — skip redundant refits across lag jobs
+# PCA cache (file-lock, cross-job) - skip redundant refits across lag jobs
 # ---------------------------------------------------------------------------
 #
 # Each 08d per-lag SLURM job reruns the PCA fit even though the inputs and
@@ -1012,7 +1012,7 @@ def _pca_cache_try_load(
 
     Validity is determined purely from on-disk state: meta.json presence +
     schema match + every (layer, run) .npy file present + pca_models.joblib
-    present. The caller does NOT hold the lock while this runs — it is a
+    present. The caller does NOT hold the lock while this runs - it is a
     fast-path check before acquiring the exclusive lock, then re-run under
     the lock to avoid duplicate refits.
     """
@@ -1064,7 +1064,7 @@ def _pca_cache_try_load(
     features_root = os.path.join(cache_dir, "features")
     for layer_idx, layer_meta in pca_info.items():
         if not layer_meta or int(layer_meta.get("K", 0)) == 0:
-            continue  # empty layer — no per-run files expected
+            continue  # empty layer - no per-run files expected
         layer_dir = os.path.join(features_root, f"layer_{layer_idx:02d}")
         if not os.path.isdir(layer_dir):
             return None
@@ -1081,7 +1081,7 @@ def _pca_cache_try_load(
         pca_models = joblib.load(models_path)
     except Exception:
         logger.warning(
-            "PCA cache: failed to load %s — treating as miss",
+            "PCA cache: failed to load %s - treating as miss",
             models_path, exc_info=True,
         )
         return None
@@ -1103,7 +1103,7 @@ def _pca_cache_try_load(
     except Exception:
         logger.warning(
             "PCA cache: failed to load one or more .npy files under %s "
-            "— treating as miss", features_root, exc_info=True,
+            "- treating as miss", features_root, exc_info=True,
         )
         return None
 
@@ -1150,7 +1150,7 @@ def _pca_cache_save(
 
     # PCA models (sklearn objects via joblib). Use mkstemp for the temp
     # path so concurrent writers (should the lock ever fail) do not clobber
-    # each other's in-progress writes — matches the pattern used by the
+    # each other's in-progress writes - matches the pattern used by the
     # .npy and meta.json writers.
     import tempfile as _tempfile
     models_path = os.path.join(cache_dir, "pca_models.joblib")
@@ -1168,7 +1168,7 @@ def _pca_cache_save(
             pass
         raise
 
-    # meta.json LAST — its presence marks the cache complete
+    # meta.json LAST - its presence marks the cache complete
     meta = {
         "version": _PCA_CACHE_VERSION,
         "stimulus": stimulus,
@@ -1213,13 +1213,13 @@ def load_or_fit_pca_cache(
 
     Uses ``fcntl.flock`` on ``{cache_dir}/.lock`` for cross-process
     coordination. Cache is keyed on (stimulus, model_key, split_hash,
-    variance_threshold) — if any of these change, the cache misses and
+    variance_threshold) - if any of these change, the cache misses and
     ``stream_pca_features`` is called to refill.
 
     Blocking semantics: if process A holds the lock (actively fitting),
     process B blocks on ``flock`` until A releases. When B acquires the
     lock it re-checks the cache and typically finds a fresh hit written
-    by A — so B pays only the cache-load cost (~30 s) instead of a full
+    by A - so B pays only the cache-load cost (~30 s) instead of a full
     refit (~90 min for LLaMA).
     """
     import fcntl
@@ -1240,14 +1240,14 @@ def load_or_fit_pca_cache(
         return hit
 
     logger.info(
-        "PCA cache MISS for %s/%s — acquiring lock at %s",
+        "PCA cache MISS for %s/%s - acquiring lock at %s",
         stimulus, model_key, lock_path,
     )
     lock_fd = os.open(lock_path, os.O_CREAT | os.O_WRONLY, 0o644)
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)  # blocks
 
-        # Re-check under lock — another process may have populated it
+        # Re-check under lock - another process may have populated it
         hit = _pca_cache_try_load(
             cache_dir, stimulus, model_key, split_hash, variance_threshold,
         )
@@ -1312,7 +1312,7 @@ def build_layer_feature_matrix(
     Used by both [08d D1](../08d_transformer_depth.py) (within-stimulus, per-lag
     decoding) and [08e D3a](../08e_transformer_cross_stim_aggregate.py)
     (cross-stimulus aggregate transfer). Previously duplicated as a private
-    helper in each script — hoisted here so both can share the same safeguards
+    helper in each script - hoisted here so both can share the same safeguards
     and lag convention.
 
     Parameters
@@ -1350,7 +1350,7 @@ def build_layer_feature_matrix(
     Notes
     -----
     * Runs **in** ``run_ids`` but **not in** ``layer_runs`` get
-      ``np.zeros((n_trs, K))`` — accepted project-wide behavior for
+      ``np.zeros((n_trs, K))`` - accepted project-wide behavior for
       tolerating partial layer coverage. Callers that want strict matching
       should pre-filter ``run_ids`` to the layer's keys.
     * For runs present in both dicts, the feature length must match
@@ -1362,7 +1362,7 @@ def build_layer_feature_matrix(
         raise ValueError("layer_runs is empty")
 
     # Infer K from the first run that has feature data. If none do, the
-    # layer has zero coverage — raise rather than building a degenerate
+    # layer has zero coverage - raise rather than building a degenerate
     # all-zeros matrix.
     first_runs = [r for r in run_ids if r in layer_runs]
     if not first_runs:
@@ -1407,7 +1407,7 @@ def loro_ridge_classifier_cv(X, y, folds):
 
     This is the multi-class decoder used for D1 (within-stimulus depth
     profile) and D3a (cross-stimulus transfer, via ``fit`` on Friends and
-    ``score`` on the test stimulus — D3a uses its own helper, not this one).
+    ``score`` on the test stimulus - D3a uses its own helper, not this one).
 
     Parameters
     ----------
@@ -1479,7 +1479,7 @@ def _ridge_label_binarize(y, classes):
         out = -np.ones((n, 1), dtype=np.float64)
         out[y == classes[1], 0] = 1.0
         return out
-    # Multi-class: (n, C) with {-1, +1} — vectorized via class_lookup
+    # Multi-class: (n, C) with {-1, +1} - vectorized via class_lookup
     class_lookup = np.empty(int(classes.max()) + 1, dtype=np.intp)
     class_lookup[classes] = np.arange(C)
     out = -np.ones((n, C), dtype=np.float64)
@@ -1547,7 +1547,7 @@ def _cholesky_solve_targets(
 
     Notes
     -----
-    The generator does NOT track a "valid" mask — that's the consumer's job.
+    The generator does NOT track a "valid" mask - that's the consumer's job.
     For degenerate folds the test_idx samples are simply never yielded,
     leaving the consumer's pre-allocated buffer in its initial sentinel state.
     """
@@ -1580,7 +1580,7 @@ def _cholesky_solve_targets(
         X_test = X[test_idx]
 
         # Balanced class weights from sample_weight_source training labels
-        # (fixed across all targets — see batch_loro_ridge_classify docstring).
+        # (fixed across all targets - see batch_loro_ridge_classify docstring).
         class_counts = np.array(
             [np.sum(sample_weight_source[train_idx] == c) for c in classes],
             dtype=np.float64,
@@ -1607,7 +1607,7 @@ def _cholesky_solve_targets(
         try:
             L = cho_factor(A)
         except np.linalg.LinAlgError:
-            logger.debug("Cholesky failed for fold — skipping")
+            logger.debug("Cholesky failed for fold - skipping")
             continue
 
         for b_start in range(0, n_targets, batch_size):
@@ -1750,7 +1750,7 @@ def batch_loro_ridge_classify(
     null_preds = preds[1:]  # (n_perm, n_samples)
     valid_shared = np.all(null_preds != -1, axis=0) if n_perm > 0 else valid_obs
     if valid_shared.sum() >= 10 and np.array_equal(valid_shared, valid_obs):
-        # Fast path: shared valid mask — fully vectorized
+        # Fast path: shared valid mask - fully vectorized
         yt = y_null[:, valid_obs]       # (n_perm, n_valid)
         yp = null_preds[:, valid_obs]   # (n_perm, n_valid)
         # Per-class recall for all perms at once
@@ -1807,7 +1807,7 @@ def batch_loro_ridge_per_state_auc(
     Gaussian-like covariates (Hastie/Tibshirani/Friedman 2009 §4.3-4.4).
     AUC is invariant to monotone transforms of the score, so per-state AUC
     is rank-stable across the LogReg/Ridge swap. Validated empirically on
-    sub-04 + sub-01 × dinov2 × lag=3 — see
+    sub-04 + sub-01 × dinov2 × lag=3 - see
     ``the design notes`` §6.
 
     **Cross-fold score scale.** Each fold's Cholesky produces different
@@ -1815,7 +1815,7 @@ def batch_loro_ridge_per_state_auc(
     scale. AUC pools across folds, treating the union of fold-scores as a
     single ranking. This inherits the same convention as
     :func:`loro_logistic_auc_cv` (which pools per-fold ``predict_proba`` the
-    same way) and is empirically fine — but is documented here because the
+    same way) and is empirically fine - but is documented here because the
     rank-based AUC argument depends on it.
 
     **Approximation note (inherited).** Sample weights are computed from
@@ -1823,7 +1823,7 @@ def batch_loro_ridge_per_state_auc(
     :func:`batch_loro_ridge_classify` docstring). For per-state binary AUC,
     the validation step measures null-AUC distribution shift between the
     fixed-weight path and a per-permutation reweight path; if KS distance
-    > 0.05, fall back to per-permutation reweight (cheap — only affects the
+    > 0.05, fall back to per-permutation reweight (cheap - only affects the
     sample_weight vector inside :func:`_cholesky_solve_targets`).
 
     **Eligible-subspace null required.** ``y_null`` must be generated by
@@ -1838,7 +1838,7 @@ def batch_loro_ridge_per_state_auc(
         Lagged feature matrix (typically PCA-projected layer activations).
     y_observed : np.ndarray, shape (n_samples,)
         Observed state labels (multi-class; only ``eligible_states`` participate
-        in the regression — non-eligible labels are not part of the OHE).
+        in the regression - non-eligible labels are not part of the OHE).
         The caller is expected to have masked X/y to eligible TRs already.
     y_null : np.ndarray, shape (n_perm, n_samples)
         Eligible-subspace null state labels.
@@ -2000,7 +2000,7 @@ def loro_logistic_auc_cv(X, y_binary, folds):
     y_pred = np.full(len(y_binary), np.nan, dtype=float)
     for train_idx, test_idx in folds:
         if len(np.unique(y_binary[train_idx])) < 2:
-            # Class-balance failure for this fold — leave as NaN
+            # Class-balance failure for this fold - leave as NaN
             continue
         clf = LogisticRegression(
             penalty="l2", solver="liblinear", class_weight="balanced",
@@ -2132,7 +2132,7 @@ def stratify_states_by_dominant_network(
     12 buckets, one per entry in :data:`utils.plot_style.NETWORK_ORDER`.
     When ``include_sign=True`` states are split by polarity as well
     (``"+"`` for activation, ``"-"`` for deactivation), yielding up to
-    24 ``(network, polarity)`` buckets — this is the default in
+    24 ``(network, polarity)`` buckets - this is the default in
     ``08d_transformer_depth.py`` since 2026-04 to prevent functionally
     opposite states (e.g. DMN-on vs. DMN-off) from being pooled into a
     single depth profile.
@@ -2142,7 +2142,7 @@ def stratify_states_by_dominant_network(
     state_means : np.ndarray
         Parcel-space state means with shape ``(n_states, n_parcels)``. These
         come from ``04_combined_hdphmm/.../final/state_means_parcel.npy``,
-        which is already back-projected at save time — no PCA inverse
+        which is already back-projected at save time - no PCA inverse
         transform is required.
     active_states : array-like of int
         Subset of state indices to include (usually the ``content_eligible``
@@ -2168,7 +2168,7 @@ def stratify_states_by_dominant_network(
     parcel_networks = load_parcel_networks(parcellation)
     if parcel_networks is None:
         raise RuntimeError(
-            f"Could not load parcel networks for {parcellation} — "
+            f"Could not load parcel networks for {parcellation} - "
             f"D1-net stratification unavailable."
         )
 
@@ -2188,7 +2188,7 @@ def stratify_states_by_dominant_network(
             if not isinstance(val, tuple):
                 logger.debug(
                     "State %d: dominant network payload %r is not a "
-                    "(network, polarity) tuple — skipping",
+                    "(network, polarity) tuple - skipping",
                     state_id, val,
                 )
                 continue
@@ -2199,7 +2199,7 @@ def stratify_states_by_dominant_network(
             else:
                 logger.debug(
                     "State %d dominant group %s not in NETWORK_ORDER × "
-                    "{+,-} — skipping", state_id, key,
+                    "{+,-} - skipping", state_id, key,
                 )
         return groups
 
@@ -2209,7 +2209,7 @@ def stratify_states_by_dominant_network(
             groups_flat[net_name].append(int(state_id))
         else:
             logger.debug(
-                "State %d dominant network '%s' not in NETWORK_ORDER — skipping",
+                "State %d dominant network '%s' not in NETWORK_ORDER - skipping",
                 state_id, net_name,
             )
     return groups_flat
@@ -2313,12 +2313,12 @@ def load_d1_per_lag_matrix(
         Keys:
 
         * ``balanced_accuracy``, ``chance_level``, ``null_mean``, ``null_std``,
-          ``p_perm``, ``normalized_effect_size`` — each a ``(n_lags, n_layers)``
+          ``p_perm``, ``normalized_effect_size`` - each a ``(n_lags, n_layers)``
           float array with NaN for missing (lag, layer) cells.
-        * ``n_complete_per_lag`` — ``(n_lags,)`` int array of layers present in
+        * ``n_complete_per_lag`` - ``(n_lags,)`` int array of layers present in
           each lag's checkpoint (0 if the lag file is missing).
-        * ``n_total`` — total complete cells (int).
-        * ``label`` — the input label, echoed back.
+        * ``n_total`` - total complete cells (int).
+        * ``label`` - the input label, echoed back.
     """
     matrices = {
         key: np.full((n_lags, n_layers), np.nan, dtype=np.float64)

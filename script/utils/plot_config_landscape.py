@@ -7,7 +7,7 @@ to produce a comprehensive view of the variance threshold x model capacity
 landscape. Decomposes the Stage 1 metric (ll_per_dim) into eigenvalue-bias
 and genuine HMM-gain components.
 
-No model pickles are loaded — only JSON files. Fast, no GPU, no large memory.
+No model pickles are loaded - only JSON files. Fast, no GPU, no large memory.
 
 Outputs (to {SCRATCH_DIR}/output/diagnostics/{parcellation}/config_landscape/):
   - config_landscape_summary.csv   Full DataFrame
@@ -188,7 +188,7 @@ def plot_c1_stage1_vt_comparison(df, out_dir):
     """C1: ll_per_dim vs vt, one line per subject."""
     stage1 = df[df['stage'] == 'stage1'].copy()
     if stage1.empty:
-        logger.warning("No stage1 configs found — skipping C1")
+        logger.warning("No stage1 configs found - skipping C1")
         return
 
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -223,7 +223,7 @@ def plot_c2_ll_decomposition(df, out_dir):
     """C2: Stacked bar showing null_LL/dim + HMM_gain/dim = ll_per_dim."""
     stage1 = df[df['stage'] == 'stage1'].copy()
     if stage1.empty:
-        logger.warning("No stage1 configs found — skipping C2")
+        logger.warning("No stage1 configs found - skipping C2")
         return
 
     subjects = sorted(stage1['sub_id'].unique())
@@ -275,13 +275,13 @@ def plot_c3_stage2_heatmap(df, out_dir):
     """C3: Validation LL heatmap nc x gamma at vt=0.95, per subject."""
     stage2 = df[df['stage'] == 'stage2'].copy()
     if stage2.empty:
-        logger.warning("No stage2 configs found — skipping C3")
+        logger.warning("No stage2 configs found - skipping C3")
         return
 
     # Filter to vt=0.95 stage2 configs (where the grid was run)
     stage2_95 = stage2[np.isclose(stage2['vt'], 0.95)]
     if stage2_95.empty:
-        logger.warning("No stage2 configs at vt=0.95 — skipping C3")
+        logger.warning("No stage2 configs at vt=0.95 - skipping C3")
         return
 
     subjects = sorted(stage2_95['sub_id'].unique())
@@ -310,7 +310,7 @@ def plot_c3_stage2_heatmap(df, out_dir):
         ax.set_yticklabels(gamma_vals)
         ax.set_xlabel('n_components')
         ax.set_ylabel('gamma')
-        ax.set_title(f'{sid} — Stage 2 validation LL at vt=0.95')
+        ax.set_title(f'{sid} - Stage 2 validation LL at vt=0.95')
 
         # Annotate cells
         for gi in range(len(gamma_vals)):
@@ -333,7 +333,7 @@ def plot_c4_active_states(df, out_dir):
     """C4: n_active_states vs nc, colored by gamma."""
     stage2 = df[df['stage'] == 'stage2'].copy()
     if stage2.empty:
-        logger.warning("No stage2 configs found — skipping C4")
+        logger.warning("No stage2 configs found - skipping C4")
         return
 
     fig, ax = plt.subplots(figsize=(6, 4))

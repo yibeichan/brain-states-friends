@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# PCA Loadings Analysis — SLURM Submission Script
+# PCA Loadings Analysis - SLURM Submission Script
 # =============================================================================
 #
 # Generates diagnostic plots (A1-A5, A7) and CSVs from PCA models fitted in 03a.
@@ -57,7 +57,7 @@ CROSS_SUBJECT=${CROSS_SUBJECT:-"0"}
 
 # Variance threshold for CSV outputs (pca_residual_variance.csv signal/residual
 # split; A3/A5 plot k-cutoff). The Python script default is "0.90"; override here
-# to match the production pipeline at vt=0.95 (k=75 PCs) — what HMM downstream
+# to match the production pipeline at vt=0.95 (k=75 PCs) - what HMM downstream
 # actually consumes. Pass a space-separated list (e.g. "0.95 0.90") to emit
 # diagnostic plots at additional thresholds; the FIRST value is the one written
 # to pca_residual_variance.csv.

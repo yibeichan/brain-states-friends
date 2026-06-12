@@ -78,7 +78,7 @@ def test_residualize_removes_polynomial_drift():
     records = _fake_records(120, rng)
     D = build_epoch_run_position_design(records, degree=3)
 
-    # y = strong linear drift in t_bar + tiny noise — no state signal.
+    # y = strong linear drift in t_bar + tiny noise - no state signal.
     t_bar = D[:, 1]
     y = 2.0 * t_bar + 0.05 * rng.standard_normal(len(t_bar))
 
@@ -165,7 +165,7 @@ def test_variable_n_null_type_i_error():
         # Null: shuffle state labels many times, compute KW on residualized y
         # (residualize IS rebuilt per-permutation in the real pipeline because
         # block boundaries change with the TR-level shift; here the design D
-        # is fixed because we only permute state labels — a simplified
+        # is fixed because we only permute state labels - a simplified
         # sanity check. The boundary-shifting case is exercised in the full
         # 08b A3 path and validated there on real data.)
         n_perm = 200
@@ -260,7 +260,7 @@ def test_per_state_auc_recovery():
     aucs, signs = _compute_auc_grid(state, feats_mat, target_states, compute_signs=True)
 
     # State 2's AUC should be dramatically > 0.5. Other-state AUCs may drift
-    # below 0.5 because their "other" group contains state 2's elevated epochs —
+    # below 0.5 because their "other" group contains state 2's elevated epochs -
     # that's the expected behavior of a two-sample per-state AUC against the
     # complement. The substantive contrast: state 2 >> every other state.
     assert aucs[2, 0] > 0.7, f"planted state AUC too low: {aucs[2, 0]:.3f}"
@@ -303,7 +303,7 @@ def test_per_lag_residualization():
     )
     # For non-planted states, post-residualization AUC should be closer to 0.5.
     for s in [0, 1, 2]:
-        # Weak — just confirm no degeneration far from 0.5.
+        # Weak - just confirm no degeneration far from 0.5.
         assert abs(aucs_resid[s, 0] - 0.5) < 0.2
     print(
         f"  planted state: raw AUC={aucs_raw[3, 0]:.3f} "

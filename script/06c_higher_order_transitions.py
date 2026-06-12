@@ -40,8 +40,8 @@ Statistical design notes
     (there is no null distribution centered at zero), so we report only whether the
     CI excludes zero.
 
-  - Analysis 2: Tests *all* well-observed (A,B) contexts — not just trigrams
-    pre-selected as significant by 06b — to avoid selective-inference bias.  Uses a
+  - Analysis 2: Tests *all* well-observed (A,B) contexts - not just trigrams
+    pre-selected as significant by 06b - to avoid selective-inference bias.  Uses a
     leave-one-out baseline: P(C|B, not from A) = (N(B->C) - N(A->B->C)) /
     (N(B->*) - N(A->B->*)), so the tested events do not contaminate the null.
 
@@ -50,8 +50,8 @@ Statistical design notes
     comparable.  The restricted order-2 parameter count includes the 1st-order
     fallback parameters used by sparse contexts.
 
-  - Analysis 4: Tests *all* 4-grams with sufficient counts — not pre-selected by
-    06b — with leave-one-out P(D|B,C) baseline, same design as Analysis 2.
+  - Analysis 4: Tests *all* 4-grams with sufficient counts - not pre-selected by
+    06b - with leave-one-out P(D|B,C) baseline, same design as Analysis 2.
 
 Prerequisites
 -------------
@@ -295,7 +295,7 @@ def test_context_dependence(change_sequences, min_context_count=10):
     """Test whether the predecessor state modulates B's exit distribution.
 
     For each well-observed (A,B) context, test whether P(C|A,B) differs
-    from P(C|B, not from A) — the leave-one-out baseline that excludes
+    from P(C|B, not from A) - the leave-one-out baseline that excludes
     the tested context to avoid circularity.
 
     Tests *all* (A,B) contexts with >= min_context_count observations,

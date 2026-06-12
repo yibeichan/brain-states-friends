@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-08f_transformer_cross_stim_per_state.py — per-state cross-stimulus signature
+08f_transformer_cross_stim_per_state.py - per-state cross-stimulus signature
 consistency (D3c) and language invariance (D4-lang).
 
 Reads D2 outputs from 08d for two stimuli (same subject, same model) and
 computes:
 
-* **D3c — per-state similarity.** For each state that is (a) in
+* **D3c - per-state similarity.** For each state that is (a) in
   ``content_eligible``, (b) fractional-occupancy ≥
   :data:`~utils.transformer_analysis.INTERSECTION_MIN_FO` in both stimuli,
   (c) D2-selective in both stimuli (``max_minus_median_auc ≥
@@ -25,7 +25,7 @@ computes:
   ``(petitprince_fr, petitprince_en)`` with ``model ∈ {w2v-bert-2.0,
   llama-3.2-3b}``.
 
-This script performs **no feature reloading** — it is a light post-processing
+This script performs **no feature reloading** - it is a light post-processing
 step that consumes ``08d_transformer_depth/.../D2_state_layer_auc.json``.
 The FO and selectivity thresholds are imported from
 ``utils.transformer_analysis`` so 08d, 08e, and 08f share one source of
@@ -79,7 +79,7 @@ logger = logging.getLogger("08f_cross_stim_per_state")
 BOOTSTRAP_N = 1000
 # Reserved slot in the 08-series seed offset block (D1 main=10_000,
 # D1 confound=40_000, D2=50_000, D3a=60_000, D3c=70_000). 08f's bootstrap
-# is not a permutation null — it's a percentile CI over states — but
+# is not a permutation null - it's a percentile CI over states - but
 # using a reserved seed keeps its RNG decorrelated from 08d/08e nulls
 # if those ever share a process with 08f.
 BOOTSTRAP_SEED_D3C = 70_000
@@ -137,7 +137,7 @@ def _is_selective(state_entry):
     """Return True if a D2 per-state entry passes the project selectivity gate.
 
     Uses :data:`~utils.transformer_analysis.D2_SELECTIVITY_THRESHOLD` (=0.05)
-    on ``selectivity.max_minus_median`` — the same threshold 08d applies
+    on ``selectivity.max_minus_median`` - the same threshold 08d applies
     when emitting the ``non_selective`` flag in ``D2_state_layer_auc.json``.
     We re-check the threshold explicitly here (instead of only trusting the
     ``non_selective`` flag) so that rerunning 08f against a legacy D2 JSON
@@ -200,7 +200,7 @@ def _compute_d3c(
         ea = states_a[sid]
         eb = states_b[sid]
 
-        # Defensive FO check — 08d's D2 already filters FO ≥ 0.01, but
+        # Defensive FO check - 08d's D2 already filters FO ≥ 0.01, but
         # re-checking here keeps 08f's output self-auditing and survives
         # any future change to the upstream threshold.
         fo_a = float(ea.get("fractional_occupancy", 0.0))
@@ -273,7 +273,7 @@ def _aggregate(per_state):
     The **inferential** statistic is ``mean_rho`` with its bootstrap 95% CI
     (N is the number of included states). The peak-layer and
     structural-realism correlations are **exploratory** point estimates
-    with supporting bootstrap CIs — they have no p-values because N is
+    with supporting bootstrap CIs - they have no p-values because N is
     typically 5–20 states and ties are guaranteed for small-domain integer
     peak layers. Both Spearman ρ and Kendall τ are reported per the
     project convention (Kendall τ is more robust to ties; see
@@ -291,7 +291,7 @@ def _aggregate(per_state):
         rhos, n_boot=BOOTSTRAP_N, seed=BOOTSTRAP_SEED_D3C,
     )
 
-    # Peak-layer rank test — build ONE paired list so peaks_a[i] and
+    # Peak-layer rank test - build ONE paired list so peaks_a[i] and
     # peaks_b[i] always refer to the same state. (The old code used two
     # independent list comprehensions, which could silently misalign if
     # one stimulus had a missing peak_layer.)
@@ -437,7 +437,7 @@ def main():
 
     analysis_label = "D4_lang" if args.d4_lang else "D3c"
     logger.info("=" * 60)
-    logger.info("08f — %s", analysis_label)
+    logger.info("08f - %s", analysis_label)
     logger.info("Sub=%s A=%s B=%s model=%s", sub_id, stim_a, stim_b, model_key)
     logger.info("=" * 60)
 
@@ -504,7 +504,7 @@ def main():
         if drop_frac > 0.5:
             logger.warning(
                 "%.0f%% of content-eligible intersection states were dropped "
-                "by FO / selectivity / layer filters (%d/%d) — results may "
+                "by FO / selectivity / layer filters (%d/%d) - results may "
                 "be underpowered",
                 100 * drop_frac, n_dropped_post_candidate, len(candidate_ids),
             )

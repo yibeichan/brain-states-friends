@@ -94,7 +94,7 @@ def load_state_flags(
     csv_path = os.path.join(base, "state_flags.csv")
     if not os.path.isfile(csv_path):
         logger.warning(
-            "state_flags.csv not found at %s — categories will be 'unknown'.",
+            "state_flags.csv not found at %s - categories will be 'unknown'.",
             csv_path,
         )
         return None

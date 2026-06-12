@@ -7,7 +7,7 @@ and projects each HP run's parcel time series into the same PCA space. Computes 
 PCA transfer diagnostic (variance explained by Friends PCA on HP data).
 
 Harry Potter is a unimodal reading stimulus (word-by-word RSVP at 2Hz).
-This tests whether the Friends PCA subspace — trained on audiovisual data — captures
+This tests whether the Friends PCA subspace - trained on audiovisual data - captures
 meaningful variance in unimodal reading.
 
 Prerequisites:
@@ -221,7 +221,7 @@ def load_network_labels(parcellation):
     atlas_dir = os.environ.get('ATLAS_DIR', os.path.expanduser('~/atlases'))
     tsv_path = os.path.join(atlas_dir, parcellation, f'{parcellation}_dseg.tsv')
     if not os.path.exists(tsv_path):
-        logger.warning(f"Atlas TSV not found: {tsv_path} — network-stratified R² will be skipped")
+        logger.warning(f"Atlas TSV not found: {tsv_path} - network-stratified R² will be skipped")
         return None
 
     df = pd.read_csv(tsv_path, sep='\t')
@@ -229,7 +229,7 @@ def load_network_labels(parcellation):
     for _, row in df.iterrows():
         net = row.get('network_label')
         if pd.isna(net):
-            # Subcortical parcel — use assign_network() from plot_style
+            # Subcortical parcel - use assign_network() from plot_style
             subcort_net = assign_network(row['label'])
             networks.append(subcort_net if subcort_net else 'Unknown')
         else:
@@ -245,13 +245,13 @@ def _accumulate_r2_stats(pca, n_pcs, X, stats_bucket):
     If stats_bucket has 'by_network', also accumulates per-network SSE/SST.
 
     Returns:
-        X_proj: np.ndarray (n_trs, n_pcs) — truncated PCA projection, for
+        X_proj: np.ndarray (n_trs, n_pcs) - truncated PCA projection, for
                 reuse by caller (avoids redundant pca.transform call).
     """
     X_centered = X - pca.mean_
     stats_bucket['sst'] += np.sum(X_centered ** 2)
 
-    # Single PCA transform — reused for truncated and full reconstruction
+    # Single PCA transform - reused for truncated and full reconstruction
     X_full_proj = pca.transform(X)
     X_proj = X_full_proj[:, :n_pcs]
     X_recon = X_proj @ pca.components_[:n_pcs] + pca.mean_
@@ -406,12 +406,12 @@ def main():
             # Load parcel time series
             X = np.load(fpath)  # (n_trs, n_parcels)
 
-            # Drop background column (column 0) — same as 03a_pca4combined_hmm.py
+            # Drop background column (column 0) - same as 03a_pca4combined_hmm.py
             original_cols = X.shape[1]
             if original_cols in (157, 457, 557, 657, 757, 857, 957, 1057):
                 X = X[:, 1:]
 
-            # Validate finite values — same as 03a_pca4combined_hmm.py
+            # Validate finite values - same as 03a_pca4combined_hmm.py
             if not np.all(np.isfinite(X)):
                 n_bad = (~np.isfinite(X)).sum()
                 pct = n_bad / X.size * 100
@@ -422,7 +422,7 @@ def main():
                     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
                 else:
                     logger.error(
-                        f"{run_id}: {n_bad} non-finite values ({pct:.2f}%) — too many, skipping"
+                        f"{run_id}: {n_bad} non-finite values ({pct:.2f}%) - too many, skipping"
                     )
                     continue
 
@@ -488,7 +488,7 @@ def main():
     print(f"Transfer gap:       {diagnostic['transfer_gap']:.4f}")
     print(f"Transfer gap (mc):  {diagnostic['transfer_gap_mean_corrected']:.4f}")
     if diagnostic['flag_low_variance']:
-        print(f"*** WARNING: HP R² < 0.70 — PCA subspace may not capture HP variance ***")
+        print(f"*** WARNING: HP R² < 0.70 - PCA subspace may not capture HP variance ***")
     print(f"\nPer-type R² (n_pcs):")
     for stype, r2_info in diagnostic['r2_by_type'].items():
         print(f"  {stype:15s}: {r2_info['r2_n_pcs']:.4f}  ({r2_info['n_trs']} TRs)")
@@ -504,7 +504,7 @@ def main():
     print(f"  Max |shift|:      {ms['max_abs_shift']:.4f}")
     print(f"  Parcels > 1 SD:   {ms['n_parcels_shift_gt_1sd']}")
     if ms['flag_mean_shift']:
-        print(f"*** WARNING: >10% of parcels have mean shift > 1 SD — check preprocessing ***")
+        print(f"*** WARNING: >10% of parcels have mean shift > 1 SD - check preprocessing ***")
     print(f"{'='*60}")
     print(f"Output: {out_dir}")
     print(f"{'='*60}")
@@ -598,7 +598,7 @@ def main():
             for i, v in enumerate(r2_vals):
                 ax_net.text(v + 0.01, i, f'{v:.2f}', va='center', fontsize=7)
             ax_net.legend(fontsize=7, loc='lower right')
-            ax_net.set_title(f'Per-Network PCA Transfer R² — {scope_label}')
+            ax_net.set_title(f'Per-Network PCA Transfer R² - {scope_label}')
             ax_net.invert_yaxis()
 
             # Row 2: R² comparison bars
@@ -618,7 +618,7 @@ def main():
             ax_ov.set_title(f"Transfer gap: {gap:.4f}")
 
             fig.suptitle(
-                f'PCA Transfer: Friends → HP — {scope_label} ({sub_id}{vt_str})',
+                f'PCA Transfer: Friends → HP - {scope_label} ({sub_id}{vt_str})',
                 fontsize=12, y=0.98)
             fig.savefig(out_path, bbox_inches='tight')
             plt.close(fig)

@@ -14,7 +14,7 @@
 # Extracts TR-aligned physiological features from Harry Potter physprep data.
 # SLURM array job: one task per subject (array index 0-4 → 5 subjects, no sub-04).
 #
-# Fully independent of the brain pipeline — discovers runs from physprep
+# Fully independent of the brain pipeline - discovers runs from physprep
 # and derives TR counts from recording length.
 #
 # Prerequisites:
@@ -39,7 +39,7 @@ mkdir -p "${PROJECT_DIR}/logs"
 eval "$(micromamba shell hook --shell bash)"
 micromamba activate friends-states
 
-# Map array index to subject ID (5 subjects — no sub-04)
+# Map array index to subject ID (5 subjects - no sub-04)
 SUBJECTS=(sub-01 sub-02 sub-03 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"
 

@@ -14,9 +14,9 @@ Tags (non-mutually-exclusive):
     a_anchored          Locked to start of a-runs only (a_start_specific)
     b_anchored          Locked to start of b-runs only (b_start_specific)
     session_trend_down  FO decreases within session (LME slope < 0, q < alpha)
-                        [INFORMATIONAL — handled via detrended FO, not exclusion]
+                        [INFORMATIONAL - handled via detrended FO, not exclusion]
     session_trend_up    FO increases within session (LME slope > 0, q < alpha)
-                        [INFORMATIONAL — handled via detrended FO, not exclusion]
+                        [INFORMATIONAL - handled via detrended FO, not exclusion]
     season_structured   FO varies by season identity (q < alpha)
     global_trend        FO trends with global position (q < alpha, from a1 Scale 3)
 
@@ -43,9 +43,9 @@ Outputs (saved to {SCRATCH_DIR}/output/05e_temporal_trend_a4/{parc}/{sub_id}/[vt
     - state_flag_overview.png/pdf   binary heatmap
 
 See also:
-    05e_temporal_trend_a1.py — cross-episode temporal trends
-    05e_temporal_trend_a2.py — within-run temporal position
-    05e_temporal_trend_a3.py — within-session FO habituation (LME)
+    05e_temporal_trend_a1.py - cross-episode temporal trends
+    05e_temporal_trend_a2.py - within-run temporal position
+    05e_temporal_trend_a3.py - within-session FO habituation (LME)
 """
 
 import argparse
@@ -207,7 +207,7 @@ def compute_tags(df, alpha=0.05):
     q_season = df.get('q_s3_season', pd.Series([np.nan] * n))
     df['season_structured'] = q_season.lt(alpha) & q_season.notna()
 
-    # Global trend (from a1 Scale 3 — global position predictor)
+    # Global trend (from a1 Scale 3 - global position predictor)
     q_global = df.get('q_s3_global', pd.Series([np.nan] * n))
     df['global_trend'] = q_global.lt(alpha) & q_global.notna()
 
@@ -221,7 +221,7 @@ def compute_tags(df, alpha=0.05):
 def compute_summary_category(df, recurrence_floor=0.10):
     """Assign mutually exclusive summary category per state (priority order).
 
-    Session trends (session_trend_down/up) are informational tags only — they
+    Session trends (session_trend_down/up) are informational tags only - they
     do NOT exclude states.  Session-level FO drift is handled via detrended FO
     output from a3 rather than state exclusion.
 

@@ -3,7 +3,7 @@
 06d_preserved_chains.py - Identify state transition chains preserved across episodes.
 
 For each n-gram order (bigrams, trigrams), computes a Chain Preservation Score
-(CPS) — the fraction of episodes containing the chain — and tests whether CPS
+(CPS) - the fraction of episodes containing the chain - and tests whether CPS
 exceeds what a first-order Markov process would produce via simulation.
 
 Statistical framework
@@ -184,7 +184,7 @@ def compute_chain_preservation(change_sequences, P_change, order,
         # Count n-grams in surrogates
         _, sim_per_ep = count_ngrams(sim_sequences, order)
 
-        # Compute CPS for this simulation — count how many episodes contain each
+        # Compute CPS for this simulation - count how many episodes contain each
         sim_ep_counts = {ng: 0 for ng in candidates}
         for ep_counter in sim_per_ep.values():
             for ng in candidates:

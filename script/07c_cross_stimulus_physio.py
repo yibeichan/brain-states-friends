@@ -18,7 +18,7 @@ Prerequisites:
     - 07a completed for Friends and Movie10 (+ hp_07a for HP)
     - 04 decoded_states.pkl (Friends)
     - m10_04 decoded_states.pkl (Movie10)
-    - hp_04 decoded_states.pkl (HP, optional — absent for some subjects)
+    - hp_04 decoded_states.pkl (HP, optional - absent for some subjects)
     - 05a recurrence_summary.json
 
 Outputs:
@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument("--exclude_sub_hrf", action=argparse.BooleanOptionalAction,
                         default=False,
                         help="Exclude sub-HRF states from analyses "
-                             "(default: False — all states included, annotated by category).")
+                             "(default: False - all states included, annotated by category).")
     parser.add_argument("--sensitivity_analysis", action=argparse.BooleanOptionalAction,
                         default=False,
                         help="Run sensitivity analyses: EDA-excluded + high-confidence "
@@ -187,7 +187,7 @@ def load_all_inputs(sub_id, parc, vt):
         m10_physio_dir, m10_ds, suffix="_physio_features_raw"
     )
 
-    # Harry Potter decoded states + physio (optional — absent for some subjects)
+    # Harry Potter decoded states + physio (optional - absent for some subjects)
     hp_ds = None
     hp_physio = None
     hp_physio_raw = None
@@ -211,7 +211,7 @@ def load_all_inputs(sub_id, parc, vt):
             len(hp_physio), len(hp_ds),
         )
     except FileNotFoundError:
-        logger.info("HP data not available for %s — HP analyses will be skipped", sub_id)
+        logger.info("HP data not available for %s - HP analyses will be skipped", sub_id)
         hp_ds = None
         hp_physio = None
         hp_physio_raw = None
@@ -316,7 +316,7 @@ def _c1_pairwise_correlation(friends_profiles, other_profiles, active_states):
         "overall_profile_correlation": {"r": float(r_fisher_z), "method": "fisher_z_average"},
         "overall_profile_correlation_flattened": {
             "r": float(overall_r_flattened), "p": float(overall_p_flattened),
-            "method": "flattened_pearson", "note": "deprecated — inflates df",
+            "method": "flattened_pearson", "note": "deprecated - inflates df",
         },
         "per_feature_correlations": feature_correlations,
         "fdr_corrected": True,
@@ -1054,7 +1054,7 @@ def main():
                 DATA_DIR, "all_about_cneuromod", f"{stim_name}.physprep",
             )
             if not os.path.isdir(physprep_dir):
-                logger.warning("Physprep dir not found for %s — QC skipped", stim_name)
+                logger.warning("Physprep dir not found for %s - QC skipped", stim_name)
                 continue
             pv_df = load_run_percentage_valid(
                 sub_id, physprep_dir, list(decoded_dict.keys()),
@@ -1068,7 +1068,7 @@ def main():
                 json.dump(mnar, f, indent=2)
             logger.info("Physio QC report saved for %s (%d runs)", stim_name, qc_report["n_runs_total"])
     else:
-        logger.warning("DATA_DIR not set — physio QC skipped")
+        logger.warning("DATA_DIR not set - physio QC skipped")
 
     # ── Primary analyses ─────────────────────────────────────────────────
     analysis_c1_signature_stability(

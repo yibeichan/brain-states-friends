@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Reliability FC Computation — SLURM Wrapper
+# Reliability FC Computation - SLURM Wrapper
 # =============================================================================
 #
 # Computes empirical within-state FC for LOSO folds and split-half halves.

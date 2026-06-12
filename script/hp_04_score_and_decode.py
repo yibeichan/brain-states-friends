@@ -200,7 +200,7 @@ def main():
 
     total_runs_decoded = len(decoded_states)
     if total_runs_decoded == 0:
-        logger.error("No HP runs were decoded — check hp_03 outputs")
+        logger.error("No HP runs were decoded - check hp_03 outputs")
         sys.exit(1)
     logger.info(f"Decoded {total_runs_decoded} HP runs")
 

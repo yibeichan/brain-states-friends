@@ -248,8 +248,8 @@ def compute_observed_early_fractions(run_data, n_states, suffix='a',
         early_threshold: normalized position cutoff (default 0.20)
 
     Returns:
-        early_frac: np.array(n_states,) — fraction of blocks in early window
-        block_counts: np.array(n_states,) — total block count for this suffix
+        early_frac: np.array(n_states,) - fraction of blocks in early window
+        block_counts: np.array(n_states,) - total block count for this suffix
     """
     early_counts = np.zeros(n_states, dtype=float)
     total_counts = np.zeros(n_states, dtype=float)
@@ -304,7 +304,7 @@ def permutation_test_early_fraction(
         early_threshold: normalized position cutoff (default 0.20)
 
     Returns:
-        p_values: np.array(n_states,) — NaN for states with too few blocks
+        p_values: np.array(n_states,) - NaN for states with too few blocks
     """
     rng = np.random.default_rng(seed)
     perm_greater = np.zeros(n_states, dtype=float)
@@ -371,7 +371,7 @@ def permutation_test_early_fraction(
 def compute_theme_fraction(block_records, threshold_tr=33):
     """Compute fraction of 'a'-run blocks starting before threshold_tr.
 
-    This is a descriptive metric only — theme song position varies across
+    This is a descriptive metric only - theme song position varies across
     episodes due to cold opens, so this fixed window is an approximate
     lower bound.
 
@@ -405,7 +405,7 @@ def compute_theme_fraction(block_records, threshold_tr=33):
 def classify_anchoring_type(q_early_a, q_early_b, fdr_threshold=0.10):
     """Classify states by conjunction of per-suffix significance.
 
-    Labels are neutral/descriptive — no causal mechanism assumed.
+    Labels are neutral/descriptive - no causal mechanism assumed.
 
     Args:
         q_early_a: np.array of FDR-corrected q-values for suffix a
@@ -512,7 +512,7 @@ def transition_confound_check(model_path, position_locked_states, n_states,
         'note': (
             'secondary_states: non-locked states that may appear early via '
             'transitions from locked states. sub_hrf_feeders: excluded sub-HRF '
-            'states with high transition probability to anchored states — these '
+            'states with high transition probability to anchored states - these '
             'short-lived states may trigger anchored-state activation.'
         ),
     }
@@ -677,7 +677,7 @@ def plot_position_cdfs(
     for idx in range(n_plots, nrows * ncols):
         axes[idx // ncols, idx % ncols].set_visible(False)
 
-    fig.suptitle(f'Position CDFs — flagged states\n{sub_id}', fontsize=11)
+    fig.suptitle(f'Position CDFs - flagged states\n{sub_id}', fontsize=11)
     fig.tight_layout()
 
     out_png = os.path.join(out_dir, 'position_cdf_flagged_states.png')
@@ -712,7 +712,7 @@ def plot_early_fraction_bars(
         logger.warning("No data for early fraction bars; skipping.")
         return None
 
-    # Sort by max(ef_a, ef_b) descending — most anchored at top
+    # Sort by max(ef_a, ef_b) descending - most anchored at top
     rows_sorted = sorted(
         rows_with_data,
         key=lambda r: max(r['early_fraction_a'] or 0, r['early_fraction_b'] or 0),
@@ -756,7 +756,7 @@ def plot_early_fraction_bars(
     ax.invert_yaxis()
     ax.set_xlabel(f'Early fraction (first {early_threshold:.0%} of run)')
     ax.set_title(
-        f'Early fraction by suffix — {sub_id}\n'
+        f'Early fraction by suffix - {sub_id}\n'
         f'(states with < {min_blocks} blocks excluded)',
         fontsize=10)
     ax.legend(loc='lower right', fontsize=8)
@@ -1093,7 +1093,7 @@ def main():
             logger.error("Missing required input: %s", p)
             sys.exit(1)
 
-    # Output dir (vt-aware) — no all_states/ subfolder
+    # Output dir (vt-aware) - no all_states/ subfolder
     out_dir = os.path.join(
         SCRATCH_DIR, 'output', '05e_temporal_trend_a2', parc, sub_id
     )

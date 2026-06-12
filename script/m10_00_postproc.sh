@@ -41,7 +41,7 @@ fi
 SCRIPT_DIR="${PROJECT_DIR}/script"
 mkdir -p "${PROJECT_DIR}/logs"
 
-# Subject array (6 subjects — identical to Friends)
+# Subject array (6 subjects - identical to Friends)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")
 TASK_ID=${sub_ids[$SLURM_ARRAY_TASK_ID]}
 

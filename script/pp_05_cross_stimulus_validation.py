@@ -205,7 +205,7 @@ def analysis_a1_recurrence_fo_correlation(pp_fo, recurrence_scores, n_states, ou
             'Effect is attenuated by cross-dataset design (recurrence from '
             'Friends, FO from PP). Additionally, PP chapters are consecutive '
             'sections of a continuous narrative (unlike Friends independent '
-            'episodes), so serial dependence may inflate rho — interpret as '
+            'episodes), so serial dependence may inflate rho - interpret as '
             'an upper bound. See serial_dependence diagnostic for n_effective.')
         result['positive_correlation'] = bool(rho > 0 and p_val < 0.05)
     else:
@@ -928,7 +928,7 @@ def main():
         proj_dir = os.path.join(proj_dir, f'vt{args.vt}')
     pp_run_ids_path = os.path.join(proj_dir, 'pp_run_ids.json')
 
-    # run_id_map.json from pp_04 — maps long BIDS keys to short keys
+    # run_id_map.json from pp_04 - maps long BIDS keys to short keys
     run_id_map_path = os.path.join(pp_dir, 'run_id_map.json')
 
     # PCA diagnostic
@@ -980,7 +980,7 @@ def main():
         for lid in long_ids:
             short = long_to_short.get(lid)
             if short is None:
-                logger.warning("run_id_map has no short key for %s — skipping", lid)
+                logger.warning("run_id_map has no short key for %s - skipping", lid)
                 continue
             short_ids.append(short)
         pp_run_ids[stype] = short_ids

@@ -10,7 +10,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# DataLad Save & Push — Save pipeline outputs and sync to persistent storage
+# DataLad Save & Push - Save pipeline outputs and sync to persistent storage
 # =============================================================================
 #
 # Usage (manual):

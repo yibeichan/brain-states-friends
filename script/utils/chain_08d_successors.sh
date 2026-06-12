@@ -17,7 +17,7 @@ DRY_RUN=0
 
 PARTITION="mit_preemptable"
 EXCLUDE_NODES="node2803,node3805"   # GPU-equipped nodes silently stall CPU jobs (may24 lesson #390)
-TIME="1-12:00:00"   # 36h — lag=0 has timed out at 24h (may22 lesson #338)
+TIME="1-12:00:00"   # 36h - lag=0 has timed out at 24h (may22 lesson #338)
 MEM="48G"
 CPUS=8       # layers are single-threaded (OMP/MKL/OPENBLAS pinned to 1); 1 core per joblib worker
 N_JOBS=8     # 4× the prior 2-wide layer parallelism (was CPUS=4/N_JOBS=2 → 2 cores idle)
@@ -26,14 +26,14 @@ VT="0.95"
 SCRIPT="script/08d_transformer_depth.sh"
 
 count=0
-# Match all D1_lag job-name variants — D1_lag (PERLAGS), D1w_lag (wave), D1s_lag (successor) —
+# Match all D1_lag job-name variants - D1_lag (PERLAGS), D1w_lag (wave), D1s_lag (successor) -
 # but only RUNNING ones. Pending tasks already have a parent in flight that will chain
 # them when it terminates; chaining a successor-of-a-PD-successor is just queue clutter.
 while IFS='|' read jobid name state; do
     # Parse: name = "08d_D1{,w,s}_lagN_MODEL", jobid = "BASEID_ARRAYIDX"
     lag=$(echo "$name" | sed 's/.*lag\([0-9]*\)_.*/\1/')
     model=$(echo "$name" | sed 's/.*lag[0-9]*_//')
-    # Strip brackets defensively — squeue shows pending array tasks as "BASEID_[N]"
+    # Strip brackets defensively - squeue shows pending array tasks as "BASEID_[N]"
     array_idx=$(echo "$jobid" | sed 's/.*_//; s/[][]//g')
 
     successor_name="08d_D1s_lag${lag}_${model}"

@@ -1,4 +1,4 @@
-"""08e_plots.py — Figure F3 cross-stimulus depth correspondence (R4b slim).
+"""08e_plots.py - Figure F3 cross-stimulus depth correspondence (R4b slim).
 
 Companion figure script for ``08e_transformer_cross_stim_aggregate.py``,
 analogous to ``08d_plots.py`` for stage 08d.
@@ -12,16 +12,16 @@ stim/film; shared x and shared y axis):
 
 Why small multiples instead of overlaid lines:
   With 4 stim curves whose Δ values overlap in the same range (Panel B), no
-  color choice resolves the overlap — that is a data problem, not a palette
+  color choice resolves the overlap - that is a data problem, not a palette
   problem. Stripping each curve onto its own row removes the discrimination
   problem entirely, keeps the SEM uncertainty band, and lets every panel
   share one global y-axis so peak magnitudes remain comparable across A/B/C.
 
 Palettes (CB-safe, used for strip identity not overlap resolution):
-  STIM: Paul Tol Vibrant 4-class — distinct from Okabe–Ito network,
+  STIM: Paul Tol Vibrant 4-class - distinct from Okabe–Ito network,
         ColorBrewer Set1 taxonomy, Tailwind category, viridis recurrence
         palettes already used elsewhere in this manuscript.
-  FILM: Paul Tol Light 4-class — CB-safe pastel companion to Tol Vibrant.
+  FILM: Paul Tol Light 4-class - CB-safe pastel companion to Tol Vibrant.
 
 Each panel saves PDF + PNG. No on-panel legends (each strip self-labels).
 Standalone legend files are still emitted for caption / sidebar use:
@@ -33,7 +33,7 @@ Source data:
   C:    08e .../D3a_per_subset_movie10_dinov2-large.json (production, with
         permutation). Falls back to .../manuscript_figures/fig3/perfilm/
         sub-*_dinov2-large_movie10_perfilm.json (provisional, point estimates
-        only, no permutation) when production JSONs are absent — used for
+        only, no permutation) when production JSONs are absent - used for
         the poster build while the production --per_subset run is in flight.
 """
 import json

@@ -5,19 +5,19 @@
 Supports both Friends and Movie10 stimuli via the --stimulus flag.
 Core extraction logic is identical; only I/O paths differ.
 
-This script is fully independent of the brain pipeline — it discovers runs
+This script is fully independent of the brain pipeline - it discovers runs
 from the physprep directory and derives TR counts from the physio recording
 length.  Downstream scripts (07b, 07c) truncate to min(len(features),
 len(states)) at load time to guarantee alignment.
 
 Features (7 columns per TR):
-    0: HR (bpm)         — from r_peak_corrected, interpolated
-    1: HRV_RMSSD (ms)   — 30s rolling window
-    2: breathing_rate    — from inhale_max, interpolated
-    3: RVT              — respiratory volume per time
-    4: EDA_tonic        — mean per TR
-    5: EDA_phasic       — mean per TR (log-transformed before z-score)
-    6: SCR_binary       — any SCR onset in TR window (0/1)
+    0: HR (bpm)         - from r_peak_corrected, interpolated
+    1: HRV_RMSSD (ms)   - 30s rolling window
+    2: breathing_rate    - from inhale_max, interpolated
+    3: RVT              - respiratory volume per time
+    4: EDA_tonic        - mean per TR
+    5: EDA_phasic       - mean per TR (log-transformed before z-score)
+    6: SCR_binary       - any SCR onset in TR window (0/1)
 
 QC handling: per-channel NaN masking (ECG fail → cols 0,1 = NaN, etc.).
 PPG used as ECG backup when ECG fails but PPG passes.
@@ -29,11 +29,11 @@ Prerequisites:
 
 Outputs:
     {SCRATCH_DIR}/output/{output_dir}/{sub_id}/
-        {run_id}_physio_features.npy       — shape (n_trs, 7), z-scored
-        {run_id}_physio_features_raw.npy   — shape (n_trs, 7), pre-normalization
-        {run_id}_physio_quality.json       — per-channel QC status
-        feature_columns.json               — column name mapping
-        extraction_summary.json            — run counts, skip reasons, QC stats
+        {run_id}_physio_features.npy       - shape (n_trs, 7), z-scored
+        {run_id}_physio_features_raw.npy   - shape (n_trs, 7), pre-normalization
+        {run_id}_physio_quality.json       - per-channel QC status
+        feature_columns.json               - column name mapping
+        extraction_summary.json            - run counts, skip reasons, QC stats
 """
 
 import os
@@ -242,11 +242,11 @@ def main():
             # Save feature arrays
             safe_name = _make_safe_filename(run_key)
 
-            # Normalized features (z-scored within run) — for state profiles, lags, TTAs
+            # Normalized features (z-scored within run) - for state profiles, lags, TTAs
             feat_path = os.path.join(out_dir, f"{safe_name}_physio_features.npy")
             np.save(feat_path, features)
 
-            # Raw features (pre-normalization) — for run-level arousal proxies
+            # Raw features (pre-normalization) - for run-level arousal proxies
             raw_path = os.path.join(out_dir, f"{safe_name}_physio_features_raw.npy")
             np.save(raw_path, features_raw)
 

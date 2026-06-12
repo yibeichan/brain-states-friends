@@ -710,7 +710,7 @@ def cross_subject_summary(parcellation, vt):
         if idx % 3 == 0:
             ax.set_ylabel('Median Dwell (s)')
 
-    fig.suptitle('Recurrence vs Median Dwell Time — All Subjects', fontsize=14, y=1.01)
+    fig.suptitle('Recurrence vs Median Dwell Time - All Subjects', fontsize=14, y=1.01)
 
     plt.tight_layout()
     for ext in ('png', 'pdf'):
@@ -808,7 +808,7 @@ def main():
                 state_means, np.array(active_for_nets), parcel_networks)
             logger.info(f"Loaded dominant networks for {len(dominant_networks)} states")
     if not dominant_networks:
-        logger.warning("Could not load network data — scatter plots will use fallback colors")
+        logger.warning("Could not load network data - scatter plots will use fallback colors")
 
     # Load 05e_a4 state flags for category annotations
     parc_full = parc  # already normalized by normalize_parcellation_name()
@@ -819,7 +819,7 @@ def main():
             state_categories[int(row['state'])] = row.get('summary_category', 'unknown')
         logger.info(f"Loaded state flags for {len(state_categories)} states")
     else:
-        logger.warning("No 05e_a4 state flags — all states treated as eligible")
+        logger.warning("No 05e_a4 state flags - all states treated as eligible")
 
     logger.info("Extracting contiguous blocks...")
     df_blocks = extract_state_blocks(decoded_states, n_states, recurrence_scores)

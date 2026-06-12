@@ -5,26 +5,26 @@
 Investigates whether brain states exhibit systematic temporal trends across
 episodes at four hierarchical scales, plus two supplementary diagnostics:
 
-Scale 1 — Cross-season (coarsest; 6 data points per state):
+Scale 1 - Cross-season (coarsest; 6 data points per state):
     Mann-Kendall tau(mean_FO_per_season, season_number).
     Uses per_season_mean_fo.json from 05a. Exploratory (very low power).
 
-Scale 2 — Within-season episode position (~24 broadcast episodes/season):
+Scale 2 - Within-season episode position (~24 broadcast episodes/season):
     FO aggregated to broadcast-episode level (a+b -> one episode; for 4-part
     episodes, c+d -> next episode number). Spearman rho per season, combined
     via permutation test on mean_rho across seasons.
 
-Scale 3 — Multi-predictor variance partitioning:
+Scale 3 - Multi-predictor variance partitioning:
     Semi-partial R^2 decomposition: global_position (proxy for scanning date),
     season (categorical), within-season position (ordinal). Permutation inference.
 
-Diagnostic 1 — Motion confound check:
+Diagnostic 1 - Motion confound check:
     Run-level mean FD trend + FD-controlled partial correlations.
 
-Diagnostic 2 — Anti-correlated state pair analysis:
+Diagnostic 2 - Anti-correlated state pair analysis:
     Tests whether emission-space anti-correlated states show opposite FO trends.
 
-No state classification — all analyses produce continuous effect sizes and
+No state classification - all analyses produce continuous effect sizes and
 FDR-corrected q-values. All states are analyzed; eligible (non-sub-HRF) states
 flagged in output.
 
@@ -45,8 +45,8 @@ Outputs (saved to {SCRATCH_DIR}/output/05e_temporal_trend_a1/{parc}/{sub_id}/[vt
     - state_pair_trends.png/pdf
 
 See also:
-    05e_temporal_trend_a2.py — within-run temporal position
-    05e_temporal_trend_a3.py — within-session FO habituation (LME)
+    05e_temporal_trend_a2.py - within-run temporal position
+    05e_temporal_trend_a3.py - within-session FO habituation (LME)
 Design doc: the design notes
 """
 
@@ -169,12 +169,12 @@ def _lag1_autocorrelation(fo_matrix):
     """Compute mean lag-1 autocorrelation of FO across episodes (vectorized).
 
     Args:
-        fo_matrix: np.array(n_episodes, n_states) — rows in chronological order.
+        fo_matrix: np.array(n_episodes, n_states) - rows in chronological order.
 
     Returns:
-        mean_lag1_autocorr: float — mean across states of lag-1 autocorrelation.
-        per_state_lag1: np.array(n_states,) — per-state lag-1 autocorrelation.
-        effective_n_approx: float — approximate effective sample size
+        mean_lag1_autocorr: float - mean across states of lag-1 autocorrelation.
+        per_state_lag1: np.array(n_states,) - per-state lag-1 autocorrelation.
+        effective_n_approx: float - approximate effective sample size
             (Bayley & Hammersley 1946: n_eff ≈ n * (1 - r1) / (1 + r1)).
     """
     n_eps, n_states = fo_matrix.shape
@@ -241,7 +241,7 @@ def _batch_spearman_ranks(fo_matrix):
 
     Returns:
         ranked: np.array same shape, rank-transformed per column.
-        constant_mask: np.array(n_states,) — True if column is constant.
+        constant_mask: np.array(n_states,) - True if column is constant.
     """
     from scipy.stats import rankdata
     n_obs, n_states = fo_matrix.shape
@@ -261,11 +261,11 @@ def _pearson_with_vec(x_centered, y_ranked_matrix):
     """Pearson correlation of centered vector x with each column of centered Y.
 
     Args:
-        x_centered: np.array(n,) — already centered (mean-subtracted).
-        y_ranked_matrix: np.array(n, n_states) — already centered per column.
+        x_centered: np.array(n,) - already centered (mean-subtracted).
+        y_ranked_matrix: np.array(n, n_states) - already centered per column.
 
     Returns:
-        rho: np.array(n_states,) — correlation per column.
+        rho: np.array(n_states,) - correlation per column.
     """
     ss_x = np.dot(x_centered, x_centered)
     if ss_x < 1e-20:
@@ -291,8 +291,8 @@ def scale2_within_season(episode_fo, broadcast_meta, n_states, n_perm=5000, seed
 
     Returns:
         mean_rho: np.array(n_states,)
-        perm_p: np.array(n_states,) — permutation p-values
-        per_season_rho: np.array(n_seasons, n_states) — per-season rho
+        perm_p: np.array(n_states,) - permutation p-values
+        per_season_rho: np.array(n_seasons, n_states) - per-season rho
     """
     from scipy.stats import rankdata
 
@@ -596,8 +596,8 @@ def motion_confound_check(fo_dict, fd_dict, n_states):
 
     Returns:
         fd_trend_rho, fd_trend_p: FD vs global run index
-        rho_uncorrected: np.array(n_states,) — FO vs run index
-        rho_corrected: np.array(n_states,) — FO vs run index, controlling for FD
+        rho_uncorrected: np.array(n_states,) - FO vs run index
+        rho_corrected: np.array(n_states,) - FO vs run index, controlling for FD
     """
     # Align run_ids
     common_runs = sorted(set(fo_dict.keys()) & set(fd_dict.keys()),
@@ -798,7 +798,7 @@ def plot_scale1_catalog(per_season_fo, recurrence_scores, tau_s1, q_s1,
         ax.set_visible(False)
 
     fig.suptitle(
-        f'Scale 1: Cross-Season FO Profiles — All States by Recurrence (Mann-Kendall, n=6, exploratory)\n{sub_id}',
+        f'Scale 1: Cross-Season FO Profiles - All States by Recurrence (Mann-Kendall, n=6, exploratory)\n{sub_id}',
         fontsize=10, y=1.01,
     )
     fig.tight_layout()
@@ -859,8 +859,8 @@ def plot_scale2_per_state(episode_fo, broadcast_meta, per_season_rho, mean_rho,
         q_str = f'q={q_s2[k]:.3f}' if np.isfinite(q_s2[k]) else 'q=NaN'
         mean_rho_str = f'mean ρ={mean_rho[k]:.3f}' if np.isfinite(mean_rho[k]) else 'mean ρ=NaN'
         fig.suptitle(
-            f'State {k} — Scale 2: Within-Season Episode Trend\n'
-            f'{mean_rho_str} {q_str} rec={recurrence_scores[k]:.2f} — {sub_id}',
+            f'State {k} - Scale 2: Within-Season Episode Trend\n'
+            f'{mean_rho_str} {q_str} rec={recurrence_scores[k]:.2f} - {sub_id}',
             fontsize=9, y=1.03,
         )
         fig.tight_layout()
@@ -914,7 +914,7 @@ def plot_scale3_variance(s3_results, recurrence_scores, sub_id, out_dir, n_state
     else:
         gp_label = 'ordinal episode index'
     ax.set_title(
-        f'Scale 3: Variance Partitioning — {sub_id}\n'
+        f'Scale 3: Variance Partitioning - {sub_id}\n'
         f'global_position ({gp_label}) | season | within-season position',
         fontsize=9,
     )
@@ -963,7 +963,7 @@ def plot_trend_vs_mean_fo(mean_fo, recurrence_scores, results_per_scale, sub_id,
         ax.grid(True, alpha=0.15)
 
     make_recurrence_colorbar(axes[-1])
-    fig.suptitle(f'Cross-Episode Temporal Trends vs State Occupancy — {sub_id}',
+    fig.suptitle(f'Cross-Episode Temporal Trends vs State Occupancy - {sub_id}',
                  fontsize=12, y=1.01)
     fig.tight_layout()
 
@@ -1040,7 +1040,7 @@ def plot_motion_diagnostic(motion_results, recurrence_scores, sub_id, out_dir, n
     ax.grid(True, alpha=0.15, axis='x')
     make_recurrence_colorbar(ax)
 
-    fig.suptitle(f'Motion Confound Check — {sub_id}', fontsize=11, y=1.01)
+    fig.suptitle(f'Motion Confound Check - {sub_id}', fontsize=11, y=1.01)
     fig.tight_layout()
 
     out_png = os.path.join(out_dir, 'motion_confound_check.png')
@@ -1437,7 +1437,7 @@ def main():
             'a+b -> episode N, c+d -> episode N+1.'
         ),
         'note': (
-            'Scale 1 (cross-season): only 6 data points — purely descriptive. '
+            'Scale 1 (cross-season): only 6 data points - purely descriptive. '
             'FDR q-values reported for completeness but should NOT be interpreted as '
             'confirmatory evidence; minimum detectable |tau| at n=6 is extreme. '
             'Session-order confound dominates cross-season FO structure in this dataset '
@@ -1454,7 +1454,7 @@ def main():
         'scale1_cross_season': {
             'description': (
                 'Mann-Kendall tau of mean_FO_per_season vs season_number (n=6). '
-                'PURELY DESCRIPTIVE — do not treat any result as confirmatory.'
+                'PURELY DESCRIPTIVE - do not treat any result as confirmatory.'
             ),
             'n_points': len(unique_seasons),
             'n_testable_states': n_testable_s1,

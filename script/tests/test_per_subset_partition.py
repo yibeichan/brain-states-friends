@@ -38,7 +38,7 @@ def canonical_movie10_run_ids():
     Hidden Figures: 12 clips × 2 viewings = 24 run_ids.
     Bourne: 10 runs.
     Life: 5 clips × 2 viewings = 10 run_ids.
-    Total: 61 run_ids — matches sub-05 m10_04_decoded.
+    Total: 61 run_ids - matches sub-05 m10_04_decoded.
     """
     rids = []
     for i in range(1, 18):

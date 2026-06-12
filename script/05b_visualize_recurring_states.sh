@@ -49,7 +49,7 @@ PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 N_STATES="${N_STATES:-5}"
 VT="${VT:-0.95}"
 
-# PyVista headless rendering — OSMesa software renderer (no GPU needed)
+# PyVista headless rendering - OSMesa software renderer (no GPU needed)
 export PYOPENGL_PLATFORM=osmesa
 export DISPLAY=""
 

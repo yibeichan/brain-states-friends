@@ -14,7 +14,7 @@
 # Tests whether brain states carry information about narrative content.
 # Seven analyses: per-state signatures (A1), decoding (A2), per-state multi-lag
 # signatures (A3), TTAs (A4), consistency (A5), selectivity (A6), sensory-confound (A7).
-# A1/A3 refactored 2026-04-23 to per-(state, feature) AUC framework —
+# A1/A3 refactored 2026-04-23 to per-(state, feature) AUC framework -
 # see the design notes.
 #
 # Prerequisites:

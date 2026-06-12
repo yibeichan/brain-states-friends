@@ -46,7 +46,7 @@ mkdir -p "${PROJECT_DIR}/logs"
 # Load environment for DATA_DIR
 set -a; source "${PROJECT_DIR}/.env"; set +a
 
-# Subject array (5 subjects — no sub-04 in Petit Prince)
+# Subject array (5 subjects - no sub-04 in Petit Prince)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-05" "sub-06")
 TASK_ID=${sub_ids[$SLURM_ARRAY_TASK_ID]}
 

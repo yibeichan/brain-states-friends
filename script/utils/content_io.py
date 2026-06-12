@@ -36,24 +36,24 @@ MAIN_CHARACTERS = ["Monica", "Ross", "Rachel", "Chandler", "Joey", "Phoebe"]
 # Feature column names for the (n_trs, 16) output array
 CONTENT_FEATURE_COLUMNS = [
     # Dialogue structure (cols 0-5)
-    "speech_presence",       # 0: binary — any utterance overlapping this TR
-    "dialogue_rate",         # 1: float — utterances overlapping / TR_s
-    "n_speakers",            # 2: int   — unique speakers (dialogue rows only)
-    "speaker_change",        # 3: binary — speaker differs between consecutive utterances
-    "silence_duration_s",    # 4: float — seconds since last utterance end (0 if speaking)
-    "utterance_duration_s",  # 5: float — total speech seconds within TR window
+    "speech_presence",       # 0: binary - any utterance overlapping this TR
+    "dialogue_rate",         # 1: float - utterances overlapping / TR_s
+    "n_speakers",            # 2: int   - unique speakers (dialogue rows only)
+    "speaker_change",        # 3: binary - speaker differs between consecutive utterances
+    "silence_duration_s",    # 4: float - seconds since last utterance end (0 if speaking)
+    "utterance_duration_s",  # 5: float - total speech seconds within TR window
     # Scene features (cols 6-8)
-    "scene_boundary",        # 6: binary — scene boundary within ±1 TR
-    "n_scene_speakers",      # 7: int   — |scene_speaker_set| for current scene
-    "scene_duration_s",      # 8: float — duration of current scene
+    "scene_boundary",        # 6: binary - scene boundary within ±1 TR
+    "n_scene_speakers",      # 7: int   - |scene_speaker_set| for current scene
+    "scene_duration_s",      # 8: float - duration of current scene
     # Character features (cols 9-15)
-    "monica_speaking",       # 9:  binary — Monica has dialogue overlapping this TR
-    "ross_speaking",         # 10: binary — Ross speaking
-    "rachel_speaking",       # 11: binary — Rachel speaking
-    "chandler_speaking",     # 12: binary — Chandler speaking
-    "joey_speaking",         # 13: binary — Joey speaking
-    "phoebe_speaking",       # 14: binary — Phoebe speaking
-    "n_main_in_scene",       # 15: int   — count of main 6 in current scene
+    "monica_speaking",       # 9:  binary - Monica has dialogue overlapping this TR
+    "ross_speaking",         # 10: binary - Ross speaking
+    "rachel_speaking",       # 11: binary - Rachel speaking
+    "chandler_speaking",     # 12: binary - Chandler speaking
+    "joey_speaking",         # 13: binary - Joey speaking
+    "phoebe_speaking",       # 14: binary - Phoebe speaking
+    "n_main_in_scene",       # 15: int   - count of main 6 in current scene
 ]
 
 N_FEATURES = len(CONTENT_FEATURE_COLUMNS)  # 16
@@ -85,7 +85,7 @@ def build_content_inventory(
         try:
             season = _get_season(run_id)
         except ValueError:
-            logger.warning("Cannot parse season from run_id %s — skipping", run_id)
+            logger.warning("Cannot parse season from run_id %s - skipping", run_id)
             inventory[run_id] = {"sentences": None, "scenes": None}
             continue
 
@@ -178,13 +178,13 @@ def sentences_to_tr_features(
     """Convert sentence annotations to TR-level features.
 
     Features (columns 0-11):
-        0: speech_presence     — any utterance overlapping this TR
-        1: dialogue_rate       — count of overlapping utterances / tr_s
-        2: n_speakers          — unique speakers (dialogue rows only)
-        3: speaker_change      — speaker changed between consecutive dialogue utterances
-        4: silence_duration_s  — time since last utterance end (0 if speaking)
-        5: utterance_duration_s — total speech seconds within TR window
-        6-11: character presence — one column per main character (dialogue rows only)
+        0: speech_presence     - any utterance overlapping this TR
+        1: dialogue_rate       - count of overlapping utterances / tr_s
+        2: n_speakers          - unique speakers (dialogue rows only)
+        3: speaker_change      - speaker changed between consecutive dialogue utterances
+        4: silence_duration_s  - time since last utterance end (0 if speaking)
+        5: utterance_duration_s - total speech seconds within TR window
+        6-11: character presence - one column per main character (dialogue rows only)
 
     Args:
         sent_df: DataFrame from load_sentences().
@@ -283,9 +283,9 @@ def scenes_to_tr_features(
     """Convert scene annotations to TR-level features.
 
     Features (columns 0-2):
-        0: scene_boundary      — scene boundary within ±1 TR of this TR
-        1: n_scene_speakers    — |scene_speaker_set| for current scene
-        2: scene_duration_s    — duration of current scene
+        0: scene_boundary      - scene boundary within ±1 TR of this TR
+        1: n_scene_speakers    - |scene_speaker_set| for current scene
+        2: scene_duration_s    - duration of current scene
 
     Args:
         scene_df: DataFrame from load_scenes().
@@ -351,7 +351,7 @@ def _compute_scene_speaker_counts(
 
     The caller must ensure scene_df timestamps are already offset-adjusted
     (in fMRI time). Speaker counts are matched by scene_id, so sent_df
-    timestamps are not used — only sent_df scene_id and speaker columns.
+    timestamps are not used - only sent_df scene_id and speaker columns.
 
     Returns:
         1D array (n_trs,) with speaker counts. NaN where no scene.

@@ -184,7 +184,7 @@ def create_multipanel_figure(
 
         logger.info(f"Rendering state {idx + 1}/{n_rows}: {key} (ID {state_id})")
 
-        # Build named-key dicts (resolves ordering mismatch risk — stats agent)
+        # Build named-key dicts (resolves ordering mismatch risk - stats agent)
         cortical_dict = pattern_to_cortical_dict(pattern, labels_df, parcellation)
         subcortical_dict = pattern_to_subcortical_dict(pattern, labels_df, parcellation)
 
@@ -268,7 +268,7 @@ def create_multipanel_figure(
 
     # Main title
     fig.suptitle(
-        f"Top {n_rows} States by Recurrence Score — {subject_id}\n"
+        f"Top {n_rows} States by Recurrence Score - {subject_id}\n"
         f"Cortical (Schaefer-100, functionally-derived) | "
         f"Subcortical* (anatomically-defined: CIT168, HCP thalamus, Hippo/Amyg, Cerebellum)",
         fontsize=13, fontweight="bold", y=0.998,
@@ -290,7 +290,7 @@ def create_multipanel_figure(
     # and states the parcellation logic difference, as required by the 05b review plan.
     fig.text(
         0.5, 0.005,
-        "Supplementary figure — for exploration and manual review, not a primary state-interpretation result. "
+        "Supplementary figure - for exploration and manual review, not a primary state-interpretation result. "
         "Cortical parcels (Schaefer-100) are functionally-derived; subcortical parcels (CIT168, HCP) are "
         "anatomically-defined. The two systems differ in parcellation logic and reliability and should not "
         "be treated as directly rank-comparable on a shared activation scale. "
@@ -367,10 +367,10 @@ def create_individual_state_plots(
         axes[1].axis("off")
 
         fig.suptitle(
-            f"Recurring State #{idx + 1} (ID {state_id}) — {subject_id}\n"
+            f"Recurring State #{idx + 1} (ID {state_id}) - {subject_id}\n"
             f"Recurrence: {recurrence_score:.1%} | Runs: {run_spread}\n"
             f"Supplementary. Cortical: functionally-derived (Schaefer-100); "
-            f"Subcortical*: anatomically-defined (CIT168, HCP) — not rank-comparable on a shared scale.\n"
+            f"Subcortical*: anatomically-defined (CIT168, HCP) - not rank-comparable on a shared scale.\n"
             f"*Hippo/amygdala: lower tSNR, interpret conservatively.",
             fontsize=10, fontweight="bold",
         )
@@ -577,7 +577,7 @@ def main():
     if not SCRATCH_DIR:
         raise EnvironmentError("SCRATCH_DIR not set. Source .env or set the variable.")
 
-    # Input paths — must match 05a's vt-aware output layout
+    # Input paths - must match 05a's vt-aware output layout
     recurrence_dir = os.path.join(
         SCRATCH_DIR, "output", "05a_recurrence_analysis", parcellation, args.sub_id
     )
@@ -605,7 +605,7 @@ def main():
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     logger.info("=" * 70)
-    logger.info("05b: RECURRING BRAIN STATES — yabplot (cortical + subcortical)")
+    logger.info("05b: RECURRING BRAIN STATES - yabplot (cortical + subcortical)")
     logger.info("=" * 70)
     logger.info(f"Subject:       {args.sub_id}")
     logger.info(f"Parcellation:  {parcellation}")

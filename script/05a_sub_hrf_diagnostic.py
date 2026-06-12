@@ -8,7 +8,7 @@ sub-HRF.
 
 Adapted from mario-rSLDS/scripts/05b_sub_hrf_reanalysis.py.
 
-No SLURM needed — runs in seconds on login node.
+No SLURM needed - runs in seconds on login node.
 
 Usage:
     python script/05a_sub_hrf_diagnostic.py
@@ -193,7 +193,7 @@ def analyze_transitions(A, metrics_df):
 
     Reports self-transition probability, top incoming/outgoing transition
     partners, and bridge score for each sub-HRF state.  Interpretation is
-    left to the reader — no hardcoded thresholds are applied.
+    left to the reader - no hardcoded thresholds are applied.
     """
     rows = []
     for _, row in metrics_df.iterrows():
@@ -259,13 +259,13 @@ def main():
             hmm_dir = hmm_dir / vt_sub
 
         if not recur_dir.exists():
-            print(f"\n  {sub}: 05a output not found at {recur_dir} — skipping")
+            print(f"\n  {sub}: 05a output not found at {recur_dir} - skipping")
             continue
 
         # Load data
         metrics_df = load_state_metrics(recur_dir)
         if metrics_df is None:
-            print(f"\n  {sub}: state_recurrence_dwell_metrics.csv not found — skipping")
+            print(f"\n  {sub}: state_recurrence_dwell_metrics.csv not found - skipping")
             continue
 
         A = load_transition_matrix(hmm_dir)
@@ -338,7 +338,7 @@ def main():
 
             all_transitions.append(trans)
         else:
-            print(f"\n  best_model.pkl not found — skipping transition analysis")
+            print(f"\n  best_model.pkl not found - skipping transition analysis")
 
         all_metrics.append(met)
 

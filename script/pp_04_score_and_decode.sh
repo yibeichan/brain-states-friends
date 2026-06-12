@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Petit Prince Score & Decode — SLURM Submission Script
+# Petit Prince Score & Decode - SLURM Submission Script
 # =============================================================================
 # Scores and decodes PP runs with Friends-trained HMM.
 # One array task per subject (5 subjects, no sub-04).
@@ -38,7 +38,7 @@ mkdir -p "${PROJECT_DIR}/logs"
 source ~/.bashrc
 micromamba activate friends-states
 
-# Configuration (5 subjects — no sub-04 in Petit Prince)
+# Configuration (5 subjects - no sub-04 in Petit Prince)
 PARCELLATION=${PARCELLATION:-"atlas-4S156Parcels"}
 VT="${VT:-"0.95"}"
 SUBJECTS=("sub-01" "sub-02" "sub-03" "sub-05" "sub-06")

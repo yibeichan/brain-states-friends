@@ -109,7 +109,7 @@ def compute_transition_entropy(transmat, active_indices):
     For each active state, compute H(row) / log(K_active).
     Returns mean normalized entropy.
 
-    Note: This computes entropy **conditional on the active subspace** — rows
+    Note: This computes entropy **conditional on the active subspace** - rows
     are subsetted to active states and re-normalized. This measures "how random
     are transitions among active states?" rather than full HMM entropy. The
     subspace restriction is intentional: inactive states have near-zero

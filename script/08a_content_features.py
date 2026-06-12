@@ -3,7 +3,7 @@
 08a_content_features.py - Extract TR-level content features from narrative annotations.
 
 Converts sentence and scene annotations from te-charnet into TR-aligned feature
-arrays for each run. Independent of brain pipeline — only requires decoded_states
+arrays for each run. Independent of brain pipeline - only requires decoded_states
 to determine n_trs per run.
 
 Content features are stimulus-level (same video for all subjects), so output is
@@ -140,7 +140,7 @@ def main():
         scene_path = inv.get("scenes")
 
         if sent_path is None:
-            logger.warning("No sentence annotation for %s — skipping", run_id)
+            logger.warning("No sentence annotation for %s - skipping", run_id)
             n_skipped += 1
             continue
 
@@ -148,7 +148,7 @@ def main():
         try:
             offset_s, sent_df = validate_timestamp_alignment(sent_path, n_trs)
         except ValueError as e:
-            logger.error("%s: timestamp alignment failed: %s — skipping", run_id, e)
+            logger.error("%s: timestamp alignment failed: %s - skipping", run_id, e)
             n_skipped += 1
             continue
 

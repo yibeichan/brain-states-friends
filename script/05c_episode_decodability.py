@@ -19,12 +19,12 @@ Prerequisites:
 Analyses:
     1. Feature matrix X[r, k] = FO(state k, run r) at run level
     2. CLR transform applied to X before logistic regression (FO vectors sum to 1;
-       raw FO is compositional data — CLR maps the simplex to Euclidean space)
+       raw FO is compositional data - CLR maps the simplex to Euclidean space)
     3. Season decoding via L2-regularized multinomial logistic regression (LOO-CV)
     4. Permutation test (shuffle season labels) for statistical significance
     5. Nuisance control: decode ordinal run number (session order)
     6. Per-state Kruskal-Wallis test across seasons with FDR correction
-       (uses raw FO, not CLR — KW is non-parametric and scale-invariant)
+       (uses raw FO, not CLR - KW is non-parametric and scale-invariant)
 
 CLR transform: CLR(x)[k] = log(x[k] / geom_mean(x)), after adding a small
 pseudocount to handle zero-FO entries (inactive states or states absent from
@@ -251,7 +251,7 @@ def build_confusion_matrix(y_true, y_pred, classes):
     cm = np.zeros((n_classes, n_classes), dtype=int)
     for t, p in zip(y_true, y_pred):
         if t not in class_to_idx or p not in class_to_idx:
-            logger.warning(f"Unknown class in (true={t}, pred={p}) — skipping cell")
+            logger.warning(f"Unknown class in (true={t}, pred={p}) - skipping cell")
             continue
         cm[class_to_idx[t], class_to_idx[p]] += 1
     return cm

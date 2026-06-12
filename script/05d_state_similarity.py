@@ -615,7 +615,7 @@ def main():
         'n_pairwise_comparisons': n_pairs,
         'combined_metric_note': (
             'heuristic_combined_similarity is the mean of [0,1]-normalised '
-            'activation and transition similarities. FC was removed — see '
+            'activation and transition similarities. FC was removed - see '
             '05f_state_fc.py for empirical state-conditioned FC.'
         ),
         'exclude_sub_hrf': args.exclude_sub_hrf,

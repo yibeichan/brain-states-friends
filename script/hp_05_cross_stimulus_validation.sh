@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Harry Potter Cross-Stimulus Validation — SLURM Submission Script
+# Harry Potter Cross-Stimulus Validation - SLURM Submission Script
 # =============================================================================
 # Runs A1–A5 + B1–B2 analyses comparing HP reading state usage against
 # Friends recurrence scores, with Movie10 bootstrap baseline.
@@ -41,7 +41,7 @@ mkdir -p "${PROJECT_DIR}/logs"
 source ~/.bashrc
 micromamba activate friends-states
 
-# Configuration (5 subjects — no sub-04 in Harry Potter)
+# Configuration (5 subjects - no sub-04 in Harry Potter)
 PARCELLATION=${PARCELLATION:-"atlas-4S156Parcels"}
 VT=${VT:-"0.95"}
 SUBJECTS=("sub-01" "sub-02" "sub-03" "sub-05" "sub-06")

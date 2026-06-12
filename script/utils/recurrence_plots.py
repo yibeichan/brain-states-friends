@@ -39,7 +39,7 @@ def compute_mean_fo_when_active(fo, n_states, fo_threshold):
 
     fo_matrix = np.stack(list(fo.values()))    # (n_episodes, n_states)
     mask = fo_matrix > fo_threshold             # (n_episodes, n_states)
-    state_counts = mask.sum(axis=0)             # (n_states,) — episodes where active
+    state_counts = mask.sum(axis=0)             # (n_states,) - episodes where active
 
     # Vectorized: zero out inactive episodes, then divide by active count
     sum_fo = np.where(mask, fo_matrix, 0.0).sum(axis=0)   # (n_states,)

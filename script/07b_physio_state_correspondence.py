@@ -23,7 +23,7 @@ Five analyses:
 Prerequisites:
     - 07a physio features completed for the target stimulus
     - Decoded states (04 for friends, m10_04/hp_04 for others)
-    - 05a recurrence_summary.json (Friends — always)
+    - 05a recurrence_summary.json (Friends - always)
 
 Outputs:
     {SCRATCH_DIR}/output/{output_dir}/{parcellation}/{sub_id}/
@@ -125,7 +125,7 @@ def parse_args():
     parser.add_argument("--exclude_sub_hrf", action=argparse.BooleanOptionalAction,
                         default=False,
                         help="Exclude sub-HRF states from physio analyses "
-                             "(default: False — all states included, annotated by category).")
+                             "(default: False - all states included, annotated by category).")
     parser.add_argument("--sensitivity_analysis", action=argparse.BooleanOptionalAction,
                         default=False,
                         help="Run sensitivity analyses: EDA-excluded + high-confidence "
@@ -215,7 +215,7 @@ def analysis_1_state_profiles(
     Kruskal-Wallis omnibus per feature, pairwise Mann-Whitney U with FDR.
     All active states (recurrence > 0) are included.
 
-    Design choice — equal-weight epochs:
+    Design choice - equal-weight epochs:
         Each contiguous state block (epoch) contributes one observation
         regardless of its duration (number of TRs).  This treats each epoch
         as one realization of a brain state rather than weighting by
@@ -259,7 +259,7 @@ def analysis_1_state_profiles(
         })
 
     if not epoch_data:
-        logger.warning("No epoch data — skipping Analysis 1")
+        logger.warning("No epoch data - skipping Analysis 1")
         return
 
     df = pd.DataFrame(epoch_data)
@@ -270,7 +270,7 @@ def analysis_1_state_profiles(
     active_states = sorted(df["state"].unique())
     n_states = len(active_states)
     if n_states < 2:
-        logger.warning("Fewer than 2 active states — skipping KW tests")
+        logger.warning("Fewer than 2 active states - skipping KW tests")
         return
 
     # Per-state sample sizes
@@ -337,7 +337,7 @@ def analysis_1_state_profiles(
         json.dump(pairwise_results, f, indent=2)
     logger.info("Pairwise MWU: %d significant features, %d pair tests", len(sig_features), len(pairwise_results))
 
-    # Plot: per-state mean physio — 2-row grid with category strip + colorbar at bottom
+    # Plot: per-state mean physio - 2-row grid with category strip + colorbar at bottom
     from matplotlib.patches import Patch
     from matplotlib.colors import Normalize
     from matplotlib.cm import ScalarMappable
@@ -473,7 +473,7 @@ def analysis_2_multilag(decoded_states, physio_features, recurrence_scores, acti
                 })
 
     if not lag_results:
-        logger.warning("No lag data — skipping Analysis 2")
+        logger.warning("No lag data - skipping Analysis 2")
         return
 
     df = pd.DataFrame(lag_results)
@@ -600,7 +600,7 @@ def analysis_3_tta(decoded_states, physio_features, recurrence_scores, active_st
         df = annotate_dataframe(df, state_flags)
         df.to_csv(os.path.join(out_dir, "transition_triggered_averages.csv"), index=False)
 
-        # Plot TTA for HR — 2 rows (into/outof), colored by category, SEM shading
+        # Plot TTA for HR - 2 rows (into/outof), colored by category, SEM shading
         cat_lookup = {}
         if state_flags is not None:
             cat_lookup = dict(zip(state_flags["state"], state_flags["summary_category"]))
@@ -810,7 +810,7 @@ def analysis_4_consistency(
     df = annotate_dataframe(df, state_flags)
     df.to_csv(os.path.join(out_dir, "cross_episode_consistency.csv"), index=False)
 
-    # Per-state SD across episodes (SD, not CV — CV is unstable on z-scored data)
+    # Per-state SD across episodes (SD, not CV - CV is unstable on z-scored data)
     consistency = []
     for state in sorted(df["state"].unique()):
         sub = df[df["state"] == state]
@@ -903,7 +903,7 @@ def analysis_4_consistency(
         with open(os.path.join(out_dir, "consistency_recurrence_correlation.json"), "w") as f:
             json.dump(corr_result, f, indent=2)
 
-        # Scatter: recurrence vs mean SD — two-panel (raw + corrected)
+        # Scatter: recurrence vs mean SD - two-panel (raw + corrected)
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
 
         # Left panel: raw correlation (existing visualization)
@@ -1054,7 +1054,7 @@ def analysis_5_arousal_diversity(
     with open(os.path.join(out_dir, "arousal_diversity_results.json"), "w") as f:
         json.dump(corr_results, f, indent=2)
 
-    # Scatter plot — color-coded by season
+    # Scatter plot - color-coded by season
     season_colors = {1: "#E63946", 2: "#F4A261", 3: "#2A9D8F",
                      4: "#264653", 5: "#7209B7", 6: "#E76F51"}
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -1161,14 +1161,14 @@ def main():
                 json.dump(qc_report, f, indent=2)
             logger.info("Physio QC report saved (%d runs)", qc_report["n_runs_total"])
 
-            # EDA MNAR diagnostic (must use raw physio — z-scored HR is ~0 per run)
+            # EDA MNAR diagnostic (must use raw physio - z-scored HR is ~0 per run)
             mnar = run_eda_mnar_diagnostic(physio_features_raw, pv_df)
             with open(os.path.join(out_dir, "eda_mnar_diagnostic.json"), "w") as f:
                 json.dump(mnar, f, indent=2)
         else:
-            logger.warning("Physprep dir not found: %s — QC skipped", physprep_dir)
+            logger.warning("Physprep dir not found: %s - QC skipped", physprep_dir)
     else:
-        logger.warning("DATA_DIR not set — physio QC skipped")
+        logger.warning("DATA_DIR not set - physio QC skipped")
 
     # ── Primary analyses ─────────────────────────────────────────────────
     analysis_1_state_profiles(
@@ -1249,7 +1249,7 @@ def main():
                 )
             else:
                 logger.warning(
-                    "Too few high-confidence runs (%d) — skipping sensitivity",
+                    "Too few high-confidence runs (%d) - skipping sensitivity",
                     n_hc_runs,
                 )
 

@@ -5,11 +5,11 @@
 Analyzes the directed transition graph between brain states discovered by the
 combined HDP-HMM. Four analysis areas:
 
-  A1. Transition Graph Topology — community detection, centrality, visualization
-  A2. Transition Selectivity & Asymmetry — directional flow, concentration
-  A3. Transition ↔ State Properties — recurrence assortativity, FC-transition
+  A1. Transition Graph Topology - community detection, centrality, visualization
+  A2. Transition Selectivity & Asymmetry - directional flow, concentration
+  A3. Transition ↔ State Properties - recurrence assortativity, FC-transition
       correlation, network homophily
-  A4. Transition Distance & Landscape — mean first passage time, MDS embedding
+  A4. Transition Distance & Landscape - mean first passage time, MDS embedding
 
 Design principles:
   - model.transmat_ for graph topology (A1) and MFPT (A4)
@@ -123,7 +123,7 @@ def build_transition_graph(transmat, active_states, recurrence_scores,
             if p >= edge_threshold:
                 G.add_edge(i, j, weight=float(p))
 
-    logger.info(f"A1: Graph built — {G.number_of_nodes()} nodes, "
+    logger.info(f"A1: Graph built - {G.number_of_nodes()} nodes, "
                 f"{G.number_of_edges()} edges (threshold={edge_threshold})")
     return G
 
@@ -228,7 +228,7 @@ def detect_communities_with_stability(G, decoded_states, transmat,
                     consensus[i_idx, j_idx] += 1
 
     consensus /= max(n_bootstrap, 1)
-    logger.info(f"A1: Community detection — {len(communities)} communities, "
+    logger.info(f"A1: Community detection - {len(communities)} communities, "
                 f"{n_bootstrap} bootstrap resamples")
 
     return primary_assignment, consensus, nodes
@@ -732,7 +732,7 @@ def compute_mfpt(transmat, active_states):
     # Extract sub-matrix
     idx = np.array(scc_states)
     P = transmat[np.ix_(idx, idx)].copy()
-    # Validate row sums — for a true SCC they should already be ~1.0
+    # Validate row sums - for a true SCC they should already be ~1.0
     row_sums = P.sum(axis=1)
     if not np.allclose(row_sums, 1.0, atol=1e-6):
         logger.warning(
@@ -1003,7 +1003,7 @@ def main():
         rv_matrix = np.load(fc_path)
         logger.info(f"Loaded FC similarity matrix from 05f (shape={rv_matrix.shape})")
     else:
-        logger.info("05f FC similarity not found — A3 FC-transition test will be skipped")
+        logger.info("05f FC similarity not found - A3 FC-transition test will be skipped")
 
     # State summary table (from 06a, for occupancy data)
     summary_path = _path('06a_state_temp_dynamics', 'state_summary_table.csv')
@@ -1099,7 +1099,7 @@ def main():
                                  dominant_networks, state_summary, out_dir)
 
         # MFPT ↔ FC correlation (Mantel test)
-        # NaN handling: see test_fc_transition_correlation docstring — same
+        # NaN handling: see test_fc_transition_correlation docstring - same
         # permutation NaN-mask bug, same fix (per-permutation mask intersection).
         mfpt_fc_result = {'rho': np.nan, 'p_value': np.nan}
         if rv_matrix is not None and len(scc_states) >= 5:
@@ -1122,11 +1122,11 @@ def main():
 
             rng = np.random.default_rng(42)
             if len(mfpt_vec_f) < 10:
-                logger.warning("A4: Too few valid MFPT-FC pairs — skipping correlation")
+                logger.warning("A4: Too few valid MFPT-FC pairs - skipping correlation")
             else:
                 rho_obs, _ = sp_stats.spearmanr(mfpt_vec_f, fc_vec_f)
                 if np.isnan(rho_obs):
-                    logger.warning("A4: MFPT-FC rho is NaN (constant input?) — skipping")
+                    logger.warning("A4: MFPT-FC rho is NaN (constant input?) - skipping")
                 else:
                     n_perm = 5000
                     rho_null = np.full(n_perm, np.nan)
@@ -1166,7 +1166,7 @@ def main():
         with open(os.path.join(out_dir, 'mfpt_fc_correlation.json'), 'w') as f:
             json.dump(mfpt_fc_result, f, indent=2)
     else:
-        logger.warning("A4: MFPT computation failed — skipping landscape plots")
+        logger.warning("A4: MFPT computation failed - skipping landscape plots")
 
     # ===================== Summary =====================
     summary = {

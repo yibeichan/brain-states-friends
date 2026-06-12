@@ -151,7 +151,7 @@ def compute_transition_entropy(transmat, active_states):
 
     Mean row entropy over active states, normalized by log(K_active).
 
-    Note: This computes entropy **conditional on the active subspace** — rows
+    Note: This computes entropy **conditional on the active subspace** - rows
     are subsetted to active states and re-normalized. This measures "how random
     are transitions among active states?" rather than full HMM entropy.
 
@@ -234,7 +234,7 @@ def compute_half_invariants(half_data, fo_threshold=0.01, min_state_usage=0.01,
     n_states = results_json["refit"]["n_states"]
     K_active_json = results_json["refit"]["n_active_states"]
 
-    # 1. K_active — from results JSON
+    # 1. K_active - from results JSON
     active_states = identify_active_states(decoded, n_states, min_state_usage)
     K_active = len(active_states)
     logger.info(f"  K_active: {K_active} (JSON: {K_active_json})")

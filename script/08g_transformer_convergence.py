@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-08g_transformer_convergence.py — cross-method convergence for the 08d/08e/08f
+08g_transformer_convergence.py - cross-method convergence for the 08d/08e/08f
 transformer correspondence sweep.
 
 Three analyses:
 
-* **D5 — transformer / annotation convergence** (Friends only).
+* **D5 - transformer / annotation convergence** (Friends only).
   Correlates 08b's per-state binary content AUC (from
   ``analysis_2_decoding_per_state.json``, the univariate decoder) with
   08d D2 per-state transformer peak AUC. Both quantities are
   ROC-AUCs in [0.5, 1] (commensurate units, no aggregation needed).
 
-  Friends-only because 08b only runs on Friends — content annotations
+  Friends-only because 08b only runs on Friends - content annotations
   are Friends-only (te-charnet narrative annotations).
 
 * **Cross-modality dissociation** (Friends + Movie10).
@@ -33,7 +33,7 @@ Outputs:
 
 All output JSONs include ``sub_id``, ``parcellation``, ``vt``,
 ``eligibility_source``, ``n_candidate_states``, and ``skip_counts``
-for traceability — the output path does not embed ``vt``.
+for traceability - the output path does not embed ``vt``.
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ logger = logging.getLogger("08g_convergence")
 # ---------------------------------------------------------------------------
 
 #: Multi-modal classification margin sensitivity sweep. The primary cutoff
-#: is the middle value (0.05) — counts at the other two are reported in the
+#: is the middle value (0.05) - counts at the other two are reported in the
 #: payload so reviewers can inspect classification stability under stricter /
 #: looser margins without re-running.
 MULTIMODAL_MARGINS = (0.03, 0.05, 0.10)
@@ -124,7 +124,7 @@ CROSS_MODAL_STIMULI = ("friends", "movie10")
 def _load_d2(sub_id, parc, stimulus, model_key):
     """Load 08d D2 ``D2_state_layer_auc.json`` for one (stimulus, model).
 
-    Returns ``None`` (not raises) on missing input — 08g runs three
+    Returns ``None`` (not raises) on missing input - 08g runs three
     independent analyses per call and a missing D2 should skip the affected
     analyses, not crash the script.
     """
@@ -154,7 +154,7 @@ def _load_08b_per_state(sub_id, parc):
     path = os.path.join(base, "analysis_2_decoding_per_state.json")
     if not os.path.exists(path):
         logger.warning(
-            "08b analysis_2_decoding_per_state.json missing at %s — has 08b "
+            "08b analysis_2_decoding_per_state.json missing at %s - has 08b "
             "been re-run after the per-state decoder was added?", path,
         )
         return None
@@ -215,8 +215,8 @@ def _eligible_depths(d2_payload):
     """Per-state representational depth for ALL content-eligible states.
 
     Unlike :func:`_selective_states`, this applies **no** selectivity gate
-    (``max_minus_median ≥ 0.05``). The recurrence×depth question — do
-    higher-recurrence states peak at deeper layers? — is defined on every
+    (``max_minus_median ≥ 0.05``). The recurrence×depth question - do
+    higher-recurrence states peak at deeper layers? - is defined on every
     state's depth, not only those whose layer-AUC profile clears a selectivity
     threshold. With these flat profiles (peak ~0.002 AUC above the runner-up;
     see 2026-06-05 design doc) almost no state is "selective", so gating here
@@ -228,7 +228,7 @@ def _eligible_depths(d2_payload):
     only as a secondary descriptive field.
 
     The FO floor (``INTERSECTION_MIN_FO``) is kept as a *data-quality* filter
-    (a state seen in <1% of TRs has too few TRs for a stable layer profile) —
+    (a state seen in <1% of TRs has too few TRs for a stable layer profile) -
     this is distinct from the FO that recurrence×depth partials out as a
     robustness probe.
 
@@ -323,7 +323,7 @@ def _format_float(value, digits=3):
 
 
 # ---------------------------------------------------------------------------
-# D5 — transformer / annotation convergence (Friends only)
+# D5 - transformer / annotation convergence (Friends only)
 # ---------------------------------------------------------------------------
 
 
@@ -334,10 +334,10 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
     (te-charnet narrative annotations) only exist for Friends.
     """
     logger.info("=" * 40)
-    logger.info("D5 — transformer / annotation convergence (model=%s)", model_key)
+    logger.info("D5 - transformer / annotation convergence (model=%s)", model_key)
     logger.info("=" * 40)
 
-    # Modality guard — defensive even though Friends supports all 3 models.
+    # Modality guard - defensive even though Friends supports all 3 models.
     validate_stimulus_model("friends", model_key)
 
     out_path = os.path.join(out_dir, f"D5_convergence_{model_key}.json")
@@ -354,7 +354,7 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
 
     d2 = _load_d2(sub_id, parc, "friends", model_key)
     if d2 is None:
-        logger.warning("D5: Friends D2 missing — writing skip stub")
+        logger.warning("D5: Friends D2 missing - writing skip stub")
         payload = {**base_payload, "insufficient_states": True,
                    "skip_reason": "missing_d2"}
         with open(out_path, "w") as f:
@@ -363,7 +363,7 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
 
     per_state_08b = _load_08b_per_state(sub_id, parc)
     if not per_state_08b:
-        logger.warning("D5: 08b per-state decoding missing — writing skip stub")
+        logger.warning("D5: 08b per-state decoding missing - writing skip stub")
         payload = {**base_payload, "insufficient_states": True,
                    "skip_reason": "missing_08b_per_state"}
         with open(out_path, "w") as f:
@@ -406,7 +406,7 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
 
     if len(shared_ids) < MIN_CONVERGENCE_STATES:
         logger.warning(
-            "D5: only %d shared states (< %d) — writing insufficient stub",
+            "D5: only %d shared states (< %d) - writing insufficient stub",
             len(shared_ids), MIN_CONVERGENCE_STATES,
         )
         payload["insufficient_states"] = True
@@ -417,7 +417,7 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
     x_arr = np.array(x, dtype=float)
     y_arr = np.array(y, dtype=float)
 
-    # Observed Spearman ρ + Kendall τ. Per-state p-values not reported —
+    # Observed Spearman ρ + Kendall τ. Per-state p-values not reported -
     # the inferential statistic is the permutation null below; bootstrap
     # CIs supply uncertainty for the observed correlations.
     rho, _ = stats.spearmanr(x_arr, y_arr)
@@ -475,7 +475,7 @@ def _run_d5(sub_id, parc, model_key, eligibility, n_perm, out_dir, vt):
     ax.set_xlabel("08b per-state speech AUC (analysis_2_per_state)")
     ax.set_ylabel("08d D2 peak transformer AUC")
     ax.set_title(
-        f"D5 — Friends ({model_key}), ρ={_format_float(rho)}, "
+        f"D5 - Friends ({model_key}), ρ={_format_float(rho)}, "
         f"τ={_format_float(tau)}, p_perm={_format_float(p_perm)}"
     )
     fig.savefig(os.path.join(out_dir, f"D5_convergence_{model_key}.png"),
@@ -508,12 +508,12 @@ def _classify_state(aucs, margin):
 def _run_cross_modality(sub_id, parc, stimulus, eligibility, out_dir, vt):
     """Three-way (audio/video/text) modality classification per state."""
     logger.info("=" * 40)
-    logger.info("Cross-modality dissociation — stim=%s", stimulus)
+    logger.info("Cross-modality dissociation - stim=%s", stimulus)
     logger.info("=" * 40)
 
     if stimulus not in CROSS_MODAL_STIMULI:
         logger.warning(
-            "Cross-modality only supported on %s — skipping %s",
+            "Cross-modality only supported on %s - skipping %s",
             CROSS_MODAL_STIMULI, stimulus,
         )
         return None
@@ -541,7 +541,7 @@ def _run_cross_modality(sub_id, parc, stimulus, eligibility, out_dir, vt):
         d2 = _load_d2(sub_id, parc, stimulus, model_key)
         if d2 is None:
             logger.warning(
-                "Missing %s / %s — cannot run cross-modality",
+                "Missing %s / %s - cannot run cross-modality",
                 stimulus, model_key,
             )
             payload = {**base_payload, "insufficient_states": True,
@@ -579,7 +579,7 @@ def _run_cross_modality(sub_id, parc, stimulus, eligibility, out_dir, vt):
 
     if len(intersection) < MIN_CONVERGENCE_STATES:
         logger.warning(
-            "Cross-modality: only %d states in 3-way intersection (< %d) — "
+            "Cross-modality: only %d states in 3-way intersection (< %d) - "
             "writing insufficient stub", len(intersection), MIN_CONVERGENCE_STATES,
         )
         payload["insufficient_states"] = True
@@ -666,7 +666,7 @@ def _run_cross_modality(sub_id, parc, stimulus, eligibility, out_dir, vt):
     ax.bar(labels, values, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#808080"])
     ax.set_ylabel("Number of states")
     ax.set_title(
-        f"Cross-modality — {stimulus} (margin={PRIMARY_MULTIMODAL_MARGIN})"
+        f"Cross-modality - {stimulus} (margin={PRIMARY_MULTIMODAL_MARGIN})"
     )
     for i, v in enumerate(values):
         ax.text(i, v, str(v), ha="center", va="bottom", fontsize=9)
@@ -691,7 +691,7 @@ def _run_cross_modality(sub_id, parc, stimulus, eligibility, out_dir, vt):
 def _per_stim_recurrence_depth(depths, recurrence_scores, eligible_set, drop_log):
     """Build (sid, rec, centroid, peak_auc, fo) rows for one stimulus.
 
-    ``depths`` comes from :func:`_eligible_depths` — ALL content-eligible
+    ``depths`` comes from :func:`_eligible_depths` - ALL content-eligible
     states (no selectivity gate). Depth is the AUC-weighted centroid layer,
     stable under flat profiles. States whose ID exceeds the recurrence vector
     are counted in ``drop_log["sid_out_of_range"]`` (logged loudly).
@@ -705,7 +705,7 @@ def _per_stim_recurrence_depth(depths, recurrence_scores, eligible_set, drop_log
             drop_log["sid_out_of_range"] += 1
             logger.warning(
                 "Recurrence × depth: state %d outside recurrence vector "
-                "(len=%d) — dropped. Likely a 04 ↔ 05a state-count mismatch.",
+                "(len=%d) - dropped. Likely a 04 ↔ 05a state-count mismatch.",
                 sid, len(recurrence_scores),
             )
             continue
@@ -723,13 +723,13 @@ def _stim_correlation_block(pairs, n_perm, base_seed):
     """Recurrence × centroid-depth statistics for one stimulus.
 
     PRIMARY: raw Spearman(recurrence, centroid_depth) with a two-sided
-    permutation null (shuffle recurrence) — ``p_perm``. The analytic Pearson-p
+    permutation null (shuffle recurrence) - ``p_perm``. The analytic Pearson-p
     of a partial correlation has the wrong df and assumes residual normality
     (stats review 2026-06-05), so inference rests on the permutation null, not
     the bootstrap CI alone.
 
     ROBUSTNESS PROBE: partial Spearman controlling fractional occupancy (FO),
-    with the same permutation null — ``p_perm_partial_fo``. FO is a robustness
+    with the same permutation null - ``p_perm_partial_fo``. FO is a robustness
     probe, NOT the primary statistic: recurrence and FO are entangled, so
     partialling can suppress true signal (neuro review + USER decision
     2026-06-05, overriding the 2026-06-04 run-plan's binding FO constraint).
@@ -783,7 +783,7 @@ def _stim_correlation_block(pairs, n_perm, base_seed):
 
     return {
         "n_states": len(pairs),
-        # cross-state spread of the centroid depth — a near-zero SD means the
+        # cross-state spread of the centroid depth - a near-zero SD means the
         # depth estimator is compressed toward mid-stack (flat profiles), so a
         # null correlation may be an estimator artifact rather than biology.
         # Interpret alongside the D1 aggregate gradient (neuro review).
@@ -817,7 +817,7 @@ def _run_recurrence_depth(
     selectivity gate; argmax peak_layer is noise at these flat profiles).
     Primary statistic: raw Spearman(recurrence, centroid_depth) with a two-sided
     permutation null. FO-partialled Spearman is a robustness probe. The D1
-    aggregate depth-gradient ρ is attached per stimulus — a per-state
+    aggregate depth-gradient ρ is attached per stimulus - a per-state
     recurrence×depth result is only interpretable where an aggregate depth
     gradient exists (audio has none). See 2026-06-05 design doc.
     """
@@ -853,7 +853,7 @@ def _run_recurrence_depth(
         validate_stimulus_model(stimulus, model_key)
         d2 = _load_d2(sub_id, parc, stimulus, model_key)
         if d2 is None:
-            logger.info("  %s D2 missing — skipping", stimulus)
+            logger.info("  %s D2 missing - skipping", stimulus)
             per_stim_results[stimulus] = {"d2_missing": True}
             continue
         depths = _eligible_depths(d2)
@@ -937,7 +937,7 @@ def _run_recurrence_depth(
             "per_stimulus.<stim>.p_perm_partial_fo (FO-partialled, probe only)"
         ),
     }
-    # Convenience flag for downstream aggregators — keyed on the emitted
+    # Convenience flag for downstream aggregators - keyed on the emitted
     # inferential statistic (spearman_rho present ⇒ block was computed).
     has_any_stim = any(
         isinstance(r, dict) and r.get("spearman_rho") is not None
@@ -949,7 +949,7 @@ def _run_recurrence_depth(
     with open(out_path, "w") as f:
         json.dump(payload, f, indent=2)
 
-    # Plot — recurrence vs centroid depth, one color per stimulus.
+    # Plot - recurrence vs centroid depth, one color per stimulus.
     fig, ax = plt.subplots(figsize=(5, 5))
     has_any_points = False
     for stim, color in (("friends", "#1f77b4"), ("movie10", "#ff7f0e")):
@@ -1081,13 +1081,13 @@ def main():
         len(eligibility["content_eligible"]),
     )
 
-    # Recurrence is subject-level — load once and pass through to recurrence-depth.
+    # Recurrence is subject-level - load once and pass through to recurrence-depth.
     recurrence_scores = load_recurrence_scores(sub_id, parc, SCRATCH_DIR, vt=args.vt)
 
     rd_payloads = {}
     for model_key in args.models:
         if model_key not in MODEL_REGISTRY:
-            logger.warning("Unknown model %s — skipping", model_key)
+            logger.warning("Unknown model %s - skipping", model_key)
             continue
         _run_d5(
             sub_id, parc, model_key, eligibility,

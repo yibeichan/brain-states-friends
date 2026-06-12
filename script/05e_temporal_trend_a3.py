@@ -17,7 +17,7 @@ Model (per state k):
     - No random slope (unidentifiable with n=3-6 runs per session)
 
 Inference:
-    Hybrid approach — LME slope β₁ as test statistic, permutation test for
+    Hybrid approach - LME slope β₁ as test statistic, permutation test for
     p-values (shuffling run indices within sessions). FO is zero-inflated for
     many states, violating Gaussian assumptions for Wald tests; permutation
     gives exact Type I error control.
@@ -29,7 +29,7 @@ Inference:
 Known limitation:
     Shuffling run indices within sessions breaks temporal autocorrelation
     structure (lag-1 r ≈ 0.09-0.22 across subjects). This is standard
-    practice — the null hypothesis is "no monotonic trend in run position."
+    practice - the null hypothesis is "no monotonic trend in run position."
 
 Prerequisites:
     - 04_combined_hdphmm.py (mode: select) completed for this subject
@@ -43,8 +43,8 @@ Outputs (saved to {SCRATCH_DIR}/output/05e_temporal_trend_a3/{parc}/{sub_id}/[vt
     - habituation_summary.png/pdf      multi-panel overview
 
 See also:
-    05e_temporal_trend_a1.py — cross-episode temporal trends (Scales 1, 2, 3)
-    05e_temporal_trend_a2.py — within-run temporal position
+    05e_temporal_trend_a1.py - cross-episode temporal trends (Scales 1, 2, 3)
+    05e_temporal_trend_a2.py - within-run temporal position
 
 Design doc: the design notes
 """
@@ -683,8 +683,8 @@ def plot_per_state(results, recurrence_scores, sub_id, out_dir, n_states):
         ax.grid(True, alpha=0.2)
         ax.legend(fontsize=6, loc='upper right')
         ax.set_title(
-            f'State {k} — Within-Session Habituation (LME)\n'
-            f'{slope_str}  {icc_str}  rec={recurrence_scores[k]:.2f} — {sub_id}',
+            f'State {k} - Within-Session Habituation (LME)\n'
+            f'{slope_str}  {icc_str}  rec={recurrence_scores[k]:.2f} - {sub_id}',
             fontsize=9,
         )
         fig.tight_layout()
@@ -826,7 +826,7 @@ def plot_summary(results, recurrence_scores, q_values, is_eligible,
         ax.set_title('(d) Slope vs recurrence (fallback)', fontsize=9)
     ax.tick_params(labelsize=7)
 
-    fig.suptitle(f'Within-Session Habituation (LME) — {sub_id}', fontsize=11)
+    fig.suptitle(f'Within-Session Habituation (LME) - {sub_id}', fontsize=11)
     fig.tight_layout()
 
     for ext in ('png', 'pdf'):
@@ -1125,7 +1125,7 @@ def main():
                 include_sign=True)
             logger.info("Loaded dominant networks for %d states", len(dominant_networks))
     except Exception as e:
-        logger.warning("Could not load network data: %s — panel (d) will use fallback", e)
+        logger.warning("Could not load network data: %s - panel (d) will use fallback", e)
 
     fo_matrix = results.get('fo_matrix')
     mean_fo = np.mean(fo_matrix, axis=0) if fo_matrix is not None else None

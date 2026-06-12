@@ -15,7 +15,7 @@
 # scanner runs, using the a/b suffix design to disentangle a-specific from
 # shared run-onset effects.  Reports structural observations only.
 #
-# See also: 05e_temporal_trend_a1.sh — cross-episode temporal trends
+# See also: 05e_temporal_trend_a1.sh - cross-episode temporal trends
 #
 # Prerequisites:
 #   - Step 04 completed in 'select' mode (decoded_states.pkl)

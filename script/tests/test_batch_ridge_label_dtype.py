@@ -4,7 +4,7 @@
 The 08d D1 + D1confound pipeline allocates several (n_perm, n_eligible)
 label arrays inside ``batch_loro_ridge_classify`` (transformer_analysis.py).
 Casting state labels from int64 to int8 (HMM states fit comfortably in
-[0, 49]) saves ~8× memory on those arrays, but only if the cast is safe —
+[0, 49]) saves ~8× memory on those arrays, but only if the cast is safe -
 i.e. the function produces bit-identical observed metrics and
 null_balanced_accuracies regardless of integer dtype.
 
@@ -109,7 +109,7 @@ def test_overflow_guard():
     """If state IDs exceed int8 max, the function must fail loud, not silently
     truncate. Currently we accept ANY integer dtype the caller provides; the
     guard fires when ``classes.max()`` would exceed the input dtype's iinfo
-    max — but with int64 input there's no such constraint to trip. We check
+    max - but with int64 input there's no such constraint to trip. We check
     instead that an artificially overflowed int8 input (created by silent
     casting from a too-large int) is REJECTED before producing nonsense.
     """
@@ -131,7 +131,7 @@ def test_overflow_guard():
             X[eligible_mask], silently_truncated[eligible_mask], null_y, folds,
         )
     except (AssertionError, ValueError) as e:
-        print(f"  PASS test_overflow_guard — rejected with: {type(e).__name__}: {e}")
+        print(f"  PASS test_overflow_guard - rejected with: {type(e).__name__}: {e}")
         return
     raise AssertionError(
         "expected batch_loro_ridge_classify to reject silently-truncated "

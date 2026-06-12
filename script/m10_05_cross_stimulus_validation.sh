@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Movie10 Cross-Stimulus Validation — SLURM Submission Script
+# Movie10 Cross-Stimulus Validation - SLURM Submission Script
 # =============================================================================
 # Runs A1–A5 analyses comparing movie state usage against Friends recurrence scores.
 #

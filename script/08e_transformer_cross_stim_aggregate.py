@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-08e_transformer_cross_stim_aggregate.py — aggregate Friends → test-stimulus
+08e_transformer_cross_stim_aggregate.py - aggregate Friends → test-stimulus
 transformer transfer (D3a).
 
 For each (subject, test_stimulus, model) triple, this script:
 
 1. Validates modality compatibility between the stimulus and the model
-   (e.g. rejects ``harrypotter + w2v-bert-2.0`` — no audio stream).
+   (e.g. rejects ``harrypotter + w2v-bert-2.0`` - no audio stream).
 2. Loads Friends raw features and decoded states, fits a per-layer PCA on the
    03a **training split only**.
 3. Loads test-stimulus raw features (Friends-HMM-decoded) and projects them
@@ -181,7 +181,7 @@ def _fit_eval_one_layer(
     X_train = friends_X[friends_mask]
     y_train = friends_y[friends_mask]
     # Keep test_X full so subset re-masking is straightforward. Pooled metrics
-    # use the same test_mask-restricted slice as before — behavior unchanged
+    # use the same test_mask-restricted slice as before - behavior unchanged
     # when subsets=None.
     X_test_pooled = test_X[test_mask]
     y_test_pooled = test_y[test_mask]
@@ -194,7 +194,7 @@ def _fit_eval_one_layer(
     ):
         logger.warning(
             "Layer %d: degenerate train/test split "
-            "(n_train=%d, n_test=%d, unique_train=%d, unique_test=%d) — skipping",
+            "(n_train=%d, n_test=%d, unique_train=%d, unique_test=%d) - skipping",
             layer_idx, len(X_train), len(X_test_pooled),
             len(np.unique(y_train)) if len(y_train) else 0,
             len(np.unique(y_test_pooled)) if len(y_test_pooled) else 0,
@@ -229,7 +229,7 @@ def _fit_eval_one_layer(
     # autocorrelation), evaluate on REAL test labels. Each row of
     # `null_friends_seqs` is already restricted to the intersection
     # subspace (shape matches X_train), so no secondary masking is needed
-    # — this is the label-space-leakage fix from 2026-04-10.
+    # - this is the label-space-leakage fix from 2026-04-10.
     #
     # When `subsets` is given, each shuffled classifier is also evaluated on
     # each subset slice to build per-subset null distributions. We do NOT
@@ -263,7 +263,7 @@ def _fit_eval_one_layer(
         skip_frac = n_skipped / len(null_friends_seqs)
         if skip_frac > 0.05:
             logger.warning(
-                "Layer %d: %d/%d null permutations skipped (%.1f%%) — "
+                "Layer %d: %d/%d null permutations skipped (%.1f%%) - "
                 "null distribution may be biased",
                 layer_idx, n_skipped, len(null_friends_seqs), 100 * skip_frac,
             )
@@ -406,12 +406,12 @@ def subset_partition_for(stimulus, run_ids):
         matches = [lbl for lbl, pat in pairs if pat.match(r_str)]
         if len(matches) > 1:
             raise ValueError(
-                f"Run id {r_str!r} matches multiple subsets {matches} — "
+                f"Run id {r_str!r} matches multiple subsets {matches} - "
                 f"PER_SUBSET_DEFS[{stimulus!r}] patterns are not mutually exclusive."
             )
         if not matches:
             raise ValueError(
-                f"Run id {r_str!r} matches no subset — orphan. Update "
+                f"Run id {r_str!r} matches no subset - orphan. Update "
                 f"PER_SUBSET_DEFS[{stimulus!r}] to cover this run name."
             )
         assigned[matches[0]].append(r_str)
@@ -425,13 +425,13 @@ def main():
     stimulus = args.stimulus
     model_key = args.model
 
-    # Modality guard — MUST be called for both friends and test stimulus (they
+    # Modality guard - MUST be called for both friends and test stimulus (they
     # share the same modality check since both feed the same model).
     validate_stimulus_model("friends", model_key)
     validate_stimulus_model(stimulus, model_key)
 
     logger.info("=" * 60)
-    logger.info("08e — Cross-stimulus aggregate (D3a)")
+    logger.info("08e - Cross-stimulus aggregate (D3a)")
     logger.info("Sub=%s test_stimulus=%s model=%s", sub_id, stimulus, model_key)
     logger.info("=" * 60)
 
@@ -510,7 +510,7 @@ def main():
         "Streaming %s features + projecting through Friends PCA", stimulus,
     )
     # movie10 has two viewings of figures/life per subject but a single
-    # 08c feature file per clip — pass the feature_key stripper so both
+    # 08c feature file per clip - pass the feature_key stripper so both
     # decoded_states entries share the same feature file lookup.
     test_feature_key_fn = (
         (lambda r: feature_key_for_cross_stim_run_id(r, stimulus))
@@ -520,7 +520,7 @@ def main():
     # scan continues after the audio ends). 08c's n_trs is derived from audio
     # duration + pre-stimulus silence and does NOT include the post-stimulus
     # tail, so BOLD-derived states are 6-7 TRs longer than features per run
-    # (uniform across all 5 subjects, both LLaMA and W2V-BERT — verified
+    # (uniform across all 5 subjects, both LLaMA and W2V-BERT - verified
     # 2026-05-25). The 3-TR default drift cap is too strict for this
     # structural offset; raise to 8 TRs for petitprince_* (covers observed
     # 7-TR max + 1-TR safety margin). The trailing TRs are post-stimulus
@@ -557,7 +557,7 @@ def main():
             test_decoded[rid] = np.asarray(test_decoded[rid])[:eff]
 
     if not friends_decoded or not test_decoded:
-        logger.error("No runs survived drift alignment — exiting")
+        logger.error("No runs survived drift alignment - exiting")
         sys.exit(1)
 
     friends_run_ids = sorted(friends_decoded.keys())
@@ -593,7 +593,7 @@ def main():
         INTERSECTION_MIN_FO * 100,
     )
     if len(intersect_ids) < 2:
-        logger.error("Intersection contains < 2 states — cannot decode. Exiting.")
+        logger.error("Intersection contains < 2 states - cannot decode. Exiting.")
         sys.exit(1)
 
     intersect_set = set(intersect_ids)
@@ -645,7 +645,7 @@ def main():
 
     # ── Null sequences for Friends TRAINING labels ────────────────────
     # The principled null for a cross-stimulus transfer claim permutes the
-    # Friends training labels (not the test-stimulus labels) — we want to
+    # Friends training labels (not the test-stimulus labels) - we want to
     # know whether the learned Friends feature→state mapping carries
     # test-stimulus-relevant structure beyond chance. Circular-shift within
     # Friends runs preserves within-run autocorrelation. The classifier is
@@ -656,7 +656,7 @@ def main():
     # only come from the 29 intersection classes. The prior pattern
     # (shift the full 47-class Friends sequence, then mask by original
     # intersection positions) leaked non-intersection classes into the
-    # null training set and depressed null_mean below true chance — see
+    # null training set and depressed null_mean below true chance - see
     # 2026-04-10 null-leakage plan.
     #
     # Base seed matches the 08d sequence: D1 main=10_000, D1 confound=40_000,

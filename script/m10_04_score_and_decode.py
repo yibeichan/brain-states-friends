@@ -197,7 +197,7 @@ def main():
 
     total_runs_decoded = len(decoded_states)
     if total_runs_decoded == 0:
-        logger.error("No movie runs were decoded — check m10_03 outputs")
+        logger.error("No movie runs were decoded - check m10_03 outputs")
         sys.exit(1)
     logger.info(f"Decoded {total_runs_decoded} movie runs")
 

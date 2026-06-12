@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 """
-08d_plots.py — cross-subject / cross-model aggregate panels for 08d results.
+08d_plots.py - cross-subject / cross-model aggregate panels for 08d results.
 
 Loads per-lag D1 checkpoints produced by ``08d_transformer_depth.py`` and
 emits three manuscript-oriented panel families:
 
-* **P1** — per-subject depth curves (6-subject 2×3 small multiples), one file
+* **P1** - per-subject depth curves (6-subject 2×3 small multiples), one file
   per model. Solid = D1 main at best lag (excluding lag 0); dashed = D1
   neg-control at the same lag; gray band = 95% permutation null CI.
-* **P3** — peak-layer summary scatter: peak-layer fraction of network depth
+* **P3** - peak-layer summary scatter: peak-layer fraction of network depth
   per (subject, model).
-* **P5** — main vs neg-control accuracy/chance ratio scatter, with a caveat
+* **P5** - main vs neg-control accuracy/chance ratio scatter, with a caveat
   annotation about the heterogeneous ``run_onset_anchored`` label set
   (see ``the design notes``).
 
@@ -74,7 +74,7 @@ MODEL_LABELS = {
     "llama-3.2-3b":  "LLaMA 3.2 3B (text)",
 }
 
-#: tab10[0:3] — consistent with matplotlib defaults; readable on white
+#: tab10[0:3] - consistent with matplotlib defaults; readable on white
 MODEL_COLORS = {
     "dinov2-large":  "#1f77b4",
     "w2v-bert-2.0":  "#ff7f0e",
@@ -87,7 +87,7 @@ PEAK_LAG_EXCLUDE = {0}  # synchronous / autocorrelation diagnostic, not HRF peak
 NEG_CONTROL_CAVEAT = (
     "Neg-control = run_onset_anchored states (heterogeneous: ab-common + a-anchored + b-anchored).\n"
     "a-anchored subcategory is contaminated by Friends theme-song stereotypy.\n"
-    "Partial-effect variant (D1_neg_v2) pending — see 2026-04-20_neg_control_redesign.md."
+    "Partial-effect variant (D1_neg_v2) pending - see 2026-04-20_neg_control_redesign.md."
 )
 
 
@@ -159,7 +159,7 @@ def find_peak(matrices: dict, exclude_lag0: bool = True) -> dict | None:
 def save_fig(fig, out_path: Path) -> None:
     """Save figure as both PDF and PNG. ``out_path`` is the stem (no suffix)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Use string concatenation rather than Path.with_suffix — model names
+    # Use string concatenation rather than Path.with_suffix - model names
     # like "w2v-bert-2.0" or "llama-3.2-3b" contain dots that with_suffix
     # would strip as a fake extension.
     pdf_path = out_path.parent / f"{out_path.name}.pdf"
@@ -171,7 +171,7 @@ def save_fig(fig, out_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# P1 — per-subject depth curves, one file per model
+# P1 - per-subject depth curves, one file per model
 # ---------------------------------------------------------------------------
 
 
@@ -185,7 +185,7 @@ def plot_p1(
         2, 3, figsize=(11, 6.5), sharex=True, sharey=True,
     )
     fig.suptitle(
-        f"D1 depth profile — {MODEL_LABELS[model]} (content_eligible)",
+        f"D1 depth profile - {MODEL_LABELS[model]} (content_eligible)",
         y=1.00, fontsize=12,
     )
     layers_x = np.arange(n_layers)
@@ -193,13 +193,13 @@ def plot_p1(
     for ax, sub in zip(axes.flat, ALL_SUBJECTS):
         res = results_by_sub.get(sub)
         if res is None:
-            ax.set_title(f"{sub} — no data", fontsize=9)
+            ax.set_title(f"{sub} - no data", fontsize=9)
             ax.set_xticks([0, n_layers // 2, n_layers - 1])
             continue
 
         main_peak = find_peak(res["main"])
         if main_peak is None:
-            ax.set_title(f"{sub} — no usable cells", fontsize=9)
+            ax.set_title(f"{sub} - no usable cells", fontsize=9)
             continue
 
         lag_star = main_peak["lag"]
@@ -286,7 +286,7 @@ def plot_p1(
 
 
 # ---------------------------------------------------------------------------
-# P3 — peak-layer summary scatter (peak layer as fraction of network depth)
+# P3 - peak-layer summary scatter (peak layer as fraction of network depth)
 # ---------------------------------------------------------------------------
 
 
@@ -372,7 +372,7 @@ def plot_p3(results_all: dict, out_dir: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# P5 — main vs neg-control ratio scatter (with caveat)
+# P5 - main vs neg-control ratio scatter (with caveat)
 # ---------------------------------------------------------------------------
 
 
@@ -422,7 +422,7 @@ def plot_p5(results_all: dict, out_dir: Path) -> None:
     )
     ax.grid(True, alpha=0.25, linewidth=0.5)
 
-    # Legend: models — place outside the axes on the right so it doesn't
+    # Legend: models - place outside the axes on the right so it doesn't
     # occlude data points in the upper-left region.
     model_handles = [
         mpatches.Patch(color=MODEL_COLORS[m], label=MODEL_LABELS[m])
@@ -434,7 +434,7 @@ def plot_p5(results_all: dict, out_dir: Path) -> None:
         fontsize=8, frameon=False,
     )
 
-    # Caveat box — below the plot area (outside axes) to keep data visible.
+    # Caveat box - below the plot area (outside axes) to keep data visible.
     fig.text(
         0.5, -0.04, NEG_CONTROL_CAVEAT,
         ha="center", va="top",
@@ -489,7 +489,7 @@ def main() -> None:
         for sub in args.subjects:
             res = load_sub_model(sub, model, args.parcellation)
             if res is None:
-                logger.warning("%s × %s: no data — skipped", sub, model)
+                logger.warning("%s × %s: no data - skipped", sub, model)
                 continue
             main_done = res["main"]["n_total"]
             neg_done = res["neg"]["n_total"]
@@ -501,7 +501,7 @@ def main() -> None:
             results_all[(sub, model)] = res
 
     if not results_all:
-        logger.error("no data loaded for any subject×model — exiting")
+        logger.error("no data loaded for any subject×model - exiting")
         sys.exit(1)
 
     if "P1" in args.panels:
@@ -521,7 +521,7 @@ def main() -> None:
     if "P5" in args.panels:
         plot_p5(results_all, out_dir)
 
-    logger.info("done — wrote %s", out_dir)
+    logger.info("done - wrote %s", out_dir)
 
 
 if __name__ == "__main__":

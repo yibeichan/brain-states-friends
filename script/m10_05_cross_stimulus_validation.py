@@ -132,10 +132,10 @@ def compute_eligible_recurrence_correlations(
     dict with keys:
         - ``eligibility_source`` (str)
         - ``n_content_eligible`` (int)
-        - ``n_eligible_active`` (int) — eligible ∩ (recurrence > 0)
+        - ``n_eligible_active`` (int) - eligible ∩ (recurrence > 0)
         - ``eligible_state_ids`` (list[int])
-        - ``A1_overall`` — eligible-subset Spearman for mean FO across all runs
-        - ``A2_per_type`` — dict[type -> eligible-subset Spearman] (+ FDR across types)
+        - ``A1_overall`` - eligible-subset Spearman for mean FO across all runs
+        - ``A2_per_type`` - dict[type -> eligible-subset Spearman] (+ FDR across types)
     """
     eligible_ids = set(int(s) for s in eligibility.get('content_eligible', []))
     active_mask = recurrence_scores > 0
@@ -598,7 +598,7 @@ Examples:
     parser.add_argument('--exclude_sub_hrf', action=argparse.BooleanOptionalAction,
                         default=False,
                         help="Exclude sub-HRF states from cross-stimulus analyses "
-                             "(default: False — include all states, since FO-based "
+                             "(default: False - include all states, since FO-based "
                              "validation does not require per-block BOLD evidence). "
                              "Use --exclude_sub_hrf for sensitivity analysis.")
     return parser.parse_args()
@@ -634,7 +634,7 @@ def main():
         proj_dir = os.path.join(proj_dir, f'vt{args.vt}')
     movie_run_ids_path = os.path.join(proj_dir, 'movie_run_ids.json')
 
-    # run_id_map.json from m10_04 — maps long BIDS keys to short keys
+    # run_id_map.json from m10_04 - maps long BIDS keys to short keys
     run_id_map_path = os.path.join(movie_dir, 'run_id_map.json')
 
     # PCA diagnostic
@@ -652,7 +652,7 @@ def main():
     }
     for path, label in required_files.items():
         if not os.path.exists(path):
-            logger.error(f"Missing: {path} — {label}")
+            logger.error(f"Missing: {path} - {label}")
             sys.exit(1)
 
     # =========================================================================
@@ -687,7 +687,7 @@ def main():
         for lid in long_ids:
             short = long_to_short.get(lid)
             if short is None:
-                logger.warning("run_id_map has no short key for %s — skipping", lid)
+                logger.warning("run_id_map has no short key for %s - skipping", lid)
                 continue
             short_ids.append(short)
         movie_run_ids[mtype] = short_ids
@@ -695,7 +695,7 @@ def main():
     with open(pca_diag_path, 'r') as f:
         pca_diagnostic = json.load(f)
 
-    # Sub-HRF filtering (default OFF for this script — FO-based validation
+    # Sub-HRF filtering (default OFF for this script - FO-based validation
     # does not require per-block BOLD evidence)
     excluded_sub_hrf = []
     if args.exclude_sub_hrf:

@@ -9,7 +9,7 @@ Recurrence is a continuous gradient: each state's score is the fraction of runs
 in which it is active (FO > threshold).  Season-specificity significance is
 tested separately via a permutation test with FDR correction.
 
-Recurrence and specificity are computed at the run level — each scan run
+Recurrence and specificity are computed at the run level - each scan run
 (e.g. s01e01a, s01e01b) is treated as an independent unit.  No multipart
 episode aggregation is performed.  Dwell time and revisitation metrics are
 model-derived temporal diagnostics, not direct neural timescale estimates.
@@ -90,7 +90,7 @@ logger = logging.getLogger(__name__)
 # States with median block dwell below this threshold are flagged as sub-HRF
 # resolution.  At TR = 1.49 s this equals ~4.5 s, just below the canonical HRF
 # peak (~5-6 s).  The flag indicates that BOLD evidence for these state
-# assignments is limited — it does not imply the underlying neural event was
+# assignments is limited - it does not imply the underlying neural event was
 # shorter than the HRF.
 SUB_HRF_DWELL_THRESHOLD_TR = 3.0
 
@@ -206,7 +206,7 @@ def build_state_recurrence_dwell_metrics(
     the mean, because dwell distributions are right-skewed (geometric by
     construction for Markov models) and the mean is inflated by a few long
     blocks.  The flag indicates that BOLD evidence for a state's assignments is
-    limited — it does not imply the underlying neural event was shorter than the
+    limited - it does not imply the underlying neural event was shorter than the
     HRF.
     """
     block_records = extract_state_block_records(
@@ -838,7 +838,7 @@ def permutation_test_specificity(fo, n_states, available_seasons, fo_threshold, 
         seed: Random seed
 
     Returns:
-        p_values: np.array(n_states,) — fraction of permutations where surrogate
+        p_values: np.array(n_states,) - fraction of permutations where surrogate
                   specificity >= observed specificity.
     """
     # Observed
@@ -935,7 +935,7 @@ def main():
     n_states = final_results['model_info']['n_states']
     logger.info(f"Loaded HMM with {n_states} states across {len(decoded_states)} runs")
 
-    # 1. FO & Recurrence (run-level — no episode aggregation)
+    # 1. FO & Recurrence (run-level - no episode aggregation)
     fo = compute_fractional_occupancy(decoded_states, n_states)
     n_runs = len(fo)
     logger.info(f"Computed run-level FO for {n_runs} runs (no episode aggregation)")
@@ -1310,7 +1310,7 @@ def main():
         },
     }
 
-    # Optional Threshold Sweep — shows n_active at different FO thresholds
+    # Optional Threshold Sweep - shows n_active at different FO thresholds
     if args.threshold_sweep:
         logger.info("\nRunning threshold sweep (FO sensitivity)...")
         fo_thresholds = [0.005, 0.01, 0.02, 0.05]

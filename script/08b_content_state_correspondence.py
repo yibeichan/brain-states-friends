@@ -6,7 +6,7 @@ Post-hoc analysis testing whether brain states carry information about
 narrative content. Content was not used to define states, so any association
 is independent validation.
 
-Seven analyses (A1 / A3 were redesigned 2026-04-23 — see
+Seven analyses (A1 / A3 were redesigned 2026-04-23 - see
 the design notes):
 
     1. **Per-state content signatures** (NEW). For each (state, feature),
@@ -17,7 +17,7 @@ the design notes):
     3. **Multi-lag per-state content signatures** (NEW). Same per-state AUC
        framework extended across lags τ ∈ {0..6}; peak lag per (state, feature)
        identifies the HRF peak.
-    4. Transition-triggered averages (TTAs) — all active states
+    4. Transition-triggered averages (TTAs) - all active states
     5. Cross-episode consistency (split-half reliability, occupancy-content corr)
     6. Content selectivity (IQR/variance for continuous, Bernoulli entropy for binary)
        + Spearman: recurrence_score vs selectivity
@@ -127,7 +127,7 @@ def parse_args():
         "--n_permutations_per_state", type=int, default=500,
         help=(
             "Permutations per (state, feature) for the A1/A3 per-state signature "
-            "pipeline (2026-04-23 redesign). Default 500 — min-p ≈ 1/501 ≈ 0.002, "
+            "pipeline (2026-04-23 redesign). Default 500 - min-p ≈ 1/501 ≈ 0.002, "
             "tolerable at K×16 ≈ 500-test matrix-level BH. Increase to 1000 for "
             "borderline q-values."
         ),
@@ -468,8 +468,8 @@ def _per_state_signature_pvalues(obs_aucs, null_aucs_stack):
 
     Returns
     -------
-    p_perm : (K, F) — ``(1 + # |null-0.5| ≥ |obs-0.5|) / (1 + n_valid)``
-    valid_perm_fraction : (K, F) — fraction of permutations producing a finite AUC.
+    p_perm : (K, F) - ``(1 + # |null-0.5| ≥ |obs-0.5|) / (1 + n_valid)``
+    valid_perm_fraction : (K, F) - fraction of permutations producing a finite AUC.
     """
     n_perm, K, F = null_aucs_stack.shape
     obs_dist = np.abs(obs_aucs - 0.5)
@@ -662,7 +662,7 @@ def analysis_1_state_content_signatures(
     lag0_obs = observed[0]
     n_epochs_total = lag0_obs["n_epochs_total"]
     if n_epochs_total < 10:
-        logger.warning("Analysis 1%s: too few epochs (%d) — skipping", label, n_epochs_total)
+        logger.warning("Analysis 1%s: too few epochs (%d) - skipping", label, n_epochs_total)
         return
 
     # Keep all eligible states (even 0-epoch ones) so the output matrix
@@ -753,7 +753,7 @@ def analysis_1_state_content_signatures(
 # construction and CV math, guaranteeing per-state and joint AUCs are
 # directly comparable. Bit-identical regression check on the joint output is
 # part of the rollout.
-REG_C = 0.01      # L2 regularization for the per-fold logistic CV — same observed and null
+REG_C = 0.01      # L2 regularization for the per-fold logistic CV - same observed and null
 RIDGE_ALPHA = 10.0  # L2 regularization for the per-fold ridge CV
 
 
@@ -901,7 +901,7 @@ def analysis_2_decoding(
         filtered_records.append(rec)
 
     if len(epochs) < 20:
-        logger.warning("Too few epochs (%d) for decoding — skipping", len(epochs))
+        logger.warning("Too few epochs (%d) for decoding - skipping", len(epochs))
         return
     # Invariant: epochs and filtered_records are appended in lockstep so
     # that position_dummies built from filtered_records aligns row-wise
@@ -946,7 +946,7 @@ def analysis_2_decoding(
 
     # Targets and folds (built via the hoisted helper so the per-state
     # decoder shares the EXACT same logistic_folds / ridge_folds /
-    # run_boundaries — see ``_build_lo_run_folds``).
+    # run_boundaries - see ``_build_lo_run_folds``).
     y_binary = (df["speech_presence"].values > 0.5).astype(float)
     y_cont = df["dialogue_rate"].values
     logistic_folds, ridge_folds, run_boundaries = _build_lo_run_folds(
@@ -1074,7 +1074,7 @@ def analysis_2_decoding_per_state(
     and :func:`_run_ridge_cv`, so a per-state ``binary_auc_roc`` is directly
     comparable to the joint ``binary_auc_roc`` reported in
     ``analysis_2_decoding.json`` (the only difference is design-matrix
-    rank — joint uses ``n_states`` columns, per-state uses 1).
+    rank - joint uses ``n_states`` columns, per-state uses 1).
 
     Why this exists: 08g D5 needs a per-state content score that is
     commensurate with 08d D2's per-state transformer AUC. The pre-existing
@@ -1142,7 +1142,7 @@ def analysis_2_decoding_per_state(
 
     if len(epochs) < 20:
         logger.warning(
-            "Per-state: too few epochs (%d) — skipping", len(epochs),
+            "Per-state: too few epochs (%d) - skipping", len(epochs),
         )
         return
 
@@ -1354,7 +1354,7 @@ def _plot_state_lag_profiles(
         order = np.argsort(-state_scores)[:6]
         order = [i for i in order if signif[i]]
     else:
-        # No significant state — plot top 4 most recurrent as a diagnostic.
+        # No significant state - plot top 4 most recurrent as a diagnostic.
         rec_vec = np.array([float(recurrence_scores[int(s)]) for s in target_states])
         order = list(np.argsort(-rec_vec)[:4])
 
@@ -1399,13 +1399,13 @@ def analysis_3_state_content_multilag(
 
     Extends A1's per-state AUC testing across lags τ ∈ {0..6}. Same two-sample
     Mann-Whitney AUC, same within-run circular-shift null, same two-layer
-    BH-FDR — computed independently at each lag. Peak lag per (state, feature)
+    BH-FDR - computed independently at each lag. Peak lag per (state, feature)
     is the lag maximizing ``|AUC − 0.5|``.
 
     Output files (per subject, per mode):
-      - ``analysis_3_state_multilag{suffix}.json`` — nested per_lag → states → feature_*
-      - ``state_lag_profiles{suffix}.pdf`` — per-state AUC-vs-lag curves
-      - ``state_content_profiles_multilag{suffix}.csv`` — long-form (state, feature, lag)
+      - ``analysis_3_state_multilag{suffix}.json`` - nested per_lag → states → feature_*
+      - ``state_lag_profiles{suffix}.pdf`` - per-state AUC-vs-lag curves
+      - ``state_content_profiles_multilag{suffix}.csv`` - long-form (state, feature, lag)
 
     See the design notes §3.5 for spec.
     """
@@ -1418,7 +1418,7 @@ def analysis_3_state_content_multilag(
     lags = list(range(0, 7))
 
     if not target_states:
-        logger.warning("Analysis 3%s: no eligible states — skipping", label)
+        logger.warning("Analysis 3%s: no eligible states - skipping", label)
         return
 
     run_ids_order = sorted(decoded_states.keys())
@@ -1433,7 +1433,7 @@ def analysis_3_state_content_multilag(
     )
     total_epochs = sum(v["n_epochs_total"] for v in observed.values())
     if total_epochs == 0:
-        logger.warning("Analysis 3%s: 0 eligible epochs across all lags — skipping",
+        logger.warning("Analysis 3%s: 0 eligible epochs across all lags - skipping",
                        label)
         return
 
@@ -1592,7 +1592,7 @@ def analysis_4_tta(
     decoded_states, content_features, recurrence_scores, eligible_states,
     out_dir, n_permutations, n_jobs=1,
 ):
-    """Content features around state transitions — all active states."""
+    """Content features around state transitions - all active states."""
     logger.info("Analysis 4: Transition-triggered averages")
 
     window = 10  # TRs before and after
@@ -1919,7 +1919,7 @@ def analysis_6_selectivity(
     When ``control_mode == "partial"``, the C4 negative control applies:
     epoch-level feature values are residualized against an epoch-center
     run-position cubic polynomial (computed once across all epochs of all
-    states — a single global design) before selectivity is evaluated. This
+    states - a single global design) before selectivity is evaluated. This
     removes variation attributable to within-run drift before measuring
     per-state content selectivity. Other control_mode values reuse raw logic
     (the mask/state-set substitution is applied in the caller).
@@ -2063,7 +2063,7 @@ def analysis_7_sensory_control(
             means_base, "state_means_parcel.npy", "state means",
         )
     except FileNotFoundError as e:
-        logger.warning("%s — skipping Analysis 7", e)
+        logger.warning("%s - skipping Analysis 7", e)
         return {}
 
     state_means = np.load(means_path)  # (K, n_parcels)
@@ -2073,7 +2073,7 @@ def analysis_7_sensory_control(
         from utils.viz_yabplot import load_parcel_labels
         label_df = load_parcel_labels(parc)
     except Exception as e:
-        logger.warning("Could not load parcel labels: %s — skipping Analysis 7", e)
+        logger.warning("Could not load parcel labels: %s - skipping Analysis 7", e)
         return {}
 
     # Build parcel-to-network mapping

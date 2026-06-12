@@ -20,7 +20,7 @@
 #   Diag 1: motion confound check (FD trend + partial correlations)
 #   Diag 2: anti-correlated state pair analysis
 #
-# See also: 05e_temporal_trend_a2.sh — within-run temporal position (theme song)
+# See also: 05e_temporal_trend_a2.sh - within-run temporal position (theme song)
 #
 # Prerequisites:
 #   - Step 04 completed (decoded_states.pkl, best_model.pkl)

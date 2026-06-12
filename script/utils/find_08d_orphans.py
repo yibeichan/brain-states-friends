@@ -6,8 +6,8 @@ Replaces the hand-maintained ``ORPHANS`` assoc-array in
 *cell-complete* and stranded cells (e.g. sub-03 lag5 was marked "done" on the
 main partial while its neg partial sat at 4/28). This scanner reads every
 ``(subject, lag)`` cell's partials directly, cross-references ``squeue`` for
-in-flight jobs, and reports which cells are **orphaned** — incomplete AND not
-covered by any running/pending job — so the D1 text-depth leg can be finished
+in-flight jobs, and reports which cells are **orphaned** - incomplete AND not
+covered by any running/pending job - so the D1 text-depth leg can be finished
 without hand-guessing.
 
 Decision context (2026-05-31): the run-onset-anchored *negative control* was
@@ -58,7 +58,7 @@ DEFAULT_MODEL = "llama-3.2-3b"
 DEFAULT_PARC = "atlas-4S156Parcels"
 DEFAULT_STIMULUS = "friends"
 
-# Submit env — mirrors launch_08d_orphans.sh exactly.
+# Submit env - mirrors launch_08d_orphans.sh exactly.
 SUBMIT_DEFAULTS = {
     "partition": "mit_preemptable",
     "exclude": "node2803,node3805",
@@ -83,7 +83,7 @@ def parse_array_spec(spec: str) -> list[int]:
     index and is dropped). Mixed list+range elements (``"[0,2-4]"``) are
     supported. Unparseable fragments are skipped.
 
-    Do NOT reuse ``chain_08d_successors.sh``'s ``s/[][]//g`` approach — it
+    Do NOT reuse ``chain_08d_successors.sh``'s ``s/[][]//g`` approach - it
     mangles ranges. We strip brackets, drop a trailing ``%k`` throttle, then
     expand element by element.
     """
@@ -118,7 +118,7 @@ def job_lag(job_name: str, model: str) -> int | None:
     D1 job for ``model``.
 
     Job names: ``08d_D1_lag{N}_{model}`` (PERLAGS fan), ``08d_D1f_lag{N}_{model}``
-    (orphan launcher), and ``08d_D1s_lag{N}_{model}`` (chain resumer) — the
+    (orphan launcher), and ``08d_D1s_lag{N}_{model}`` (chain resumer) - the
     ``[a-z]?`` between ``D1`` and ``_lag`` matches the optional single-letter
     suffix (``f``/``s``/empty). It is deliberately NOT ``[a-z0-9]*``, which
     would over-match a hypothetical ``08d_D1net_lag…`` / ``08d_D1merge_lag…``
@@ -182,7 +182,7 @@ def query_inflight(model: str) -> set[tuple[int, int]]:
 
     Read partials BEFORE calling this (safe race ordering): if a job finishes
     between the partial read and the squeue snapshot, the cell is seen as
-    incomplete + not-in-flight and is conservatively resubmitted — a resume
+    incomplete + not-in-flight and is conservatively resubmitted - a resume
     from the (now-complete) checkpoint is a cheap no-op, never data loss.
     """
     user = os.environ.get("USER", "")
@@ -199,7 +199,7 @@ def query_inflight(model: str) -> set[tuple[int, int]]:
                     capture_output=True, text=True, check=True,
                 ).stdout
             except (subprocess.CalledProcessError, FileNotFoundError):
-                print("WARNING: squeue unavailable — treating ALL cells as "
+                print("WARNING: squeue unavailable - treating ALL cells as "
                       "not-in-flight (conservative; may resubmit live cells).",
                       file=sys.stderr)
                 return set()

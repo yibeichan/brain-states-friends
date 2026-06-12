@@ -1,4 +1,4 @@
-"""fig_S7_individual_differences.py — Supplementary Figure S7.
+"""fig_S7_individual_differences.py - Supplementary Figure S7.
 
 Subject-level individual differences across F1–F5 findings, rendered as a
 1×6 horizontal strip of per-subject radar plots.
@@ -235,7 +235,7 @@ def scale_cohort(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, tuple[fl
     -------
     scaled_df : (6, 7) DataFrame of values in [0, 1].
     cohort_ranges : {axis_label: (cohort_min, cohort_max)} (unpadded absolute range).
-    valid_mask : (6, 7) DataFrame of bool — True where the raw value is real, False where
+    valid_mask : (6, 7) DataFrame of bool - True where the raw value is real, False where
         the value is a fallback (sub-04 HP+PP).
     """
     scaled_data: dict[str, pd.Series] = {}
@@ -293,7 +293,7 @@ def plot_one_radar(
     valid_closed = list(valid_row) + [valid_row[0]]
     theta_closed = np.concatenate([theta, theta[:1]])
 
-    # Polygon outline — segment by segment so we can dash invalid segments
+    # Polygon outline - segment by segment so we can dash invalid segments
     for i in range(n_axes):
         seg_valid = valid_closed[i] and valid_closed[i + 1]
         ls = "-" if seg_valid else (0, (3, 3))

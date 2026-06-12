@@ -173,7 +173,7 @@ def main():
         output_dir = fold_dir  # Save FC alongside existing LOSO outputs
 
         logger.info("=" * 60)
-        logger.info("04rc Reliability FC — LOSO season %d", fold)
+        logger.info("04rc Reliability FC - LOSO season %d", fold)
         logger.info("Subject: %s | Parcellation: %s", args.sub_id, parc)
         logger.info("=" * 60)
 
@@ -197,7 +197,7 @@ def main():
         output_dir = half_dir  # Save FC alongside existing split-half outputs
 
         logger.info("=" * 60)
-        logger.info("04rc Reliability FC — Split-half %s", half)
+        logger.info("04rc Reliability FC - Split-half %s", half)
         logger.info("Subject: %s | Parcellation: %s", args.sub_id, parc)
         logger.info("=" * 60)
 

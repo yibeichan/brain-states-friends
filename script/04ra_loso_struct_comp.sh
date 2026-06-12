@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# LOSO Structural Comparison — SLURM Wrapper
+# LOSO Structural Comparison - SLURM Wrapper
 # =============================================================================
 #
 # Compares structural invariants across 6 LOSO folds.

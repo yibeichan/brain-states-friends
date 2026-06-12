@@ -49,7 +49,7 @@ def check_checkpoint(output_dir, filenames, label, force=False):
     Returns
     -------
     bool
-        ``True`` if checkpoint exists and *force* is ``False`` — caller
+        ``True`` if checkpoint exists and *force* is ``False`` - caller
         should skip.  ``False`` otherwise.
     """
     if force:
@@ -357,7 +357,7 @@ def normalize_cross_stim_run_id(run_id: str, stimulus: str) -> str:
         # BIDS source had a run entity. cneuromod's movie10 repeats
         # ``figures`` and ``life`` across two sessions (run-1 / run-2),
         # so the fMRI side has two decoded_states entries per clip for
-        # those categories — both must survive normalization as distinct
+        # those categories - both must survive normalization as distinct
         # keys. ``bourne`` and ``wolf`` have no run entity and use the
         # bare clip name. (The 08c transformer features are stored at the
         # clip level since the stimulus is identical across viewings;
@@ -451,7 +451,7 @@ def feature_key_for_cross_stim_run_id(short_id: str, stimulus: str) -> str:
         if "_run-" in short_id:
             return short_id.rsplit("_run-", 1)[0]
         return short_id
-    # friends, harrypotter, petitprince_* — short_id already matches the
+    # friends, harrypotter, petitprince_* - short_id already matches the
     # 08c feature filename.
     return short_id
 
@@ -605,7 +605,7 @@ def load_training_split(sub_id, parc, scratch_dir):
     Returns
     -------
     dict
-        ``{'train': set[str], 'valid': set[str], 'test': set[str]}`` — run IDs
+        ``{'train': set[str], 'valid': set[str], 'test': set[str]}`` - run IDs
         per split.
 
     Raises

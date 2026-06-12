@@ -14,7 +14,7 @@
 # Extracts TR-aligned physiological features from Movie10 physprep data.
 # SLURM array job: one task per subject (array index 0-5 → sub-01 to sub-06).
 #
-# Fully independent of the brain pipeline — discovers runs from physprep
+# Fully independent of the brain pipeline - discovers runs from physprep
 # and derives TR counts from recording length.
 #
 # Prerequisites:

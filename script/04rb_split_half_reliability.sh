@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Split-Half Reliability Analysis — SLURM Wrapper
+# Split-Half Reliability Analysis - SLURM Wrapper
 # =============================================================================
 #
 # Compares structural invariants between two independently-fit HMM halves.

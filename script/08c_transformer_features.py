@@ -9,9 +9,9 @@ sub_id in the path.  PCA reduction happens at analysis time (08d) using
 subject-specific training splits.
 
 Models (TRIBEv2-validated backbones, frozen, all layers):
-  Audio: Wav2VecBert 2.0  (24 layers × 1024 dim) — Friends, M10, PP
-  Video: DINOv2-large     (24 layers × 1024 dim) — Friends, M10
-  Text:  LLaMA 3.2 3B     (28 layers × 3072 dim) — Friends, M10, HP, PP
+  Audio: Wav2VecBert 2.0  (24 layers × 1024 dim) - Friends, M10, PP
+  Video: DINOv2-large     (24 layers × 1024 dim) - Friends, M10
+  Text:  LLaMA 3.2 3B     (28 layers × 3072 dim) - Friends, M10, HP, PP
 
 Prerequisites:
     uv sync --extra torch
@@ -203,7 +203,7 @@ def discover_runs_movie10(config):
     08c output layout. Algonauts TR-aligned transcripts are still used for
     the text modality since cneuromod has none.
 
-    ``n_trs`` is computed as ``ceil((onset + duration) / TR_DURATION)`` —
+    ``n_trs`` is computed as ``ceil((onset + duration) / TR_DURATION)`` -
     this is an asymmetrically-safe overshoot (08d truncates features to
     ``len(decoded_states[run_id])``; an undershoot would silently drop the
     run). Matches the HP/PP discovery convention.
@@ -228,7 +228,7 @@ def discover_runs_movie10(config):
             continue
         if len(df) > 1:
             logger.warning(
-                "Expected 1 row in %s, got %d — using first",
+                "Expected 1 row in %s, got %d - using first",
                 events_path.name, len(df),
             )
 
@@ -283,7 +283,7 @@ def discover_runs_hp(config):
     # HP may have session dirs (sub-01/ses-*/func) or flat layout (sub-01/func).
     func_dirs = sorted(events_dir.glob("sub-01/*/func"))
     if not func_dirs:
-        # Flat layout — no session directories
+        # Flat layout - no session directories
         flat = events_dir / "sub-01" / "func"
         if flat.is_dir():
             func_dirs = [flat]
@@ -319,7 +319,7 @@ def discover_runs_hp(config):
 def discover_runs_pp(config):
     """Discover Petit Prince runs from WAV files in the stimuli directory.
 
-    PP is audiobook listening — WAV files are the direct stimuli (no video).
+    PP is audiobook listening - WAV files are the direct stimuli (no video).
     n_trs is derived from audio duration.  Onset offset (pre-stimulus silence
     in the fMRI scan) is read live from each run's events.tsv and stored as
     ``onset_s`` so downstream text alignment can use the exact scan-time
@@ -419,7 +419,7 @@ def process_run_audio(run_info, model, processor, out_dir, device, tmp_dir):
         if not os.path.exists(audio_path):
             extract_audio_from_video(video_path, audio_path)
     elif audio_path is None:
-        logger.warning("No audio source for run %s — skipping", run_id)
+        logger.warning("No audio source for run %s - skipping", run_id)
         return False
 
     # For PP: extract features for audio portion only, then prepend onset TRs
@@ -450,7 +450,7 @@ def process_run_video(run_info, model, processor, out_dir, device):
     n_trs = run_info["n_trs"]
 
     if video_path is None:
-        logger.warning("No video for run %s — skipping", run_id)
+        logger.warning("No video for run %s - skipping", run_id)
         return False
 
     layer_features = extract_video_features(
@@ -474,7 +474,7 @@ def process_run_text(run_info, model, tokenizer, out_dir, device, config, window
     if transcript_type == "tr_aligned_tsv":
         transcript_path = run_info.get("transcript_path")
         if transcript_path is None:
-            logger.warning("No transcript for run %s — skipping", run_id)
+            logger.warning("No transcript for run %s - skipping", run_id)
             return False
         cumulative_text = load_transcript_friends_m10(transcript_path, n_trs)
 
@@ -485,7 +485,7 @@ def process_run_text(run_info, model, tokenizer, out_dir, device, config, window
     elif transcript_type == "pp_transcript":
         transcript_path = run_info.get("transcript_path")
         if transcript_path is None:
-            logger.warning("No transcript for run %s — skipping", run_id)
+            logger.warning("No transcript for run %s - skipping", run_id)
             return False
         cumulative_text = load_transcript_pp(
             transcript_path,
@@ -526,7 +526,7 @@ Examples:
   # Text features for HP (default window_trs=4)
   python script/08c_transformer_features.py --stimulus harrypotter --model llama-3.2-3b
 
-  # LLaMA W-sweep variant — writes to 08c_transformer_features_sweep_w3/...
+  # LLaMA W-sweep variant - writes to 08c_transformer_features_sweep_w3/...
   python script/08c_transformer_features.py --stimulus friends --model llama-3.2-3b \\
       --window_trs 3 --output_subdir_suffix _sweep_w3
 
@@ -605,7 +605,7 @@ def main():
             logger.info("Downloading %s (%s) ...", mk, MODEL_REGISTRY[mk]["hf_id"])
             load_model(mk, device=args.device)
             logger.info("  %s cached successfully", mk)
-        logger.info("All models cached — exiting (download-only mode)")
+        logger.info("All models cached - exiting (download-only mode)")
         sys.exit(0)
 
     if args.stimulus is None:
@@ -654,7 +654,7 @@ def main():
     logger.info("Discovered %d runs", len(runs))
 
     if not runs:
-        logger.warning("No runs found — exiting")
+        logger.warning("No runs found - exiting")
         sys.exit(0)
 
     # Filter to single run if requested
@@ -709,7 +709,7 @@ def main():
                 out_dir, f"layer_{n_layers - 1:02d}", f"{run_id}_raw.npy"
             )
             if os.path.exists(first_layer) and os.path.exists(last_layer):
-                logger.info("  Already processed — skipping")
+                logger.info("  Already processed - skipping")
                 # Record the actual on-disk TR count so metadata stays in sync
                 # with the saved tensors regardless of which convention wrote them.
                 actual_n_trs = int(np.load(first_layer, mmap_mode="r").shape[0])

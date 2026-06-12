@@ -2,7 +2,7 @@
 
 Authored as a marimo notebook. Each panel is a separate cell that saves
 its own .pdf + .png to disk. The user assembles panels into composite
-figures in a layout tool (no panel labels, no titles — user adds those
+figures in a layout tool (no panel labels, no titles - user adds those
 during assembly).
 
 Run:
@@ -112,21 +112,21 @@ def config(Path, os):
 @app.cell
 def figure1_panel_plan():
     """
-    # Figure 1 — The recurring brain state repertoire (per subject)
+    # Figure 1 - The recurring brain state repertoire (per subject)
 
     Serves manuscript R1 and talk slide 5.1.
 
     | Panel | Content | Relative size | Output filename |
     |---|---|---|---|
-    | A | Dwell × FO × recurrence — 2×3 small multiples, one dot per state; x=mean dwell (log), y=mean FO when active, color=recurrence | wide | `fig1_A_recurrence_dwell.pdf` |
-    | B | Exemplar state mean — cortical surface + subcortical (yabplot); independent cortical/subcortical color ranges | wide | `fig1_B_{cortical,subcortical}.png` + `fig1_B_colorbar_{cortical,subcortical}.{pdf,png}` |
-    | C | Exemplar state within-state FC — network-sorted matrix | square | `fig1_C_exemplar_fc.pdf` |
-    | D | Per-state network loading — per-subject heatmap, states (recurrence-sorted) × 13 networks | wide | `fig1_D_network_loading.pdf` |
+    | A | Dwell × FO × recurrence - 2×3 small multiples, one dot per state; x=mean dwell (log), y=mean FO when active, color=recurrence | wide | `fig1_A_recurrence_dwell.pdf` |
+    | B | Exemplar state mean - cortical surface + subcortical (yabplot); independent cortical/subcortical color ranges | wide | `fig1_B_{cortical,subcortical}.png` + `fig1_B_colorbar_{cortical,subcortical}.{pdf,png}` |
+    | C | Exemplar state within-state FC - network-sorted matrix | square | `fig1_C_exemplar_fc.pdf` |
+    | D | Per-state network loading - per-subject heatmap, states (recurrence-sorted) × 13 networks | wide | `fig1_D_network_loading.pdf` |
 
     LOSO moves to supplementary (S3 or S8), freeing a main-figure slot.
 
     Rules: no titles, no on-figure panel labels, one file per panel.
-    Panel letters appear in filenames only — user adds on-figure labels during assembly.
+    Panel letters appear in filenames only - user adds on-figure labels during assembly.
     """
     return
 
@@ -157,7 +157,7 @@ def panel_recurrence_dwell_fo(
     state_summary, mean_fo_active, SUBJECTS, OUT_FIG1, RECURRENCE_CMAP,
     plt, np,
 ):
-    """Panel A — 2×3 small multiples, one dot per active state.
+    """Panel A - 2×3 small multiples, one dot per active state.
 
     For each subject: x = mean dwell (s, log), y = mean FO when active,
     color = recurrence score. Combines three orthogonal properties
@@ -261,7 +261,7 @@ def panel_exemplar_fc(
     NETWORK_ORDER, NETWORK_COLORS, load_parcel_networks,
     np, plt,
 ):
-    """Panel 3 — within-state FC of the highest-recurrence state (sub-01).
+    """Panel 3 - within-state FC of the highest-recurrence state (sub-01).
 
     Network-sorted 156x156 correlation matrix with network-colored
     side/top bars. Square aspect.
@@ -343,7 +343,7 @@ def load_state_means(SUBJECTS, MODEL_DIR, VT, np):
 def panel_exemplar_surface(
     state_summary, state_means, PARCELLATION, OUT_FIG1, plt, np,
 ):
-    """Panel B — exemplar state mean as cortical surface + subcortical 3D.
+    """Panel B - exemplar state mean as cortical surface + subcortical 3D.
 
     Same exemplar state as Panel C (sub-01, highest recurrence).
 
@@ -432,9 +432,9 @@ def panel_network_loading(
     state_summary, state_means, SUBJECTS, PARCELLATION, OUT_FIG1,
     NETWORK_ORDER, NETWORK_COLORS, load_parcel_networks, plt, np,
 ):
-    """Panel D — per-state network loading, one heatmap per subject.
+    """Panel D - per-state network loading, one heatmap per subject.
 
-    Each cell = row-normalized mean |activation| per network per state —
+    Each cell = row-normalized mean |activation| per network per state -
     i.e. the proportion of a state's total |activation| (taken as mean
     across that network's parcels) that falls in each network. This is
     a loading, not a raw composition: sign is dropped, magnitude is
@@ -444,7 +444,7 @@ def panel_network_loading(
     subcortical (5 networks on bottom). Each strip uses its own 98th-pct
     color range and its own palette (cortical: cividis; subcortical:
     magma) because subcortical proportions cap at ~0.05 while cortical
-    reach ~0.33 (~6× mismatch) — shared scale would wash subcortical
+    reach ~0.33 (~6× mismatch) - shared scale would wash subcortical
     structure out. Different palettes signal the independent scales
     without requiring the reader to remember the caption.
     Rows = active states, sorted by descending recurrence.
@@ -477,7 +477,7 @@ def panel_network_loading(
 
     # Separate 98th-pct color ranges for cortical vs subcortical. Cortical
     # proportions reach ~0.3 while subcortical caps around ~0.05 (~6× mismatch)
-    # because row normalization is computed over all 13 networks — so a shared
+    # because row normalization is computed over all 13 networks - so a shared
     # range washes subcortical strips to a single shade. Per-subregion ranges
     # restore subcortical visibility; the magnitude mismatch is flagged in
     # the caption and via separate colorbar files (below).
@@ -498,7 +498,7 @@ def panel_network_loading(
 
     # Layout: 2x3 subjects. Each subject = vertical stack of 2 axes
     # (cortical on top, subcortical below). Both strips share the same
-    # row count (K active states), so use equal height_ratios — unequal
+    # row count (K active states), so use equal height_ratios - unequal
     # heights would mislead into suggesting different numbers of states.
     _fig = plt.figure(figsize=(9.2, 6.0))
     _outer = _fig.add_gridspec(
@@ -542,12 +542,12 @@ def panel_network_loading(
         _ax_sub.tick_params(axis="x", length=0, pad=2)
 
         # Subcortical magnitudes are low (near-zero on the shared cividis
-        # range) — draw light separators between network columns so the
+        # range) - draw light separators between network columns so the
         # reader can see the 5 network bands.
         for _j in range(1, len(SUBCORTICAL_NETWORKS)):
             _ax_sub.axvline(_j - 0.5, color="white", linewidth=0.6, alpha=0.9)
 
-        # Same y-tick recurrence labels on both strips — makes it visually
+        # Same y-tick recurrence labels on both strips - makes it visually
         # explicit that both strips share the same state ordering / row count.
         _n = len(_recur_ord)
         _yticks = [0, _n // 2, _n - 1] if _n >= 3 else list(range(_n))
@@ -602,14 +602,14 @@ def panel_network_loading(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FIGURE 2 — Heterogeneous sources of recurrence (R2)
+# FIGURE 2 - Heterogeneous sources of recurrence (R2)
 # ──────────────────────────────────────────────────────────────────────────────
 
 
 @app.cell
 def figure2_panel_plan():
     """
-    # Figure 2 — Heterogeneous sources of recurrence
+    # Figure 2 - Heterogeneous sources of recurrence
 
     Serves manuscript R2 and talk slide 5.2 (talk uses only Panel A).
 
@@ -619,7 +619,7 @@ def figure2_panel_plan():
     | A-supp | Reversed stacked bar per subject (Content-eligible on top, Unused+rare at bottom) | wide | `supplementary/fig2_A_supp_taxonomy_stacked_bar.pdf` |
     | B | Flag-overview heatmap (sub-01): states (recurrence-sorted) × 4 numeric criteria | square | `fig2_B_flag_overview.pdf` |
     | C | Two exemplar states (sub-01, run-onset-anchored + content-eligible); each: cortical surface + subcortical + diagnostic curve (occupancy × TR-within-run) | wide | `fig2_C_{run_onset,content_eligible}_{cortical,subcortical,occupancy}.{pdf,png}` + `fig2_C_colorbar.{pdf,png}` |
-    | C-supp | One exemplar per display category (sub-01): content-eligible, run-onset-anchored, low-confidence, drift-anchored, rare (stand-in for "Unused + rare" — unused states have no decoded pattern). Same template as main Panel C (cortical + subcortical + occupancy curve). Independent color ranges from main Panel C — reader inside supp can compare across categories; cross-figure comparison requires reading both colorbars. | wide | `supplementary/fig2_C_supp_{category}_{cortical,subcortical,occupancy}.{pdf,png}` + `supplementary/fig2_C_supp_colorbar_{cortical,subcortical}.{pdf,png}` |
+    | C-supp | One exemplar per display category (sub-01): content-eligible, run-onset-anchored, low-confidence, drift-anchored, rare (stand-in for "Unused + rare" - unused states have no decoded pattern). Same template as main Panel C (cortical + subcortical + occupancy curve). Independent color ranges from main Panel C - reader inside supp can compare across categories; cross-figure comparison requires reading both colorbars. | wide | `supplementary/fig2_C_supp_{category}_{cortical,subcortical,occupancy}.{pdf,png}` + `supplementary/fig2_C_supp_colorbar_{cortical,subcortical}.{pdf,png}` |
     | D | Low-confidence prevalence per subject (sub-06 accent) | wide | `fig2_D_low_confidence_per_subject.pdf` |
 
     Language: "Content-eligible," "Run-onset-anchored," "Low-confidence," "Drift-anchored," "Unused + rare".
@@ -689,7 +689,7 @@ def panel_A_taxonomy(
     state_flags, SUBJECTS, OUT_FIG2,
     TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP, plt, np,
 ):
-    """Panel A — per-subject strip plot: recurrence × taxonomy.
+    """Panel A - per-subject strip plot: recurrence × taxonomy.
 
     x = subject (jittered); y = recurrence score; one dot per state,
     colored by taxonomy category. Shows counts (dot density per color)
@@ -697,7 +697,7 @@ def panel_A_taxonomy(
     Figure 2 back to Figure 1's recurrence distribution.
 
     Draw order (back → front): Unused+rare, Drift-anchored, Low-confidence,
-    Run-onset-anchored, Content-eligible — puts content-eligible dots on top.
+    Run-onset-anchored, Content-eligible - puts content-eligible dots on top.
     """
     _rng = np.random.default_rng(20260422)
     _jitter_w = 0.32
@@ -771,7 +771,7 @@ def panel_A_supp_taxonomy_bar(
     state_flags, SUBJECTS, OUT_FIG2_SUPP,
     TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP, plt, np,
 ):
-    """Panel A (supplementary) — reversed stacked bar.
+    """Panel A (supplementary) - reversed stacked bar.
 
     x = subject; y = count of states; stacked by category with
     Content-eligible on TOP and Unused+rare on BOTTOM (reverse of the
@@ -835,7 +835,7 @@ def panel_B_flag_overview(
     state_flags, OUT_FIG2,
     TAXONOMY_COLORS, TAXONOMY_MAP, plt, np,
 ):
-    """Panel B — binary flag overview for sub-01 (mirrors 05e_a4 style).
+    """Panel B - binary flag overview for sub-01 (mirrors 05e_a4 style).
 
     Rows = active states (recurrence > 0), sorted by descending recurrence.
     Cols = 3 diagnostic flag groups:
@@ -941,7 +941,7 @@ def pick_fig2_exemplars(state_flags, np):
     Run-onset exemplar: run_onset_anchored state with highest recurrence.
     Content-eligible exemplar: SECOND-highest recurrence content-eligible
       state (the top one is the widespread-baseline pattern already used
-      as Figure 1's exemplar — this panel picks the next one for visual
+      as Figure 1's exemplar - this panel picks the next one for visual
       variety without conceding recurrence-rank credibility).
     """
     _df = state_flags["sub-01"]
@@ -963,7 +963,7 @@ def panel_C_surfaces(
     state_means, run_onset_state, content_state,
     PARCELLATION, OUT_FIG2, plt, np,
 ):
-    """Panel C surface mini-pieces — two exemplar states on cortical + subcortical.
+    """Panel C surface mini-pieces - two exemplar states on cortical + subcortical.
 
     Writes:
       fig2_C_run_onset_cortical.png
@@ -1056,7 +1056,7 @@ def panel_C_diagnostic_curves(
     decoded_sub01, run_onset_state, content_state, OUT_FIG2,
     TAXONOMY_COLORS, plt, np,
 ):
-    """Panel C diagnostic curves — occupancy × TR-position-within-run.
+    """Panel C diagnostic curves - occupancy × TR-position-within-run.
 
     For each exemplar, compute per-run occupancy(t): fraction of runs where
     the state is active at TR index t (0-based, truncated to the shortest run).
@@ -1102,13 +1102,13 @@ def pick_fig2_supp_exemplars(state_flags, run_onset_state, content_state):
     """Pick one exemplar per display category for supplementary Panel C.
 
     All from sub-01 (matches main Panel C's subject so exemplars share PCA,
-    HMM, and decoded episodes — the occupancy curves are directly comparable).
+    HMM, and decoded episodes - the occupancy curves are directly comparable).
 
-      Content-eligible      — reuses main Panel C's content_state (2nd highest).
-      Run-onset-anchored    — reuses main Panel C's run_onset_state (highest).
-      Low-confidence        — highest-recurrence low_confidence state.
-      Drift-anchored        — highest-recurrence season_temporal state.
-      Unused + rare         — highest-recurrence "rare" state. Pure "unused"
+      Content-eligible      - reuses main Panel C's content_state (2nd highest).
+      Run-onset-anchored    - reuses main Panel C's run_onset_state (highest).
+      Low-confidence        - highest-recurrence low_confidence state.
+      Drift-anchored        - highest-recurrence season_temporal state.
+      Unused + rare         - highest-recurrence "rare" state. Pure "unused"
                               states have recurrence = 0 and no decoded
                               occupancy, so they have no meaningful spatial
                               pattern to display; "rare" is the live member
@@ -1145,7 +1145,7 @@ def pick_fig2_supp_exemplars(state_flags, run_onset_state, content_state):
 def panel_C_supp_surfaces(
     state_means, supp_exemplars, PARCELLATION, OUT_FIG2_SUPP, plt, np,
 ):
-    """Supplementary Panel C surfaces — one exemplar per category.
+    """Supplementary Panel C surfaces - one exemplar per category.
 
     Writes per-category cortical/subcortical PNGs plus two colorbars
     (independent symmetric 98th-percentile ranges across the 5 supp
@@ -1222,7 +1222,7 @@ def panel_C_supp_curves(
     decoded_sub01, supp_exemplars, OUT_FIG2_SUPP,
     TAXONOMY_COLORS, TAXONOMY_MAP, plt, np,
 ):
-    """Supplementary Panel C diagnostic curves — one per category.
+    """Supplementary Panel C diagnostic curves - one per category.
 
     Occupancy × TR-within-run for each exemplar state. Same template as
     main Panel C's curves; colored by display category so curves visually
@@ -1230,7 +1230,7 @@ def panel_C_supp_curves(
 
     Interpretation varies by category:
       - Run-onset-anchored: peak at t=0 is the defining feature.
-      - Content-eligible: roughly flat — the absence of anchoring.
+      - Content-eligible: roughly flat - the absence of anchoring.
       - Low-confidence / drift-anchored / rare: low-amplitude curves are
         expected given low recurrence; these are shown for completeness,
         not because the curve carries the category-defining signal.
@@ -1279,11 +1279,11 @@ def panel_D_low_confidence(
     state_flags, SUBJECTS, OUT_FIG2,
     SUBJECT_NEUTRAL, SUBJECT_ACCENT, plt, np,
 ):
-    """Panel D — low-confidence prevalence per subject.
+    """Panel D - low-confidence prevalence per subject.
 
     Horizontal bar: fraction of states classified as "Low-confidence" (out of
     total K per subject, so the denominator matches Panel A's bar heights).
-    Sub-06 drawn in accent color, others in neutral — the outlier is the
+    Sub-06 drawn in accent color, others in neutral - the outlier is the
     individual-differences finding about state granularity.
     """
     _total = {_sub: int(len(state_flags[_sub])) for _sub in SUBJECTS}
@@ -1328,22 +1328,22 @@ def panel_D_low_confidence(
 @app.cell
 def figure3_panel_plan():
     """
-    # Figure 3 — Transitions connect functionally similar states (per subject)
+    # Figure 3 - Transitions connect functionally similar states (per subject)
 
     Serves manuscript R3 and talk slide 5.3.
 
     | Panel | Content | Size | Output filename |
     |---|---|---|---|
     | A | Transition probability matrix (sub-01 exemplar), states sorted by recurrence descending; log color for off-diagonal | square | `fig3_A_transition_matrix.pdf` |
-    | B | Effect-size summary — four metrics × six subjects (recurrence assortativity ρ, FC–transition ρ, MFPT–FC ρ, network homophily ratio). Subject = marker shape; sub-05 homophily null flagged (open marker) | wide | `fig3_B_effect_summary.pdf` |
-    | C | FC–transition binned scatter (sub-01 exemplar) — mirrors talk slide 5.3 | wide | `fig3_C_fc_transition.pdf` |
+    | B | Effect-size summary - four metrics × six subjects (recurrence assortativity ρ, FC–transition ρ, MFPT–FC ρ, network homophily ratio). Subject = marker shape; sub-05 homophily null flagged (open marker) | wide | `fig3_B_effect_summary.pdf` |
+    | C | FC–transition binned scatter (sub-01 exemplar) - mirrors talk slide 5.3 | wide | `fig3_C_fc_transition.pdf` |
     | D | MFPT matrix (sub-01 exemplar), states sorted by recurrence | square | `fig3_D_mfpt_landscape.pdf` |
     | E | Network × network empirical transition-probability matrix (sub-01 exemplar), 13×13, LogNorm magma_r; diagonal = within-network homophily, scalar-consistent P<1e-15 filter | square | `fig3_E_network_transition_matrix.pdf` |
 
     Language: "associated with" not "predicts"; FC / MFPT come from empirical
     Ledoit-Wolf state correlations (05f), one step removed from HMM emissions.
 
-    All-subject versions of A, C, D, E are written to `fig3/supplementary/` —
+    All-subject versions of A, C, D, E are written to `fig3/supplementary/` -
     user can drop these into the supplement composite. Panel B already
     aggregates six subjects, so no supplement for it. Panel E sibling files
     (`*_counts.npy`, `*_mean.npy`) store per-cell pair counts and mean P
@@ -1365,10 +1365,10 @@ def load_fig3_data(
     For each subject we record:
       - tp_full (50x50) transition probabilities
       - rv_full (50x50) FC similarity (RV coefficient, empirical state corr)
-      - mfpt (K_active x K_active) — 06b restricts to active already
-      - active_ids (K_active,) — original state indices in 0..49 space
-      - recurrence (K_active,) — recurrence score aligned with active_ids
-      - graph_metrics dataframe — row order = MFPT row order
+      - mfpt (K_active x K_active) - 06b restricts to active already
+      - active_ids (K_active,) - original state indices in 0..49 space
+      - recurrence (K_active,) - recurrence score aligned with active_ids
+      - graph_metrics dataframe - row order = MFPT row order
     """
     fig3_data = {}
     for _sub in SUBJECTS:
@@ -1401,7 +1401,7 @@ def load_fig3_data(
 
 @app.cell
 def panel_A_transition_matrix(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np):
-    """Panel A — transition probability matrix, states sorted by recurrence descending.
+    """Panel A - transition probability matrix, states sorted by recurrence descending.
 
     Off-diagonal log-color on a shared vmin/vmax per subject. Diagonal drawn
     separately (grey) so the off-diagonal structure is visible.
@@ -1477,7 +1477,7 @@ def panel_A_transition_matrix(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt,
 
 @app.cell
 def panel_B_effect_summary(fig3_data, SUBJECTS, OUT_FIG3, SUBJECT_MARKERS, plt, np):
-    """Panel B — four-metric effect-size summary across six subjects.
+    """Panel B - four-metric effect-size summary across six subjects.
 
     Four rows of subpanels (shared marker convention), each on its own
     x-scale appropriate to the metric:
@@ -1490,7 +1490,7 @@ def panel_B_effect_summary(fig3_data, SUBJECTS, OUT_FIG3, SUBJECT_MARKERS, plt, 
     perm p < 0.05, open marker otherwise. sub-05 homophily falls out as
     open because p=0.51.
     """
-    # Three ρ metrics share x-scale — they are all Spearman correlations on
+    # Three ρ metrics share x-scale - they are all Spearman correlations on
     # the same conceptual axis ("strength of coupling"), so direct visual
     # comparison is meaningful. Network homophily is a ratio (within /
     # between, null at 1), not a correlation, and stays on its own scale.
@@ -1588,7 +1588,7 @@ def panel_B_effect_summary(fig3_data, SUBJECTS, OUT_FIG3, SUBJECT_MARKERS, plt, 
 
 @app.cell
 def panel_C_fc_transition(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np):
-    """Panel C — FC–transition binned scatter (sub-01 exemplar + supplementary 6).
+    """Panel C - FC–transition binned scatter (sub-01 exemplar + supplementary 6).
 
     For each active-state pair (i,j), i<j:
       x = FC similarity (RV coefficient on empirical within-state correlations, 05f)
@@ -1644,7 +1644,7 @@ def panel_C_fc_transition(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np)
 
         if include_rho:
             # ρ is 06b's Spearman on RV-valid pairs. The scatter is restricted
-            # to tp>0 (log y), but 06b's ρ includes tp=0 pairs — so we do not
+            # to tp>0 (log y), but 06b's ρ includes tp=0 pairs - so we do not
             # annotate a pair count that would not match what is drawn.
             _summary_rho = float(_d["summary"]["A3_fc_transition"]["rho"])
             _ax.text(
@@ -1667,7 +1667,7 @@ def panel_C_fc_transition(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np)
 
 @app.cell
 def panel_D_mfpt_landscape(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np):
-    """Panel D — MFPT matrix, states sorted by recurrence descending.
+    """Panel D - MFPT matrix, states sorted by recurrence descending.
 
     MFPT (mean first-passage time) is the expected number of TRs for a
     random walk in the HMM transition graph starting in state i to first
@@ -1757,7 +1757,7 @@ def panel_D_mfpt_landscape(fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np
 def panel_E_network_transition_matrix(
     fig3_data, OUT_FIG3, OUT_FIG3_SUPP, SUBJECTS, plt, np,
 ):
-    """Panel E — network × network empirical transition-probability matrix.
+    """Panel E - network × network empirical transition-probability matrix.
 
     Aggregates per-state empirical transition probabilities (tp_full) by each
     state's dominant network (13 groups in NETWORK_ORDER). Cell (A, B) =
@@ -1768,7 +1768,7 @@ def panel_E_network_transition_matrix(
     aggregated at different levels.
 
     Color: LogNorm magma_r, 5th/95th-percentile clipping of finite cells,
-    extend="max" — matches MFPT panel D's recipe. Empty cells (no pairs)
+    extend="max" - matches MFPT panel D's recipe. Empty cells (no pairs)
     render transparent. Sub-01 = main panel; each subject = supp.
 
     Sample counts saved alongside each figure for reproducibility.
@@ -1819,7 +1819,7 @@ def panel_E_network_transition_matrix(
 
         _finite = _mean[np.isfinite(_mean) & (_mean > 0)]
         if len(_finite) == 0:
-            print(f"  {_sub}: no finite cells — skipping")
+            print(f"  {_sub}: no finite cells - skipping")
             return
         _vmin = float(np.nanpercentile(_finite, 5))
         _vmax = float(np.nanpercentile(_finite, 95))
@@ -1895,19 +1895,19 @@ def panel_E_network_transition_matrix(
 @app.cell
 def figure5_panel_plan():
     """
-    # Figure 5 — Cross-stimulus transfer of the Friends recurrence gradient
+    # Figure 5 - Cross-stimulus transfer of the Friends recurrence gradient
 
     Serves manuscript R5 and talk slide 5.5.
 
     | Panel | Content | Relative size | Output filename |
     |---|---|---|---|
     | A | ρ × stimulus × subject, full repertoire. 3 stimulus groups (M10 / HP / PP); subjects as distinct markers with horizontal jitter; filled = p<0.05 uncorr, open = ns | wide | `fig5_A_rho_full.pdf` |
-    | B | Same layout, content-eligible subset (R2 filter) — shows qualitative pattern preserved | wide | `fig5_B_rho_eligible.pdf` |
-    | C | Movie10 genre breakdown — 4 genres (bourne, wolf, figures, life) × 6 subjects; same marker scheme. Shows social-narrative (wolf/figures) vs nature-documentary (life) dissociation. | wide | `fig5_C_m10_genre.pdf` |
+    | B | Same layout, content-eligible subset (R2 filter) - shows qualitative pattern preserved | wide | `fig5_B_rho_eligible.pdf` |
+    | C | Movie10 genre breakdown - 4 genres (bourne, wolf, figures, life) × 6 subjects; same marker scheme. Shows social-narrative (wolf/figures) vs nature-documentary (life) dissociation. | wide | `fig5_C_m10_genre.pdf` |
     | D | Cross-modality per-subject pattern: 6 connecting lines M10→HP→PP (full ρ), sub-02 accented as pattern-breaker, others neutral/low-alpha | square | `fig5_D_crossmodality_lines.pdf` |
     | E | Same layout as A/B, **run-onset-anchored** subset (2–8 states/subject). Lets reader see whether the cross-stimulus gradient is carried by scan-structure-anchored states. | wide | `fig5_E_rho_runonset.pdf` |
     | F | Same layout as A/B, **low-confidence (sub-HRF)** subset (5–18 states/subject). Included for completeness; wider y-range because ρ is noisier here. | wide | `fig5_F_rho_lowconf.pdf` |
-    | G (supp) | Run-onset anchoring decomposition — early-TR enrichment across 5 contexts (Friends a-runs, Friends b-runs, M10, HP, PP) split by the 3 anchoring sub-types from 05e_a2 (`ab-common`, `a-anchored`, `b-anchored`). Supports Panel E by showing that cross-stimulus ρ transfer is carried by `ab-common`; `a-anchored` drops to null in M10. | tall | `fig5_G_anchor_decomposition.pdf` |
+    | G (supp) | Run-onset anchoring decomposition - early-TR enrichment across 5 contexts (Friends a-runs, Friends b-runs, M10, HP, PP) split by the 3 anchoring sub-types from 05e_a2 (`ab-common`, `a-anchored`, `b-anchored`). Supports Panel E by showing that cross-stimulus ρ transfer is carried by `ab-common`; `a-anchored` drops to null in M10. | tall | `fig5_G_anchor_decomposition.pdf` |
 
     Design:
     - Subject identity = SUBJECT_MARKERS (shape) + SUBJECT_NEUTRAL color. Color channel preserved for future overlays.
@@ -1995,7 +1995,7 @@ def load_fig5_data(
                     for _g, _r in _d["A2_per_type"].items()
                 }
 
-            # Per-category ρ — recompute from flags + FO
+            # Per-category ρ - recompute from flags + FO
             _rec_scores = np.load(
                 RECURRENCE_DIR / _sub / VT / "recurrence_scores.npy"
             )
@@ -2077,7 +2077,7 @@ def panel_5A_rho_full(
     for _spine in ("top", "right"):
         _ax.spines[_spine].set_visible(False)
 
-    # Subject-shape legend — compact horizontal
+    # Subject-shape legend - compact horizontal
     _handles = [
         plt.Line2D([0], [0], marker=SUBJECT_MARKERS[_s], linestyle="",
                    markerfacecolor=SUBJECT_NEUTRAL, markeredgecolor=SUBJECT_NEUTRAL,
@@ -2233,7 +2233,7 @@ def panel_5D_crossmodality_lines(
     fig5_data, SUBJECTS, SUBJECT_MARKERS, SUBJECT_ACCENT, SUBJECT_NEUTRAL,
     OUT_FIG5, plt, np,
 ):
-    """Panel 5D: cross-modality pattern per subject — all 6 subjects as lines.
+    """Panel 5D: cross-modality pattern per subject - all 6 subjects as lines.
 
     Each subject gets a connecting line across M10 → HP → PP (full ρ).
     Sub-02 in accent color (pattern-breaker: weak M10, strong HP/PP).
@@ -2529,7 +2529,7 @@ def panel_5G_anchor_decomposition(
     print("=== Panel G enrichment table (subject-mean across states) ===")
     print(_df.to_string(index=False))
 
-    # Plot — 3 rows × 1 col, one row per anchor sub-type
+    # Plot - 3 rows × 1 col, one row per anchor sub-type
     _fig, _axes = plt.subplots(
         3, 1, figsize=(4.4, 5.4), sharex=True, sharey=True,
     )
@@ -2561,7 +2561,7 @@ def panel_5G_anchor_decomposition(
 
     _axes[-1].set_xticks(list(_cx.values()))
     _axes[-1].set_xticklabels([_ctx_labels[c] for c in _contexts])
-    # shared ylim — inspect data range + 10% headroom
+    # shared ylim - inspect data range + 10% headroom
     _all_vals = _df[_contexts].to_numpy().flatten()
     _all_vals = _all_vals[~pd.isna(_all_vals)].astype(float)
     _ymax = min(4.0, float(np.nanmax(_all_vals)) * 1.08)

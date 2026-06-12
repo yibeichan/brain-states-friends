@@ -12,7 +12,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Combined sHDP-HMM — GPU SLURM Wrapper (JAX backend)
+# Combined sHDP-HMM - GPU SLURM Wrapper (JAX backend)
 # =============================================================================
 #
 # Same interface as 04_combined_hdphmm.sh but requests a GPU and uses JAX.

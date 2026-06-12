@@ -1,4 +1,4 @@
-"""Figure F2 — the sources of recurrence (R2).
+"""Figure F2 - the sources of recurrence (R2).
 
 Split from the former `fig_F1_recurrence_and_taxonomy.py` (2026-06-10). R1 (the
 recurrence gradient) is now `fig_F1_recurrence_gradient.py`; this script is R2
@@ -128,7 +128,7 @@ def load_state_means(SUBJECTS, MODEL_DIR, VT, np):
 
 @app.cell
 def load_decoded_states_sub01(MODEL_DIR, VT, pickle):
-    """Viterbi-decoded state sequences for sub-01 (all runs) — for Panel C strips."""
+    """Viterbi-decoded state sequences for sub-01 (all runs) - for Panel C strips."""
     _path = MODEL_DIR / "sub-01" / "final" / VT / "decoded_states.pkl"
     with open(_path, "rb") as _f:
         decoded_states_sub01 = pickle.load(_f)
@@ -141,7 +141,7 @@ def panel_A_category_bars(
     state_flags, SUBJECTS, OUT_F2,
     TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP, plt, np,
 ):
-    """Panel A — per-subject category-count stacked bars (no recurrence dots).
+    """Panel A - per-subject category-count stacked bars (no recurrence dots).
 
     Horizontal stacked bars, one per subject (sub-01 bottom), counting all 50
     latent states across the 5 source categories. Pure composition by source;
@@ -216,7 +216,7 @@ def panel_B_category_network_sankey(
     TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP,
     NETWORK_ORDER, NETWORK_COLORS, display_network, plt, np,
 ):
-    """Panel B — Sankey: 5 taxonomy categories -> 13 networks (top-3 composition).
+    """Panel B - Sankey: 5 taxonomy categories -> 13 networks (top-3 composition).
 
     Lifted verbatim from the former F1 Panel B. Per-state composition: for each
     network, mean(|z-activation|) over its parcels; keep top-3 networks per
@@ -374,7 +374,7 @@ def panel_B_category_network_sankey(
 
 @app.cell
 def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt, np):
-    """Panel C — surface exemplars per category (sub-01), cortical + subcortical.
+    """Panel C - surface exemplars per category (sub-01), cortical + subcortical.
 
     Lifted verbatim from the former F1 Panel C. One exemplar per category
     (eligible rank-2, run-onset rank-1, low-conf rank-1, drift rank-1), rendered
@@ -409,7 +409,7 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
     _picks = {}
     for _name, _ranked_df in _ranked.items():
         if len(_ranked_df) == 0:
-            print(f"  WARNING: {_sub} has no {_name} states — skipping")
+            print(f"  WARNING: {_sub} has no {_name} states - skipping")
             continue
         _row = _ranked_df.iloc[min(_rank_idx[_name], len(_ranked_df) - 1)]
         _picks[_name] = int(_row[_flag_id])
@@ -474,7 +474,7 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
 def panel_C_state_timeseries(
     state_flags, decoded_states_sub01, OUT_F2, TAXONOMY_COLORS, plt, np,
 ):
-    """Panel C inset — binary-active timeseries strips per category exemplar.
+    """Panel C inset - binary-active timeseries strips per category exemplar.
 
     Lifted verbatim from the former F1. Same 4 picks (sub-01); each strip is a
     600-bin FO trace over all runs, colored by that category's taxonomy color.
@@ -511,7 +511,7 @@ def panel_C_state_timeseries(
 
     for _name, _ranked_df in _ranked.items():
         if len(_ranked_df) == 0:
-            print(f"  WARNING: no {_name} states for {_sub} — skipping")
+            print(f"  WARNING: no {_name} states for {_sub} - skipping")
             continue
         _row = _ranked_df.iloc[min(_rank_idx[_name], len(_ranked_df) - 1)]
         _sid = int(_row[_flag_id])

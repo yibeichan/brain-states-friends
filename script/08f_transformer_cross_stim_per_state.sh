@@ -9,17 +9,17 @@
 #SBATCH --array=0-5
 
 # =============================================================================
-# 08f — Per-state cross-stimulus signature consistency (D3c + D4-lang)
+# 08f - Per-state cross-stimulus signature consistency (D3c + D4-lang)
 # =============================================================================
 # Reads 08d D2 outputs for two stimuli and computes per-state Spearman ρ of
 # layer-wise AUC profiles. No feature reloading.
 #
 # Required exports:
-#   STIMULUS_A  — e.g. friends            (default: friends)
-#   STIMULUS_B  — e.g. movie10            (default: movie10)
-#   MODEL       — transformer model       (default: llama-3.2-3b)
-#   VT          — 05e_a4 VT suffix        (default: 0.95)
-#   D4_LANG     — if "1", add --d4_lang   (default: unset)
+#   STIMULUS_A  - e.g. friends            (default: friends)
+#   STIMULUS_B  - e.g. movie10            (default: movie10)
+#   MODEL       - transformer model       (default: llama-3.2-3b)
+#   VT          - 05e_a4 VT suffix        (default: 0.95)
+#   D4_LANG     - if "1", add --d4_lang   (default: unset)
 #
 # Usage examples:
 #   # D3c Friends vs Movie10
@@ -54,18 +54,18 @@ VT="${VT:-0.95}"
 SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"
 
-# HP and PP datasets do not include sub-04 — this is a CNeuroMod data-provenance
+# HP and PP datasets do not include sub-04 - this is a CNeuroMod data-provenance
 # limitation, NOT a quality-control exclusion. Auto-skip so the uniform
 # --array=0-5 works for every stimulus without re-launching with a trimmed array.
 if [[ "${STIMULUS_A}" == "harrypotter" || "${STIMULUS_A}" == "petitprince_fr" || "${STIMULUS_A}" == "petitprince_en" \
    || "${STIMULUS_B}" == "harrypotter" || "${STIMULUS_B}" == "petitprince_fr" || "${STIMULUS_B}" == "petitprince_en" ]] \
    && [[ "${SUB_ID}" == "sub-04" ]]; then
-    echo "Skipping ${SUB_ID} for ${STIMULUS_A}/${STIMULUS_B} (subject not in dataset — CNeuroMod data-provenance limitation, not QC)"
+    echo "Skipping ${SUB_ID} for ${STIMULUS_A}/${STIMULUS_B} (subject not in dataset - CNeuroMod data-provenance limitation, not QC)"
     exit 0
 fi
 
 echo "=============================================="
-echo "08f — Per-state cross-stim consistency"
+echo "08f - Per-state cross-stim consistency"
 echo "=============================================="
 echo "Subject:     ${SUB_ID}"
 echo "Stimulus A:  ${STIMULUS_A}"

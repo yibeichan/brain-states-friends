@@ -1,5 +1,5 @@
 """
-hdphmm_jax.py — JAX/GPU-accelerated Sticky HDP-HMM.
+hdphmm_jax.py - JAX/GPU-accelerated Sticky HDP-HMM.
 
 Drop-in replacement for StickyHDPHMM (hdphmm.py) that runs the E-step,
 M-step, and most of the HDP posterior update on GPU via JAX.
@@ -15,7 +15,7 @@ import JAX.
 Requirements:
     pip install "jax[cuda12]>=0.4.30" "dynamax>=0.1.4"
 
-Critical: float64 is mandatory — see the design notes
+Critical: float64 is mandatory - see the design notes
 """
 
 # Enable float64 BEFORE importing jax (must be set before any JAX operation)
@@ -368,7 +368,7 @@ _viterbi_one_seq_jit = jit(_viterbi_one_seq)
 
 
 # =============================================================================
-# StickyHDPHMM_JAX — Main class
+# StickyHDPHMM_JAX - Main class
 # =============================================================================
 
 class StickyHDPHMM_JAX:
@@ -398,7 +398,7 @@ class StickyHDPHMM_JAX:
         self.min_iter = min_iter
         self.learn_hyperparameters = learn_hyperparameters
         self.min_covar = min_covar
-        self.n_jobs = n_jobs  # Ignored — JAX handles parallelism
+        self.n_jobs = n_jobs  # Ignored - JAX handles parallelism
 
         self.n_features = None
         self.state_weights = None
@@ -424,7 +424,7 @@ class StickyHDPHMM_JAX:
             raise ValueError("n_components must be at least 1.")
 
     # -----------------------------------------------------------------
-    # Initialization (numpy — runs once, cheap)
+    # Initialization (numpy - runs once, cheap)
     # -----------------------------------------------------------------
 
     def _sample_stick_breaking(self, concentration, n_samples):
@@ -516,7 +516,7 @@ class StickyHDPHMM_JAX:
         return covars
 
     # -----------------------------------------------------------------
-    # E-step (JAX — the hot path)
+    # E-step (JAX - the hot path)
     # -----------------------------------------------------------------
 
     def _e_step(self, X_seqs, means_j, covars_j, startprob_j, transmat_j):
@@ -616,7 +616,7 @@ class StickyHDPHMM_JAX:
         return np.asarray(means), np.asarray(covars)
 
     # -----------------------------------------------------------------
-    # HDP posterior update (mostly numpy — cheap scalar ops)
+    # HDP posterior update (mostly numpy - cheap scalar ops)
     # -----------------------------------------------------------------
 
     def _hdp_posterior_update(self, posteriors_list, xi_sum, lengths):

@@ -66,13 +66,13 @@ def parse_bids_entities(name: str) -> dict:
         name: BIDS-like string, e.g.
           'sub-01_ses-007_task-s01e17a_desc-preproc_physio.tsv.gz'
           'sub-01_ses-001_task-bourne01_space-fsLR_den-91k'
-          's01e17a'  (Friends short key — returns task only)
+          's01e17a'  (Friends short key - returns task only)
 
     Returns:
         dict with keys like 'sub', 'ses', 'task', 'run' (only those present).
     """
     entities = {k: v for k, v in _BIDS_ENTITY_RE.findall(name)}
-    # Handle Friends short run_id (e.g. 's01e17a') — no BIDS entities at all
+    # Handle Friends short run_id (e.g. 's01e17a') - no BIDS entities at all
     if not entities and re.match(r"^s\d+e\d+[a-z]$", name):
         entities["task"] = name
     return entities
@@ -126,7 +126,7 @@ def build_physio_inventory(
             (e.g., '$DATA_DIR/friends.physprep')
         decoded_state_keys: List of run_id keys from decoded_states.pkl.
             If None, returns inventory keyed by physprep-derived task entities.
-        stimulus: 'friends' or 'movie10' — controls filename pattern matching.
+        stimulus: 'friends' or 'movie10' - controls filename pattern matching.
 
     Returns:
         dict: {run_key: {'preproc_physio': Path, 'events': Path, 'quality': Path}}
@@ -265,7 +265,7 @@ def load_quality(quality_path: Path | str | None) -> tuple[dict[str, bool], str]
     """
     default = {"ECG": True, "RSP": True, "EDA": True, "PPG": True}
     if quality_path is None:
-        logger.warning("No quality file — assuming all channels pass")
+        logger.warning("No quality file - assuming all channels pass")
         return default, "assumed"
 
     with open(quality_path) as f:
@@ -583,13 +583,13 @@ def extract_physio_features(
     """Extract 7 TR-aligned physiological features for one run.
 
     Features (columns):
-        0: HR (bpm) — from r_peak_corrected, interpolated
-        1: HRV_RMSSD (ms) — 30s rolling window
-        2: breathing_rate (breaths/min) — from inhale_max, interpolated
-        3: RVT — respiratory volume per time
-        4: EDA_tonic — mean per TR
-        5: EDA_phasic — mean per TR (log-transform before z-score in caller)
-        6: SCR_binary — any SCR onset in TR window
+        0: HR (bpm) - from r_peak_corrected, interpolated
+        1: HRV_RMSSD (ms) - 30s rolling window
+        2: breathing_rate (breaths/min) - from inhale_max, interpolated
+        3: RVT - respiratory volume per time
+        4: EDA_tonic - mean per TR
+        5: EDA_phasic - mean per TR (log-transform before z-score in caller)
+        6: SCR_binary - any SCR onset in TR window
 
     QC: failed channels → NaN for dependent features.
     PPG used as ECG backup when ECG fails but PPG passes.

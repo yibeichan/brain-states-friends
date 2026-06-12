@@ -93,7 +93,7 @@ LOSO_CV_THRESHOLD = 0.20
 # IMPORTANT: subcortical bins MUST stay in sync with
 # script/utils/plot_style.py:_SUBCORT_GROUPS (v2 canonical BG circuit per
 # Alexander-DeLong-Strick 1986; Haber & Knutson 2010). Cortical bins here
-# use Yeo-17 sub-network names (VisCent/VisPeri/etc.) — a separate local
+# use Yeo-17 sub-network names (VisCent/VisPeri/etc.) - a separate local
 # convention from plot_style.py's Yeo-7 names; unifying that is out of
 # scope.
 NETWORK_ORDER = [
@@ -127,7 +127,7 @@ NETWORK_COLORS = {
 }
 
 # Subcortical structure-to-group mapping (v2 canonical BG circuit).
-# Mirrors script/utils/plot_style.py:_SUBCORT_GROUPS — keep in sync.
+# Mirrors script/utils/plot_style.py:_SUBCORT_GROUPS - keep in sync.
 _SUBCORT_GROUPS = {
     'Pu': 'BG', 'Ca': 'BG', 'NAC': 'BG',
     'GPe': 'BG', 'GPi': 'BG',

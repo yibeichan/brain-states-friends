@@ -555,7 +555,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
                 usage = np.array(usage_list[-1])
 
         if usage is None:
-            # No usage history available — fall back to standard decode
+            # No usage history available - fall back to standard decode
             return self.decode(X, lengths=lengths)
 
         active_mask = usage >= min_usage
@@ -847,7 +847,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
         state_posterior_params = np.maximum(self.gamma * current_beta, 0) + np.maximum(global_effective_counts, 0)
 
         if np.sum(state_posterior_params) > 1e-10:
-            # Deterministic posterior mean — consistent with MAP estimation
+            # Deterministic posterior mean - consistent with MAP estimation
             # used everywhere else. The previous np.random.dirichlet() draw
             # was a hybrid (stochastic beta in an otherwise deterministic EM)
             # that caused LL oscillations without providing MCMC benefits.
@@ -986,7 +986,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
             # --- Log Likelihood for Convergence Check ---
             # Use logprob_total from the E-step (pre M-step parameters).
             # This is the standard EM convention and avoids a redundant
-            # forward pass — self.score() would recompute the exact same
+            # forward pass - self.score() would recompute the exact same
             # forward algorithm on the same data, just with post-update
             # parameters. The windowed convergence criterion (100-iter
             # windows) is robust to the pre/post distinction.
@@ -1278,7 +1278,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
         # Sum over all samples for each component (state occupancy)
         stats['post'] += posteriors.sum(axis=0)
         
-        # Add observation statistics (means and covariances) — vectorized over T
+        # Add observation statistics (means and covariances) - vectorized over T
         if 'm' in self.params:
             # posteriors.T: (K, T)  X: (T, D)  → stats['obs']: (K, D)
             stats['obs'] += posteriors.T @ X
@@ -1289,7 +1289,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
                 for c in range(n_components):
                     Xw = X * posteriors[:, c:c+1]  # (T, D) weighted rows
                     stats['obs*obs.T'][c] += Xw.T @ X  # (D, D)
-            else:  # diag, spherical, tied — need weighted sum of squares
+            else:  # diag, spherical, tied - need weighted sum of squares
                 # posteriors.T: (K, T)  X**2: (T, D)  → stats['obs**2']: (K, D)
                 stats['obs**2'] += posteriors.T @ (X ** 2)
         
@@ -1678,7 +1678,7 @@ def infer_n_active_states(model, min_state_usage=0.01):
     FIXED_PARAMS['min_state_usage'] in config/combined_hmm_config.py.
 
     Falls back to `model.n_components` (conservative upper bound) when usage
-    history is unavailable — e.g., for freshly-loaded models or models that
+    history is unavailable - e.g., for freshly-loaded models or models that
     terminated before the first usage update. This fallback is HDP-HMM
     specific: the true active count is unknown without training history, so
     over-counting is safer than under-counting.

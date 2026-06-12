@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Movie10 Score & Decode — SLURM Submission Script
+# Movie10 Score & Decode - SLURM Submission Script
 # =============================================================================
 # Scores and decodes movie10 runs using the Friends-trained sHDP-HMM.
 #

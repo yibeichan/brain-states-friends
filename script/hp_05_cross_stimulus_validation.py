@@ -527,7 +527,7 @@ def analysis_b1_movie10_baseline(sub_id, parc, vt, recurrence_scores, n_states):
     movie_fo_path = os.path.join(movie_dir, 'fractional_occupancy.pkl')
 
     if not os.path.exists(movie_fo_path):
-        logger.warning(f"Movie10 FO not found at {movie_fo_path} — skipping B1")
+        logger.warning(f"Movie10 FO not found at {movie_fo_path} - skipping B1")
         return {'available': False, 'note': 'Movie10 data not available for this subject'}
 
     with open(movie_fo_path, 'rb') as f:
@@ -572,7 +572,7 @@ def analysis_b2_bootstrap_reference(sub_id, parc, vt, hp_fo,
     movie_fo_path = os.path.join(movie_dir, 'fractional_occupancy.pkl')
 
     if not os.path.exists(movie_fo_path):
-        logger.warning(f"Movie10 FO not found — skipping B2")
+        logger.warning(f"Movie10 FO not found - skipping B2")
         return {'available': False}
 
     with open(movie_fo_path, 'rb') as f:
@@ -582,7 +582,7 @@ def analysis_b2_bootstrap_reference(sub_id, parc, vt, hp_fo,
     n_hp_runs = len(hp_fo)
 
     if len(movie_run_ids) < n_hp_runs:
-        logger.warning(f"Movie10 has fewer runs ({len(movie_run_ids)}) than HP ({n_hp_runs}) — skipping B2")
+        logger.warning(f"Movie10 has fewer runs ({len(movie_run_ids)}) than HP ({n_hp_runs}) - skipping B2")
         return {'available': False}
 
     active_mask = np.array([recurrence_scores[i] > 0 for i in range(n_states)])
@@ -788,7 +788,7 @@ def main():
         proj_dir = os.path.join(proj_dir, f'vt{args.vt}')
     hp_run_ids_path = os.path.join(proj_dir, 'hp_run_ids.json')
 
-    # run_id_map.json from hp_04 — maps long BIDS keys to short keys
+    # run_id_map.json from hp_04 - maps long BIDS keys to short keys
     run_id_map_path = os.path.join(hp_dir, 'run_id_map.json')
 
     # PCA diagnostic
@@ -806,7 +806,7 @@ def main():
     }
     for path, label in required_files.items():
         if not os.path.exists(path):
-            logger.error(f"Missing: {path} — {label}")
+            logger.error(f"Missing: {path} - {label}")
             sys.exit(1)
 
     # =========================================================================
@@ -840,7 +840,7 @@ def main():
         for lid in long_ids:
             short = long_to_short.get(lid)
             if short is None:
-                logger.warning("run_id_map has no short key for %s — skipping", lid)
+                logger.warning("run_id_map has no short key for %s - skipping", lid)
                 continue
             short_ids.append(short)
         hp_run_ids[stype] = short_ids
@@ -862,7 +862,7 @@ def main():
             logger.warning("eligible_states.json not found; sub-HRF filtering skipped.")
 
     if not hp_fo:
-        logger.error("No HP runs in fractional_occupancy.pkl — check hp_04 outputs")
+        logger.error("No HP runs in fractional_occupancy.pkl - check hp_04 outputs")
         sys.exit(1)
 
     n_active = int(np.sum(recurrence_scores > 0))

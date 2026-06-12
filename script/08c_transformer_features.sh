@@ -37,7 +37,7 @@
 #   HF_HOME=/path/to/hf_cache uv run python script/08c_transformer_features.py \
 #       --model all --download_only --device cpu
 #
-#   # Step 1: Fan-out — 292 parallel GPU jobs per model
+#   # Step 1: Fan-out - 292 parallel GPU jobs per model
 #   sbatch --export=MODEL=llama-3.2-3b --array=0-291 script/08c_transformer_features.sh
 #   sbatch --export=MODEL=dinov2-large --array=0-291 script/08c_transformer_features.sh
 #   sbatch --export=MODEL=w2v-bert-2.0 --array=0-291 script/08c_transformer_features.sh
@@ -75,11 +75,11 @@ module load ffmpeg/5.1.4
 eval "$(micromamba shell hook --shell bash)"
 micromamba activate friends-states
 
-# NOTE: Do NOT run `uv sync` here — it strips NVIDIA .so files (known uv bug).
+# NOTE: Do NOT run `uv sync` here - it strips NVIDIA .so files (known uv bug).
 # Run `uv sync --extra torch --extra gpu` once manually, then fix with:
 #   uv pip install --reinstall nvidia-cudnn-cu13 nvidia-nccl-cu13
 
-# NVIDIA libs installed by pip (cuDNN, cuBLAS, NCCL, etc.) — not on system LD path
+# NVIDIA libs installed by pip (cuDNN, cuBLAS, NCCL, etc.) - not on system LD path
 NVIDIA_LIB="${PROJECT_DIR}/.venv/lib/python3.12/site-packages/nvidia"
 NVIDIA_LD=""
 for subdir in "${NVIDIA_LIB}"/*/lib; do
@@ -107,7 +107,7 @@ fi
 # Default stimulus
 STIMULUS="${STIMULUS:-friends}"
 
-# LLaMA local-window readout — see 2026-05-01_08c_llama_local_window_design.md
+# LLaMA local-window readout - see 2026-05-01_08c_llama_local_window_design.md
 WINDOW_TRS="${WINDOW_TRS:-4}"
 OUTPUT_SUBDIR_SUFFIX="${OUTPUT_SUBDIR_SUFFIX:-}"
 

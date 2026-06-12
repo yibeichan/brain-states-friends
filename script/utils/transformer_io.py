@@ -66,7 +66,7 @@ MODEL_REGISTRY = {
 STIMULUS_MODALITIES = {
     "friends":        {"audio", "video", "text"},
     "movie10":        {"audio", "video", "text"},
-    "harrypotter":    {"text"},              # 2Hz RSVP reading — no audio, no scene video
+    "harrypotter":    {"text"},              # 2Hz RSVP reading - no audio, no scene video
     "petitprince_fr": {"audio", "text"},     # audiobook (no video)
     "petitprince_en": {"audio", "text"},     # audiobook (no video)
 }
@@ -427,13 +427,13 @@ def _extract_video_frames(video_path, n_trs):
             if fpath.exists():
                 frames.append(Image.open(fpath).convert("RGB"))
             else:
-                # Fewer frames than TRs — duplicate last frame
+                # Fewer frames than TRs - duplicate last frame
                 if frames:
                     frames.append(frames[-1].copy())
                 else:
                     # Create blank frame as fallback
                     frames.append(Image.new("RGB", (224, 224)))
-                logger.warning("Missing video frame %d — using fallback", i)
+                logger.warning("Missing video frame %d - using fallback", i)
 
     return frames
 
@@ -458,11 +458,11 @@ def _compute_tr_token_boundaries(
     Args:
         offsets: (seq_len, 2) int array of (char_start, char_end) per token,
             from `tokenizer(..., return_offsets_mapping=True)`.
-        char_lengths: (n_trs,) int array — cumulative character length of the
+        char_lengths: (n_trs,) int array - cumulative character length of the
             transcript through TR `t`.
 
     Returns:
-        (n_trs,) int array — `tr_token_boundaries[t]` is the number of tokens
+        (n_trs,) int array - `tr_token_boundaries[t]` is the number of tokens
         whose end-character is ≤ `char_lengths[t]` (BOS-inclusive).
     """
     return np.searchsorted(offsets[:, 1], char_lengths, side="right").astype(
@@ -491,7 +491,7 @@ def _local_window_pool(
     per §2.5 v1 policy (cortical-encoding precedent: Vaidya et al. 2022).
 
     Args:
-        hidden_states: (seq_len, dim) array — hidden states for one layer.
+        hidden_states: (seq_len, dim) array - hidden states for one layer.
         tr_token_boundaries: (n_trs,) array of token-count boundaries.
         window_trs: W in TR units; must be ≥ 1.
         B: BOS clamp (1 if BOS at index 0, else 0).
@@ -539,7 +539,7 @@ def extract_text_features(
 
     Strategy:
     1. Single forward pass on the FULL run (LLaMA's causal attention is
-       unchanged — token at position `i` still attends only to `0..i`).
+       unchanged - token at position `i` still attends only to `0..i`).
     2. Single full-text tokenization with `return_offsets_mapping=True` to
        guarantee monotone per-TR boundaries (§2.3.1).
     3. Per-TR readout = mean of hidden states whose end-character is in
@@ -562,8 +562,8 @@ def extract_text_features(
 
     References:
         - Caucheteux & King 2022 (mean-pooling for distributed semantics).
-        - Caucheteux et al. 2023 (NHB) — bounded-context cortical encoding.
-        - Antonello et al. 2024 (NeurIPS) — local-window LLM-fMRI alignment.
+        - Caucheteux et al. 2023 (NHB) - bounded-context cortical encoding.
+        - Antonello et al. 2024 (NeurIPS) - local-window LLM-fMRI alignment.
     """
     assert getattr(tokenizer, "is_fast", False), (
         "extract_text_features requires a fast tokenizer "
@@ -588,7 +588,7 @@ def extract_text_features(
             full_text = transcript_data[t]
             break
     if not full_text:
-        logger.warning("No text in any TR — returning zeros")
+        logger.warning("No text in any TR - returning zeros")
         return layer_features
 
     # Per-TR cumulative character lengths (§2.3.1).
@@ -609,13 +609,13 @@ def extract_text_features(
     offsets = enc["offset_mapping"][0].cpu().numpy()  # (seq_len, 2)
     input_ids = enc["input_ids"][0]                   # (seq_len,)
 
-    # BOS clamp — §2.3.2 / §2.6.
+    # BOS clamp - §2.3.2 / §2.6.
     bos_id = getattr(tokenizer, "bos_token_id", None)
     B = 1 if (bos_id is not None and int(input_ids[0]) == int(bos_id)) else 0
 
     tr_token_boundaries = _compute_tr_token_boundaries(offsets, char_lengths)
 
-    # Forward pass — `return_offsets_mapping` is not a model input.
+    # Forward pass - `return_offsets_mapping` is not a model input.
     model_inputs = {
         "input_ids": input_ids.unsqueeze(0).to(device),
         "attention_mask": enc["attention_mask"].to(device),

@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# PCA Preparation for Combined HDP-HMM — SLURM Submission Script
+# PCA Preparation for Combined HDP-HMM - SLURM Submission Script
 # =============================================================================
 #
 # Fits PCA on primary training data and each of 6 LOSO fold training sets,

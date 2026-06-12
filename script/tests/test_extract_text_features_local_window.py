@@ -18,7 +18,7 @@ Standalone::
 
     python script/tests/test_extract_text_features_local_window.py
 
-Pure synthetic — no transformers, no GPU, no pytest dep.
+Pure synthetic - no transformers, no GPU, no pytest dep.
 """
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ def test_extract_text_features_requires_fast_tokenizer() -> None:
 
     ``return_offsets_mapping=True`` is unsupported by slow tokenizers, so the
     function asserts ``tokenizer.is_fast`` early. The check must fire before
-    any forward pass — this test passes a MagicMock model that would error on
+    any forward pass - this test passes a MagicMock model that would error on
     any call, proving the assertion is reached first.
     """
     slow_tokenizer = MagicMock()
@@ -199,7 +199,7 @@ def test_extract_text_features_requires_fast_tokenizer() -> None:
     except AssertionError as e:
         raised = True
         # Failure must mention the tokenizer requirement, not the side-effect
-        # we wired into the fake model — proves the early-assert path fired.
+        # we wired into the fake model - proves the early-assert path fired.
         assert (
             "is_fast" in str(e).lower()
             or "fast tokenizer" in str(e).lower()

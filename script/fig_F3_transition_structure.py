@@ -1,11 +1,11 @@
-"""Figure F3 — Transition structure (R3): graph topology + FC-transition coupling.
+"""Figure F3 - Transition structure (R3): graph topology + FC-transition coupling.
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .pdf + .png mini-figures for manual
 assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
 R3 claim: "Transitions are organized by the functional relationships between
-states, not random diffusion." Intro §5 commits to three findings —
+states, not random diffusion." Intro §5 commits to three findings -
 recurrence assortativity, FC-transition coupling, and network homophily "in
 most individuals."
 
@@ -20,7 +20,7 @@ Panel A width ≈ B + C; heights need not match. Legends ship as separate files.
 | Panel | Content | Chart family | Source files | Output |
 |---|---|---|---|---|
 | A | Per-subject transition graphs, 1×6 small-multiples row (one mini graph per subject; nodes colored by dominant network, sized by recurrence; force-directed layout). Separate legend files. | network/graph | 06b transition_graph.graphml (×6 subj) | fig3_A_transition_graphs.{pdf,png} + fig3_A_legend_networks.* + fig3_A_legend_recurrence.* |
-| B | Pooled FC→transition 2D density (all 6 subjects, 5,723 state pairs; RANK axes; hexbin + binned-median trend). No in-plot text/legend — ρ range, n, trend all in caption. | distribution (2D density) | 06a transition_probabilities.npy + 05f rv (×6 subj) | fig3_B_fc_transition_density.{pdf,png} |
+| B | Pooled FC→transition 2D density (all 6 subjects, 5,723 state pairs; RANK axes; hexbin + binned-median trend). No in-plot text/legend - ρ range, n, trend all in caption. | distribution (2D density) | 06a transition_probabilities.npy + 05f rv (×6 subj) | fig3_B_fc_transition_density.{pdf,png} |
 | C | Cross-subject consistency forest (4 metrics × 6 subjects; per-subject marker shapes, neutral color, no accent, no legend; assortativity CI; per-row null line) | point-based 1D | 06b transition_structure_summary.json (all subjects) | fig3_C_cross_subject_consistency.{pdf,png} |
 
 Design notes (2026-05-26 revision):
@@ -28,15 +28,15 @@ Design notes (2026-05-26 revision):
     R1-reachability story; replaced by network-colored transition graphs (show
     actual transitions + partial network clustering). Now a 1×6 per-subject
     strip (not a single exemplar): states are subject-specific and transitions
-    are within-subject, so a single pooled/connected graph is undefined — the
+    are within-subject, so a single pooled/connected graph is undefined - the
     honest cross-subject object is six independent graphs. Network palette is
-    colorblind-safe Okabe–Ito (plot_style.NETWORK_COLORS) — only ≤7 cortical
+    colorblind-safe Okabe–Ito (plot_style.NETWORK_COLORS) - only ≤7 cortical
     networks ever appear as dominant nodes (Vis/SomMot/DorsAttn/SalVentAttn/
     Limbic/Cont/Default), so 7 CB-distinct hues suffice. Legends are separate
     files per the assembly workflow (graph strip carries none).
   * Panel B: was a single-exemplar FC-transition scatter; now a *pooled* 2D
     density over all 6 subjects' pairs on RANK axes (distribution family,
-    distinct from A's graph and C's point-1D). Pooling is for-display only — the
+    distinct from A's graph and C's point-1D). Pooling is for-display only - the
     per-individual ρ is the inferential statistic and lives in Panel C. ρ range
     (0.33–0.55), n, and the trend definition are all in the caption, NOT in the
     plot. Rank axes are used because the raw RV/transition values are
@@ -44,11 +44,11 @@ Design notes (2026-05-26 revision):
     corner); 407 of 5,723 pairs have T_sym=0 and form the bottom rank band.
   * Panel C: subjects now use SUBJECT_MARKERS shapes (consistent with F4) in a
     single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51) is no
-    longer accented — it is visible as the one homophily marker at/below the null
+    longer accented - it is visible as the one homophily marker at/below the null
     line and noted in the caption. No per-panel legend (marker→subject key is
     shared project-wide; cross-reference F4). Tightened top padding.
 
-Source-truth audit (2026-05-26, reproduced from raw arrays — see session log):
+Source-truth audit (2026-05-26, reproduced from raw arrays - see session log):
   * Panel B pooled: 5,723 pairs total, 407 with T_sym=0; per-subject ρ reproduces
     JSON exactly (0.417/0.483/0.326/0.551/0.393/0.434 → range 0.33–0.55).
   * Panel C: FC-Mantel ρ 0.326–0.551, MFPT-FC ρ 0.405–0.680, assortativity
@@ -157,7 +157,7 @@ def panel_A_transition_graphs(
     SUBJECTS, TRANS_DIR, VT, OUT_F3, nx, plt, np,
     NETWORK_COLORS, NETWORK_ORDER, display_network,
 ):
-    """Panel A — per-subject transition graphs, 1×6 small-multiples row.
+    """Panel A - per-subject transition graphs, 1×6 small-multiples row.
 
     One mini directed-transition graph per subject (06b transition_graph.graphml:
     model transmat_, self-loops removed, edges thresholded at P >= 0.01), drawn
@@ -172,18 +172,18 @@ def panel_A_transition_graphs(
 
     Why six graphs, not one pooled graph: states are subject-specific (each
     subject has its own HMM, states are NOT aligned across subjects) and
-    transitions exist only within a subject's own sequence — there is no
+    transitions exist only within a subject's own sequence - there is no
     cross-subject edge and no pooled transition matrix. A single connected graph
     is therefore undefined; the honest cross-subject object is six independent
-    graphs. Their shared signature — same-network nodes pulling into partial
-    local groups — is the visual counterpart of the network-homophily column in
+    graphs. Their shared signature - same-network nodes pulling into partial
+    local groups - is the visual counterpart of the network-homophily column in
     Panel C (ratios 1.55–1.99 in five of six subjects).
 
     Edges are UNDIRECTED: ~84% of directed edges are reciprocated, so arrowheads
     add clutter without information; net directionality is a supplementary result.
 
     Legends are emitted as SEPARATE files (fig3_A_legend_networks,
-    fig3_A_legend_recurrence) per the user's assembly workflow — the graph strip
+    fig3_A_legend_recurrence) per the user's assembly workflow - the graph strip
     itself carries no legend.
     """
     _present_nets = set()
@@ -287,7 +287,7 @@ def panel_B_fc_transition_density(
     SUBJECTS, FC_DIR, DYN_DIR, TRANS_DIR, VT, active_states, OUT_F3,
     json, plt, np, sp_stats,
 ):
-    """Panel B — pooled FC→transition 2D density (all 6 subjects).
+    """Panel B - pooled FC→transition 2D density (all 6 subjects).
 
     One hexbin over every active-state pair from all six subjects (upper
     triangle, masked exactly as 06b's `test_fc_transition_correlation`):
@@ -295,13 +295,13 @@ def panel_B_fc_transition_density(
     y = symmetrized transition probability (P_ij + P_ji)/2. ~5,700 pairs total.
 
     Pooling is FOR DISPLAY ONLY. The inferential statistic is the per-individual
-    Spearman ρ (R3 is a per-subject claim) — reported in Panel C and summarized
+    Spearman ρ (R3 is a per-subject claim) - reported in Panel C and summarized
     here as a *range*, never as a pooled ρ (no JSON reports one, and pooling
     across subjects with different repertoires would mix individuals). We verify
     each subject's reproduced ρ against its 06b JSON before pooling.
 
     Distribution family (hexbin density), distinct from Panel A's graph and
-    Panel C's point-1D — satisfies the plot-type-variety rule.
+    Panel C's point-1D - satisfies the plot-type-variety rule.
 
     LINEAR y-axis (not log): 407 of the 5,723 pooled pairs have y=0 (no observed
     transition despite shared FC). A log axis would silently drop them, breaking
@@ -343,7 +343,7 @@ def panel_B_fc_transition_density(
     print(f"Panel B pooled: n_pairs={_x_raw.size}, y=0 count={(_y_raw <= 1e-10).sum()}, "
           f"per-subject rho range {_rmin:.3f}-{_rmax:.3f}")
 
-    # Display on RANK (percentile) axes — Spearman is a rank correlation, and the
+    # Display on RANK (percentile) axes - Spearman is a rank correlation, and the
     # raw RV/transition values are pathologically concentrated (RV near 1.0,
     # transition prob near 0 with 407 exact zeros) so a linear-linear density
     # collapses into one corner. Percentile ranks spread both axes uniformly, so
@@ -399,7 +399,7 @@ def panel_B_fc_transition_density(
 def panel_C_cross_subject_consistency(
     SUBJECTS, trans_summary, OUT_F3, SUBJECT_NEUTRAL, SUBJECT_MARKERS, plt, np,
 ):
-    """Panel C — cross-subject consistency forest (4 metrics × 6 subjects).
+    """Panel C - cross-subject consistency forest (4 metrics × 6 subjects).
 
     Four R3 metrics, one horizontal track each (own x-scale; small-multiple
     rows sharing the subject styling):
@@ -409,21 +409,21 @@ def panel_C_cross_subject_consistency(
       4. Network homophily (within/between ratio)            null = 1
 
     Each subject is a distinct SUBJECT_MARKERS shape in a single neutral color
-    (the project-wide subject key, consistent with Fig 5 — so no per-panel
+    (the project-wide subject key, consistent with Fig 5 - so no per-panel
     legend is needed; the shapes also de-overlap clustered points). Color is NOT
     spent on subject identity here: marker shape carries it, leaving the panel
-    uncluttered. sub-05's homophily null (ratio 0.980, p=0.51 — the intro's "in
+    uncluttered. sub-05's homophily null (ratio 0.980, p=0.51 - the intro's "in
     most individuals" caveat) is no longer accented; it reads as the one
     homophily marker sitting at/below the dashed null line, and is named in the
     caption. The point estimate per row is the message; which marker is which
     individual is secondary (recoverable via the Fig 5 marker key).
     """
     # (row label, key, null value, per-row x-axis label). Each row has its own
-    # x-scale — the metrics are not commensurable — so each carries its own
+    # x-scale - the metrics are not commensurable - so each carries its own
     # axis label rather than a single shared "effect size" caption.
     # y-label = the variable; x-label = the statistic (rows 3 & 4 are the SAME
     # variable, functional connectivity, differing only in what it is correlated
-    # against — transition probability vs MFPT). Spearman ρ is symmetric and
+    # against - transition probability vs MFPT). Spearman ρ is symmetric and
     # non-causal, so no directional ("A→B") naming. MFPT = mean first passage
     # time (defined in caption).
     _metrics = [
@@ -467,7 +467,7 @@ def panel_C_cross_subject_consistency(
         for _j, _sub in enumerate(SUBJECTS):
             _v, _ci = _val(_sub, _key)
             _vals.append(_v)
-            # NOTE: _yj is RANDOM vertical jitter with NO meaning — the y-axis
+            # NOTE: _yj is RANDOM vertical jitter with NO meaning - the y-axis
             # has no scale. It only de-overlaps the 6 subject markers and the
             # assortativity CI whiskers so they don't pile onto one line.
             _yj = _rng.uniform(-0.18, 0.18)

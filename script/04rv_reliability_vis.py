@@ -193,7 +193,7 @@ def save_fig(fig, out_dir, name):
 
 
 # =============================================================================
-# Fig 1 — State Spatial Reproducibility
+# Fig 1 - State Spatial Reproducibility
 # =============================================================================
 
 def fig1_spatial_reproducibility(all_loso, all_sh, out_dir):
@@ -278,7 +278,7 @@ def fig1_spatial_reproducibility(all_loso, all_sh, out_dir):
 
 
 # =============================================================================
-# Fig 2 — Scalar Invariant Stability
+# Fig 2 - Scalar Invariant Stability
 # =============================================================================
 
 def fig2_scalar_stability(all_loso, all_sh, out_dir):
@@ -326,7 +326,7 @@ def fig2_scalar_stability(all_loso, all_sh, out_dir):
             noise = loso["noise_floor"]
             x = x_positions[si]
 
-            # Noise floor (seed range) — grey bar
+            # Noise floor (seed range) - grey bar
             nk = noise_keys[metric]
             if nk is not None and nk in noise:
                 seed_range = noise[nk]["range"]
@@ -336,7 +336,7 @@ def fig2_scalar_stability(all_loso, all_sh, out_dir):
                     color="lightgrey", alpha=0.6, zorder=1,
                 )
 
-            # LOSO fold values — colored dots
+            # LOSO fold values - colored dots
             fold_vals = []
             seasons = sorted(fold_inv.keys(), key=int)
             for si_fold, season_key in enumerate(seasons):
@@ -349,7 +349,7 @@ def fig2_scalar_stability(all_loso, all_sh, out_dir):
                         edgecolors="black", linewidths=0.4, zorder=3,
                     )
 
-            # Split-half A/B — triangle markers
+            # Split-half A/B - triangle markers
             for half_label, marker_offset in [("A", -0.12), ("B", 0.12)]:
                 val = half_inv[half_label].get(sh_keys[metric])
                 if val is not None:
@@ -379,7 +379,7 @@ def fig2_scalar_stability(all_loso, all_sh, out_dir):
 
 
 # =============================================================================
-# Fig 3 — Recurrence Profile Reliability
+# Fig 3 - Recurrence Profile Reliability
 # =============================================================================
 
 def fig3_recurrence_reliability(all_sh, out_dir):
@@ -482,7 +482,7 @@ def fig3_recurrence_reliability(all_sh, out_dir):
 
 
 # =============================================================================
-# Fig 4 — LOSO Recurrence CDFs
+# Fig 4 - LOSO Recurrence CDFs
 # =============================================================================
 
 def fig4_loso_recurrence_cdfs(all_loso, out_dir):
@@ -547,7 +547,7 @@ def fig4_loso_recurrence_cdfs(all_loso, out_dir):
 
 
 # =============================================================================
-# Fig 5 — Network Composition
+# Fig 5 - Network Composition
 # =============================================================================
 
 def fig5_network_composition(all_loso, all_sh, out_dir):
@@ -635,7 +635,7 @@ def fig5_network_composition(all_loso, all_sh, out_dir):
 
 
 # =============================================================================
-# Fig 6a — Transition Scalar Stability (per-subject)
+# Fig 6a - Transition Scalar Stability (per-subject)
 # =============================================================================
 
 def fig6a_transition_scalars(loso, sh, sub_id, out_dir):
@@ -667,7 +667,7 @@ def fig6a_transition_scalars(loso, sh, sub_id, out_dir):
                 label="Seed range",
             )
 
-        # LOSO fold values — strip/swarm
+        # LOSO fold values - strip/swarm
         fold_vals = []
         for season_key in seasons:
             val = fold_inv[season_key].get(metric_key)
@@ -682,7 +682,7 @@ def fig6a_transition_scalars(loso, sh, sub_id, out_dir):
                     zorder=3, label=f"S{season_key}" if mi == 0 else None,
                 )
 
-        # Split-half A/B — triangles
+        # Split-half A/B - triangles
         for half_label, x_offset in [("A", 0.6), ("B", 0.85)]:
             sh_key = metric_key
             val = half_inv[half_label].get(sh_key)
@@ -704,14 +704,14 @@ def fig6a_transition_scalars(loso, sh, sub_id, out_dir):
                 fontsize=6, loc="upper right", ncol=3, framealpha=0.7,
             )
 
-    fig.suptitle(f"Transition Scalar Stability — {sub_id}", fontsize=11)
+    fig.suptitle(f"Transition Scalar Stability - {sub_id}", fontsize=11)
     fig.tight_layout()
     sub_out = os.path.join(out_dir, sub_id)
     save_fig(fig, sub_out, f"fig6a_transition_scalars_{sub_id}")
 
 
 # =============================================================================
-# Fig 6b — Transition Matrix Comparison (per-subject)
+# Fig 6b - Transition Matrix Comparison (per-subject)
 # =============================================================================
 
 def fig6b_transition_matrices(loso, sh, primary, sub_id, parcellation, out_dir):
@@ -749,7 +749,7 @@ def fig6b_transition_matrices(loso, sh, primary, sub_id, parcellation, out_dir):
     # Split-half A model
     sh_model = load_split_half_model(parcellation, sub_id, "A")
 
-    # Collect matrices — each model uses its own active states
+    # Collect matrices - each model uses its own active states
     panels = []
     titles = []
 
@@ -803,7 +803,7 @@ def fig6b_transition_matrices(loso, sh, primary, sub_id, parcellation, out_dir):
         fig.colorbar(im, ax=ax, label="log10(P)", shrink=0.8)
 
     fig.suptitle(
-        f"Transition Matrices (active states) — {sub_id}",
+        f"Transition Matrices (active states) - {sub_id}",
         fontsize=11,
     )
     fig.tight_layout()
@@ -812,7 +812,7 @@ def fig6b_transition_matrices(loso, sh, primary, sub_id, parcellation, out_dir):
 
 
 # =============================================================================
-# Fig 7 — FC Structure Stability
+# Fig 7 - FC Structure Stability
 # =============================================================================
 
 def fig7a_fc_split_half(all_sh, parcellation, out_dir):
@@ -928,7 +928,7 @@ def fig7a_fc_split_half(all_sh, parcellation, out_dir):
 
 
 # =============================================================================
-# Fig 7b — LOSO FC Similarity
+# Fig 7b - LOSO FC Similarity
 # =============================================================================
 
 def _load_primary_fc(parcellation, sub_id, vt="0.95"):
@@ -1048,7 +1048,7 @@ def fig7b_fc_loso(all_loso, parcellation, out_dir):
 
 
 # =============================================================================
-# Fig 7c — FC Similarity: LOSO vs Split-Half (combined)
+# Fig 7c - FC Similarity: LOSO vs Split-Half (combined)
 # =============================================================================
 
 def fig7c_fc_combined(all_loso, all_sh, parcellation, out_dir):
@@ -1163,7 +1163,7 @@ def fig7c_fc_combined(all_loso, all_sh, parcellation, out_dir):
 
 
 # =============================================================================
-# Fig 7d — FC Similarity vs Mean Correlation
+# Fig 7d - FC Similarity vs Mean Correlation
 # =============================================================================
 
 def fig7d_fc_vs_mean(all_sh, parcellation, out_dir):
@@ -1356,10 +1356,10 @@ def main():
     # ── Per-subject figures ───────────────────────────────────────────────
     for loso, sh, primary in zip(all_loso, all_sh, all_primary):
         sub_id = loso["sub_id"]
-        logger.info("--- Fig 6a: Transition Scalars — %s ---", sub_id)
+        logger.info("--- Fig 6a: Transition Scalars - %s ---", sub_id)
         fig6a_transition_scalars(loso, sh, sub_id, per_sub_out)
 
-        logger.info("--- Fig 6b: Transition Matrices — %s ---", sub_id)
+        logger.info("--- Fig 6b: Transition Matrices - %s ---", sub_id)
         fig6b_transition_matrices(loso, sh, primary, sub_id, parcellation, per_sub_out)
 
     # ── Fig 7: FC stability (optional) ───────────────────────────────────

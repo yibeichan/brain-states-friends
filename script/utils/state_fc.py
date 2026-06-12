@@ -128,7 +128,7 @@ def compute_empirical_state_fc(parcel_ts, viterbi, K, min_trs=30):
     Returns:
         corr_parcel:      (K, n_parcels, n_parcels) correlation matrices.
         n_trs_per_state:  (K,) TR counts.
-        reliable:         (K,) boolean — True if n_trs >= min_trs.
+        reliable:         (K,) boolean - True if n_trs >= min_trs.
         shrinkage_alpha:  (K,) Ledoit-Wolf shrinkage intensity per state.
     """
     n_parcels = parcel_ts.shape[1]
@@ -197,7 +197,7 @@ def compute_fc_similarity_pairs(corr_a, corr_b, pairs):
         pairs:  list of dicts with 'state_A' and 'state_B' keys (indices).
 
     Returns:
-        fc_similarities: list of float — per-pair RV coefficient.
+        fc_similarities: list of float - per-pair RV coefficient.
     """
     from utils.stats import compute_rv_coefficient
 

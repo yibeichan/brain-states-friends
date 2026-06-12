@@ -5,13 +5,13 @@
 Two-stage model selection (2026-03-13 improvement):
 
   fit mode --stage 1 (SLURM-parallelizable):
-    Stage 1 — select variance threshold (PCA dimension).
+    Stage 1 - select variance threshold (PCA dimension).
     Sweep vt ∈ {0.80..0.99} with fixed nc=60, gamma=5, cov=diag.
     5 configs, each with N seeds. Metric: per-dimension validation LL.
     SLURM array: 0-4 (5 configs).
 
   fit mode --stage 2 (SLURM-parallelizable):
-    Stage 2 — select K, gamma, covariance at the vt chosen in Stage 1.
+    Stage 2 - select K, gamma, covariance at the vt chosen in Stage 1.
     Sweep nc × gamma × cov. Metric: BIC (training LL, effective K).
     SLURM array: 0-(N_stage2-1) where N depends on selected vt's cov rules.
 
@@ -284,7 +284,7 @@ def fit_single_config(config, sub_id, parcellation, n_fit_seeds, n_jobs=1):
 
             # Per-season validation LL (heuristic non-stationarity diagnostic).
             # With N=6 seasons, IQR is unreliable as a statistical test.
-            # This is a qualitative warning only — LOSO (loso_fit mode) provides
+            # This is a qualitative warning only - LOSO (loso_fit mode) provides
             # the definitive cross-season generalization test.
             valid_ll_per_season = {}
             for s in sorted(season_valid_cache.keys()):
@@ -296,7 +296,7 @@ def fit_single_config(config, sub_id, parcellation, n_fit_seeds, n_jobs=1):
                     logger.warning(f"  Season {s} valid LL scoring failed: {e_sv}")
 
             # Tukey fence on per-season LL values (heuristic only; N=6 makes
-            # IQR unstable — treat any flagged season as a signal for LOSO, not
+            # IQR unstable - treat any flagged season as a signal for LOSO, not
             # a definitive finding)
             if len(valid_ll_per_season) >= 3:
                 season_lls = np.array(list(valid_ll_per_season.values()))
@@ -521,7 +521,7 @@ def select_and_refit(sub_id, parcellation, n_final_seeds, force_refit=False, n_j
     configs_dir = os.path.join(output_base, 'configs')
 
     logger.info(f"\n{'=' * 60}")
-    logger.info(f"COMBINED MODEL — Model Selection: {sub_id}")
+    logger.info(f"COMBINED MODEL - Model Selection: {sub_id}")
     logger.info(f"{'=' * 60}")
 
     # -------------------------------------------------------------------------
@@ -586,7 +586,7 @@ def select_and_refit(sub_id, parcellation, n_final_seeds, force_refit=False, n_j
             threshold = max(top1['std_valid_ll'], top2['std_valid_ll'])
         if threshold > 0 and diff < threshold:
             logger.warning(
-                f"STATISTICAL WARNING: Top-2 configs indistinguishable — "
+                f"STATISTICAL WARNING: Top-2 configs indistinguishable - "
                 f"score diff={diff:.6f} < threshold={threshold:.6f}. "
                 "Prefer the simpler config (fewer states or diagonal cov)."
             )
@@ -913,12 +913,12 @@ def _compute_selection_score(summary, selection_metric):
     Metrics:
       'll_per_sample': raw mean validation LL/sample (legacy default)
       'll_per_dim': per-dimension validation LL = valid_ll/sample / n_pcs
-                    (Stage 1 metric — NOTE: biased toward higher vt because
+                    (Stage 1 metric - NOTE: biased toward higher vt because
                     low-variance PCs with λ<1 contribute positive -½·log(λ) terms,
                     inflating LL/dim. Use --fixed_vt to bypass Stage 1 with an
                     externally validated vt instead.)
       'bic': BIC on training LL with effective-K parameter counting
-             (Stage 2 metric — principled complexity penalty)
+             (Stage 2 metric - principled complexity penalty)
 
     LOSO is the definitive generalization test and takes precedence.
     """
@@ -940,7 +940,7 @@ def _compute_selection_score(summary, selection_metric):
         if not successful:
             return -np.inf
 
-        # BIC uses training LL (not validation LL) — BIC is derived as an
+        # BIC uses training LL (not validation LL) - BIC is derived as an
         # approximation to the marginal likelihood under training data.
         # Using validation LL would double-count regularization.
         #
@@ -1526,13 +1526,13 @@ def loso_fit(sub_id, parcellation, loso_season, n_final_seeds, force_refit=False
     Args:
         sub_id:        Subject ID
         parcellation:  Parcellation name
-        loso_season:   Integer (1-6; 1-4 for sub-04) — season to hold out
+        loso_season:   Integer (1-6; 1-4 for sub-04) - season to hold out
         n_final_seeds: Number of seeds for refit
         force_refit:   If True, redo even if results exist
         fixed_vt:      Optional fixed variance threshold (bypasses stage1_result.json)
     """
     logger.info(f"\n{'=' * 60}")
-    logger.info(f"LOSO FIT — Season {loso_season} held out: {sub_id}")
+    logger.info(f"LOSO FIT - Season {loso_season} held out: {sub_id}")
     logger.info(f"{'=' * 60}")
 
     combined_base = get_combined_base(sub_id, parcellation)
@@ -1564,7 +1564,7 @@ def loso_fit(sub_id, parcellation, loso_season, n_final_seeds, force_refit=False
         return
     os.makedirs(loso_output_dir, exist_ok=True)
 
-    # Load this fold's own PCA — trained on seasons excluding loso_season.
+    # Load this fold's own PCA - trained on seasons excluding loso_season.
     loso_pca_path = os.path.join(
         combined_base, 'loso', f'season_{loso_season}', 'pca_model.pkl'
     )
@@ -1658,7 +1658,7 @@ def split_half_fit(sub_id, parcellation, half, n_final_seeds, force_refit=False,
         fixed_vt:      Optional fixed variance threshold
     """
     logger.info(f"\n{'=' * 60}")
-    logger.info(f"SPLIT-HALF FIT — Half {half}: {sub_id}")
+    logger.info(f"SPLIT-HALF FIT - Half {half}: {sub_id}")
     logger.info(f"{'=' * 60}")
 
     combined_base = get_combined_base(sub_id, parcellation)
@@ -1709,7 +1709,7 @@ def split_half_fit(sub_id, parcellation, half, n_final_seeds, force_refit=False,
     n_pcs = half_n_pcs_lookup[vt_key]
     logger.info(f"Split-half {half}: variance threshold {vt_key} -> {n_pcs} PCs")
 
-    # Load split — note: 'test' is empty for split-half (no within-half test set).
+    # Load split - note: 'test' is empty for split-half (no within-half test set).
     # We use train+valid for fitting, then decode ALL runs in this half.
     half_split = load_split(combined_base, fold_spec=fold_spec)
     half_projected_dir = get_projected_dir(combined_base, fold_spec=fold_spec)

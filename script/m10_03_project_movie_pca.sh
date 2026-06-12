@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Movie10 PCA Projection — SLURM Submission Script
+# Movie10 PCA Projection - SLURM Submission Script
 # =============================================================================
 # Projects movie10 parcel time series through Friends-trained PCA.
 # One array task per subject.

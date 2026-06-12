@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Harry Potter PCA Projection — SLURM Submission Script
+# Harry Potter PCA Projection - SLURM Submission Script
 # =============================================================================
 # Projects Harry Potter parcel time series through Friends-trained PCA.
 # One array task per subject (5 subjects, no sub-04).
@@ -38,7 +38,7 @@ mkdir -p "${PROJECT_DIR}/logs"
 source ~/.bashrc
 micromamba activate friends-states
 
-# Configuration (5 subjects — no sub-04 in Harry Potter)
+# Configuration (5 subjects - no sub-04 in Harry Potter)
 PARCELLATION=${PARCELLATION:-"atlas-4S156Parcels"}
 VT="${VT:-"0.95"}"
 SUBJECTS=("sub-01" "sub-02" "sub-03" "sub-05" "sub-06")

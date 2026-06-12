@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Subcortical anatomical grouping via canonical v2 partition
 # (Alexander-DeLong-Strick 1986; Haber & Knutson 2010). Use
-# plot_style.assign_network() per parcel — the parcel-level lookup is the
+# plot_style.assign_network() per parcel - the parcel-level lookup is the
 # source of truth. The legacy atlas_name-based fallback (CIT168Subcortical
 # -> single bin) lumped 14 structures including DA midbrain + hypothalamus
 # under "Basal Ganglia" which was anatomically wrong; replaced with
@@ -191,7 +191,7 @@ def _expand_subcortical_label(label: str) -> str:
 def _subcortical_group(parcel_label: str) -> str:
     """Map a parcel label to its v2 canonical subcortical bin.
 
-    Uses plot_style.assign_network() — the parcel-level source of truth.
+    Uses plot_style.assign_network() - the parcel-level source of truth.
     Returns the v2 bin name (BG / Midbrain-DA / Midbrain-Diencephalic /
     Thalamus / Hipp/Amyg / Cerebellum), or "Other" if the label is not a
     recognized subcortical parcel.

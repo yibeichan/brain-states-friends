@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_hdphmm_equivalence.py — Validate JAX vs numpy StickyHDPHMM equivalence.
+test_hdphmm_equivalence.py - Validate JAX vs numpy StickyHDPHMM equivalence.
 
 Tests:
   1. Per-iteration log-likelihood agreement (10 iters, same init)
@@ -190,7 +190,7 @@ def main():
         logger.info("JAX version: %s, backend: %s, devices: %s",
                      jax.__version__, jax.default_backend(), jax.devices())
     except ImportError:
-        logger.error("JAX not available — cannot run equivalence tests")
+        logger.error("JAX not available - cannot run equivalence tests")
         sys.exit(1)
 
     # Generate test data

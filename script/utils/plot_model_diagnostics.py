@@ -4,11 +4,11 @@ plot_model_diagnostics.py - Post-hoc model diagnostic plots from pickled HDP-HMM
 
 Generates diagnostic figures B1–B5 from already-computed outputs (no re-fitting):
 
-  B1. LL Convergence Traces    — per-seed log-likelihood per EM iteration
-  B2. Active State Count       — violin/strip of n_active_states across final seeds
-  B3. Covariance Health        — eigenvalue spectra and condition numbers
-  B4. Seed Stability           — Hungarian-matched Pearson r heatmap across seeds
-  B5. Per-Season Test LL       — bar plot from final_results.json
+  B1. LL Convergence Traces    - per-seed log-likelihood per EM iteration
+  B2. Active State Count       - violin/strip of n_active_states across final seeds
+  B3. Covariance Health        - eigenvalue spectra and condition numbers
+  B4. Seed Stability           - Hungarian-matched Pearson r heatmap across seeds
+  B5. Per-Season Test LL       - bar plot from final_results.json
 
 Prerequisites:
     - 04_combined_hdphmm.py mode=select completed for this subject
@@ -211,7 +211,7 @@ def plot_ll_convergence(seed_records, output_dir):
     for i, rec in enumerate(seed_records):
         ll_trace = rec['history']['log_likelihood']
         if not ll_trace:
-            logger.warning(f"  Seed {rec['seed']}: empty LL history — skipping")
+            logger.warning(f"  Seed {rec['seed']}: empty LL history - skipping")
             continue
         ax.plot(ll_trace, color=cmap(i % 10), alpha=0.85,
                 label=f"Seed {rec['seed']}", linewidth=1.5)
@@ -243,7 +243,7 @@ def _compute_n_active(rec):
     """Extract n_active_states from a model record.
 
     Priority:
-      1. model.history['active_states'][-1]  — count of states above threshold per iter
+      1. model.history['active_states'][-1]  - count of states above threshold per iter
       2. Recompute from model.history['state_usage'][-1]
       3. Return -1 if neither is available
     """
@@ -278,7 +278,7 @@ def plot_active_state_count(seed_records, output_dir):
     if len(n_active_list) >= 2:
         ax.violinplot(n_active_list, positions=[0], widths=0.5, showmedians=True)
     else:
-        # Only 1 point — violin would fail
+        # Only 1 point - violin would fail
         ax.axhline(y=n_active_list[0], color='steelblue', linewidth=2)
 
     rng = np.random.default_rng(0)
@@ -300,7 +300,7 @@ def plot_active_state_count(seed_records, output_dir):
 
 
 # =============================================================================
-# B3: Covariance Health — Eigenvalue Spectra
+# B3: Covariance Health - Eigenvalue Spectra
 # =============================================================================
 
 def _eigenvalues_for_record(rec, active_mask=None):
@@ -429,7 +429,7 @@ def plot_covariance_health(seed_records, output_dir):
                      ha='center', va='center')
         axes[1].axis('off')
 
-    fig.suptitle(f'B3. Covariance Health — Eigenvalue Spectra\n'
+    fig.suptitle(f'B3. Covariance Health - Eigenvalue Spectra\n'
                  f'({best_rec["covariance_type"]} covariance)',
                  fontsize=13)
     out_path = os.path.join(output_dir, 'B3_covariance_health.png')
@@ -440,7 +440,7 @@ def plot_covariance_health(seed_records, output_dir):
 
 
 # =============================================================================
-# B4: Seed Stability — Hungarian-Matched Pearson r
+# B4: Seed Stability - Hungarian-Matched Pearson r
 # =============================================================================
 
 def _pearson_r_matrix(A, B):
