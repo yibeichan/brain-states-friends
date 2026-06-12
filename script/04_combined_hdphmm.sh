@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Combined sHDP-HMM — SLURM Wrapper (Two-Stage Model Selection)
+# Combined sHDP-HMM - SLURM Wrapper (Two-Stage Model Selection)
 # =============================================================================
 #
 # Two-stage pipeline controlled by MODE and STAGE environment variables:
@@ -46,7 +46,7 @@
 #   sbatch --array=0 --export=SUBJECT_ID=sub-01,MODE=select_finalize \
 #          --time=01:00:00 script/04_combined_hdphmm.sh
 #
-# LOSO FIT MODE: Strategy B — refit best config for one held-out season
+# LOSO FIT MODE: Strategy B - refit best config for one held-out season
 #   sbatch --array=1-6 --export=SUBJECT_ID=sub-01,MODE=loso_fit \
 #          --time=20:00:00 script/04_combined_hdphmm.sh
 #   # With explicit vt:

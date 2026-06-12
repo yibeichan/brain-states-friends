@@ -231,7 +231,7 @@ def load_single_run(subject_id, run_id, data_dir, parcellation):
             data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
         else:
             raise ValueError(
-                f"Run {run_id}: {n_bad} non-finite values ({pct:.2f}%) — too many"
+                f"Run {run_id}: {n_bad} non-finite values ({pct:.2f}%) - too many"
             )
 
     return data, file_path
@@ -599,7 +599,7 @@ def fit_pca_and_project(train_runs, all_splits, data_dir, parcellation,
         )
 
     if not X_list:
-        raise RuntimeError(f"[{label}] No training data loaded — cannot fit PCA")
+        raise RuntimeError(f"[{label}] No training data loaded - cannot fit PCA")
 
     X_train = np.vstack(X_list)
     n_trs_train, n_parcels = X_train.shape
@@ -716,9 +716,9 @@ def main():
 
     # Validate environment
     if not SCRATCH_DIR:
-        raise RuntimeError("SCRATCH_DIR not set — check .env file")
+        raise RuntimeError("SCRATCH_DIR not set - check .env file")
     if not BASE_DIR:
-        raise RuntimeError("BASE_DIR not set — check .env file")
+        raise RuntimeError("BASE_DIR not set - check .env file")
 
     parcellation = normalize_parcellation_name(args.parcellation)
 
@@ -941,7 +941,7 @@ def main():
         for half_label, half_data in sorted(split_half_splits.items()):
             logger.info(f"  --- Split-half {half_label} ---")
 
-            # No test set for split-half — use all runs as train+valid for HMM,
+            # No test set for split-half - use all runs as train+valid for HMM,
             # then 04rb compares the two halves. But for fit_pca_and_project,
             # we need train/valid/test. Use train+valid for PCA, project all runs.
             # For 04 split_half_fit: train on 'train', validate on 'valid'.

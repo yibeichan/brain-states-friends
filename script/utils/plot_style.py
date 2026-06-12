@@ -66,7 +66,7 @@ NETWORK_ORDER = [
 
 NETWORK_COLORS = {
     # Cortical: colorblind-safe Okabe–Ito hues (2026-05-26). The canonical Yeo-7
-    # colors (Vis purple, DMN red, etc.) are field-standard but NOT CB-safe — the
+    # colors (Vis purple, DMN red, etc.) are field-standard but NOT CB-safe - the
     # Vis-purple / SalVentAttn-magenta pair and the green/orange/red trio collide
     # under deuteranopia/protanopia. At most 7 cortical networks ever appear as
     # *dominant* states in any subject (subcortical never wins the per-state max,
@@ -191,7 +191,7 @@ def load_parcel_networks(parcellation):
         from utils.viz_yabplot import load_parcel_labels
         label_df = load_parcel_labels(parcellation)
     except Exception as e:
-        logger.warning("Could not load parcel labels: %s — network analysis disabled", e)
+        logger.warning("Could not load parcel labels: %s - network analysis disabled", e)
         return None
 
     n_parcels = len(label_df)

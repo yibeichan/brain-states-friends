@@ -4,13 +4,13 @@ combined_hmm_config.py - Hyperparameter grid for the combined cross-season sHDP-
 
 Two-stage model selection (2026-03-13 improvement):
 
-  Stage 1 — Select variance threshold (PCA dimension):
+  Stage 1 - Select variance threshold (PCA dimension):
     Metric: per-dimension LL = valid_ll_per_sample / n_pcs.
     Fixed: nc=60, gamma=5, cov=diag, kappa=10, alpha=1, rho=1.
     Sweep: vt ∈ {0.80, 0.85, 0.90, 0.95, 0.99}.
     → 5 configs × 5 seeds = 25 fits per subject.
 
-  Stage 2 — Select K, gamma, and covariance type:
+  Stage 2 - Select K, gamma, and covariance type:
     Metric: BIC with effective K (training LL, complexity penalty).
     Fixed: vt from Stage 1.
     Sweep: nc ∈ {40, 60, 80, 100} × gamma ∈ {1, 5, 10} × cov ∈ {full, diag}
@@ -60,7 +60,7 @@ FIXED_PARAMS = {
 N_CONFIGS_STAGE1 = 5   # len(VARIANCE_THRESHOLDS)
 # Stage 2 count depends on selected_vt; see build_stage2_grid()
 
-# Legacy constant — matches old 28-config grid (gamma=10 fixed, no gamma sweep).
+# Legacy constant - matches old 28-config grid (gamma=10 fixed, no gamma sweep).
 # Kept for backward compatibility with code that imports N_CONFIGS.
 N_CONFIGS = 28
 

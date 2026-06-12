@@ -236,7 +236,7 @@ def back_project_states(model, pca, n_pcs):
     elif covars.ndim == 2:
         # Diagonal covariance: (K, n_pcs)
         # Sigma_pca[k] = diag(covars[k])
-        # W.T @ diag(d) @ W = (W.T * d) @ W  — avoids K full diag matrices
+        # W.T @ diag(d) @ W = (W.T * d) @ W  - avoids K full diag matrices
         state_covars_parcel = np.zeros((K, n_parcels, n_parcels))
         for k in range(K):
             Wd = W.T * covars[k]  # (n_parcels, n_pcs) * (n_pcs,) broadcast

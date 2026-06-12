@@ -183,7 +183,7 @@ def process_file(task_file, save_dir, standardize='zscore_sample'):
 
         print(f"  Cleaned shape: {cleaned_data.shape}")
 
-        # Save cleaned CIFTI — reload header from disk (task_img was deleted)
+        # Save cleaned CIFTI - reload header from disk (task_img was deleted)
         header_img = nib.load(task_file)
         task_cln = nib.Cifti2Image(cleaned_data, header_img.header)
         cleaned_file_path = os.path.join(

@@ -174,7 +174,7 @@ def bootstrap_corr_ci(xs, ys, stat_fn, n_boot=1000, seed=0, ci=0.95,
     min_finite_frac : float, default=0.1
         If fewer than this fraction of bootstrap resamples produce a
         finite statistic (e.g. because tied ranks collapse), the CI is
-        returned as ``(point, None, None)`` — the resampled distribution
+        returned as ``(point, None, None)`` - the resampled distribution
         is too degenerate to summarize.
 
     Returns
@@ -305,7 +305,7 @@ def bootstrap_partial_spearman_ci(x, y, covariate, n_boot=1000, seed=0,
     Mirrors :func:`bootstrap_corr_ci`, but resamples the *triple*
     ``(x, y, covariate)`` with one shared index per replicate (preserving
     the joint dependence) and recomputes
-    ``partial_spearman(x[idx], y[idx], covariate[idx])`` — controlling for
+    ``partial_spearman(x[idx], y[idx], covariate[idx])`` - controlling for
     ``covariate``. ``bootstrap_corr_ci`` cannot back this because the
     covariate is invisible to its two-array ``stat_fn``.
 
@@ -358,7 +358,7 @@ def bootstrap_partial_spearman_ci(x, y, covariate, n_boot=1000, seed=0,
 # used across per-state tests (08b A1/A3). The single-pair helper handles
 # validation + NaN + ties; the grid helper amortises rankdata across features
 # for K × n_features vectorised evaluation. Call from any script that needs
-# per-state per-feature AUCs — not just 08b.
+# per-state per-feature AUCs - not just 08b.
 
 
 def per_state_auc_mann_whitney(state_mask, feat_values):
@@ -404,7 +404,7 @@ def per_state_auc_grid(states_arr, feats_mat, target_states, compute_signs=True)
     """Vectorised per-state × per-feature Mann-Whitney AUC grid.
 
     Ranks each feature column once (NaN-safe) and derives each state's AUC
-    via the rank-sum shortcut — K × n_features AUC evaluations but only
+    via the rank-sum shortcut - K × n_features AUC evaluations but only
     n_features rank sorts. This is the hot path for the 08b A1/A3
     per-permutation null loops.
 
