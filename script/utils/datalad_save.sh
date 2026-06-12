@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG]"
             echo ""
-            echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 06, 07a, 07b, 07c, m10_03, m10_04, m10_07a, hp_04, pp_04, diag"
+            echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 06, m10_03, m10_04, hp_04, pp_04, diag"
             echo "Subject: sub-01 through sub-06, or 'all'"
             exit 0
             ;;
@@ -99,12 +99,6 @@ declare -A STAGE_MAP=(
     ["06b"]="06b_transition_structure"
     ["06c"]="06c_higher_order_transitions"
     ["06d"]="06d_preserved_chains"
-    ["07a"]="07a_physio_features"
-    ["07b"]="07b_physio_state_correspondence"
-    ["07c"]="07c_cross_stimulus_physio"
-    ["08a"]="08a_content_features"
-    ["08b"]="08b_content_state_correspondence"
-    ["08b_legacy"]="08b_content_state_correspondence_legacy"
     ["08c"]="08c_transformer_features"
     ["08c_w1"]="08c_transformer_features_sweep_w1"
     ["08c_w3"]="08c_transformer_features_sweep_w3"
@@ -117,13 +111,9 @@ declare -A STAGE_MAP=(
     ["m10_03"]="m10_03_projected"
     ["m10_04"]="m10_04_decoded"
     ["m10_05"]="m10_05_cross_validation"
-    ["m10_07a"]="m10_07a_physio_features"
-    ["m10_07b"]="m10_07b_physio_state_correspondence"
     ["hp_03"]="hp_03_projected"
     ["hp_04"]="hp_04_decoded"
     ["hp_05"]="hp_05_cross_validation"
-    ["hp_07a"]="hp_07a_physio_features"
-    ["hp_07b"]="hp_07b_physio_state_correspondence"
     ["pp_03"]="pp_03_projected"
     ["pp_04"]="pp_04_decoded"
     ["pp_05"]="pp_05_cross_validation"
@@ -140,7 +130,7 @@ fi
 
 # --- Build save path(s) ---
 # Stages without parcellation level (output is {stage}/{sub}/)
-if [ "$STAGE" = "00" ] || [ "$STAGE" = "07a" ] || [ "$STAGE" = "m10_07a" ]; then
+if [ "$STAGE" = "00" ]; then
     if [ "$SUBJECT_ID" = "all" ]; then
         SAVE_PATH="${STAGE_DIR}/"
     else

@@ -95,18 +95,6 @@ sbatch script/06a_cross_subject_summary.sh
 # Step 6b: Transition structure (graph topology, asymmetry, MFPT landscape)
 sbatch --export=SUB_ID=sub-01 script/06b_transition_structure.sh
 
-# Step 7a: Extract TR-aligned physio features (Friends)
-sbatch --export=SUB_ID=sub-01 script/07a_physio_features.sh
-
-# Step 7a: Extract TR-aligned physio features (Movie10)
-sbatch --export=SUB_ID=sub-01 script/m10_07a_physio_features.sh
-
-# Step 7b: Physio-state correspondence (Friends)
-sbatch --export=SUB_ID=sub-01 script/07b_physio_state_correspondence.sh
-
-# Step 7c: Cross-stimulus physio correspondence (Friends vs Movie10)
-sbatch --export=SUB_ID=sub-01,VT=0.99 script/07c_cross_stimulus_physio.sh
-
 # Petit Prince cross-stimulus pipeline (audio-only, 5 subjects, no sub-04)
 # Step PP-00: Post-process Petit Prince fMRIPrep data
 sbatch script/pp_00_postproc.sh
@@ -150,7 +138,7 @@ sbatch --dependency=afterok:$JOB --export=STAGE=04,SUBJECT_ID=sub-01 script/util
 bash script/utils/datalad_save.sh --stage 05a --subject all
 ```
 
-Valid stages: `00`, `02`, `03a`, `03b`, `04`, `05a`, `05b`, `05c`, `05d`, `05e`, `06`, `07a`, `07b`, `07c`, `m10_03`, `m10_04`, `m10_07a`, `diag`
+Valid stages: `00`, `02`, `03a`, `03b`, `04`, `05a`, `05b`, `05c`, `05d`, `05e`, `06`, `m10_03`, `m10_04`, `diag`
 
 **Note:** Stage `00` outputs have no parcellation level; the path is `00_postproc/{sub_id}/`. All other stages use `{stage_dir}/{parcellation}/{sub_id}/`.
 
@@ -179,7 +167,7 @@ bash bash_monitor/find_missing_episodes.sh
 ## Architecture and Key Patterns
 
 ### Pipeline Architecture
-- Sequential processing pipeline (00→02→03a→03b→04→05a→05b→06→07a→07b→07c) where each step depends on the previous
+- Sequential processing pipeline (00→02→03a→03b→04→05a→05b→06→08c→08d) where each step depends on the previous
 - SLURM array jobs for parallel processing across subjects
 - Results stored hierarchically: `{SCRATCH_DIR}/results/{step_name}/{parcellation}/{subject}/`
 
@@ -200,13 +188,8 @@ The `.env` file defines critical paths:
 8. **Temporal Dynamics** (06a): Dwell time distributions, transition matrices, recurrence assortativity, cross-subject summary. Key finding: recurrence and persistence are independent dimensions.
 8b. **Transition Structure** (06b): Graph topology, transition asymmetry, MFPT landscape, FC-transition correlation. Replaces old chain analysis.
 8c. **Higher-Order Transitions** (06c): Model adequacy diagnostic; conditional entropy reduction (~14%), BIC prefers order-1
-9. **Physio Feature Extraction** (07a): TR-aligned physiological features (HR, HRV, breathing, RVT, EDA, SCR) from physprep data. Supports both Friends (`--stimulus friends`) and Movie10 (`--stimulus movie10`). Output is parcellation-independent.
-10. **Physio-State Correspondence** (07b): Post-hoc test of physio-state associations (Friends). 5 analyses: state profiles, multi-lag, TTAs, cross-episode consistency, arousal-diversity.
-11. **Cross-Stimulus Physio** (07c): Tests whether brain states maintain autonomic signatures across Friends and Movie10. 4 analyses: signature stability, genre profiles, arousal modulation, cross-stimulus TTAs.
-12. **Content Features** (08a): TR-level content features from te-charnet narrative annotations (Friends only). 16 features: dialogue structure, scene features, character presence.
-13. **Content-State Correspondence** (08b): Tests association between content features and brain states (Friends). 7 analyses. A1 (per-state content signatures) and A3 (per-state multi-lag) use a per-(state, feature) Mann-Whitney AUC framework with a within-run circular-shift permutation null and two-layer BH-FDR.
-14. **Transformer Feature Extraction** (08c): Layer-wise features from frozen pretrained transformers (TRIBEv2-validated backbones). Models: Wav2VecBert 2.0 (audio, 24L), DINOv2-large (video, 24L), LLaMA 3.2 3B (text, 28L). Supports Friends, Movie10, HP, PP-FR, PP-EN. Output is stimulus-level (no sub_id). Install: `uv sync --extra torch`.
-15. **Transformer-State Correspondence** (08d): Tests brain state correspondence with transformer layer features. Analyses: D1 (representational depth per layer), D2 (per-state layer selectivity), D3a (cross-stimulus transfer), D5 (annotation convergence with 08b).
+9. **Transformer Feature Extraction** (08c): Layer-wise features from frozen pretrained transformers (TRIBEv2-validated backbones). Models: Wav2VecBert 2.0 (audio, 24L), DINOv2-large (video, 24L), LLaMA 3.2 3B (text, 28L). Supports Friends, Movie10, HP, PP-FR, PP-EN. Output is stimulus-level (no sub_id). Install: `uv sync --extra torch`.
+10. **Transformer-State Correspondence** (08d): Tests brain state correspondence with transformer layer features. Analyses: D1 (representational depth per layer), D2 (per-state layer selectivity), D3a (cross-stimulus transfer).
 
 ### Parallel Processing
 - Uses SLURM array jobs for subject-level parallelization
@@ -270,7 +253,7 @@ Do brain states during naturalistic TV viewing reflect shared, recurring structu
 - **Naturalistic paradigm**: Real-world-like viewing experience rather than artificial laboratory tasks
 
 ### Limitations
-- State–content and state–representation correspondence (scripts 08a–08d) is correlational
+- State–representation correspondence (scripts 08c–08d) is correlational
 - No direct behavioral/cognitive correlates measured
 - Observational (not causal) findings
 - Post-hoc analysis (not real-time state identification)
@@ -289,13 +272,8 @@ The analysis pipeline is organized around a combined cross-season HMM:
    - `06a_state_temp_dynamics.py` / `.sh`: Dwell time distributions, transition matrices, recurrence assortativity. Supports `--mode cross_subject_summary` for multi-panel aggregate figure.
    - `06b_transition_structure.py` / `.sh`: Graph topology, transition asymmetry, FC-transition correlation, MFPT landscape.
    - `06c_higher_order_transitions.py` / `.sh`: Model adequacy diagnostic (conditional entropy, BIC comparison)
-   - `07a_physio_features.py` / `.sh` / `m10_07a_physio_features.sh`: TR-aligned physio extraction (Friends + Movie10)
-   - `07b_physio_state_correspondence.py` / `.sh`: Physio-state correspondence (Friends, 5 analyses)
-   - `07c_cross_stimulus_physio.py` / `.sh`: Cross-stimulus physio correspondence (C1-C4)
-   - `08a_content_features.py` / `.sh`: TR-level content features from te-charnet annotations (Friends)
-   - `08b_content_state_correspondence.py` / `.sh`: Content-state correspondence (Friends, 7 analyses). A1/A3 use a per-state Mann-Whitney AUC framework; shared helpers `per_state_auc_mann_whitney`, `per_state_auc_grid`, `two_layer_bh_fdr` in `utils/stats.py`.
    - `08c_transformer_features.py` / `.sh`: Layer-wise transformer feature extraction (TRIBEv2-validated: Wav2VecBert, DINOv2-large, LLaMA 3.2 3B). GPU required, `uv sync --extra torch`. Supports Friends, M10, HP, PP.
-   - `08d_transformer_state_correspondence.py` / `.sh`: Transformer-state correspondence (D1 depth, D2 selectivity, D3a transfer, D5 convergence)
+   - `08d_transformer_state_correspondence.py` / `.sh`: Transformer-state correspondence (D1 depth, D2 selectivity, D3a transfer)
 
 2. **Cross-Stimulus Scripts** (`m10_`, `hp_`, `pp_` prefixes):
    - `m10_03/04/05`: Movie10 PCA projection, HMM decode, cross-stimulus validation
@@ -305,9 +283,6 @@ The analysis pipeline is organized around a combined cross-season HMM:
    - `pp_03_project_pp_pca.py` / `.sh`: Project PP data through Friends PCA (2 types: lppFR, lppEN)
    - `pp_04_score_and_decode.py` / `.sh`: Score/decode PP with Friends HMM
    - `pp_05_cross_stimulus_validation.py` / `.sh`: Cross-stimulus validation (A1-A5, B1-B2, language comparison)
-
-3. **Utility Scripts** (in `script/utils/`):
-   - `physio_io.py`: Physprep I/O, BIDS entity parsing, TR alignment, feature extraction (Friends + Movie10)
 
 ### Preprocessing Strategy
 
@@ -385,7 +360,7 @@ Script `05a_recurrence_analysis.py` classifies brain states as **context-invaria
 4. **Permutation Test:** Shuffles season labels to test whether specificity exceeds chance
 5. **FDR Correction:** Benjamini-Hochberg correction for multiple comparisons across states
 
-**State scoring (continuous, not categorical):** Recurrence is treated as a continuous score, NOT binned into categorical groupings (Recurring / Specific / Partial / Inactive). Downstream scripts (05d similarity, 06a dynamics, 07b physio, 08b content) all consume the continuous scores directly. Eligibility filtering (e.g., sub-HRF states) is handled via the `state_flags.csv` mechanism produced by 05e, not by the recurrence score.
+**State scoring (continuous, not categorical):** Recurrence is treated as a continuous score, NOT binned into categorical groupings (Recurring / Specific / Partial / Inactive). Downstream scripts (05d similarity, 06a dynamics) all consume the continuous scores directly. Eligibility filtering (e.g., sub-HRF states) is handled via the `state_flags.csv` mechanism produced by 05e, not by the recurrence score.
 
 **Key Outputs (saved to `{SCRATCH_DIR}/output/05a_recurrence_analysis/{parcellation}/{sub_id}/`):**
 - `recurrence_scores.npy`: Per-state recurrence scores

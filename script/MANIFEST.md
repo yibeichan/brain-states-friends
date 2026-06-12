@@ -15,9 +15,6 @@ main/supplementary boundary.
   Supplementary Material, not the main figures.
 - **CROSS-STIM (MAIN)**: Movie10 / Harry Potter / Petit Prince decode + transfer;
   these are **main** (R5, Figure 4), not supplementary.
-- **DEFERRED**: out of preprint scope; reserved for companion papers / journal
-  revision (physio → *brain-states-physio*; content → *brain-states-content*;
-  per-state transformer R4c).
 
 ---
 
@@ -78,19 +75,6 @@ same MAIN tier.)
 | `06c_higher_order_transitions.py` | Higher-order transition adequacy (entropy, BIC) | SUPP | Supp |
 | `06d_preserved_chains.py` | Preserved transition chains | SUPP | Supp |
 
-## Deferred
-
-| Script | Role | Deferred to |
-|---|---|---|
-| `07a_physio_features.py` | TR-aligned physio features (HR/HRV/EDA/...) | *brain-states-physio* (R6) |
-| `07b_physio_state_correspondence.py` | Physio–state correspondence (Friends) | *brain-states-physio* (R6) |
-| `07c_cross_stimulus_physio.py` | Cross-stimulus physio correspondence | *brain-states-physio* (R6) |
-| `m10_07a/07b`, `hp_07a/07b` (`.sh`) | Cross-stimulus physio wrappers | *brain-states-physio* (R6) |
-| `08a_content_features.py` | te-charnet narrative content features | *brain-states-content* (R4a) |
-| `08b_content_state_correspondence.py` | Content–state correspondence | *brain-states-content* (R4a) |
-| `08f_transformer_cross_stim_per_state.py` | Per-state cross-stimulus transformer | R4c (journal revision) |
-| `08g_transformer_convergence.py` | Recurrence×depth / convergence (characterized null) | R4c (journal revision) |
-
 ## Figure
 
 Each manuscript figure is built by a dedicated `fig_*.py` that reads pipeline
@@ -113,5 +97,5 @@ Shared plotting helpers (imported by the figure scripts, not run directly):
 
 ## Infrastructure (not analysis steps)
 
-`__init__.py`, `utils/` (shared helpers: `stats.py`, `physio_io.py`,
-`datalad_save.sh`, plotting), `config/`, `tests/`, `dev/`, `__marimo__/`.
+`__init__.py`, `utils/` (shared helpers: `stats.py`, `datalad_save.sh`,
+plotting), `config/`, `tests/`, `dev/`, `__marimo__/`.

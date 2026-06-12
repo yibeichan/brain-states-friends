@@ -19,11 +19,6 @@ corresponding `.env` variable (see [Configuration](#configuration)) at your loca
 | Algonauts 2025 stimuli | `ALGONAUTS_DIR` | `08c` | [algonautsproject.com/2025](https://algonautsproject.com/2025/index.html) (`$ALGONAUTS_DIR/stimuli`) |
 | 4S parcellation atlases (Schaefer-100 cortical + subcortical composite) | `ATLAS_DIR` | `01`, `02` | XCP-D atlas bundle, pinned to [`xcp_d` v0.7.1](https://github.com/PennLINC/xcp_d/archive/0.7.1.tar.gz) (PennLINC; the 4S family originates from AtlasPack). One subdirectory per atlas, e.g. `atlas-4S156Parcels/atlas-4S156Parcels_space-fsLR_den-91k_dseg.dlabel.nii` plus the matching `_dseg.tsv` labels. |
 
-The published results use only the datasets above. The deferred, out-of-preprint
-scripts read additional inputs that are not needed to reproduce the paper: the
-content-feature scripts (`08a`/`08b`) read te-charnet narrative annotations via
-`ANNOTATION_DIR`, and the physio scripts (`07`) read CNeuroMod physprep derivatives.
-
 > **Note:** Access to the CNeuroMod dataset is governed by its own terms; this code
 > does not redistribute it.
 
@@ -96,7 +91,6 @@ ranges; see [MANIFEST.md](script/MANIFEST.md) for the per-script detail.
 | **Main** | `00`, `01`, `02`, `03a`, `04`, `05a`, `05b`, `05e_a4`, `06a`, `06b`, `08c`, `08d`, `08e` | Repertoire, taxonomy, transitions, transformer depth |
 | **Cross-stimulus (main)** | `m10_*`, `hp_*`, `pp_*` (03/04/05) | Recurrence transfer to Movie10 / Harry Potter / Petit Prince |
 | **Supplementary** | `03b`, `04r*`, `05c`, `05d`, `05e_a1`–`a3`, `05f`, `06c`, `06d` | Reliability, robustness, diagnostics |
-| **Deferred** (companion / revision) | `07*` physio, `08a`/`08b` content, `08f`/`08g` | Out of preprint scope |
 
 ## Quick Start
 
@@ -164,7 +158,7 @@ scripts import these helpers; do not run them directly.
 
 ## Documentation
 
-- **[script/MANIFEST.md](script/MANIFEST.md)** - Per-script classification (main / supplementary / cross-stimulus / deferred)
+- **[script/MANIFEST.md](script/MANIFEST.md)** - Per-script classification (main / supplementary / cross-stimulus)
 - **[docs/supplementary/](docs/supplementary/)** - Supplementary material accompanying the manuscript
 - **[AGENTS.md](AGENTS.md)** - Instructions for AI coding agents (e.g. Claude Code) working in this repo: conventions, methodology notes, and analysis-scope rules.
 - **Alternative analysis (ICA)** - An independent-component-analysis decomposition of the same data, provided as a convergence check on the HMM state repertoire, is maintained as a self-contained supplement on the [`sm/ica-states`](https://github.com/yibeichan/brain-states-friends/tree/sm/ica-states) branch.
@@ -231,10 +225,9 @@ cp .env.example .env
 |----------|-------------|
 | `BASE_DIR` | Project root (this repository). |
 | `SCRATCH_DIR` | Scratch root for outputs. Scripts write under `$SCRATCH_DIR/output/`. |
-| `DATA_DIR` | Root of the `all_about_cneuromod` dataset tree (Friends/Movie10/Petit Prince + physprep derive from it). |
+| `DATA_DIR` | Root of the `all_about_cneuromod` dataset tree (Friends/Movie10/Petit Prince derive from it). |
 | `ATLAS_DIR` | Directory of dseg atlases, one subdirectory per atlas. |
 | `ALGONAUTS_DIR` | Root of the Algonauts 2025 dataset (script `08c` uses `$ALGONAUTS_DIR/stimuli`). |
-| `ANNOTATION_DIR` | Root of te-charnet narrative annotations (`sentences/`, `scenes/`). |
 
 Scripts fail fast with a clear message if a required variable is unset. See
 `.env.example` for the full annotated list.
