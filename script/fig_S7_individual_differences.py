@@ -22,7 +22,7 @@ axis-7 value is drawn as a hollow marker at the cohort midpoint with dashed
 segments to the neighbouring axes, rather than imputed.
 
 Output:
-  $SCRATCH_DIR/output/manuscript_figures/figS7/figS7_radar_strip.{pdf,png}
+  $SCRATCH_DIR/output/manuscript_figures/figS7/figS7_radar_strip.{pdf,png,svg}
 
 Manuscript-figure conventions: no in-axis titles, no panel letters, minimal
 on-figure text (axis labels + subject IDs only). Caption carries axis full
@@ -393,8 +393,10 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
     out_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = out_dir / "figS7_radar_strip.pdf"
     png_path = out_dir / "figS7_radar_strip.png"
+    svg_path = out_dir / "figS7_radar_strip.svg"
     fig.savefig(pdf_path, bbox_inches="tight", pad_inches=0.04, transparent=True)
     fig.savefig(png_path, bbox_inches="tight", pad_inches=0.04, transparent=True, dpi=300)
+    fig.savefig(svg_path, bbox_inches="tight", pad_inches=0.04, transparent=True)
     plt.close(fig)
     return pdf_path
 

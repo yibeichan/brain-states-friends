@@ -43,14 +43,28 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.plot_style import (  # noqa: E402
-    MODEL_DISPLAY,
     SUBJECT_MARKERS,
     SUBJECT_NEUTRAL,
     apply_publication_style,
-    modality_color,
 )
 
 apply_publication_style()
+
+MODEL_DISPLAY = {
+    "dinov2-large": "DINOv2-large (video)",
+    "w2v-bert-2.0": "Wav2Vec-BERT 2.0 (audio)",
+    "llama-3.2-3b": "LLaMA 3.2 3B (text)",
+}
+
+MODALITY_COLORS = {
+    "video": "#1f77b4",
+    "audio": "#ff7f0e",
+    "text": "#2ca02c",
+}
+
+
+def modality_color(modality: str) -> str:
+    return MODALITY_COLORS[modality]
 
 SCRATCH_DIR = Path(os.environ["SCRATCH_DIR"])
 PARCELLATION = "atlas-4S156Parcels"

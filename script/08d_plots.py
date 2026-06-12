@@ -157,16 +157,18 @@ def find_peak(matrices: dict, exclude_lag0: bool = True) -> dict | None:
 
 
 def save_fig(fig, out_path: Path) -> None:
-    """Save figure as both PDF and PNG. ``out_path`` is the stem (no suffix)."""
+    """Save figure as PDF, PNG, and SVG. ``out_path`` is the stem (no suffix)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Use string concatenation rather than Path.with_suffix - model names
     # like "w2v-bert-2.0" or "llama-3.2-3b" contain dots that with_suffix
     # would strip as a fake extension.
     pdf_path = out_path.parent / f"{out_path.name}.pdf"
     png_path = out_path.parent / f"{out_path.name}.png"
+    svg_path = out_path.parent / f"{out_path.name}.svg"
     fig.savefig(pdf_path, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(png_path, bbox_inches="tight", pad_inches=0.02, dpi=300)
-    logger.info("wrote %s.{pdf,png}", out_path)
+    fig.savefig(svg_path, bbox_inches="tight", pad_inches=0.02)
+    logger.info("wrote %s.{pdf,png,svg}", out_path)
     plt.close(fig)
 
 

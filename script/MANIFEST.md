@@ -92,8 +92,8 @@ outputs and renders the panels.
 | `fig_S7_individual_differences.py` | Figure S7 | Supp |
 
 Shared plotting helpers (imported by the figure scripts, not run directly):
-`manuscript_figures.py`, `08d_plots.py`, `08e_plots.py`,
-`utils/recurrence_plots.py`, `utils/temporal_plots.py`.
+`08d_plots.py`, `08e_plots.py`, `utils/recurrence_plots.py`,
+`utils/temporal_plots.py`.
 
 ## Infrastructure (not analysis steps)
 

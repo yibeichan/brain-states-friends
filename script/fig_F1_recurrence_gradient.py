@@ -186,7 +186,8 @@ def panel_A_beeswarm(active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, plt, np):
     _stem = OUT_F1 / "fig1_A_recurrence_beeswarm"
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    print(f"saved: {_stem}.pdf")
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 
@@ -269,7 +270,8 @@ def panel_B_split_half(splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS, 
     _stem = OUT_F1 / "fig1_B_split_half_reliability"
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    print(f"saved: {_stem}.pdf")
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 

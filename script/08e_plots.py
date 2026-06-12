@@ -23,10 +23,10 @@ Palettes (CB-safe, used for strip identity not overlap resolution):
         palettes already used elsewhere in this manuscript.
   FILM: Paul Tol Light 4-class - CB-safe pastel companion to Tol Vibrant.
 
-Each panel saves PDF + PNG. No on-panel legends (each strip self-labels).
+Each panel saves PDF + PNG + SVG. No on-panel legends (each strip self-labels).
 Standalone legend files are still emitted for caption / sidebar use:
-  - fig3_stim_legend.{pdf,png}: 4 stim colours
-  - fig3_film_legend.{pdf,png}: 4 film colours
+  - fig3_stim_legend.{pdf,png,svg}: 4 stim colours
+  - fig3_film_legend.{pdf,png,svg}: 4 film colours
 
 Source data:
   A, B: 08e .../D3a_transfer_{stim}_{model}.json (pooled, with permutation)
@@ -300,8 +300,10 @@ def render_panel(panel, series, ylim):
                         top=0.985, bottom=0.14)
     out_pdf = OUT_DIR / f"fig3_{panel['name']}_depth.pdf"
     out_png = OUT_DIR / f"fig3_{panel['name']}_depth.png"
+    out_svg = OUT_DIR / f"fig3_{panel['name']}_depth.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     print(f"  -> wrote {out_pdf.name} + {out_png.name}")
     if panel["kind"] == "per_subset" and any(s["source"] == "provisional"
@@ -325,8 +327,10 @@ def make_stim_legend():
     ax.axis("off")
     out_pdf = OUT_DIR / "fig3_stim_legend.pdf"
     out_png = OUT_DIR / "fig3_stim_legend.png"
+    out_svg = OUT_DIR / "fig3_stim_legend.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     print(f"  -> wrote {out_pdf.name} + {out_png.name}")
 
@@ -343,8 +347,10 @@ def make_film_legend():
     ax.axis("off")
     out_pdf = OUT_DIR / "fig3_film_legend.pdf"
     out_png = OUT_DIR / "fig3_film_legend.png"
+    out_svg = OUT_DIR / "fig3_film_legend.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     print(f"  -> wrote {out_pdf.name} + {out_png.name}")
 

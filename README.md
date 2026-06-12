@@ -152,9 +152,9 @@ noted) before invoking a figure script.
 | **S6** | `fig_S6_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **S7** | `fig_S7_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
 
-Shared plotting helpers live in `script/manuscript_figures.py`, `script/08d_plots.py`,
-`script/08e_plots.py`, and `script/utils/{recurrence,temporal}_plots.py`. The figure
-scripts import these helpers; do not run them directly.
+Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,
+and `script/utils/{recurrence,temporal}_plots.py`. The figure scripts import
+these helpers; do not run them directly.
 
 ## Documentation
 
