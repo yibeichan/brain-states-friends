@@ -60,8 +60,23 @@ content-feature scripts (`08a`/`08b`) read te-charnet narrative annotations via
                                     │
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  06a_state_temp_dynamics.py      Dwell time distributions, transition        │
-│                                  matrices, sequence barcodes                 │
+│  06a_state_temp_dynamics.py   Dwell-time distributions, transition matrices  │
+│  06b_transition_structure.py  Graph topology, FC-Mantel, MFPT landscape      │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  08c_transformer_features.py  Layer-wise transformer features (GPU)          │
+│  08d_transformer_depth.py     Representational depth per layer               │
+│  08e_transformer_cross_stim_aggregate.py  Cross-stimulus depth profile       │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Cross-stimulus transfer  Movie10 / Harry Potter / Petit Prince              │
+│  {m10,hp,pp}_03  Project stimulus through the Friends PCA basis              │
+│  {m10,hp,pp}_04  Score + decode with the Friends HMM                         │
+│  {m10,hp,pp}_05  Cross-stimulus recurrence-transfer validation               │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
