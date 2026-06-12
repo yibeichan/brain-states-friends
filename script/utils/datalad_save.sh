@@ -130,6 +130,7 @@ declare -A STAGE_MAP=(
     ["pp_annotations"]="pp_annotations"
     ["manuscript_figures"]="manuscript_figures"
     ["diag"]="diagnostics"
+    ["sm_ica"]="sm_ica_states"
 )
 
 STAGE_DIR="${STAGE_MAP[$STAGE]:-}"

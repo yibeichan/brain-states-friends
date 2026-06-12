@@ -307,3 +307,53 @@ def decode_all_runs(model, split, projected_dir, n_pcs):
             f"decode_all_runs: {n_failed}/{len(run_to_split)} runs failed"
         )
     return decoded_states
+
+
+def compute_state_posteriors(model, X, lengths):
+    """Return per-TR state posteriors gamma_k(t), shape (n_samples, K).
+
+    Backend-agnostic: the numpy StickyHDPHMM exposes ``_do_e_step`` whose
+    second return element is the posteriors. The JAX class does not, so we
+    rebuild a numpy StickyHDPHMM from the fitted parameters and run its
+    (validated) forward-backward. Posteriors respect ``lengths`` (per-run).
+
+    Parameters
+    ----------
+    model : fitted StickyHDPHMM or StickyHDPHMM_JAX
+        A fitted HMM with attributes ``startprob_``, ``transmat_``,
+        ``means_``, ``covars_``, ``n_components``, ``covariance_type``.
+    X : array-like, shape (n_samples, n_features)
+        Concatenated observations (e.g. PCA-projected runs).
+    lengths : list of int
+        Lengths of individual sequences (runs) concatenated in X.
+
+    Returns
+    -------
+    posteriors : np.ndarray, shape (n_samples, K)
+        Per-TR state posterior probabilities; rows sum to 1.
+    """
+    X = np.asarray(X)
+    if hasattr(model, "_do_e_step"):
+        engine = model
+    else:
+        from .hdphmm import StickyHDPHMM
+        engine = StickyHDPHMM(
+            n_components=int(model.n_components),
+            covariance_type=str(model.covariance_type),
+        )
+        engine.startprob_ = np.asarray(model.startprob_)
+        engine.transmat_ = np.asarray(model.transmat_)
+        engine.means_ = np.asarray(model.means_)
+        engine.covars_ = np.asarray(model.covars_)
+    # set proactively so the fallback engine has n_features without a fit
+    engine.n_features = int(np.asarray(model.means_).shape[1])
+    logprob, posteriors = engine._do_e_step(np.asarray(X), list(lengths))[:2]
+    posteriors = np.asarray(posteriors)
+    # _do_e_step returns dummy uniform posteriors on internal failure -- guard it
+    assert np.isfinite(logprob), "e-step returned non-finite logprob (FB failed)"
+    assert posteriors.shape == (X.shape[0], int(model.n_components))
+    assert np.allclose(posteriors.sum(axis=1), 1.0, atol=1e-5)
+    # reject the uniform-fallback degenerate case
+    assert not np.allclose(posteriors, 1.0 / int(model.n_components)), \
+        "posteriors are uniform -- e-step likely fell back to its failure path"
+    return posteriors
