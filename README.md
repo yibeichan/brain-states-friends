@@ -16,7 +16,7 @@ corresponding `.env` variable (see [Configuration](#configuration)) at your loca
 | Dataset | `.env` variable | Used by | Source / access |
 |---|---|---|---|
 | CNeuroMod fMRI (Friends, Movie10, Petit Prince) | `DATA_DIR` | `00`–`06` | [cneuromod.ca](https://www.cneuromod.ca/). Requires a signed data-access agreement; distributed via DataLad. The pipeline expects fMRIPrep derivatives (script `00` post-processes them). |
-| Algonauts 2025 stimuli | `ALGONAUTS_DIR` | `08c` | [algonauts.csail.mit.edu](https://algonauts.csail.mit.edu/) (`$ALGONAUTS_DIR/stimuli`) |
+| Algonauts 2025 stimuli | `ALGONAUTS_DIR` | `08c` | [algonautsproject.com/2025](https://algonautsproject.com/2025/index.html) (`$ALGONAUTS_DIR/stimuli`) |
 | 4S parcellation atlases (Schaefer-100 cortical + subcortical composite) | `ATLAS_DIR` | `01`, `02` | XCP-D atlas bundle, pinned to [`xcp_d` v0.7.1](https://github.com/PennLINC/xcp_d/archive/0.7.1.tar.gz) (PennLINC; the 4S family originates from AtlasPack). One subdirectory per atlas, e.g. `atlas-4S156Parcels/atlas-4S156Parcels_space-fsLR_den-91k_dseg.dlabel.nii` plus the matching `_dseg.tsv` labels. |
 
 The published results use only the datasets above. The deferred, out-of-preprint
