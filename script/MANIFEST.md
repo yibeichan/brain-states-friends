@@ -78,22 +78,7 @@ same MAIN tier.)
 | `06c_higher_order_transitions.py` | Higher-order transition adequacy (entropy, BIC) | SUPP | Supp |
 | `06d_preserved_chains.py` | Preserved transition chains | SUPP | Supp |
 
-## Supplementary HMM (per-season comparison)
-
-No `sm_*` scripts are present in `script/`. An earlier supplementary analysis
-(`sm_03a` / `sm_03b`) fit a separate sticky HDP-HMM to each season and compared
-the resulting state repertoires, as a check on whether states found in one
-season also appear in others.
-
-That per-season approach is deprecated. The production pipeline fits a single
-combined model across all episodes of all seasons (script `04`) and tests
-cross-season generalization directly: leave-one-season-out refits (`04ra`) hold
-out each season and confirm the held-out states are recovered, and split-half
-reliability (`04rb`) checks stability across disjoint episode halves. Because the
-combined model with these validations subsumes the per-season comparison, the
-`sm_*` scripts were removed rather than carried forward.
-
-## Deferred (companion papers / journal revision; OUT of preprint)
+## Deferred
 
 | Script | Role | Deferred to |
 |---|---|---|
@@ -106,12 +91,25 @@ combined model with these validations subsumes the per-season comparison, the
 | `08f_transformer_cross_stim_per_state.py` | Per-state cross-stimulus transformer | R4c (journal revision) |
 | `08g_transformer_convergence.py` | Recurrence×depth / convergence (characterized null) | R4c (journal revision) |
 
-## Figure / presentation tooling (MAIN-supporting)
+## Figure
 
-| Script | Role |
-|---|---|
-| `manuscript_figures.py` | Manuscript figure generation |
-| `08d_plots.py` | 08d depth-curve plotting helper |
+Each manuscript figure is built by a dedicated `fig_*.py` that reads pipeline
+outputs and renders the panels.
+
+| Script | Figure | Manuscript |
+|---|---|---|
+| `fig_F1_recurrence_gradient.py` | Figure 1 | R1 |
+| `fig_F2_recurrence_sources.py` | Figure 2 | R2 |
+| `fig_F3_transition_structure.py` | Figure 3 | R3 |
+| `fig_F4_within_friends.py` | Figure 4 (lead) | R4b |
+| `fig_F4_per_film_video.py` | Figure 4 (Movie10 per-film panel) | R4b |
+| `fig_F5_cross_stimulus_transfer.py` | Figure 5 | R5 |
+| `fig_S6_cross_stimulus_validity.py` | Figure S6 | Supp |
+| `fig_S7_individual_differences.py` | Figure S7 | Supp |
+
+Shared plotting helpers (imported by the figure scripts, not run directly):
+`manuscript_figures.py`, `08d_plots.py`, `08e_plots.py`,
+`utils/recurrence_plots.py`, `utils/temporal_plots.py`.
 
 ## Infrastructure (not analysis steps)
 
