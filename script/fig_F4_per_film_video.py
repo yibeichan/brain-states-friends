@@ -10,7 +10,7 @@ film effect sizes for the poster's Video panel.
 
 Outputs:
   $SCRATCH_DIR/output/manuscript_figures/fig4/perfilm/{sub_id}_dinov2_movie10_perfilm.json
-  $SCRATCH_DIR/output/manuscript_figures/fig4/fig4_C_video_perfilm_depth.{pdf,png}
+  $SCRATCH_DIR/output/manuscript_figures/fig4/fig4_C_video_perfilm_depth.{pdf,png,svg}
 """
 from __future__ import annotations
 
@@ -256,8 +256,10 @@ def render_panel():
     ax.spines["right"].set_visible(False)
     out_pdf = OUT_DIR / "fig4_C_video_perfilm_depth.pdf"
     out_png = OUT_DIR / "fig4_C_video_perfilm_depth.png"
+    out_svg = OUT_DIR / "fig4_C_video_perfilm_depth.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     print(f"  -> wrote {out_pdf.name} + {out_png.name}")
 

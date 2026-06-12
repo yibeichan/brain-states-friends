@@ -205,7 +205,8 @@ def panel_A_category_bars(
     _stem = OUT_F2 / "fig2_A_category_bars"
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    print(f"saved: {_stem}.pdf")
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 
@@ -367,7 +368,8 @@ def panel_B_category_network_sankey(
     _stem = OUT_F2 / "fig2_B_category_network_sankey"
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.05)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.05, dpi=300)
-    print(f"saved: {_stem}.pdf")
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.05)
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 
@@ -450,8 +452,10 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
             _ax.axis("off")
             _out = OUT_F2 / f"fig2_C_{_name}_{_region}.png"
             _fig.savefig(_out, bbox_inches="tight", pad_inches=0.0, dpi=300)
+            _fig.savefig(OUT_F2 / f"fig2_C_{_name}_{_region}.svg",
+                         bbox_inches="tight", pad_inches=0.0)
             plt.close(_fig)
-            print(f"  saved: {_out.name}")
+            print(f"  saved: {_out.name} (+ .svg)")
 
     for _region, _range in (("cortical", _shared_cort), ("subcortical", _shared_subc)):
         _cfig, _cax = plt.subplots(figsize=(3.0, 0.5))
@@ -465,8 +469,9 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
         _stem = OUT_F2 / f"fig2_C_colorbar_{_region}"
         _cfig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
         _cfig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+        _cfig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
         plt.close(_cfig)
-        print(f"  saved: fig2_C_colorbar_{_region}.{{pdf,png}}")
+        print(f"  saved: fig2_C_colorbar_{_region}.{{pdf,png,svg}}")
     return
 
 
@@ -532,8 +537,9 @@ def panel_C_state_timeseries(
         _stem = OUT_F2 / f"fig2_C_{_name}_timeseries"
         _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.0)
         _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.0, dpi=300)
+        _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.0)
         plt.close(_fig)
-        print(f"  saved: fig2_C_{_name}_timeseries.{{pdf,png}}")
+        print(f"  saved: fig2_C_{_name}_timeseries.{{pdf,png,svg}}")
     return
 
 
