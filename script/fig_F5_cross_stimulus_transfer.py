@@ -1,28 +1,26 @@
-"""Figure F5 - Cross-stimulus recurrence transfer (R5).
+"""Figure F5 — Cross-stimulus recurrence transfer (R5).
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
-Panels are per-cell, saved as separate .pdf + .png mini-figures for manual
+Panels are per-cell, saved as separate .pdf + .png + .svg mini-figures for manual
 assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
-R5 claim (reframed 2026-06-10 - see decision memory #611): a state's recurrence
-rank in Friends predicts how much the brain occupies it during other stimuli,
-and the transfer is GRADED BY SIMILARITY TO FRIENDS - strongest for the most
-Friends-like stimulus (audiovisual narrative film, Movie10), weaker and variable
-for reduced-modality reading (Harry Potter) and listening (Petit Prince). The
-earlier "tracks social-narrative content, not modality" framing was DROPPED: the
-cross-modality ρ ordering contradicts a content account (HP, the least narrative
-stimulus, transfers higher on average than PP, a coherent narrative), and the
-within-Movie10 spread co-varies with model fit + low-level audiovisual features,
-so it is reported descriptively and not attributed to content. The presence and
-the fit diagnostics live in the supplementary cross-stimulus validity figure.
+R5 claim (reframed 2026-06-12): a state's recurrence rank in Friends predicts
+out-of-stimulus occupancy most clearly during audiovisual film (Movie10), with
+weaker and more variable transfer for reduced-modality reading (Harry Potter)
+and listening (Petit Prince). The earlier "tracks social-narrative content, not
+modality" framing was DROPPED: the cross-modality rho ordering does not isolate
+narrative content from modality, timing, language, run structure, or model fit.
+The within-Movie10 spread is reported descriptively and not attributed to
+content. The presence and fit diagnostics live in the supplementary
+cross-stimulus validity figure.
 
 Panel plan (chart families distinct within the figure). Filenames carry the
 panel letter; the user arranges the composite.
 
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
-| A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors), showing content-eligible states anchor the relationship. Movie10 = the strong (most Friends-like) end of the gradient in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Transfer-ρ by condition, grouped by stimulus type - Audiovisual film (4 Movie10 films) | Visual reading (Harry Potter) | Audio listening (Petit Prince); per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. The generalization gradient; within-film spread shown descriptively (fit/AV-confounded, see supplement), NOT as a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
+| A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
+| B | Transfer-ρ by condition, grouped by stimulus type — Audiovisual film (4 Movie10 films) | Visual reading (Harry Potter) | Audio listening (Petit Prince); per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. The generalization gradient; within-film spread shown descriptively (fit/AV-confounded, see supplement), NOT as a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
 
 A `fig5_taxonomy_legend` file gives the 5-category color key for Panel A.
 
@@ -37,14 +35,16 @@ supplementary `fig_S_cross_stimulus_validity` figure.
 
 Source-truth audit (reproduced from raw arrays):
   * Panel A: reproduced sub-01 M10 ρ = 0.5486 (n_active=46) = summary JSON exactly.
-  * Full-repertoire ρ: M10 0.264–0.773 (5/6 sig), HP 0.232–0.444 (2/5 sig),
-    PP −0.018–0.332 (1/5 sig); sub-04 has no HP/PP data.
+  * Full-repertoire ρ: M10 0.264–0.773 (5/6 uncorrected per-subject
+    Spearman p<0.05), HP 0.232–0.444 (2/5), PP −0.018–0.332 (1/5);
+    sub-04 has no HP/PP data. These p-values are descriptive per-subject
+    flags, not cohort-level or multiplicity-corrected inference.
   * Per-condition mean ρ: wolf 0.69, figures 0.63, bourne 0.40, life 0.16,
     HP 0.32, PP 0.10. Cross-modality ordering (HP > Life > PP) contradicts a
     content account; within-M10 spread tracks LL-fit gap (0.92/1.54/2.43/4.98).
 
 Run:
-    marimo edit script/fig_F4_cross_stimulus_transfer.py
+    marimo edit script/fig_F5_cross_stimulus_transfer.py
 """
 
 import marimo
@@ -149,7 +149,7 @@ def load_summaries(SUBJECTS, STIMULI, xstim_dir, VT, json):
 
 @app.cell
 def taxonomy_constants():
-    """R2 taxonomy categories - labels + colors, shared with Figure 2.
+    """R2 taxonomy categories — labels + colors, shared with Figure 2.
 
     Identical to fig_F1's taxonomy_constants cell; kept in sync by hand. Maps the
     raw 05e_a4 `summary_category` values onto the 5 display categories so Panel A
@@ -229,27 +229,25 @@ def panel_A_per_subject_scatter(
     SUBJECTS, VT, summaries, presence, OUT_F5,
     np, plt, sp_stats, SUBJECT_MARKERS, TAXONOMY_COLORS,
 ):
-    """Panel A - per-subject recurrence→FO scatter, 2×3 small multiples (Movie10).
+    """Panel A — per-subject recurrence→FO scatter, 2×3 small multiples (Movie10).
 
     One subplot per subject (shared x and y axes for comparability): x = Friends
     recurrence score (05a), y = mean Movie10 fractional occupancy across runs
     (m10_04), one point per Friends-active state. Each subject keeps its own
-    marker shape (SUBJECT_MARKERS - consistent with the transfer-ρ panel) and a
+    marker shape (SUBJECT_MARKERS — consistent with the transfer-ρ panel) and a
     red OLS guide line; the per-subject Spearman ρ (asserted against the summary
     JSON) is annotated in-panel with a significance star.
 
     Dot fill = R2 taxonomy category (same colors as Figure 2), showing that the
-    content-eligible states anchor the positive relationship. Movie10 is the
-    most Friends-like (audiovisual narrative) stimulus, so this panel is the
-    strong end of the generalization gradient quantified in panel B; the
-    repertoire-presence view and the validity diagnostics live in the
+    Movie10 is the strongest audiovisual transfer case quantified in panel B;
+    the repertoire-presence view and the validity diagnostics live in the
     supplementary cross-stimulus figure.
 
     Recurrence and occupancy are both within-subject quantities, so each panel's
     ρ is the correct per-subject statistic; no pooled correlation is drawn.
     Width matches the transfer-ρ panel so the two stack as one figure column.
     """
-    _fig, _axes = plt.subplots(2, 3, figsize=(7.4, 4.8), sharex=True, sharey=True)
+    _fig, _axes = plt.subplots(2, 3, figsize=(6.7, 4.25), sharex=True, sharey=True)
     _axes = _axes.ravel()
 
     _rhos = []
@@ -274,22 +272,19 @@ def panel_A_per_subject_scatter(
 
         _b, _a = np.polyfit(_x, _y, 1)
         _xx = np.linspace(_x.min(), _x.max(), 40)
-        # Fade the guide line for the non-significant subject (sub-02, p≈0.08)
-        _line_alpha = 1.0 if _p < 0.05 else 0.35
-        _ax.plot(_xx, _b * _xx + _a, color="#D62728", lw=1.4, alpha=_line_alpha,
+        _ax.plot(_xx, _b * _xx + _a, color="#D62728", lw=1.4, alpha=0.85,
                  zorder=2)
 
-        _star = "*" if _p < 0.05 else ""
-        _ax.text(0.05, 0.95, f"{_sub.replace('sub-', 'S')}\nρ = {_rho:.2f}{_star}",
-                 transform=_ax.transAxes, ha="left", va="top", fontsize=8,
+        _ax.text(0.05, 0.95, f"{_sub.replace('sub-', 'S')}\nρ = {_rho:.2f}",
+                 transform=_ax.transAxes, ha="left", va="top", fontsize=6.5,
                  bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="#DDDDDD", lw=0.5))
-        _ax.tick_params(labelsize=7)
+        _ax.tick_params(labelsize=6)
         for _s in ("top", "right"):
             _ax.spines[_s].set_visible(False)
 
     print(f"Panel A per-subject M10 ρ: {[f'{r:.2f}' for r in _rhos]}")
-    _fig.supxlabel("Friends recurrence score", fontsize=10)
-    _fig.supylabel("Mean Movie10 fractional occupancy", fontsize=10)
+    _fig.supxlabel("Friends recurrence score", fontsize=7)
+    _fig.supylabel("Mean Movie10 fractional occupancy", fontsize=7)
     _fig.subplots_adjust(left=0.09, right=0.985, bottom=0.11, top=0.98,
                          wspace=0.10, hspace=0.16)
     _out_pdf = OUT_F5 / "fig5_A_recurrence_fo_scatter.pdf"
@@ -308,21 +303,19 @@ def panel_B_transfer_by_condition(
     SUBJECTS, summaries, OUT_F5, np, plt,
     SUBJECT_NEUTRAL, SUBJECT_MARKERS,
 ):
-    """Panel B - recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
+    """Panel B — recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
 
-    The generalization gradient: a frozen Friends-trained state model transfers
-    most strongly to the most Friends-like stimulus (audiovisual narrative film,
-    Movie10) and weakly / variably to reduced-modality stimuli - visual-only
-    word-by-word reading (Harry Potter) and audio-only listening (Petit Prince).
+    A frozen Friends-trained state model transfers most strongly to audiovisual
+    film (Movie10) and weakly / variably to reduced-modality stimuli —
+    visual-only word-by-word reading (Harry Potter) and audio-only listening
+    (Petit Prince).
 
     Conditions are grouped by stimulus type, not ordered as a content axis. The
     spread across the four Movie10 films is shown descriptively; it co-varies
-    with HMM model fit and with low-level audiovisual features (faces/speech/cut
-    rate) - see the supplementary cross-stimulus validity figure - so it is NOT
-    attributed to narrative content. Note that the reduced-modality conditions do
-    not follow narrative content either: Harry Potter (least narrative) transfers
-    higher on average than Petit Prince (a coherent narrative), inconsistent with
-    a content account and consistent with similarity-graded generalization.
+    with HMM model fit — see the supplementary cross-stimulus validity figure —
+    so it is NOT attributed to narrative content. Note that the reduced-modality
+    conditions do not isolate narrative content because they also differ in
+    modality, timing, language, run structure, and model fit.
 
     Per-subject markers (shape = subject, as in panel A; single neutral color).
     Cohort mean: dark line over the Movie10 films, dark ticks for HP and PP.
@@ -347,7 +340,7 @@ def panel_B_transfer_by_condition(
         _d = summaries[_stim][_sub]
         return None if _d is None else _d["A1_recurrence_correlation"]["spearman_rho"]
 
-    _fig, _ax = plt.subplots(figsize=(7.4, 4.4))
+    _fig, _ax = plt.subplots(figsize=(6.7, 3.95))
     _mean_color = "#333333"
 
     # Dividers between the three stimulus-type groups (no causal continuum).
@@ -387,19 +380,19 @@ def panel_B_transfer_by_condition(
     _tr = _ax.get_xaxis_transform()
     for _lo, _hi, _lab in _groups:
         _ax.text((_lo + _hi) / 2.0, -0.18, _lab, transform=_tr, ha="center",
-                 va="top", fontsize=8, color="#333333")
+                 va="top", fontsize=6.5, color="#333333")
 
     _ax.set_xticks(range(_n_x))
-    _ax.set_xticklabels(_xlabels, fontsize=8)
-    _ax.set_ylabel("Recurrence → occupancy transfer ρ", fontsize=10)
+    _ax.set_xticklabels(_xlabels, fontsize=6.5)
+    _ax.set_ylabel("Recurrence → occupancy transfer ρ", fontsize=7)
     _ax.set_xlim(-0.5, _n_x - 0.5)
-    _ax.tick_params(axis="y", labelsize=8)
+    _ax.tick_params(axis="y", labelsize=6)
     _ax.tick_params(axis="x", length=0)
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _h_mean = plt.Line2D([], [], color=_mean_color, lw=2.0, label="Cohort mean")
     _ax.legend(handles=[_h_mean], loc="upper right",
-               frameon=False, fontsize=8, handletextpad=0.4)
+               frameon=False, fontsize=6.5, handletextpad=0.4)
 
     _fig.subplots_adjust(left=0.10, right=0.98, bottom=0.22, top=0.95)
     _out_pdf = OUT_F5 / "fig5_B_transfer_by_condition.pdf"
@@ -424,8 +417,8 @@ def taxonomy_legend(OUT_F5, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     _handles = [plt.Line2D([], [], marker="o", linestyle="none", markersize=7,
                            markerfacecolor=TAXONOMY_COLORS[_c], markeredgecolor="white",
                            label=_c) for _c in TAXONOMY_ORDER]
-    _fig = plt.figure(figsize=(2.4, 1.6))
-    _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=8,
+    _fig = plt.figure(figsize=(2.1, 1.35))
+    _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
                 handletextpad=0.5, labelspacing=0.6)
     _out_pdf = OUT_F5 / "fig5_taxonomy_legend.pdf"
     _fig.savefig(_out_pdf, bbox_inches="tight", pad_inches=0.02)

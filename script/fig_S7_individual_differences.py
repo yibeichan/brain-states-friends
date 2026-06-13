@@ -1,4 +1,4 @@
-"""fig_S7_individual_differences.py - Supplementary Figure S7.
+"""fig_S7_individual_differences.py — Supplementary Figure S7.
 
 Subject-level individual differences across F1–F5 findings, rendered as a
 1×6 horizontal strip of per-subject radar plots.
@@ -17,9 +17,8 @@ the same seven axes derived from the five main-text findings:
 | 7 | HP+PP      | F5.R5          | mean of hp_05 + pp_05 A1.spearman_rho (sub-04 N/A)                      |
 
 Each axis is scaled to the cohort minimum–maximum with 10% padding on each
-end. Sub-04 was not scanned during Harry Potter or Le Petit Prince; sub-04's
-axis-7 value is drawn as a hollow marker at the cohort midpoint with dashed
-segments to the neighbouring axes, rather than imputed.
+end. Sub-04 was not scanned during Harry Potter or Le Petit Prince, so its
+HP+PP vertex and adjacent connecting segments are omitted rather than imputed.
 
 Output:
   $SCRATCH_DIR/output/manuscript_figures/figS7/figS7_radar_strip.{pdf,png,svg}
@@ -65,7 +64,6 @@ SUBJECTS: list[str] = [f"sub-0{i}" for i in range(1, 7)]
 AXIS_LABELS: list[str] = ["K", "%CE", "FCρ", "Homo", "Aud", "M10", "HP+PP"]
 OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS7"
 PAD_FRACTION = 0.10
-SUB04_HP_PP_FALLBACK_SCALED = 0.5  # cohort midpoint in the scaled [0, 1] range
 
 
 # ── Per-axis loaders ─────────────────────────────────────────────────────────
@@ -235,8 +233,8 @@ def scale_cohort(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, tuple[fl
     -------
     scaled_df : (6, 7) DataFrame of values in [0, 1].
     cohort_ranges : {axis_label: (cohort_min, cohort_max)} (unpadded absolute range).
-    valid_mask : (6, 7) DataFrame of bool - True where the raw value is real, False where
-        the value is a fallback (sub-04 HP+PP).
+    valid_mask : (6, 7) DataFrame of bool — True where the raw value is real,
+        False where the value is missing (sub-04 HP+PP).
     """
     scaled_data: dict[str, pd.Series] = {}
     cohort_ranges: dict[str, tuple[float, float]] = {}
@@ -250,23 +248,21 @@ def scale_cohort(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, tuple[fl
         low = cmin - PAD_FRACTION * rng
         high = cmax + PAD_FRACTION * rng
         if high == low:
-            scaled = pd.Series(SUB04_HP_PP_FALLBACK_SCALED, index=col.index)
+            scaled = pd.Series(np.nan, index=col.index)
+            scaled.loc[valid.index] = 0.5
         else:
             scaled = (col - low) / (high - low)
-            scaled = scaled.fillna(SUB04_HP_PP_FALLBACK_SCALED)
         scaled_data[ax] = scaled
         cohort_ranges[ax] = (cmin, cmax)
 
     scaled_df = pd.DataFrame(scaled_data).reindex(raw_df.index)
+    valid_mask = ~raw_df.isna()
 
     for ax in AXIS_LABELS:
-        v = scaled_df[ax]
+        v = scaled_df.loc[valid_mask[ax], ax]
         assert ((v >= 0.0) & (v <= 1.0)).all(), f"{ax}: scaled values outside [0, 1]: {v.tolist()}"
-    assert (
-        abs(scaled_df.loc["sub-04", "HP+PP"] - SUB04_HP_PP_FALLBACK_SCALED) < 1e-9
-    ), "sub-04 HP+PP fallback not applied"
+    assert pd.isna(scaled_df.loc["sub-04", "HP+PP"]), "sub-04 HP+PP should remain missing"
 
-    valid_mask = ~raw_df.isna()
     return scaled_df, cohort_ranges, valid_mask
 
 
@@ -283,6 +279,8 @@ def plot_one_radar(
     sub_id: str,
     scaled_row: list[float],
     valid_row: list[bool],
+    *,
+    show_axis_labels: bool = True,
 ) -> None:
     """Draw one subject's radar onto the supplied polar axis."""
     n_axes = len(AXIS_LABELS)
@@ -293,37 +291,31 @@ def plot_one_radar(
     valid_closed = list(valid_row) + [valid_row[0]]
     theta_closed = np.concatenate([theta, theta[:1]])
 
-    # Polygon outline - segment by segment so we can dash invalid segments
+    # Polygon outline — segment by segment, leaving gaps at missing axes.
     for i in range(n_axes):
-        seg_valid = valid_closed[i] and valid_closed[i + 1]
-        ls = "-" if seg_valid else (0, (3, 3))
+        if not (valid_closed[i] and valid_closed[i + 1]):
+            continue
         ax.plot(
             [theta_closed[i], theta_closed[i + 1]],
             [values_closed[i], values_closed[i + 1]],
             color=SUBJECT_NEUTRAL,
             linewidth=1.2,
-            linestyle=ls,
+            linestyle="-",
         )
 
-    # Polygon fill (continuous; the dashed outline already signals fallback segments)
-    ax.fill(theta_closed, values_closed, color=SUBJECT_NEUTRAL, alpha=0.18, linewidth=0)
+    if all(valid_row):
+        ax.fill(theta_closed, values_closed, color=SUBJECT_NEUTRAL, alpha=0.18, linewidth=0)
 
-    # Spoke-endpoint markers (subject-specific shape; hollow for fallback)
+    # Spoke-endpoint markers (subject-specific shape); missing axes have no marker.
     marker = SUBJECT_MARKERS[sub_id]
     for i in range(n_axes):
-        if valid_closed[i]:
-            ax.plot(
-                theta[i], values_closed[i],
-                marker=marker, color=SUBJECT_NEUTRAL,
-                markersize=4.5, markerfacecolor=SUBJECT_NEUTRAL, markeredgewidth=0,
-            )
-        else:
-            ax.plot(
-                theta[i], values_closed[i],
-                marker=marker, color=SUBJECT_NEUTRAL,
-                markersize=4.5, markerfacecolor="white",
-                markeredgecolor=SUBJECT_NEUTRAL, markeredgewidth=0.8,
-            )
+        if not valid_row[i]:
+            continue
+        ax.plot(
+            theta[i], values_closed[i],
+            marker=marker, color=SUBJECT_NEUTRAL,
+            markersize=4.5, markerfacecolor=SUBJECT_NEUTRAL, markeredgewidth=0,
+        )
 
     # Axis ticks (drawn as spokes only; labels placed manually below for control)
     ax.set_xticks(theta)
@@ -333,25 +325,26 @@ def plot_one_radar(
     # alignment chosen by spoke angle so labels at top/bottom centre, on the
     # right left-align, on the left right-align. This avoids the default
     # matplotlib behaviour where adjacent short+long labels collide near the top.
-    label_r = 1.45  # radial position in data coords (axes go 0..1)
-    for i, label in enumerate(AXIS_LABELS):
-        t = theta[i]
-        cos_t = np.cos(t)
-        if cos_t > 0.30:
-            ha = "left"
-        elif cos_t < -0.30:
-            ha = "right"
-        else:
-            ha = "center"
-        # Vertical alignment: top of axes → va='bottom'; bottom → va='top'
-        sin_t = np.sin(t)
-        if sin_t > 0.50:
-            va = "bottom"
-        elif sin_t < -0.50:
-            va = "top"
-        else:
-            va = "center"
-        ax.text(t, label_r, label, ha=ha, va=va, fontsize=7, color="#333333")
+    if show_axis_labels:
+        label_r = 1.45  # radial position in data coords (axes go 0..1)
+        for i, label in enumerate(AXIS_LABELS):
+            t = theta[i]
+            cos_t = np.cos(t)
+            if cos_t > 0.30:
+                ha = "left"
+            elif cos_t < -0.30:
+                ha = "right"
+            else:
+                ha = "center"
+            # Vertical alignment: top of axes -> va='bottom'; bottom -> va='top'
+            sin_t = np.sin(t)
+            if sin_t > 0.50:
+                va = "bottom"
+            elif sin_t < -0.50:
+                va = "top"
+            else:
+                va = "center"
+            ax.text(t, label_r, label, ha=ha, va=va, fontsize=7, color="#333333")
 
     # Concentric gridlines at 25%, 50%, 75%
     ax.set_yticks([0.25, 0.50, 0.75])
@@ -371,7 +364,7 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
     """Render the 1×6 radar strip; save PDF + PNG; return PDF path."""
     fig, axes = plt.subplots(
         1, 6,
-        figsize=(8.4, 2.3),
+        figsize=(6.7, 2.05),
         subplot_kw={"projection": "polar"},
     )
 
@@ -380,12 +373,13 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
             ax, sub,
             scaled_df.loc[sub].tolist(),
             valid_mask.loc[sub].tolist(),
+            show_axis_labels=(sub == SUBJECTS[0]),
         )
         ax.text(
             0.5, -0.30, sub,
             transform=ax.transAxes,
             ha="center", va="top",
-            fontsize=9, color=SUBJECT_NEUTRAL,
+            fontsize=6.5, color=SUBJECT_NEUTRAL,
         )
 
     fig.subplots_adjust(wspace=0.95, left=0.04, right=0.96, top=0.82, bottom=0.16)
@@ -420,6 +414,7 @@ def main() -> None:
     pdf_path = render_strip(scaled_df, valid_mask, OUT_DIR)
     print(f"saved: {pdf_path}")
     print(f"saved: {pdf_path.with_suffix('.png')}")
+    print(f"saved: {pdf_path.with_suffix('.svg')}")
     print("done.")
 
 

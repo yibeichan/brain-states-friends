@@ -1,4 +1,4 @@
-"""fig_F4_within_friends.py - Figure F4 within-Friends representational depth.
+"""fig_F4_within_friends.py — Figure F4 within-Friends representational depth.
 
 Leads manuscript Figure 4 (§R4b) with the WITHIN-Friends primary result that the
 old "R4b slim" figure (``08e_plots.py``, transfer only) was missing. Three
@@ -16,12 +16,12 @@ Per-subject row (A–C): thin filled profile of decoding strength in
 **Δ-above-confound-floor** units along relative network depth; the argmax is
 marked with the subject's conventional shape and bracketed by a **peak band**
 (contiguous layers with Δ-above-floor ≥ 0.90 × peak Δ-above-floor). Shared
-light "mid ~0.5 / deep ~0.9" depth zones are the categorical readout - the
+light "mid ~0.5 / deep ~0.9" depth zones are the categorical readout — the
 x-position is a *within-model* normalization, not a cross-architecture ruler.
 Per-row best lag annotated; a floor-exceedance tick marks peak > timing floor.
 
 Confound floor: dinov2 / w2v use their own ``D1_confound_baseline.json``. LLaMA
-W=1 has none, so the dinov2 lag-3 floor is **reused** - valid because the floor
+W=1 has none, so the dinov2 lag-3 floor is **reused** — valid because the floor
 depends only on (subject, lag): the 6 timing regressors carry no model features.
 Reuse is guarded by full-key equivalence asserts (lag, chance_level, n_eligible,
 eligibility_source); any mismatch hard-stops (recompute is out of scope).
@@ -43,28 +43,14 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.plot_style import (  # noqa: E402
+    MODEL_DISPLAY,
     SUBJECT_MARKERS,
     SUBJECT_NEUTRAL,
     apply_publication_style,
+    modality_color,
 )
 
 apply_publication_style()
-
-MODEL_DISPLAY = {
-    "dinov2-large": "DINOv2-large (video)",
-    "w2v-bert-2.0": "Wav2Vec-BERT 2.0 (audio)",
-    "llama-3.2-3b": "LLaMA 3.2 3B (text)",
-}
-
-MODALITY_COLORS = {
-    "video": "#1f77b4",
-    "audio": "#ff7f0e",
-    "text": "#2ca02c",
-}
-
-
-def modality_color(modality: str) -> str:
-    return MODALITY_COLORS[modality]
 
 SCRATCH_DIR = Path(os.environ["SCRATCH_DIR"])
 PARCELLATION = "atlas-4S156Parcels"
@@ -141,7 +127,7 @@ def load_confound_floor(sub, model, best_lag, chance_at_peak, n_eligible,
     dinov2 / w2v read their own D1_confound_baseline.json. LLaMA reuses the
     dinov2 donor floor, guarded by full-key equivalence asserts (Res E): the
     floor depends only on (subject, lag) because the confound classifier uses 6
-    timing regressors as features - no transformer features, no PCA - against
+    timing regressors as features — no transformer features, no PCA — against
     the identical content-eligible labels. Mismatch hard-stops.
     """
     own = D1_ROOT / sub / f"friends_{model}" / "D1_confound_baseline.json"
@@ -157,26 +143,26 @@ def load_confound_floor(sub, model, best_lag, chance_at_peak, n_eligible,
     donor = json.loads(donor_path.read_text())
     _, donor_meta = load_d1_profile(sub, CONFOUND_DONOR)
 
-    # Full-key equivalence guard - reuse ONLY if every key matches (Res E).
+    # Full-key equivalence guard — reuse ONLY if every key matches (Res E).
     if donor["best_lag"] != best_lag:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked - donor lag "
+            f"{sub} {model}: confound reuse blocked — donor lag "
             f"{donor['best_lag']} != {model} peak lag {best_lag}."
         )
     if not np.isclose(donor["chance_level"], chance_at_peak, atol=1e-4):
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked - donor chance "
+            f"{sub} {model}: confound reuse blocked — donor chance "
             f"{donor['chance_level']} != {model} chance {chance_at_peak} "
             "(label sets differ)."
         )
     if donor_meta["n_eligible_states"] != n_eligible:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked - donor n_eligible "
+            f"{sub} {model}: confound reuse blocked — donor n_eligible "
             f"{donor_meta['n_eligible_states']} != {model} {n_eligible}."
         )
     if donor_meta["eligibility_source"] != eligibility_source:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked - eligibility source "
+            f"{sub} {model}: confound reuse blocked — eligibility source "
             f"{donor_meta['eligibility_source']} != {eligibility_source}."
         )
     return float(donor["balanced_accuracy"])
@@ -371,7 +357,7 @@ def render_panel_d():
     """Transfer peak-depth grid: stimulus × modality, color = median peak depth.
 
     Three cell states (Res B amended): not-testable (hatched grey), tested but
-    not majority-significant (muted, no depth color - a noisy argmax is not shown
+    not majority-significant (muted, no depth color — a noisy argmax is not shown
     as replicated depth), tested + majority FDR-sig (depth-colored + outline).
     """
     cmap = plt.get_cmap("cividis_r")            # deep (high rel-depth) → dark
@@ -388,14 +374,14 @@ def render_panel_d():
                     (ci, y), 1, 1, facecolor="0.92", edgecolor="white",
                     hatch="////", linewidth=1.0))
                 ax.text(ci + 0.5, y + 0.5, "n/t", ha="center", va="center",
-                        fontsize=7, color="0.5")
+                        fontsize=6.5, color="0.5")
                 continue
-            if not cell["majority_sig"]:         # tested but n.s. - muted
+            if not cell["majority_sig"]:         # tested but n.s. — muted
                 ax.add_patch(mpatches.Rectangle(
                     (ci, y), 1, 1, facecolor="0.96", edgecolor="white",
                     linewidth=1.0))
                 ax.text(ci + 0.5, y + 0.58, f"{cell['acc_median']:+.3f}",
-                        ha="center", va="center", fontsize=8, color="0.55")
+                        ha="center", va="center", fontsize=6.5, color="0.55")
                 ax.text(ci + 0.5, y + 0.28,
                         f"{cell['n_sig']}/{cell['n']} ns", ha="center",
                         va="center", fontsize=6, color="0.6")
@@ -407,7 +393,7 @@ def render_panel_d():
                 (ci, y), 1, 1, facecolor=rgba, edgecolor="black", linewidth=1.2))
             txt = "white" if sum(rgba[:3]) < 1.5 else "black"
             ax.text(ci + 0.5, y + 0.58, f"{cell['acc_median']:+.3f}", ha="center",
-                    va="center", fontsize=9, color=txt, fontweight="bold")
+                    va="center", fontsize=7, color=txt, fontweight="bold")
             ax.text(ci + 0.5, y + 0.28, f"{cell['n_sig']}/{cell['n']}",
                     ha="center", va="center", fontsize=6, color=txt)
 
@@ -424,13 +410,13 @@ def render_panel_d():
 
     _save(fig, "fig4_D_transfer_depth_grid")
 
-    # Colorbar emitted as a SEPARATE file for manual assembly - kept off the grid
+    # Colorbar emitted as a SEPARATE file for manual assembly — kept off the grid
     # so the grid's width is unencumbered (and matches the per-film panels).
     cfig, cax = plt.subplots(figsize=(0.45, 2.2))
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = cfig.colorbar(sm, cax=cax, ticks=[0, 0.5, 1.0])
-    cbar.set_label("transfer peak relative depth", fontsize=8)
+    cbar.set_label("transfer peak relative depth", fontsize=6.5)
     cbar.ax.set_yticklabels(["0\nshallow", "0.5\nmid", "1.0\ndeep"], fontsize=6.5)
     # Ticks + label on the LEFT (flipped) so the bar sits to the right of them.
     cbar.ax.yaxis.set_ticks_position("left")
@@ -516,7 +502,7 @@ def render_perfilm(modality, model, n_layers, letter, series, ylim):
     if ylim:
         ax.set_ylim(*ylim)
     # Cohort-median peak per film as a star on the x-axis (NOT a dot on the
-    # mean curve) - marks where the cohort peaks without implying the mean
+    # mean curve) — marks where the cohort peaks without implying the mean
     # curve's value there. Star (not "^") so it never reads as a subject glyph:
     # SUBJECT_MARKERS uses o/s/^/D/v/P. Matches §R4b.5's cohort-median framing.
     y0 = ax.get_ylim()[0]
@@ -634,7 +620,7 @@ def load_nes_triple(sub, model, n_layers):
 
     # Confound floor: own file, else dinov2 donor. The donor reuse is already
     # validated by load_confound_floor's full-key equivalence guard, which
-    # main() runs (via collect_within) before this function - do not reorder
+    # main() runs (via collect_within) before this function — do not reorder
     # main() so this fallback executes unguarded.
     conf_path = D1_ROOT / sub / f"friends_{model}" / "D1_confound_baseline.json"
     if not conf_path.exists():
@@ -662,7 +648,7 @@ def render_supp_negcontrol():
     all 3 modalities (supplementary is exempt from the variety rule).
     """
     SUPP_DIR.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 3, figsize=(8.4, 3.0), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(6.7, 2.55), sharey=True)
     for ax, panel in zip(axes, WITHIN_PANELS):
         color = modality_color(panel["modality"])
         xs = np.arange(len(SUBJECTS))
@@ -683,15 +669,15 @@ def render_supp_negcontrol():
             nneg.append(t["n_neg"])
         ax.set_title(f"{MODEL_DISPLAY[panel['model']]}\n"
                      f"n_classes: main {min(nmain)}–{max(nmain)}, "
-                     f"neg {min(nneg)}–{max(nneg)}", fontsize=8)
+                     f"neg {min(nneg)}–{max(nneg)}", fontsize=6.5)
         ax.set_xticks(xs)
-        ax.set_xticklabels([s.replace("sub-", "") for s in SUBJECTS], fontsize=7)
-        ax.set_xlabel("subject", fontsize=8)
+        ax.set_xticklabels([s.replace("sub-", "") for s in SUBJECTS], fontsize=6)
+        ax.set_xlabel("subject", fontsize=6.5)
         ax.axhline(0, color="0.7", linewidth=0.6, linestyle=":")
         for spine in ("top", "right"):
             ax.spines[spine].set_visible(False)
-    axes[0].set_ylabel("NES at D1 peak cell", fontsize=8)
-    axes[0].legend(fontsize=6.5, loc="upper right", frameon=False)
+    axes[0].set_ylabel("NES at D1 peak cell", fontsize=6.5)
+    axes[0].legend(fontsize=6, loc="upper right", frameon=False)
     for ext in ("pdf", "png", "svg"):
         fig.savefig(SUPP_DIR / f"figS_R4b_negcontrol_triple.{ext}",
                     bbox_inches="tight", pad_inches=0.02,

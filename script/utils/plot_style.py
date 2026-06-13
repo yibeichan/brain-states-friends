@@ -56,6 +56,26 @@ SUBJECT_MARKERS = {
 }
 
 
+# ── Transformer model / modality display helpers ─────────────────────────────
+
+MODEL_DISPLAY = {
+    "dinov2-large": "DINOv2-large",
+    "w2v-bert-2.0": "Wav2Vec-BERT 2.0",
+    "llama-3.2-3b": "LLaMA-3.2-3B",
+}
+
+MODALITY_COLORS = {
+    "video": "#0072B2",
+    "audio": "#009E73",
+    "text": "#D55E00",
+}
+
+
+def modality_color(modality):
+    """Return the manuscript color for a transformer-input modality."""
+    return MODALITY_COLORS.get(modality, SUBJECT_NEUTRAL)
+
+
 # ── Network constants ────────────────────────────────────────────────────────
 
 NETWORK_ORDER = [
@@ -66,7 +86,7 @@ NETWORK_ORDER = [
 
 NETWORK_COLORS = {
     # Cortical: colorblind-safe Okabe–Ito hues (2026-05-26). The canonical Yeo-7
-    # colors (Vis purple, DMN red, etc.) are field-standard but NOT CB-safe - the
+    # colors (Vis purple, DMN red, etc.) are field-standard but NOT CB-safe — the
     # Vis-purple / SalVentAttn-magenta pair and the green/orange/red trio collide
     # under deuteranopia/protanopia. At most 7 cortical networks ever appear as
     # *dominant* states in any subject (subcortical never wins the per-state max,
@@ -191,7 +211,7 @@ def load_parcel_networks(parcellation):
         from utils.viz_yabplot import load_parcel_labels
         label_df = load_parcel_labels(parcellation)
     except Exception as e:
-        logger.warning("Could not load parcel labels: %s - network analysis disabled", e)
+        logger.warning("Could not load parcel labels: %s — network analysis disabled", e)
         return None
 
     n_parcels = len(label_df)
@@ -267,15 +287,13 @@ def apply_publication_style() -> None:
     plt.style.use("default")
     plt.rcParams.update({
         "figure.dpi":       300,
-        "font.size":        10,
+        "font.size":        7,
         "svg.fonttype":     "none",
-        "figure.titlesize": 12,
-        "axes.titlesize":   10,
-        "axes.labelsize":   9,
-        "ytick.labelsize":  8,
-        "xtick.labelsize":  8,
+        "figure.titlesize": 7,
+        "axes.titlesize":   7,
+        "axes.labelsize":   7,
+        "ytick.labelsize":  6,
+        "xtick.labelsize":  6,
         "axes.facecolor":   "white",
         "figure.facecolor": "white",
     })
-
-

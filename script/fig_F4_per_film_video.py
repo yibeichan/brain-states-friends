@@ -1,10 +1,10 @@
-"""Figure F4 Panel C - DINOv2 × Movie10 per-film depth profile.
+"""Figure F4 Panel C — DINOv2 × Movie10 per-film depth profile.
 
 For each of the 6 subjects, this script reproduces 08e's Friends-fit /
 Movie10-project pipeline for DINOv2-large only, then **breaks the Movie10
 balanced-accuracy evaluation into four per-film subsets** (bourne / figures /
 life / wolf) instead of pooling across films. Permutation testing is skipped
-(point estimates only) - the global significance question was already settled
+(point estimates only) — the global significance question was already settled
 by the existing 08e D3a output for movie10 × dinov2; here we only need per-
 film effect sizes for the poster's Video panel.
 
@@ -249,8 +249,9 @@ def render_panel():
         print(f"  {film_key:<8} n={n_subj}  peak layer={peak}/{n_layers-1}  "
               f"peak Δ={mean[peak]:.4f}  mean Δ={np.nanmean(mean):.4f}")
     ax.axhline(0, color="0.6", linewidth=0.8, linestyle=":")
-    ax.set_xlabel("DINOv2-large layer")
-    ax.set_ylabel("Balanced accuracy − chance")
+    ax.set_xlabel("DINOv2-large layer", fontsize=7)
+    ax.set_ylabel("Balanced accuracy − chance", fontsize=7)
+    ax.tick_params(labelsize=6)
     ax.legend(frameon=False, loc="upper left", fontsize=7)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
@@ -265,7 +266,7 @@ def render_panel():
 
 
 def main():
-    print(f"=== Fig F4 Panel C - per-film video depth profile ===")
+    print(f"=== Fig F4 Panel C — per-film video depth profile ===")
     print(f"  OUT_DIR = {OUT_DIR}")
     for sub_id in SUBJECTS:
         try:
