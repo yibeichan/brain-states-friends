@@ -93,9 +93,9 @@ LOSO_CV_THRESHOLD = 0.20
 # IMPORTANT: subcortical bins MUST stay in sync with
 # script/utils/plot_style.py:_SUBCORT_GROUPS (v2 canonical BG circuit per
 # Alexander-DeLong-Strick 1986; Haber & Knutson 2010). Cortical bins here
-# use Yeo-17 sub-network names (VisCent/VisPeri/etc.) - a separate local
+# use Yeo-17 sub-network names (VisCent/VisPeri/etc.) — a separate local
 # convention from plot_style.py's Yeo-7 names; unifying that is out of
-# scope.
+# scope. See docs/internal/shared/2026-05-11_subcort_partition_canonical.md.
 NETWORK_ORDER = [
     'VisCent', 'VisPeri',
     'SomMotA', 'SomMotB',
@@ -127,7 +127,7 @@ NETWORK_COLORS = {
 }
 
 # Subcortical structure-to-group mapping (v2 canonical BG circuit).
-# Mirrors script/utils/plot_style.py:_SUBCORT_GROUPS - keep in sync.
+# Mirrors script/utils/plot_style.py:_SUBCORT_GROUPS — keep in sync.
 _SUBCORT_GROUPS = {
     'Pu': 'BG', 'Ca': 'BG', 'NAC': 'BG',
     'GPe': 'BG', 'GPi': 'BG',
@@ -1117,9 +1117,10 @@ def parse_args():
                         help='Number of top PCs for A1/A2 (default: 5)')
     parser.add_argument('--n_top_parcels', type=int, default=15,
                         help='Number of top-loading parcels per PC in A2 (default: 15)')
-    parser.add_argument('--variance_threshold', type=str, nargs='+', default=['0.90'],
-                        help='Variance threshold(s) for A3/A5 (default: 0.90). '
-                             'Accepts multiple values, e.g. --variance_threshold 0.80 0.85 0.90')
+    parser.add_argument('--variance_threshold', type=str, nargs='+', default=['0.95'],
+                        help='Variance threshold(s) for A3/A5 (default: 0.95, matching the '
+                             'production HMM PCA space). Accepts multiple values, '
+                             'e.g. --variance_threshold 0.80 0.85 0.90 0.95')
     parser.add_argument('--n_pcs_c4', type=int, default=20,
                         help='Number of PCs to show in A4 stacked bar (default: 20)')
     parser.add_argument('--plots', nargs='+',
@@ -1175,8 +1176,8 @@ def main():
             k = n_pcs_lookup[vt_str]
         else:
             logger.warning(f"Variance threshold '{vt_str}' not in n_pcs_lookup; "
-                           f"available: {list(n_pcs_lookup.keys())}. Using 0.90.")
-            k = n_pcs_lookup.get('0.90', 43)
+                           f"available: {list(n_pcs_lookup.keys())}. Using 0.95.")
+            k = n_pcs_lookup.get('0.95', 75)
         vt_float = float(vt_str)
         suffix = f"vt{int(vt_float * 100):03d}" if len(vt_list) > 1 else ''
         vt_configs.append((vt_str, vt_float, k, suffix))
