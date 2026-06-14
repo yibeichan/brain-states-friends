@@ -249,8 +249,9 @@ def render_panel():
         print(f"  {film_key:<8} n={n_subj}  peak layer={peak}/{n_layers-1}  "
               f"peak Δ={mean[peak]:.4f}  mean Δ={np.nanmean(mean):.4f}")
     ax.axhline(0, color="0.6", linewidth=0.8, linestyle=":")
-    ax.set_xlabel("DINOv2-large layer")
-    ax.set_ylabel("Balanced accuracy − chance")
+    ax.set_xlabel("DINOv2-large layer", fontsize=7)
+    ax.set_ylabel("Balanced accuracy − chance", fontsize=7)
+    ax.tick_params(labelsize=6)
     ax.legend(frameon=False, loc="upper left", fontsize=7)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

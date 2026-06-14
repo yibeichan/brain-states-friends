@@ -43,28 +43,14 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.plot_style import (  # noqa: E402
+    MODEL_DISPLAY,
     SUBJECT_MARKERS,
     SUBJECT_NEUTRAL,
     apply_publication_style,
+    modality_color,
 )
 
 apply_publication_style()
-
-MODEL_DISPLAY = {
-    "dinov2-large": "DINOv2-large (video)",
-    "w2v-bert-2.0": "Wav2Vec-BERT 2.0 (audio)",
-    "llama-3.2-3b": "LLaMA 3.2 3B (text)",
-}
-
-MODALITY_COLORS = {
-    "video": "#1f77b4",
-    "audio": "#ff7f0e",
-    "text": "#2ca02c",
-}
-
-
-def modality_color(modality: str) -> str:
-    return MODALITY_COLORS[modality]
 
 SCRATCH_DIR = Path(os.environ["SCRATCH_DIR"])
 PARCELLATION = "atlas-4S156Parcels"
@@ -388,14 +374,14 @@ def render_panel_d():
                     (ci, y), 1, 1, facecolor="0.92", edgecolor="white",
                     hatch="////", linewidth=1.0))
                 ax.text(ci + 0.5, y + 0.5, "n/t", ha="center", va="center",
-                        fontsize=7, color="0.5")
+                        fontsize=6.5, color="0.5")
                 continue
             if not cell["majority_sig"]:         # tested but n.s. - muted
                 ax.add_patch(mpatches.Rectangle(
                     (ci, y), 1, 1, facecolor="0.96", edgecolor="white",
                     linewidth=1.0))
                 ax.text(ci + 0.5, y + 0.58, f"{cell['acc_median']:+.3f}",
-                        ha="center", va="center", fontsize=8, color="0.55")
+                        ha="center", va="center", fontsize=6.5, color="0.55")
                 ax.text(ci + 0.5, y + 0.28,
                         f"{cell['n_sig']}/{cell['n']} ns", ha="center",
                         va="center", fontsize=6, color="0.6")
@@ -407,7 +393,7 @@ def render_panel_d():
                 (ci, y), 1, 1, facecolor=rgba, edgecolor="black", linewidth=1.2))
             txt = "white" if sum(rgba[:3]) < 1.5 else "black"
             ax.text(ci + 0.5, y + 0.58, f"{cell['acc_median']:+.3f}", ha="center",
-                    va="center", fontsize=9, color=txt, fontweight="bold")
+                    va="center", fontsize=7, color=txt, fontweight="bold")
             ax.text(ci + 0.5, y + 0.28, f"{cell['n_sig']}/{cell['n']}",
                     ha="center", va="center", fontsize=6, color=txt)
 
@@ -430,7 +416,7 @@ def render_panel_d():
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = cfig.colorbar(sm, cax=cax, ticks=[0, 0.5, 1.0])
-    cbar.set_label("transfer peak relative depth", fontsize=8)
+    cbar.set_label("transfer peak relative depth", fontsize=6.5)
     cbar.ax.set_yticklabels(["0\nshallow", "0.5\nmid", "1.0\ndeep"], fontsize=6.5)
     # Ticks + label on the LEFT (flipped) so the bar sits to the right of them.
     cbar.ax.yaxis.set_ticks_position("left")
@@ -662,7 +648,7 @@ def render_supp_negcontrol():
     all 3 modalities (supplementary is exempt from the variety rule).
     """
     SUPP_DIR.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 3, figsize=(8.4, 3.0), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(6.7, 2.55), sharey=True)
     for ax, panel in zip(axes, WITHIN_PANELS):
         color = modality_color(panel["modality"])
         xs = np.arange(len(SUBJECTS))
@@ -683,15 +669,15 @@ def render_supp_negcontrol():
             nneg.append(t["n_neg"])
         ax.set_title(f"{MODEL_DISPLAY[panel['model']]}\n"
                      f"n_classes: main {min(nmain)}–{max(nmain)}, "
-                     f"neg {min(nneg)}–{max(nneg)}", fontsize=8)
+                     f"neg {min(nneg)}–{max(nneg)}", fontsize=6.5)
         ax.set_xticks(xs)
-        ax.set_xticklabels([s.replace("sub-", "") for s in SUBJECTS], fontsize=7)
-        ax.set_xlabel("subject", fontsize=8)
+        ax.set_xticklabels([s.replace("sub-", "") for s in SUBJECTS], fontsize=6)
+        ax.set_xlabel("subject", fontsize=6.5)
         ax.axhline(0, color="0.7", linewidth=0.6, linestyle=":")
         for spine in ("top", "right"):
             ax.spines[spine].set_visible(False)
-    axes[0].set_ylabel("NES at D1 peak cell", fontsize=8)
-    axes[0].legend(fontsize=6.5, loc="upper right", frameon=False)
+    axes[0].set_ylabel("NES at D1 peak cell", fontsize=6.5)
+    axes[0].legend(fontsize=6, loc="upper right", frameon=False)
     for ext in ("pdf", "png", "svg"):
         fig.savefig(SUPP_DIR / f"figS_R4b_negcontrol_triple.{ext}",
                     bbox_inches="tight", pad_inches=0.02,

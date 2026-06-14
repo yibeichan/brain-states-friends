@@ -1,8 +1,8 @@
-"""Figure F2 - the sources of recurrence (R2).
+"""Figure F2 - recurrence-screening taxonomy (R2).
 
 Split from the former `fig_F1_recurrence_and_taxonomy.py` (2026-06-10). R1 (the
-recurrence gradient) is now `fig_F1_recurrence_gradient.py`; this script is R2
-(the heterogeneous sources of recurrence).
+graded recurrence distribution) is now `fig_F1_recurrence_gradient.py`; this
+script is R2 (recurrence-screening categories and network summaries).
 
 Panels B and C are lifted verbatim from the former F1 (Sankey + surface
 exemplars). Panel A is the former F1 stacked taxonomy bars WITH the recurrence
@@ -11,9 +11,9 @@ category composition over all 50 latent states (including unused).
 
 | Panel | Content | Chart family | Source | Output |
 |---|---|---|---|---|
-| A | Per-subject category-count stacked bars (5 categories, all 50 states) | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{pdf,png} |
-| B | Sankey: 5 categories -> 13 networks, top-3 composition | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{pdf,png} |
-| C | Surface exemplars per category (sub-01) + activity timeseries strips | brain map | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_C_*.{pdf,png} (multi-file) |
+| A | Per-subject category-count stacked bars (5 categories, all 50 states) | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{pdf,png,svg} |
+| B | Sankey: 5 categories -> 13 networks, top-3 composition | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{pdf,png,svg} |
+| C | Surface exemplars per category (sub-01) + activity timeseries strips | brain map | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_C_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
 
 Run:
     marimo edit script/fig_F2_recurrence_sources.py
@@ -157,7 +157,7 @@ def panel_A_category_bars(
         "Unused + rare":      "#5A5A5A",    # pale gray -> dark text
     }
     _row_h = 0.64
-    _fig, _ax = plt.subplots(figsize=(7.4, 3.6))
+    _fig, _ax = plt.subplots(figsize=(6.7, 3.15))
 
     for _j, _sub in enumerate(SUBJECTS):
         _df = state_flags[_sub].copy()
@@ -174,17 +174,17 @@ def panel_A_category_bars(
             )
             if _n >= 1:
                 _ax.text(_x_cursor + _n / 2, _j, str(_n), ha="center",
-                         va="center", fontsize=7.5, color=_TEXT_ON[_cat], zorder=3)
+                         va="center", fontsize=6.5, color=_TEXT_ON[_cat], zorder=3)
             _x_cursor += _n
 
     _ax.set_yticks(np.arange(len(SUBJECTS)))
-    _ax.set_yticklabels(SUBJECTS, fontsize=8)
+    _ax.set_yticklabels(SUBJECTS, fontsize=6.5)
     _ax.tick_params(axis="y", length=0)
     _ax.set_ylim(-0.6, len(SUBJECTS) - 0.4)
     _ax.set_xlim(0, 50)
     _ax.set_xticks([0, 10, 20, 30, 40, 50])
-    _ax.set_xlabel("Number of latent states", fontsize=10)
-    _ax.tick_params(axis="x", labelsize=8)
+    _ax.set_xlabel("Number of latent states", fontsize=7)
+    _ax.tick_params(axis="x", labelsize=6)
     _ax.xaxis.grid(True, linestyle=":", linewidth=0.5, color="#E2E2E2", zorder=0)
     _ax.set_axisbelow(True)
     for _s in ("top", "right", "left"):
@@ -198,8 +198,8 @@ def panel_A_category_bars(
         for _c in TAXONOMY_ORDER
     ]
     _ax.legend(handles=_handles, loc="lower center", bbox_to_anchor=(0.5, 1.01),
-               ncol=5, frameon=False, fontsize=8, handlelength=1.2,
-               handletextpad=0.4, columnspacing=1.2)
+               ncol=5, frameon=False, fontsize=6.5, handlelength=1.0,
+               handletextpad=0.35, columnspacing=0.9)
 
     _fig.subplots_adjust(left=0.08, right=0.98, bottom=0.14, top=0.88)
     _stem = OUT_F2 / "fig2_A_category_bars"
@@ -290,7 +290,7 @@ def panel_B_category_network_sankey(
     _cat_y_off = (_h_max - _cat_height) / 2
     _net_y_off = (_h_max - _net_height) / 2
 
-    _fig, _ax = plt.subplots(figsize=(7.0, 5.0))
+    _fig, _ax = plt.subplots(figsize=(6.65, 4.55))
     _node_w = 0.018
     _x0, _x1 = _node_w, 1 - _node_w
     _xc = (_x0 + _x1) / 2
@@ -343,7 +343,7 @@ def panel_B_category_network_sankey(
         _ax.text(
             -0.015, _cat_top[_i] + _cat_y_off + _cat_totals[_i] / 2,
             f"{TAXONOMY_ORDER[_i]}\n(n={int(_cat_counts[_i])} states)",
-            ha="right", va="center", fontsize=8,
+            ha="right", va="center", fontsize=6.5,
             color=_LABEL_DARKEN.get(TAXONOMY_ORDER[_i], TAXONOMY_COLORS[TAXONOMY_ORDER[_i]]),
         )
 
@@ -357,7 +357,7 @@ def panel_B_category_network_sankey(
         _ax.text(
             1.015, _net_top[_j] + _net_y_off + _node_visual_h[_j] / 2,
             f"{display_network(NETWORK_ORDER[_j])} ({_pct:.1f}%)",
-            ha="left", va="center", fontsize=8,
+            ha="left", va="center", fontsize=6.5,
             color=_LABEL_DARKEN.get(NETWORK_ORDER[_j], NETWORK_COLORS[NETWORK_ORDER[_j]]),
         )
 
@@ -450,10 +450,10 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
             _ax = _fig.add_axes([0, 0, 1, 1])
             _ax.imshow(_img)
             _ax.axis("off")
-            _out = OUT_F2 / f"fig2_C_{_name}_{_region}.png"
+            _stem = OUT_F2 / f"fig2_C_{_name}_{_region}"
+            _out = _stem.with_suffix(".png")
             _fig.savefig(_out, bbox_inches="tight", pad_inches=0.0, dpi=300)
-            _fig.savefig(OUT_F2 / f"fig2_C_{_name}_{_region}.svg",
-                         bbox_inches="tight", pad_inches=0.0)
+            _fig.savefig(_stem.with_suffix(".svg"), bbox_inches="tight", pad_inches=0.0)
             plt.close(_fig)
             print(f"  saved: {_out.name} (+ .svg)")
 
@@ -464,8 +464,8 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
                                     norm=plt.Normalize(vmin=_range[0], vmax=_range[1]))
         _sm.set_array([])
         _cb = _cfig.colorbar(_sm, cax=_cax, orientation="horizontal")
-        _cb.set_label(f"Mean activation (z), {_region}", fontsize=8)
-        _cb.ax.tick_params(labelsize=7)
+        _cb.set_label(f"Mean activation (z), {_region}", fontsize=6.5)
+        _cb.ax.tick_params(labelsize=5.5)
         _stem = OUT_F2 / f"fig2_C_colorbar_{_region}"
         _cfig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
         _cfig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
