@@ -4,19 +4,24 @@ Split from the former `fig_F1_recurrence_and_taxonomy.py` (2026-06-10). R1 (the
 graded recurrence distribution) is now `fig_F1_recurrence_gradient.py`; this
 script is R2 (recurrence-screening categories and network summaries).
 
-Panels B and C are lifted verbatim from the former F1 (Sankey + surface
-exemplars). Panel A is the former F1 stacked taxonomy bars WITH the recurrence
-dots and dwell marginal removed (recurrence now lives in F1); it shows pure
-category composition over all 50 latent states (including unused).
+Panel B and the surface exemplars are lifted from the former F1. Panel A is the
+former F1 stacked taxonomy bars WITH the recurrence dots and dwell marginal
+removed (recurrence now lives in F1); it shows pure category composition over
+all 50 latent states (including unused). Panel C adds content-eligible
+network-participation summaries.
 
 | Panel | Content | Chart family | Source | Output |
 |---|---|---|---|---|
 | A | Per-subject category-count stacked bars (5 categories, all 50 states) | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{pdf,png,svg} |
 | B | Sankey: 5 categories -> 13 networks, top-3 composition | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{pdf,png,svg} |
-| C | Surface exemplars per category (sub-01) + activity timeseries strips | brain map | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_C_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
+| C | Content-eligible network participation | distribution | state_flags.csv + 04 state_means_parcel.npy | fig2_C_network_participation.{pdf,png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
+| D | Surface exemplars per category (sub-01) + activity timeseries strips | brain map | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
 
-Run:
+Run full app:
     marimo edit script/fig_F2_recurrence_sources.py
+
+Render Panel C in batch:
+    python script/fig_F2_network_participation.py
 """
 
 import marimo
@@ -44,6 +49,7 @@ def imports():
     from utils.plot_style import (
         NETWORK_COLORS,
         NETWORK_ORDER,
+        SUBJECT_MARKERS,
         apply_publication_style,
         display_network,
     )
@@ -52,7 +58,7 @@ def imports():
 
     return (
         Path, json, np, os, pd, pickle, plt,
-        NETWORK_COLORS, NETWORK_ORDER, display_network,
+        NETWORK_COLORS, NETWORK_ORDER, SUBJECT_MARKERS, display_network,
     )
 
 
@@ -226,6 +232,7 @@ def panel_B_category_network_sankey(
     from matplotlib.path import Path as MplPath
     from matplotlib.patches import PathPatch
     from utils.plot_style import load_parcel_networks
+    from utils.network_participation import network_composition_for_state
 
     _K_TOP = 3
     _parcel_nets = np.array(load_parcel_networks(PARCELLATION))
@@ -244,15 +251,13 @@ def panel_B_category_network_sankey(
                 continue
             _cat_idx = TAXONOMY_ORDER.index(_cat)
             _cat_counts[_cat_idx] += 1
-            _abs_pat = np.abs(_means[int(_state_id)])
-            _net_scores = np.zeros(len(NETWORK_ORDER))
-            for _nj, _net in enumerate(NETWORK_ORDER):
-                _mask = _parcel_nets == _net
-                if _mask.any():
-                    _net_scores[_nj] = _abs_pat[_mask].mean()
-            if _net_scores.sum() <= 0:
+            # Same mean(|z|)-per-network composition as the shared utility (and
+            # Panel C); kept identical to avoid a second metric implementation.
+            _full_comp = network_composition_for_state(
+                _means[int(_state_id)], _parcel_nets, NETWORK_ORDER
+            )
+            if not _full_comp.any():
                 continue
-            _full_comp = _net_scores / _net_scores.sum()
             _top_idx = np.argpartition(_full_comp, -_K_TOP)[-_K_TOP:]
             _topk = np.zeros_like(_full_comp)
             _topk[_top_idx] = _full_comp[_top_idx]
@@ -375,8 +380,46 @@ def panel_B_category_network_sankey(
 
 
 @app.cell
-def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt, np):
-    """Panel C - surface exemplars per category (sub-01), cortical + subcortical.
+def panel_C_network_participation(
+    state_flags, state_means, SUBJECTS, PARCELLATION, OUT_F2,
+    NETWORK_ORDER, SUBJECT_MARKERS, plt, np,
+):
+    """Panel C - network participation of content-eligible fitted states.
+
+    Each content-eligible state is summarized by its absolute state-mean
+    contribution per canonical network. Metrics are descriptive annotations of
+    state composition, not a claim that canonical resting networks are the
+    discovered state units.
+    """
+    from utils.plot_style import load_parcel_networks
+    from utils.network_participation import (
+        compute_network_participation_metrics,
+        plot_network_participation,
+        save_network_participation_outputs,
+    )
+
+    _parcel_nets = np.array(load_parcel_networks(PARCELLATION))
+    _metrics, _summary = compute_network_participation_metrics(
+        state_flags=state_flags,
+        state_means=state_means,
+        subjects=SUBJECTS,
+        parcel_networks=_parcel_nets,
+        network_order=NETWORK_ORDER,
+    )
+    _metrics_path, _summary_path = save_network_participation_outputs(
+        _metrics, _summary, OUT_F2,
+    )
+    _stem = OUT_F2 / "fig2_C_network_participation"
+    plot_network_participation(_metrics, _summary, _stem, SUBJECTS, SUBJECT_MARKERS)
+
+    print(f"saved: {_stem}.pdf")
+    print(f"saved: {_metrics_path.name}, {_summary_path.name}")
+    return _metrics, _summary
+
+
+@app.cell
+def panel_D_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt, np):
+    """Panel D - surface exemplars per category (sub-01), cortical + subcortical.
 
     Lifted verbatim from the former F1 Panel C. One exemplar per category
     (eligible rank-2, run-onset rank-1, low-conf rank-1, drift rank-1), rendered
@@ -450,7 +493,7 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
             _ax = _fig.add_axes([0, 0, 1, 1])
             _ax.imshow(_img)
             _ax.axis("off")
-            _stem = OUT_F2 / f"fig2_C_{_name}_{_region}"
+            _stem = OUT_F2 / f"fig2_D_{_name}_{_region}"
             _out = _stem.with_suffix(".png")
             _fig.savefig(_out, bbox_inches="tight", pad_inches=0.0, dpi=300)
             _fig.savefig(_stem.with_suffix(".svg"), bbox_inches="tight", pad_inches=0.0)
@@ -466,20 +509,20 @@ def panel_C_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
         _cb = _cfig.colorbar(_sm, cax=_cax, orientation="horizontal")
         _cb.set_label(f"Mean activation (z), {_region}", fontsize=6.5)
         _cb.ax.tick_params(labelsize=5.5)
-        _stem = OUT_F2 / f"fig2_C_colorbar_{_region}"
+        _stem = OUT_F2 / f"fig2_D_colorbar_{_region}"
         _cfig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
         _cfig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
         _cfig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
         plt.close(_cfig)
-        print(f"  saved: fig2_C_colorbar_{_region}.{{pdf,png,svg}}")
+        print(f"  saved: fig2_D_colorbar_{_region}.{{pdf,png,svg}}")
     return
 
 
 @app.cell
-def panel_C_state_timeseries(
+def panel_D_state_timeseries(
     state_flags, decoded_states_sub01, OUT_F2, TAXONOMY_COLORS, plt, np,
 ):
-    """Panel C inset - binary-active timeseries strips per category exemplar.
+    """Panel D inset - binary-active timeseries strips per category exemplar.
 
     Lifted verbatim from the former F1. Same 4 picks (sub-01); each strip is a
     600-bin FO trace over all runs, colored by that category's taxonomy color.
@@ -534,12 +577,12 @@ def panel_C_state_timeseries(
         for _s in ("top", "right", "bottom", "left"):
             _ax.spines[_s].set_visible(False)
         _fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        _stem = OUT_F2 / f"fig2_C_{_name}_timeseries"
+        _stem = OUT_F2 / f"fig2_D_{_name}_timeseries"
         _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.0)
         _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.0, dpi=300)
         _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.0)
         plt.close(_fig)
-        print(f"  saved: fig2_C_{_name}_timeseries.{{pdf,png,svg}}")
+        print(f"  saved: fig2_D_{_name}_timeseries.{{pdf,png,svg}}")
     return
 
 

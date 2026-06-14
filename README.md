@@ -145,16 +145,19 @@ noted) before invoking a figure script.
 | Figure | Script | Shows | Reads from |
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
-| **2** | `fig_F2_recurrence_sources.py` | Sources/taxonomy of recurrence (R2) | `04`, `05a`, `05e` |
+| **2** | `fig_F2_recurrence_sources.py` (all panels); `fig_F2_network_participation.py` (batch Panel C) | Recurrence-screening categories + network participation (R2) | `04`, `05a`, `05e` |
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
 | **4** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **5** | `fig_F5_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **S6** | `fig_S6_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **S7** | `fig_S7_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
+| **S9** | `fig_S9_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,
-and `script/utils/{recurrence,temporal}_plots.py`. The figure scripts import
-these helpers; do not run them directly.
+and `script/utils/{recurrence,temporal}_plots.py`. Network-participation metrics
+(Figure 2C and Figure S9) share one implementation in
+`script/utils/network_participation.py`. The figure scripts import these
+helpers; do not run them directly.
 
 ## Documentation
 

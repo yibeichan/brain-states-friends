@@ -84,16 +84,18 @@ outputs and renders the panels.
 |---|---|---|
 | `fig_F1_recurrence_gradient.py` | Figure 1 | R1 |
 | `fig_F2_recurrence_sources.py` | Figure 2 | R2 |
+| `fig_F2_network_participation.py` | Figure 2 (Panel C batch renderer) | R2 |
 | `fig_F3_transition_structure.py` | Figure 3 | R3 |
 | `fig_F4_within_friends.py` | Figure 4 (lead) | R4b |
 | `fig_F4_per_film_video.py` | Figure 4 (Movie10 per-film panel) | R4b |
 | `fig_F5_cross_stimulus_transfer.py` | Figure 5 | R5 |
 | `fig_S6_cross_stimulus_validity.py` | Figure S6 | Supp |
 | `fig_S7_individual_differences.py` | Figure S7 | Supp |
+| `fig_S9_network_participation_categories.py` | Figure S9 | Supp |
 
 Shared plotting helpers (imported by the figure scripts, not run directly):
-`08d_plots.py`, `08e_plots.py`, `utils/recurrence_plots.py`,
-`utils/temporal_plots.py`.
+`08d_plots.py`, `08e_plots.py`, `utils/network_participation.py`,
+`utils/recurrence_plots.py`, `utils/temporal_plots.py`.
 
 ## Infrastructure (not analysis steps)
 
