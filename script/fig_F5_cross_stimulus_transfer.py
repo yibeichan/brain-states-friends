@@ -1,4 +1,4 @@
-"""Figure F5 — Cross-stimulus recurrence transfer (R5).
+"""Figure F5 - Cross-stimulus recurrence transfer (R5).
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .pdf + .png + .svg mini-figures for manual
@@ -20,7 +20,7 @@ panel letter; the user arranges the composite.
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
 | A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Transfer-ρ by condition, grouped by stimulus type — Audiovisual film (4 Movie10 films) | Visual reading (Harry Potter) | Audio listening (Petit Prince); per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. The generalization gradient; within-film spread shown descriptively (fit/AV-confounded, see supplement), NOT as a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
+| B | Transfer-ρ by condition, grouped by stimulus type - Audiovisual film (4 Movie10 films) | Visual reading (Harry Potter) | Audio listening (Petit Prince); per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer is clearest for audiovisual film and weaker/variable for reduced-modality stimuli; within-film spread shown descriptively (fit-confounded, see supplement), NOT as a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
 
 A `fig5_taxonomy_legend` file gives the 5-category color key for Panel A.
 
@@ -149,7 +149,7 @@ def load_summaries(SUBJECTS, STIMULI, xstim_dir, VT, json):
 
 @app.cell
 def taxonomy_constants():
-    """R2 taxonomy categories — labels + colors, shared with Figure 2.
+    """R2 taxonomy categories - labels + colors, shared with Figure 2.
 
     Identical to fig_F1's taxonomy_constants cell; kept in sync by hand. Maps the
     raw 05e_a4 `summary_category` values onto the 5 display categories so Panel A
@@ -229,14 +229,14 @@ def panel_A_per_subject_scatter(
     SUBJECTS, VT, summaries, presence, OUT_F5,
     np, plt, sp_stats, SUBJECT_MARKERS, TAXONOMY_COLORS,
 ):
-    """Panel A — per-subject recurrence→FO scatter, 2×3 small multiples (Movie10).
+    """Panel A - per-subject recurrence→FO scatter, 2×3 small multiples (Movie10).
 
     One subplot per subject (shared x and y axes for comparability): x = Friends
     recurrence score (05a), y = mean Movie10 fractional occupancy across runs
     (m10_04), one point per Friends-active state. Each subject keeps its own
-    marker shape (SUBJECT_MARKERS — consistent with the transfer-ρ panel) and a
+    marker shape (SUBJECT_MARKERS - consistent with the transfer-ρ panel) and a
     red OLS guide line; the per-subject Spearman ρ (asserted against the summary
-    JSON) is annotated in-panel with a significance star.
+    JSON) is annotated in-panel without a significance marker.
 
     Dot fill = R2 taxonomy category (same colors as Figure 2), showing that the
     Movie10 is the strongest audiovisual transfer case quantified in panel B;
@@ -259,7 +259,7 @@ def panel_A_per_subject_scatter(
         _y = _e["M10_mean_fo"][_active]
         _colors = [TAXONOMY_COLORS[_c] for _c in _e["tax"][_active]]
 
-        _rho, _p = sp_stats.spearmanr(_x, _y)
+        _rho, _ = sp_stats.spearmanr(_x, _y)
         _j = summaries["m10"][_sub]["A1_recurrence_correlation"]
         assert abs(_rho - _j["spearman_rho"]) < 1e-3, (
             f"{_sub}: reproduced ρ {_rho:.4f} != summary {_j['spearman_rho']:.4f}"
@@ -303,16 +303,16 @@ def panel_B_transfer_by_condition(
     SUBJECTS, summaries, OUT_F5, np, plt,
     SUBJECT_NEUTRAL, SUBJECT_MARKERS,
 ):
-    """Panel B — recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
+    """Panel B - recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
 
     A frozen Friends-trained state model transfers most strongly to audiovisual
-    film (Movie10) and weakly / variably to reduced-modality stimuli —
+    film (Movie10) and weakly / variably to reduced-modality stimuli -
     visual-only word-by-word reading (Harry Potter) and audio-only listening
     (Petit Prince).
 
     Conditions are grouped by stimulus type, not ordered as a content axis. The
     spread across the four Movie10 films is shown descriptively; it co-varies
-    with HMM model fit — see the supplementary cross-stimulus validity figure —
+    with HMM model fit - see the supplementary cross-stimulus validity figure -
     so it is NOT attributed to narrative content. Note that the reduced-modality
     conditions do not isolate narrative content because they also differ in
     modality, timing, language, run structure, and model fit.

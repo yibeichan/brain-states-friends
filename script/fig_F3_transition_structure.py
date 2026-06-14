@@ -1,11 +1,11 @@
-"""Figure F3 — Transition structure (R3): graph topology + FC-transition coupling.
+"""Figure F3 - Transition structure (R3): graph topology + FC-transition coupling.
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .pdf + .png + .svg mini-figures for manual
 assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
 R3 claim: "Transitions are organized by the functional relationships between
-states, not random diffusion." Intro §5 commits to three findings —
+states, not random diffusion." Intro §5 commits to three findings -
 recurrence assortativity, FC-transition coupling, and network homophily "in
 most individuals."
 
@@ -27,9 +27,9 @@ Design notes (2026-05-26 revision):
     R1-reachability story; replaced by network-colored transition graphs (show
     actual transitions + partial network clustering). Now a 1×6 per-subject
     strip (not a single exemplar): states are subject-specific and transitions
-    are within-subject, so a single pooled/connected graph is undefined — the
+    are within-subject, so a single pooled/connected graph is undefined - the
     honest cross-subject object is six independent graphs. Network palette is
-    colorblind-safe Okabe–Ito (plot_style.NETWORK_COLORS) — only ≤7 cortical
+    colorblind-safe Okabe–Ito (plot_style.NETWORK_COLORS) - only ≤7 cortical
     networks ever appear as dominant nodes (Vis/SomMot/DorsAttn/SalVentAttn/
     Limbic/Cont/Default), so 7 CB-distinct hues suffice. Legends are separate
     files per the assembly workflow (graph strip carries none).
@@ -39,11 +39,11 @@ Design notes (2026-05-26 revision):
     with docs/manuscript/figure_captions.md.
   * Panel B: subjects now use SUBJECT_MARKERS shapes (consistent with F4) in a
     single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51) is no
-    longer accented — it is visible as the one homophily marker at/below the null
+    longer accented - it is visible as the one homophily marker at/below the null
     line and noted in the caption. No per-panel legend (marker→subject key is
     shared project-wide; cross-reference F4). Tightened top padding.
 
-Source-truth audit (2026-05-26, reproduced from raw arrays — see session log):
+Source-truth audit (2026-05-26, reproduced from raw arrays - see session log):
   * Panel B: FC-Mantel ρ 0.326–0.551, MFPT-FC ρ 0.405–0.680, assortativity
     0.111–0.297, homophily ratio 0.980–1.989 (sub-05 null, p=0.51).
 
@@ -97,7 +97,6 @@ def config(Path, os):
     PARCELLATION = "atlas-4S156Parcels"
     VT = "vt0.95"
     SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-    EXEMPLAR = "sub-01"  # exemplar subject for the single-subject panels A & B
 
     TRANS_DIR = SCRATCH_DIR / "output" / "06b_transition_structure" / PARCELLATION
 
@@ -105,7 +104,7 @@ def config(Path, os):
     OUT_F3.mkdir(parents=True, exist_ok=True)
 
     return (
-        SCRATCH_DIR, PARCELLATION, VT, SUBJECTS, EXEMPLAR,
+        SCRATCH_DIR, PARCELLATION, VT, SUBJECTS,
         TRANS_DIR, OUT_F3,
     )
 
@@ -125,7 +124,7 @@ def panel_A_transition_graphs(
     SUBJECTS, TRANS_DIR, VT, OUT_F3, nx, plt, np,
     NETWORK_COLORS, NETWORK_ORDER, display_network,
 ):
-    """Panel A — per-subject transition graphs, 1×6 small-multiples row.
+    """Panel A - per-subject transition graphs, 1×6 small-multiples row.
 
     One mini directed-transition graph per subject (06b transition_graph.graphml:
     model transmat_, self-loops removed, edges thresholded at P >= 0.01), drawn
@@ -140,18 +139,18 @@ def panel_A_transition_graphs(
 
     Why six graphs, not one pooled graph: states are subject-specific (each
     subject has its own HMM, states are NOT aligned across subjects) and
-    transitions exist only within a subject's own sequence — there is no
+    transitions exist only within a subject's own sequence - there is no
     cross-subject edge and no pooled transition matrix. A single connected graph
     is therefore undefined; the honest cross-subject object is six independent
-    graphs. Their shared signature — same-network nodes pulling into partial
-    local groups — is the visual counterpart of the network-homophily column in
+    graphs. Their shared signature - same-network nodes pulling into partial
+    local groups - is the visual counterpart of the network-homophily column in
     Panel B (ratios 1.55–1.99 in five of six subjects).
 
     Edges are UNDIRECTED: ~84% of directed edges are reciprocated, so arrowheads
     add clutter without information; net directionality is a supplementary result.
 
     Legends are emitted as SEPARATE files (fig3_A_legend_networks,
-    fig3_A_legend_recurrence) per the user's assembly workflow — the graph strip
+    fig3_A_legend_recurrence) per the user's assembly workflow - the graph strip
     itself carries no legend.
     """
     _present_nets = set()
@@ -254,7 +253,7 @@ def panel_A_transition_graphs(
 def panel_B_cross_subject_consistency(
     SUBJECTS, trans_summary, OUT_F3, SUBJECT_NEUTRAL, SUBJECT_MARKERS, plt, np,
 ):
-    """Panel B — cross-subject consistency forest (4 metrics × 6 subjects).
+    """Panel B - cross-subject consistency forest (4 metrics × 6 subjects).
 
     Four R3 metrics, one horizontal track each (own x-scale; small-multiple
     rows sharing the subject styling):
@@ -264,21 +263,21 @@ def panel_B_cross_subject_consistency(
       4. Network homophily (within/between ratio)            null = 1
 
     Each subject is a distinct SUBJECT_MARKERS shape in a single neutral color
-    (the project-wide subject key, consistent with Fig 5 — so no per-panel
+    (the project-wide subject key, consistent with Fig 5 - so no per-panel
     legend is needed; the shapes also de-overlap clustered points). Color is NOT
     spent on subject identity here: marker shape carries it, leaving the panel
-    uncluttered. sub-05's homophily null (ratio 0.980, p=0.51 — the intro's "in
+    uncluttered. sub-05's homophily null (ratio 0.980, p=0.51 - the intro's "in
     most individuals" caveat) is no longer accented; it reads as the one
     homophily marker sitting at/below the dashed null line, and is named in the
     caption. The point estimate per row is the message; which marker is which
     individual is secondary (recoverable via the Fig 5 marker key).
     """
     # (row label, key, null value, per-row x-axis label). Each row has its own
-    # x-scale — the metrics are not commensurable — so each carries its own
+    # x-scale - the metrics are not commensurable - so each carries its own
     # axis label rather than a single shared "effect size" caption.
     # y-label = the variable; x-label = the statistic (rows 3 & 4 are the SAME
     # variable, functional connectivity, differing only in what it is correlated
-    # against — transition probability vs MFPT). Spearman ρ is symmetric and
+    # against - transition probability vs MFPT). Spearman ρ is symmetric and
     # non-causal, so no directional ("A→B") naming. MFPT = mean first passage
     # time (defined in caption).
     _metrics = [
@@ -322,7 +321,7 @@ def panel_B_cross_subject_consistency(
         for _j, _sub in enumerate(SUBJECTS):
             _v, _ci = _val(_sub, _key)
             _vals.append(_v)
-            # NOTE: _yj is RANDOM vertical jitter with NO meaning — the y-axis
+            # NOTE: _yj is RANDOM vertical jitter with NO meaning - the y-axis
             # has no scale. It only de-overlaps the 6 subject markers and the
             # assortativity CI whiskers so they don't pile onto one line.
             _yj = _rng.uniform(-0.18, 0.18)

@@ -1,4 +1,4 @@
-"""fig_S7_individual_differences.py — Supplementary Figure S7.
+"""fig_S7_individual_differences.py - Supplementary Figure S7.
 
 Subject-level individual differences across F1–F5 findings, rendered as a
 1×6 horizontal strip of per-subject radar plots.
@@ -233,7 +233,7 @@ def scale_cohort(raw_df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, tuple[fl
     -------
     scaled_df : (6, 7) DataFrame of values in [0, 1].
     cohort_ranges : {axis_label: (cohort_min, cohort_max)} (unpadded absolute range).
-    valid_mask : (6, 7) DataFrame of bool — True where the raw value is real,
+    valid_mask : (6, 7) DataFrame of bool - True where the raw value is real,
         False where the value is missing (sub-04 HP+PP).
     """
     scaled_data: dict[str, pd.Series] = {}
@@ -291,7 +291,7 @@ def plot_one_radar(
     valid_closed = list(valid_row) + [valid_row[0]]
     theta_closed = np.concatenate([theta, theta[:1]])
 
-    # Polygon outline — segment by segment, leaving gaps at missing axes.
+    # Polygon outline - segment by segment, leaving gaps at missing axes.
     for i in range(n_axes):
         if not (valid_closed[i] and valid_closed[i + 1]):
             continue

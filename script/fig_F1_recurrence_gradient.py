@@ -1,10 +1,10 @@
-"""Figure F1 — graded recurrence distribution (R1).
+"""Figure F1 - graded recurrence distribution (R1).
 
 Split from the former `fig_F1_recurrence_and_taxonomy.py` (2026-06-10): R1 (the
 graded recurrence distribution) and R2 (the recurrence-screening taxonomy) are
 two figures. This script is R1.
 
-R1/R2 separation (2026-06-10): R1 shows ONLY the recurrence distribution — dots
+R1/R2 separation (2026-06-10): R1 shows ONLY the recurrence distribution - dots
 are a single neutral color, no taxonomy coloring. The source taxonomy
 (content-eligible / run-onset / low-confidence / drift / unused) is entirely an
 R2 construct and lives in Figure 2. The two figures describe the same ~45 active
@@ -76,7 +76,7 @@ def config(Path, os):
     OUT_F1 = SCRATCH_DIR / "output" / "manuscript_figures" / "fig1"
     OUT_F1.mkdir(parents=True, exist_ok=True)
 
-    # Single neutral dot color — R1 carries no taxonomy, so dots are uncolored
+    # Single neutral dot color - R1 carries no taxonomy, so dots are uncolored
     # by category. Deliberately not one of the R2 category colors.
     DOT_COLOR = "#44546A"
     return SUBJECTS, BLOCKS_DIR, SPLITHALF_DIR, OUT_F1, VT, DOT_COLOR
@@ -104,7 +104,7 @@ def load_active_states(SUBJECTS, BLOCKS_DIR, VT, pd, np):
 
 @app.cell
 def panel_A_beeswarm(active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, plt, np):
-    """Panel A — per-subject recurrence beeswarm, colored by mean dwell time.
+    """Panel A - per-subject recurrence beeswarm, colored by mean dwell time.
 
     x = recurrence (0 -> ~0.93); one row per subject (sub-01 bottom), each row
     drawn with that subject's marker shape (the project-wide subject key, shared
@@ -187,7 +187,7 @@ def panel_A_beeswarm(active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, plt, np):
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf")
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 
@@ -201,7 +201,7 @@ def load_split_half(SUBJECTS, SPLITHALF_DIR, json, np):
     algorithm on parcel-space mean correlations (r > 0.3). For each matched pair
     we read that state's recurrence in half A and half B from the per-half
     recurrence vectors; rho is the reported raw Spearman (verified to match a
-    direct recompute). Matching is strictly within-subject — no states are
+    direct recompute). Matching is strictly within-subject - no states are
     aligned across participants.
     """
     splithalf = {}
@@ -224,7 +224,7 @@ def load_split_half(SUBJECTS, SPLITHALF_DIR, json, np):
 
 @app.cell
 def panel_B_split_half(splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS, plt, np):
-    """Panel B — split-half reliability of recurrence, per subject.
+    """Panel B - split-half reliability of recurrence, per subject.
 
     2x3 grid; x = recurrence in half A, y = recurrence in half B, one dot per
     Hungarian-matched state (independent HMM fits on interleaved episode halves
@@ -271,7 +271,7 @@ def panel_B_split_half(splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS, 
     _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf")
+    print(f"saved: {_stem}.pdf (+ .png, .svg)")
     plt.close(_fig)
     return
 

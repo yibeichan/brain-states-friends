@@ -1,4 +1,4 @@
-"""fig_F4_within_friends.py — Figure F4 within-Friends representational depth.
+"""fig_F4_within_friends.py - Figure F4 within-Friends representational depth.
 
 Leads manuscript Figure 4 (§R4b) with the WITHIN-Friends primary result that the
 old "R4b slim" figure (``08e_plots.py``, transfer only) was missing. Three
@@ -16,12 +16,12 @@ Per-subject row (A–C): thin filled profile of decoding strength in
 **Δ-above-confound-floor** units along relative network depth; the argmax is
 marked with the subject's conventional shape and bracketed by a **peak band**
 (contiguous layers with Δ-above-floor ≥ 0.90 × peak Δ-above-floor). Shared
-light "mid ~0.5 / deep ~0.9" depth zones are the categorical readout — the
+light "mid ~0.5 / deep ~0.9" depth zones are the categorical readout - the
 x-position is a *within-model* normalization, not a cross-architecture ruler.
 Per-row best lag annotated; a floor-exceedance tick marks peak > timing floor.
 
 Confound floor: dinov2 / w2v use their own ``D1_confound_baseline.json``. LLaMA
-W=1 has none, so the dinov2 lag-3 floor is **reused** — valid because the floor
+W=1 has none, so the dinov2 lag-3 floor is **reused** - valid because the floor
 depends only on (subject, lag): the 6 timing regressors carry no model features.
 Reuse is guarded by full-key equivalence asserts (lag, chance_level, n_eligible,
 eligibility_source); any mismatch hard-stops (recompute is out of scope).
@@ -127,7 +127,7 @@ def load_confound_floor(sub, model, best_lag, chance_at_peak, n_eligible,
     dinov2 / w2v read their own D1_confound_baseline.json. LLaMA reuses the
     dinov2 donor floor, guarded by full-key equivalence asserts (Res E): the
     floor depends only on (subject, lag) because the confound classifier uses 6
-    timing regressors as features — no transformer features, no PCA — against
+    timing regressors as features - no transformer features, no PCA - against
     the identical content-eligible labels. Mismatch hard-stops.
     """
     own = D1_ROOT / sub / f"friends_{model}" / "D1_confound_baseline.json"
@@ -143,26 +143,26 @@ def load_confound_floor(sub, model, best_lag, chance_at_peak, n_eligible,
     donor = json.loads(donor_path.read_text())
     _, donor_meta = load_d1_profile(sub, CONFOUND_DONOR)
 
-    # Full-key equivalence guard — reuse ONLY if every key matches (Res E).
+    # Full-key equivalence guard - reuse ONLY if every key matches (Res E).
     if donor["best_lag"] != best_lag:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked — donor lag "
+            f"{sub} {model}: confound reuse blocked - donor lag "
             f"{donor['best_lag']} != {model} peak lag {best_lag}."
         )
     if not np.isclose(donor["chance_level"], chance_at_peak, atol=1e-4):
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked — donor chance "
+            f"{sub} {model}: confound reuse blocked - donor chance "
             f"{donor['chance_level']} != {model} chance {chance_at_peak} "
             "(label sets differ)."
         )
     if donor_meta["n_eligible_states"] != n_eligible:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked — donor n_eligible "
+            f"{sub} {model}: confound reuse blocked - donor n_eligible "
             f"{donor_meta['n_eligible_states']} != {model} {n_eligible}."
         )
     if donor_meta["eligibility_source"] != eligibility_source:
         raise AssertionError(
-            f"{sub} {model}: confound reuse blocked — eligibility source "
+            f"{sub} {model}: confound reuse blocked - eligibility source "
             f"{donor_meta['eligibility_source']} != {eligibility_source}."
         )
     return float(donor["balanced_accuracy"])
@@ -357,7 +357,7 @@ def render_panel_d():
     """Transfer peak-depth grid: stimulus × modality, color = median peak depth.
 
     Three cell states (Res B amended): not-testable (hatched grey), tested but
-    not majority-significant (muted, no depth color — a noisy argmax is not shown
+    not majority-significant (muted, no depth color - a noisy argmax is not shown
     as replicated depth), tested + majority FDR-sig (depth-colored + outline).
     """
     cmap = plt.get_cmap("cividis_r")            # deep (high rel-depth) → dark
@@ -376,7 +376,7 @@ def render_panel_d():
                 ax.text(ci + 0.5, y + 0.5, "n/t", ha="center", va="center",
                         fontsize=6.5, color="0.5")
                 continue
-            if not cell["majority_sig"]:         # tested but n.s. — muted
+            if not cell["majority_sig"]:         # tested but n.s. - muted
                 ax.add_patch(mpatches.Rectangle(
                     (ci, y), 1, 1, facecolor="0.96", edgecolor="white",
                     linewidth=1.0))
@@ -410,7 +410,7 @@ def render_panel_d():
 
     _save(fig, "fig4_D_transfer_depth_grid")
 
-    # Colorbar emitted as a SEPARATE file for manual assembly — kept off the grid
+    # Colorbar emitted as a SEPARATE file for manual assembly - kept off the grid
     # so the grid's width is unencumbered (and matches the per-film panels).
     cfig, cax = plt.subplots(figsize=(0.45, 2.2))
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -502,7 +502,7 @@ def render_perfilm(modality, model, n_layers, letter, series, ylim):
     if ylim:
         ax.set_ylim(*ylim)
     # Cohort-median peak per film as a star on the x-axis (NOT a dot on the
-    # mean curve) — marks where the cohort peaks without implying the mean
+    # mean curve) - marks where the cohort peaks without implying the mean
     # curve's value there. Star (not "^") so it never reads as a subject glyph:
     # SUBJECT_MARKERS uses o/s/^/D/v/P. Matches §R4b.5's cohort-median framing.
     y0 = ax.get_ylim()[0]
@@ -620,7 +620,7 @@ def load_nes_triple(sub, model, n_layers):
 
     # Confound floor: own file, else dinov2 donor. The donor reuse is already
     # validated by load_confound_floor's full-key equivalence guard, which
-    # main() runs (via collect_within) before this function — do not reorder
+    # main() runs (via collect_within) before this function - do not reorder
     # main() so this fallback executes unguarded.
     conf_path = D1_ROOT / sub / f"friends_{model}" / "D1_confound_baseline.json"
     if not conf_path.exists():
