@@ -14,7 +14,7 @@ main/supplementary boundary.
 - **SUPP**: supplementary / robustness / diagnostic; in the repo and in the
   Supplementary Material, not the main figures.
 - **CROSS-STIM (MAIN)**: Movie10 / Harry Potter / Petit Prince decode + transfer;
-  these are **main** (R5, Figure 4), not supplementary.
+  these are **main** (R5, Figure 5), not supplementary.
 
 ---
 
@@ -29,27 +29,27 @@ main/supplementary boundary.
 | `03a_pca4combined_hmm.py` | PCA fit + train/valid/test split (feeds HMM) | MAIN | Methods §3 |
 | `04_combined_hdphmm.py` | Combined sHDP-HMM per subject (fit/select/loso) | MAIN | Methods §3, R1 |
 | `05a_recurrence_analysis.py` | Recurrence + season-specificity classification | MAIN | R1, Fig 1 |
-| `05b_visualize_recurring_states.py` | Cortical + subcortical surface plots | MAIN | Fig 1 |
+| `05b_visualize_recurring_states.py` | Cortical + subcortical surface plots | MAIN | Fig 2C / Fig S1 |
 | `05e_temporal_trend_a4.py` | State-flag synthesis (drift-anchored taxonomy / eligibility) | MAIN | Methods §4 (state classification) |
-| `06a_state_temp_dynamics.py` | Dwell-time distributions, transition matrices | MAIN | R3 |
-| `06b_transition_structure.py` | Graph topology, FC-Mantel, MFPT landscape | MAIN | R3, Fig 2 |
+| `06a_state_temp_dynamics.py` | Dwell-time distributions, transition matrices | MAIN | R3, Fig 3 |
+| `06b_transition_structure.py` | Graph topology, FC-Mantel, MFPT landscape | MAIN | R3, Fig 3 |
 | `08c_transformer_features.py` | Layer-wise transformer features (GPU) | MAIN | R4b, Methods §5 |
-| `08d_transformer_depth.py` | D1 representational depth per layer | MAIN | R4b, Fig 3 |
-| `08e_transformer_cross_stim_aggregate.py` | Cross-stimulus aggregate depth profile | MAIN | R4b cross-stim, Fig 3 |
+| `08d_transformer_depth.py` | D1 representational depth per layer | MAIN | R4b, Fig 4 |
+| `08e_transformer_cross_stim_aggregate.py` | Cross-stimulus aggregate depth profile | MAIN | R4b cross-stim, Fig 4 |
 
-## Cross-stimulus validation (MAIN; R5, Figure 4)
+## Cross-stimulus validation (MAIN; R5, Figure 5)
 
 | Script | Role | Tier | Manuscript |
 |---|---|---|---|
-| `m10_03_project_movie_pca.py` | Project Movie10 through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `m10_04_score_and_decode.py` | Score/decode Movie10 with Friends HMM | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `m10_05_cross_stimulus_validation.py` | Movie10 cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `hp_03_project_hp_pca.py` | Project Harry Potter through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `hp_04_score_and_decode.py` | Score/decode Harry Potter | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `hp_05_cross_stimulus_validation.py` | Harry Potter cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `pp_03_project_pp_pca.py` | Project Petit Prince (FR/EN) through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `pp_04_score_and_decode.py` | Score/decode Petit Prince | CROSS-STIM (MAIN) | R5, Fig 4 |
-| `pp_05_cross_stimulus_validation.py` | Petit Prince cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 4 |
+| `m10_03_project_movie_pca.py` | Project Movie10 through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `m10_04_score_and_decode.py` | Score/decode Movie10 with Friends HMM | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `m10_05_cross_stimulus_validation.py` | Movie10 cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `hp_03_project_hp_pca.py` | Project Harry Potter through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `hp_04_score_and_decode.py` | Score/decode Harry Potter | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `hp_05_cross_stimulus_validation.py` | Harry Potter cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `pp_03_project_pp_pca.py` | Project Petit Prince (FR/EN) through Friends PCA | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `pp_04_score_and_decode.py` | Score/decode Petit Prince | CROSS-STIM (MAIN) | R5, Fig 5 |
+| `pp_05_cross_stimulus_validation.py` | Petit Prince cross-stimulus validation | CROSS-STIM (MAIN) | R5, Fig 5 |
 
 (Note: `pp_00_postproc.sh`, `pp_02_extract_parcel_ts.sh`, `m10_00`, `m10_02`,
 `hp_00`, `hp_02` are the per-stimulus preprocessing wrappers for the above,
