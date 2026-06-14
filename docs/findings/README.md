@@ -23,7 +23,7 @@ in the preprint; **SUPP** = supplementary / robustness / diagnostic;
 | `04rc_reliability_fc` | SUPP | [04rc_reliability_fc.md](04rc_reliability_fc.md) | Supp (reliability) |
 | `05a_recurrence_analysis` | MAIN | [05a_recurrence_analysis.md](05a_recurrence_analysis.md) | R1, Fig 1 |
 | `05a_sub_hrf_diagnostic` | SUPP | [05a_sub_hrf_diagnostic.md](05a_sub_hrf_diagnostic.md) | Supp |
-| `05b_recurring_states_visualization` | MAIN | [05b_recurring_states_visualization.md](05b_recurring_states_visualization.md) | Fig 1 |
+| `05b_recurring_states_visualization` | MAIN | [05b_recurring_states_visualization.md](05b_recurring_states_visualization.md) | Fig 2C / Fig S1 |
 | `05c_episode_decodability` | SUPP | [05c_episode_decodability.md](05c_episode_decodability.md) | Supp |
 | `05d_state_similarity` | SUPP | [05d_state_similarity.md](05d_state_similarity.md) | Supp |
 | `05e_temporal_trend_a1` | SUPP | [05e_temporal_trend_a1.md](05e_temporal_trend_a1.md) | Supp |

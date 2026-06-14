@@ -1,6 +1,6 @@
 # Findings: 05b Recurring Brain States Visualization
 
-_Script: `script/05b_visualize_recurring_states.py`. Tier: MAIN (Fig 1)._
+_Script: `script/05b_visualize_recurring_states.py`. Tier: MAIN (Fig 2C / Fig S1)._
 
 _Renders top recurring brain states (by recurrence score from 05a) as cortical and subcortical surface maps; per-subject (n=6), atlas-4S156Parcels, vt=0.95._
 
