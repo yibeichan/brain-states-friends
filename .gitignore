@@ -15,6 +15,7 @@ CLAUDE.md
 # Only docs/supplementary/ is tracked and published with the repo.
 docs/*
 !docs/supplementary/
+!docs/findings/
 notebook/
 archive/
 logs/
