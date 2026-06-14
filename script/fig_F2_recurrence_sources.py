@@ -382,7 +382,7 @@ def panel_B_category_network_sankey(
 @app.cell
 def panel_C_network_participation(
     state_flags, state_means, SUBJECTS, PARCELLATION, OUT_F2,
-    NETWORK_ORDER, SUBJECT_MARKERS, plt, np, pd, json,
+    NETWORK_ORDER, SUBJECT_MARKERS, plt, np,
 ):
     """Panel C - network participation of content-eligible fitted states.
 

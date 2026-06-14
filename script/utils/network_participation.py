@@ -112,8 +112,6 @@ def _normalized_entropy(comp: np.ndarray, n_networks_total: int) -> float:
 
 
 def _resolve_categories(
-    state_flags: Mapping[str, pd.DataFrame],
-    subjects: Sequence[str],
     summary_categories: Sequence[str] | None,
 ) -> set[str] | None:
     """None means keep every category; otherwise return the requested set."""
@@ -144,14 +142,17 @@ def compute_network_participation_metrics(
     -------
     metrics
         One row per state with shares, top-k summaries, and per-network share
-        columns (``network_share_<net>``).
+        columns (``network_share_<net>``). The optional ``recurrence_score`` and
+        ``dominant_network`` columns are included only when present in every
+        subject's ``state_flags``; if subjects disagree they are filled with NaN
+        for the subjects that lack them.
     summary
         Summary of the returned set (see ``summarize_network_participation``).
     """
     rows: list[dict[str, object]] = []
     order_index = {network: idx for idx, network in enumerate(network_order)}
     n_networks_total = len(network_order)
-    keep = _resolve_categories(state_flags, subjects, summary_categories)
+    keep = _resolve_categories(summary_categories)
 
     for subject in subjects:
         flags = state_flags[subject]
