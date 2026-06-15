@@ -8,7 +8,7 @@
 #SBATCH --mem=8G
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=yibei@mit.edu
+#SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
 # PCA Loadings Analysis — SLURM Submission Script

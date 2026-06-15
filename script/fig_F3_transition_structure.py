@@ -36,7 +36,7 @@ Design notes (2026-05-26 revision):
   * Old Panel B pooled FC-transition density was removed from the main figure:
     it was display-only, while the inferential statistics are the per-subject
     quantities summarized in the consistency forest. Keep this omission aligned
-    with docs/manuscript/figure_captions.md.
+    with the manuscript figure captions.
   * Panel B: subjects now use SUBJECT_MARKERS shapes (consistent with F4) in a
     single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51) is no
     longer accented - it is visible as the one homophily marker at/below the null
