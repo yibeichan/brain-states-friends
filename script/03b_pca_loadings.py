@@ -95,7 +95,7 @@ LOSO_CV_THRESHOLD = 0.20
 # Alexander-DeLong-Strick 1986; Haber & Knutson 2010). Cortical bins here
 # use Yeo-17 sub-network names (VisCent/VisPeri/etc.) — a separate local
 # convention from plot_style.py's Yeo-7 names; unifying that is out of
-# scope. See docs/internal/shared/2026-05-11_subcort_partition_canonical.md.
+# scope.
 NETWORK_ORDER = [
     'VisCent', 'VisPeri',
     'SomMotA', 'SomMotB',
