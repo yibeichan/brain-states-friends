@@ -11,10 +11,11 @@ __pycache__/
 
 CLAUDE.md
 # AGENTS.md
-# All docs are local-only (internal findings, design docs, manuscript drafts).
-# Only docs/supplementary/ is tracked and published with the repo.
+# All docs are local-only (internal design docs, manuscript drafts).
+# Only docs/supplementary/ and docs/findings/ are tracked and published.
 docs/*
 !docs/supplementary/
+!docs/findings/
 notebook/
 archive/
 logs/
