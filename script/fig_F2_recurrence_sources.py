@@ -15,7 +15,7 @@ network-participation summaries.
 | A | Per-subject category-count stacked bars (5 categories, all 50 states) | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{pdf,png,svg} |
 | B | Sankey: 5 categories -> 13 networks, top-3 composition | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{pdf,png,svg} |
 | C | Content-eligible network participation | distribution | state_flags.csv + 04 state_means_parcel.npy | fig2_C_network_participation.{pdf,png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
-| D | Surface exemplars per category (sub-01) + activity timeseries strips | brain map | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
+| D | Surface exemplars per category (sub-01) + filled-line occupancy traces | brain map + line | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
 
 Run full app:
     marimo edit script/fig_F2_recurrence_sources.py
@@ -522,13 +522,16 @@ def panel_D_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
 def panel_D_state_timeseries(
     state_flags, decoded_states_sub01, OUT_F2, TAXONOMY_COLORS, plt, np,
 ):
-    """Panel D inset - binary-active timeseries strips per category exemplar.
+    """Panel D inset - binary-active timeseries per category exemplar.
 
-    Lifted verbatim from the former F1. Same 4 picks (sub-01); each strip is a
-    600-bin FO trace over all runs, colored by that category's taxonomy color.
+    Same 4 picks (sub-01); each trace is a 600-bin fractional-occupancy series
+    over all runs, lightly smoothed (moving average), drawn as a filled line in
+    that category's taxonomy color. All four strips share one y-scale (common
+    peak) so the separate y-axis reference (fig2_D_timeseries_yaxis) applies to
+    every strip; the contrast across categories is in occupancy density, not
+    peak height. Window 0 disables smoothing.
     """
-    from matplotlib.colors import LinearSegmentedColormap
-
+    _smooth_win = 7
     _sub = "sub-01"
     _df = state_flags[_sub]
     _flag_id = "state" if "state" in _df.columns else "state_id"
@@ -557,6 +560,8 @@ def panel_D_state_timeseries(
     _n_bins = 600
     _edges = np.linspace(0, _n_total, _n_bins + 1, dtype=int)
 
+    # Pass 1: build the (smoothed) occupancy series and the shared y-scale.
+    _series = {}
     for _name, _ranked_df in _ranked.items():
         if len(_ranked_df) == 0:
             print(f"  WARNING: no {_name} states for {_sub} - skipping")
@@ -568,11 +573,22 @@ def panel_D_state_timeseries(
             _binary[_edges[_i]:_edges[_i + 1]].mean() if _edges[_i + 1] > _edges[_i] else 0.0
             for _i in range(_n_bins)
         ])
-        _vmax = max(float(_binned.max()), 0.01)
-        _cmap = LinearSegmentedColormap.from_list(f"c_{_name}", ["white", _category_color[_name]])
-        _fig, _ax = plt.subplots(figsize=(1.5, 0.18))
-        _ax.imshow(_binned[None, :], aspect="auto", cmap=_cmap, vmin=0, vmax=_vmax,
-                   interpolation="nearest")
+        if _smooth_win and _smooth_win > 1:
+            _kernel = np.ones(_smooth_win) / _smooth_win
+            _binned = np.convolve(_binned, _kernel, mode="same")
+        _series[_name] = _binned
+    _vmax = max((float(_s.max()) for _s in _series.values()), default=0.01)
+    _vmax = max(_vmax * 1.05, 0.01)
+
+    # Pass 2: render each strip on the shared y-scale.
+    _x = np.arange(_n_bins)
+    for _name, _binned in _series.items():
+        _color = _category_color[_name]
+        _fig, _ax = plt.subplots(figsize=(1.5, 0.5))
+        _ax.fill_between(_x, _binned, 0.0, color=_color, alpha=0.3, linewidth=0)
+        _ax.plot(_x, _binned, color=_color, lw=0.9)
+        _ax.set_xlim(0, _n_bins - 1)
+        _ax.set_ylim(0, _vmax)
         _ax.set_xticks([]); _ax.set_yticks([])
         for _s in ("top", "right", "bottom", "left"):
             _ax.spines[_s].set_visible(False)
@@ -583,6 +599,27 @@ def panel_D_state_timeseries(
         _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.0)
         plt.close(_fig)
         print(f"  saved: fig2_D_{_name}_timeseries.{{pdf,png,svg}}")
+
+    # Separate y-axis reference for the shared scale (matches strip height).
+    # Short on-plot label ("Occupancy"); the caption carries the full term.
+    _figy, _axy = plt.subplots(figsize=(0.55, 0.5))
+    _axy.set_ylim(0, _vmax)
+    _axy.set_xlim(0, 1)
+    _axy.set_xticks([])
+    _axy.set_yticks([0, _vmax])
+    _axy.set_yticklabels(["0", f"{_vmax:.2f}"], fontsize=6)
+    _axy.tick_params(axis="y", length=2, pad=1)
+    _axy.set_ylabel("Occupancy", fontsize=6, labelpad=2)
+    for _s in ("top", "right", "bottom"):
+        _axy.spines[_s].set_visible(False)
+    _axy.spines["left"].set_linewidth(0.6)
+    _figy.subplots_adjust(left=0.45, right=0.95, bottom=0.05, top=0.95)
+    _stemy = OUT_F2 / "fig2_D_timeseries_yaxis"
+    _figy.savefig(f"{_stemy}.pdf", bbox_inches="tight", pad_inches=0.02)
+    _figy.savefig(f"{_stemy}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _figy.savefig(f"{_stemy}.svg", bbox_inches="tight", pad_inches=0.02)
+    plt.close(_figy)
+    print(f"  saved: fig2_D_timeseries_yaxis.{{pdf,png,svg}} (shared y, vmax={_vmax:.3f})")
     return
 
 
