@@ -165,7 +165,7 @@ helpers; do not run them directly.
 - **[docs/supplementary/](docs/supplementary/)** - Supplementary material accompanying the manuscript
 - **[docs/findings/](docs/findings/)** - Per-script findings: one Results-only doc per analysis script, with every number verified against the pipeline outputs
 - **[AGENTS.md](AGENTS.md)** - Instructions for AI coding agents (e.g. Claude Code) working in this repo: conventions, methodology notes, and analysis-scope rules.
-- **Alternative analysis (ICA)** - An independent-component-analysis decomposition of the same data, provided as a convergence check on the HMM state repertoire, is maintained as a self-contained supplement on the [`sm/ica-states`](https://github.com/yibeichan/brain-states-friends/tree/sm/ica-states) branch.
+- **Alternative analysis (ICA)** - An independent-component-analysis decomposition of the same data, provided as a convergence check on the HMM state repertoire, is maintained as a self-contained supplement on the [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements) branch (alongside other supplementary analyses).
 
 ## Citation
 
