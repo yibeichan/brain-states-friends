@@ -31,15 +31,29 @@ reliability/robustness):
 
 ## Contents
 
-| Supplement | Scripts | Findings doc | Runs standalone? |
-|---|---|---|---|
-| **ICA convergent validity** (`alt`) — does the HMM state repertoire re-emerge under a decomposition with orthogonal assumptions (spatial ICA)? | `script/sm_alt_ica_states.py` (+`.sh`), `script/sm_alt_ica_category_table.py`, `script/fig_sm_alt_ica_matching.py` | [`docs/findings/sm_alt_ica_states.md`](docs/findings/sm_alt_ica_states.md) | No — reads main-pipeline outputs (stages `03a`/`04`/`05e`); the code is complete but the inputs are produced on `main`. |
-| **Prior-predictive occupied-state count** (`sim`) — under the production `gamma=1` sticky-HDP prior, how many states does the model expect *a priori*? | `script/sm_sim_prior_state_count.py` | [`docs/findings/sm_sim_prior_state_count.md`](docs/findings/sm_sim_prior_state_count.md) | Yes — pure simulation, `numpy` only. |
+### ICA convergent validity (`alt`)
 
-The ICA bundle's frozen `utils/` snapshot (`ica_states`, `hmm_io`, `hdphmm`,
-`stats`, `transformer_analysis`, `common`, `state_blocks`, `state_flags_io`,
-`plot_style`) is duplicated from `main` so the supplement resolves its imports
-from this branch alone.
+Does the HMM state repertoire re-emerge under a decomposition with orthogonal
+assumptions (spatial ICA)? Findings: [`docs/findings/sm_alt_ica_states.md`](docs/findings/sm_alt_ica_states.md).
+
+- `script/sm_alt_ica_states.py` (+ `.sh` runner) — fit/match ICA vs HMM states
+- `script/sm_alt_ica_category_table.py` — per-category breakdown
+- `script/fig_sm_alt_ica_matching.py` — companion figure
+
+**Runs standalone?** No — reads main-pipeline outputs (stages `03a`/`04`/`05e`);
+the code is complete but the inputs are produced on `main`. The bundled `utils/`
+snapshot (`ica_states`, `hmm_io`, `hdphmm`, `stats`, `transformer_analysis`,
+`common`, `state_blocks`, `state_flags_io`, `plot_style`) is duplicated from
+`main` so imports resolve from this branch alone.
+
+### Prior-predictive occupied-state count (`sim`)
+
+Under the production `gamma=1` sticky-HDP prior, how many states does the model
+expect *a priori*? Findings: [`docs/findings/sm_sim_prior_state_count.md`](docs/findings/sm_sim_prior_state_count.md).
+
+- `script/sm_sim_prior_state_count.py` — the simulation
+
+**Runs standalone?** Yes — pure simulation, `numpy` only.
 
 ## Running
 
