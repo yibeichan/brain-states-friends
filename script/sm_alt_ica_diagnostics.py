@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 from dotenv import load_dotenv
-from scipy.stats import kurtosis
+from scipy.stats import kurtosis, spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # put script/ on path
 
@@ -52,6 +52,25 @@ def subspace_affinity(ica_maps, hmm_maps):
     Qa = np.linalg.qr(np.asarray(ica_maps))[0]           # (P, Kica)
     Qb = np.linalg.qr(np.asarray(hmm_maps).T)[0]         # (P, Khmm)
     return np.linalg.svd(Qa.T @ Qb, compute_uv=False)    # length min(Kica,Khmm)
+
+
+def corroboration_metrics(recurrence_summary, transition_summary):
+    rec = np.asarray(recurrence_summary["recurrence_scores"], float)
+    active = rec > 0
+    return {
+        "n_specific": len(recurrence_summary["significant_specific_states"]),
+        "mean_recurrence": float(rec[active].mean()) if active.any() else float("nan"),
+        "fc_rho": float(transition_summary["A3_fc_transition"]["rho"]),
+    }
+
+
+def spearman_illustrative(x, y):
+    """Descriptive Spearman for n=6 ordinal corroboration. NO p-value (under-powered)."""
+    x = np.asarray(x, float); y = np.asarray(y, float)
+    ties = (len(np.unique(x)) < len(x)) or (len(np.unique(y)) < len(y))
+    rho = float(spearmanr(x, y).statistic)
+    return {"rho": rho, "n": int(x.size), "ties_flag": bool(ties),
+            "pairs": list(zip(x.tolist(), y.tolist()))}
 
 
 def build_evidence_rows(summary):

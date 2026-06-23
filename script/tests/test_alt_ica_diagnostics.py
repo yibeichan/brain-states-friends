@@ -163,6 +163,24 @@ def test_state_mean_geometry_flat_vs_dominant():
     assert 0.0 < g["eff_rank_norm"] <= 1.0
 
 
+def test_corroboration_metrics_extracts_fields():
+    from sm_alt_ica_diagnostics import corroboration_metrics
+    rec = {"significant_specific_states": [2, 5, 9],
+           "recurrence_scores": [0.0, 0.4, 0.6, 0.0]}
+    tr = {"A3_fc_transition": {"rho": 0.33}}
+    m = corroboration_metrics(rec, tr)
+    assert m["n_specific"] == 3
+    assert m["mean_recurrence"] == pytest.approx(0.5)   # mean over nonzero (active)
+    assert m["fc_rho"] == pytest.approx(0.33)
+
+
+def test_spearman_illustrative_flags_ties():
+    from sm_alt_ica_diagnostics import spearman_illustrative
+    out = spearman_illustrative([0, 0, 0, 1, 2, 3], [1, 2, 3, 4, 5, 6])
+    assert out["n"] == 6 and out["ties_flag"] is True
+    assert len(out["pairs"]) == 6 and "rho" in out
+
+
 def test_empirical_fdr_control_under_global_null():
     """Under the global null (observed drawn from the null model), BH on the
     per-rank p-vector must control FDR <= q. Tests BH applicability to the
