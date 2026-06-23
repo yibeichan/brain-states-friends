@@ -309,6 +309,8 @@ def decode_all_runs(model, split, projected_dir, n_pcs):
     return decoded_states
 
 
+# SUPPLEMENT-ONLY ADDITION (absent from main's hmm_io; do not sync to main):
+# compute_state_posteriors is used by the ICA supplement only.
 def compute_state_posteriors(model, X, lengths):
     """Return per-TR state posteriors gamma_k(t), shape (n_samples, K).
 

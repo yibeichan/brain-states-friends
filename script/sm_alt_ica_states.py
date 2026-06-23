@@ -26,6 +26,7 @@ from utils.transformer_analysis import (
     load_content_eligibility, build_run_boundaries,
 )
 from utils.common import check_checkpoint
+from utils.jax_free_model_io import _load_model_no_jax
 
 load_dotenv()
 SCRATCH_DIR = os.getenv("SCRATCH_DIR")
@@ -36,69 +37,6 @@ K_SWEEP = [15, 25, 35]
 MIN_OCC = 0.01
 MIN_SHIFT = 1
 HMM_MAPS_KIND = "state_contrast_means_no_global_mean"
-
-
-# ---------------------------------------------------------------------------
-# JAX-free model loader
-# ---------------------------------------------------------------------------
-
-class _HMMStub:
-    """Minimal stub that holds the numpy arrays from a pickled StickyHDPHMM_JAX.
-
-    We intercept deserialization so that jax is never imported. The stub exposes
-    the same attributes that hmm_io.back_project_states and
-    hmm_io.compute_state_posteriors need: means_, covars_, transmat_,
-    startprob_, n_components, covariance_type.
-    """
-    pass
-
-
-class _NoJaxUnpickler(pickle.Unpickler):
-    """Custom unpickler that substitutes the JAX HMM class with _HMMStub.
-
-    Any class whose module path contains 'hdphmm_jax' is replaced; its
-    __setstate__ (which calls jax.random.PRNGKey) is NOT called. Instead we
-    populate the stub directly from the raw state dict.
-    """
-    def find_class(self, module, name):
-        if "hdphmm_jax" in module:
-            return _HMMStub
-        return super().find_class(module, name)
-
-
-def _load_model_no_jax(path):
-    """Load a pickled StickyHDPHMM (or StickyHDPHMM_JAX) without requiring jax.
-
-    When the pickle contains a JAX model, _NoJaxUnpickler substitutes _HMMStub
-    and populates it via __setstate__; we then call a jax-free __setstate__
-    replacement. When the pickle contains a numpy model, it loads normally.
-    """
-    with open(path, "rb") as f:
-        model = _NoJaxUnpickler(f).load()
-    if isinstance(model, _HMMStub):
-        # __setstate__ was called by pickle with the state dict; the stub's
-        # __dict__ should already be populated. Guard against missing attrs.
-        for attr in ("means_", "covars_", "transmat_", "startprob_",
-                     "n_components", "covariance_type"):
-            if not hasattr(model, attr):
-                raise RuntimeError(
-                    f"_HMMStub missing attribute '{attr}' after load: "
-                    f"check that the model pickle contains this field."
-                )
-        # Ensure everything is plain numpy (JAX arrays would fail downstream)
-        for attr in ("means_", "covars_", "transmat_", "startprob_"):
-            val = getattr(model, attr)
-            if val is not None and not isinstance(val, np.ndarray):
-                setattr(model, attr, np.asarray(val))
-        cov = np.asarray(model.covars_)
-        if cov.ndim not in (2, 3):
-            raise ValueError(
-                f"loaded model covars_ has unexpected ndim={cov.ndim} "
-                f"(expected 2=diag or 3=full); _normalize_covars was skipped")
-        logger.info("Loaded JAX model via _HMMStub (no jax import needed); "
-                    "n_components=%d, covariance_type=%s",
-                    model.n_components, model.covariance_type)
-    return model
 
 
 def _np(x):  # json-safe
