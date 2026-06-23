@@ -4,6 +4,8 @@ Data-free tests run on the branch alone (synthetic inputs). The data-gated
 determinism guard skips when SCRATCH outputs are absent.
 """
 import io
+import json
+import os
 import pickle
 import sys
 from pathlib import Path
@@ -221,3 +223,38 @@ def test_empirical_fdr_control_under_global_null():
         per_family_fdp.append(1.0 if int(np.sum(q < q_level)) > 0 else 0.0)
     realized_fdr = float(np.mean(per_family_fdp))
     assert realized_fdr <= q_level + 0.03, f"realized FDR {realized_fdr:.3f} > {q_level}"
+
+
+def _scratch_or_skip():
+    from dotenv import load_dotenv
+    load_dotenv()
+    s = os.environ.get("SCRATCH_DIR")
+    base = os.path.join(s or "", "output", "sm_ica_states", "atlas-4S156Parcels")
+    if not s or not os.path.isdir(base):
+        pytest.skip("SCRATCH ICA outputs absent")
+    return s
+
+
+def test_recompute_matched_r_matches_stored_multiset():
+    """Determinism/serialization guard: matched |r| recomputed from saved maps +
+    reconstructed HMM means equals the stored summary (multiset, robust to
+    equal-cost Hungarian reassignment). NOT independent validation."""
+    import pickle
+    from utils.ica_states import match_maps_hungarian
+    from utils.jax_free_model_io import _load_model_no_jax
+    scratch = _scratch_or_skip()
+    parc, vt, sub, K = "atlas-4S156Parcels", "0.95", "sub-03", "42"
+    icadir = os.path.join(scratch, "output", "sm_ica_states", parc, sub)
+    summary = json.load(open(os.path.join(icadir, "ica_match_summary.json")))
+    stored = np.sort(np.asarray(
+        summary["by_K"][K]["state_sets"]["eligible"]["matched_r"], float))
+    ica_maps = np.load(os.path.join(icadir, f"ica_maps_K{K}.npy"))           # (P, Kica)
+    fd = os.path.join(scratch, "output", "04_combined_hdphmm", parc, sub, "final", f"vt{vt}")
+    pca_base = os.path.join(scratch, "output", "03a_pca4combined_hmm", parc, sub)
+    model = _load_model_no_jax(os.path.join(fd, "best_model.pkl"))
+    pca = pickle.load(open(os.path.join(fd, "pca_model.pkl"), "rb"))
+    n_pcs = int(json.load(open(os.path.join(pca_base, "n_pcs_lookup.json")))[vt])
+    hmm_ids = summary["by_K"][K]["state_sets"]["eligible"]["hmm_state_ids"]
+    hmm_maps = (np.asarray(model.means_)[:, :n_pcs] @ pca.components_[:n_pcs])[hmm_ids]
+    recomputed = np.sort(match_maps_hungarian(ica_maps, hmm_maps)["matched_r"])
+    np.testing.assert_allclose(recomputed, stored, atol=1e-10)
