@@ -181,6 +181,24 @@ def test_spearman_illustrative_flags_ties():
     assert len(out["pairs"]) == 6 and "rho" in out
 
 
+def test_render_tables_md_uses_N_over_total():
+    from sm_alt_ica_diagnostics import render_tables_md
+    ev = [{"sub": "sub-03", "K": 35, "n_surv": 0, "n_total": 26,
+           "mean_r": 0.19, "null_mean": 0.25, "null_p95": 0.35,
+           "frac_below_null": 1.0}]
+    md = render_tables_md(ev, {}, {})
+    assert "0/26" in md            # N/total format reconciles the doc's mixed cells
+    assert "sub-03" in md
+
+
+def test_main_requires_scratch_dir(monkeypatch):
+    import sm_alt_ica_diagnostics as d
+    monkeypatch.delenv("SCRATCH_DIR", raising=False)
+    monkeypatch.setattr(d, "load_dotenv", lambda *a, **k: None)
+    with pytest.raises(SystemExit):
+        d.main(["--sub_id", "sub-03"])
+
+
 def test_empirical_fdr_control_under_global_null():
     """Under the global null (observed drawn from the null model), BH on the
     per-rank p-vector must control FDR <= q. Tests BH applicability to the
