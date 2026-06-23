@@ -1,0 +1,21 @@
+[project]
+name = "brain-states-friends-supplements"
+version = "0.1.0"
+description = "Supplementary analyses (ICA convergent validity; prior-state-count sim) for brain-states-friends"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "numpy",
+  "scipy",
+  "scikit-learn",
+  "pandas",
+  "matplotlib",
+  "python-dotenv",
+  "marimo",
+  "hmmlearn",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.uv]
+package = false
