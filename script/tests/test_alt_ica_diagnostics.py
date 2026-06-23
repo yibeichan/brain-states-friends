@@ -91,3 +91,24 @@ def test_fdr_with_nan_excludes_nan_from_family_size():
     assert np.isnan(q[3]) and np.isnan(q[4])             # NaN passthrough
     expected_finite = _bh_reference(np.array([0.01, 0.02, 0.03]))
     np.testing.assert_allclose(q[:3], expected_finite, atol=1e-12)  # family size = 3
+
+
+def test_null_self_calibration_is_uniform_not_anticonservative():
+    """Hold out each null draw as 'observed' vs the other n_perm-1; p must be
+    ~Uniform and NOT systematically conservative (>0.5)."""
+    from utils.ica_states import subspace_rotation_null, spatial_match_pvalues
+    from scipy import stats as sps
+    rng = np.random.default_rng(4)
+    n_pcs, P, K = 30, 50, 8
+    comps = np.linalg.qr(rng.normal(size=(P, n_pcs)))[0].T   # (n_pcs, P) orthonormal rows
+    hmm = rng.normal(size=(K, P))
+    null = subspace_rotation_null(comps, hmm, n_components=K, n_perm=400, rng_seed=0)
+    n_perm = null.shape[0]
+    ps = []
+    for j in range(n_perm):
+        rest = np.delete(null, j, axis=0)                    # exclude the held-out draw
+        ps.extend(spatial_match_pvalues(null[j], rest).tolist())
+    ps = np.asarray(ps)
+    assert 0.45 <= ps.mean() <= 0.55                         # calibrated, not biased
+    assert (ps < 0.5).mean() >= 0.45                         # not anti-conservative
+    assert sps.kstest(ps, "uniform").pvalue > 1e-3           # lenient uniformity
