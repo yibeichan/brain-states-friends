@@ -62,3 +62,32 @@ def test_per_rank_pvalues_require_aligned_matched_count():
     # mismatched matched count must not silently misalign
     with pytest.raises((ValueError, IndexError)):
         spatial_match_pvalues(rng.uniform(0, 1, size=n + 1), null)
+
+
+def _bh_reference(p):
+    """Independent Benjamini-Hochberg step-up (numpy only)."""
+    p = np.asarray(p, float)
+    n = p.size
+    order = np.argsort(p)
+    ranked = p[order] * n / (np.arange(n) + 1)
+    q_sorted = np.minimum.accumulate(ranked[::-1])[::-1]  # reverse cumulative min
+    q = np.empty(n)
+    q[order] = np.clip(q_sorted, 0, 1)
+    return q
+
+
+def test_benjamini_hochberg_matches_reference():
+    from utils.stats import benjamini_hochberg
+    rng = np.random.default_rng(3)
+    p = rng.uniform(0, 1, size=37)
+    np.testing.assert_allclose(benjamini_hochberg(p), _bh_reference(p), atol=1e-12)
+
+
+def test_fdr_with_nan_excludes_nan_from_family_size():
+    from utils.stats import fdr_with_nan
+    # 3 finite p's + 2 NaN: BH denominator must be 3, not 5
+    p = np.array([0.01, 0.02, 0.03, np.nan, np.nan])
+    q = fdr_with_nan(p)
+    assert np.isnan(q[3]) and np.isnan(q[4])             # NaN passthrough
+    expected_finite = _bh_reference(np.array([0.01, 0.02, 0.03]))
+    np.testing.assert_allclose(q[:3], expected_finite, atol=1e-12)  # family size = 3
