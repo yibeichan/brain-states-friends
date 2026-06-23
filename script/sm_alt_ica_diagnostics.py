@@ -55,6 +55,7 @@ def subspace_affinity(ica_maps, hmm_maps):
 
 
 def corroboration_metrics(recurrence_summary, transition_summary):
+    """Extract scalar corroboration signals from recurrence and transition summaries."""
     rec = np.asarray(recurrence_summary["recurrence_scores"], float)
     active = rec > 0
     return {
@@ -66,7 +67,8 @@ def corroboration_metrics(recurrence_summary, transition_summary):
 
 def spearman_illustrative(x, y):
     """Descriptive Spearman for n=6 ordinal corroboration. NO p-value (under-powered)."""
-    x = np.asarray(x, float); y = np.asarray(y, float)
+    x = np.asarray(x, float)
+    y = np.asarray(y, float)
     ties = (len(np.unique(x)) < len(x)) or (len(np.unique(y)) < len(y))
     rho = float(spearmanr(x, y).statistic)
     return {"rho": rho, "n": int(x.size), "ties_flag": bool(ties),
@@ -102,12 +104,14 @@ def render_tables_md(evidence_rows, geometry_by_sub, corroboration_by_sub):
                      f"{r['mean_r']:.3f} | {r['null_mean']:.3f} | {r['null_p95']:.3f} | "
                      f"{r['frac_below_null']:.2f} |")
     lines += ["", "## Repertoire geometry", "",
-              "| sub | n_pcs | K | eff_rank | eff_rank_norm | max_norm | med_norm | kurtosis |",
-              "|---|---|---|---|---|---|---|---|"]
+              "| sub | n_pcs | K | eff_rank | eff_rank_norm | max_norm | med_norm | kurtosis | affinity |",
+              "|---|---|---|---|---|---|---|---|---|"]
     for sub, g in geometry_by_sub.items():
+        aff = g.get("subspace_affinity_mean")
+        aff_str = f"{aff:.2f}" if aff is not None else "n/a"
         lines.append(f"| {sub} | {g['n_pcs']} | {g['k_active']} | {g['eff_rank']:.1f} | "
                      f"{g['eff_rank_norm']:.2f} | {g['max_norm']:.2f} | {g['med_norm']:.2f} | "
-                     f"{g['mean_excess_kurtosis']:.2f} |")
+                     f"{g['mean_excess_kurtosis']:.2f} | {aff_str} |")
     lines += ["", "## Corroboration", "",
               "| sub | n_specific | mean_recurrence | fc_rho |", "|---|---|---|---|"]
     for sub, c in corroboration_by_sub.items():
@@ -124,7 +128,8 @@ def _subjects(scratch, parc, requested):
     if requested:
         return list(requested)
     base = os.path.join(scratch, "output", "sm_ica_states", parc)
-    return sorted(d for d in os.listdir(base) if d.startswith("sub-"))
+    return sorted(d for d in os.listdir(base)
+                  if d.startswith("sub-") and os.path.isdir(os.path.join(base, d)))
 
 
 def run_subject(scratch, parc, vt, sub):
@@ -145,6 +150,20 @@ def run_subject(scratch, parc, vt, sub):
         decoded = pickle.load(f)
     active = sorted({int(x) for v in decoded.values() for x in np.unique(v)})
     geom = state_mean_geometry(model.means_, pca.components_[:n_pcs], n_pcs, active)
+
+    # ICA<->HMM subspace affinity at K_active (principal-angle cosines)
+    K_active = int(summary["K_active"])
+    ica_path = os.path.join(icadir, f"ica_maps_K{K_active}.npy")
+    if os.path.exists(ica_path):
+        ica_maps = np.load(ica_path)                                  # (P, K_active)
+        hmm_active_maps = (np.asarray(model.means_)[active][:, :n_pcs]
+                           @ pca.components_[:n_pcs])                  # (n_active, P)
+        cos = subspace_affinity(ica_maps, hmm_active_maps)
+        geom["subspace_affinity_mean"] = float(np.mean(cos))
+        geom["subspace_affinity_min"] = float(np.min(cos))
+    else:
+        geom["subspace_affinity_mean"] = None
+        geom["subspace_affinity_min"] = None
 
     v = f"vt{vt}"
     rec = _load_json(os.path.join(scratch, "output", "05a_recurrence_analysis", parc, sub, v,

@@ -6,7 +6,6 @@ determinism guard skips when SCRATCH outputs are absent.
 import io
 import json
 import os
-import pickle
 import sys
 from pathlib import Path
 
@@ -245,15 +244,18 @@ def test_recompute_matched_r_matches_stored_multiset():
     scratch = _scratch_or_skip()
     parc, vt, sub, K = "atlas-4S156Parcels", "0.95", "sub-03", "42"
     icadir = os.path.join(scratch, "output", "sm_ica_states", parc, sub)
-    summary = json.load(open(os.path.join(icadir, "ica_match_summary.json")))
+    with open(os.path.join(icadir, "ica_match_summary.json")) as f:
+        summary = json.load(f)
     stored = np.sort(np.asarray(
         summary["by_K"][K]["state_sets"]["eligible"]["matched_r"], float))
     ica_maps = np.load(os.path.join(icadir, f"ica_maps_K{K}.npy"))           # (P, Kica)
     fd = os.path.join(scratch, "output", "04_combined_hdphmm", parc, sub, "final", f"vt{vt}")
     pca_base = os.path.join(scratch, "output", "03a_pca4combined_hmm", parc, sub)
     model = _load_model_no_jax(os.path.join(fd, "best_model.pkl"))
-    pca = pickle.load(open(os.path.join(fd, "pca_model.pkl"), "rb"))
-    n_pcs = int(json.load(open(os.path.join(pca_base, "n_pcs_lookup.json")))[vt])
+    with open(os.path.join(fd, "pca_model.pkl"), "rb") as f:
+        pca = pickle.load(f)
+    with open(os.path.join(pca_base, "n_pcs_lookup.json")) as f:
+        n_pcs = int(json.load(f)[vt])
     hmm_ids = summary["by_K"][K]["state_sets"]["eligible"]["hmm_state_ids"]
     hmm_maps = (np.asarray(model.means_)[:, :n_pcs] @ pca.components_[:n_pcs])[hmm_ids]
     recomputed = np.sort(match_maps_hungarian(ica_maps, hmm_maps)["matched_r"])
