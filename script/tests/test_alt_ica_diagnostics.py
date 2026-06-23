@@ -116,24 +116,23 @@ def test_null_self_calibration_is_uniform_not_anticonservative():
 
 def test_empirical_fdr_control_under_global_null():
     """Under the global null (observed drawn from the null model), BH on the
-    per-rank p-vector must reject at rate <= q. Tests BH applicability to the
-    positively-dependent per-rank p's, not just the arithmetic."""
+    per-rank p-vector must control FDR <= q. Tests BH applicability to the
+    positively-dependent per-rank p's. Under the global null every rejection is
+    false, so per-family FDP = 1 if the family makes any rejection else 0, and
+    FDR = mean per-family FDP = P(any rejection), which BH controls at <= q."""
     from utils.ica_states import subspace_rotation_null, spatial_match_pvalues
     from utils.stats import fdr_with_nan
     rng = np.random.default_rng(5)
     n_pcs, P, K = 28, 48, 8
     comps = np.linalg.qr(rng.normal(size=(P, n_pcs)))[0].T
-    q_level, n_families, false_rejections, total_rejections = 0.05, 200, 0, 0
+    q_level, n_families = 0.05, 200
+    per_family_fdp = []
     for f in range(n_families):
         hmm = rng.normal(size=(K, P))
         null = subspace_rotation_null(comps, hmm, n_components=K, n_perm=300,
                                       rng_seed=1000 + f)
-        obs = null[0]                       # 'observed' is itself a null draw
-        p = spatial_match_pvalues(obs, null[1:])
+        p = spatial_match_pvalues(null[0], null[1:])   # 'observed' is itself a null draw
         q = fdr_with_nan(p)
-        rej = int(np.sum(q < q_level))
-        total_rejections += rej
-        false_rejections += rej             # all rejections are false under global null
-    fdr = false_rejections / max(total_rejections, 1)
-    # realized FDR should not exceed q by more than Monte-Carlo slack
-    assert fdr <= q_level + 0.03, f"realized FDR {fdr:.3f} > {q_level}"
+        per_family_fdp.append(1.0 if int(np.sum(q < q_level)) > 0 else 0.0)
+    realized_fdr = float(np.mean(per_family_fdp))
+    assert realized_fdr <= q_level + 0.03, f"realized FDR {realized_fdr:.3f} > {q_level}"
