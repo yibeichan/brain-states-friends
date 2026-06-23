@@ -135,6 +135,34 @@ def test_null_self_calibration_is_uniform_not_anticonservative():
     assert sps.kstest(ps, "uniform").pvalue > 1e-3           # lenient uniformity
 
 
+def test_participation_ratio_known_rank():
+    from sm_alt_ica_diagnostics import participation_ratio
+    assert participation_ratio([1, 0, 0, 0]) == pytest.approx(1.0)      # rank-1
+    assert participation_ratio([1, 1, 1, 1]) == pytest.approx(4.0)      # flat -> 4
+
+
+def test_subspace_affinity_identical_and_rotated():
+    from sm_alt_ica_diagnostics import subspace_affinity
+    rng = np.random.default_rng(6)
+    P, K = 40, 5
+    M = rng.normal(size=(K, P))           # hmm_maps (K,P)
+    ica = M.T.copy()                      # column space == row space of M
+    cos = subspace_affinity(ica, M)
+    np.testing.assert_allclose(np.sort(cos)[::-1][:K], np.ones(K), atol=1e-8)
+
+
+def test_state_mean_geometry_flat_vs_dominant():
+    from sm_alt_ica_diagnostics import state_mean_geometry
+    n_pcs, P = 10, 30
+    rng = np.random.default_rng(7)
+    comps = np.linalg.qr(rng.normal(size=(P, n_pcs)))[0].T   # (n_pcs, P)
+    # dominant: one large state -> low effective rank
+    means = np.zeros((4, n_pcs)); means[0, 0] = 10.0; means[1:, 1] = 0.1
+    g = state_mean_geometry(means, comps, n_pcs, [0, 1, 2, 3])
+    assert g["eff_rank"] < 2.5 and g["k_active"] == 4 and g["n_pcs"] == n_pcs
+    assert 0.0 < g["eff_rank_norm"] <= 1.0
+
+
 def test_empirical_fdr_control_under_global_null():
     """Under the global null (observed drawn from the null model), BH on the
     per-rank p-vector must control FDR <= q. Tests BH applicability to the
