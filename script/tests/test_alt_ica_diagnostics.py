@@ -112,3 +112,28 @@ def test_null_self_calibration_is_uniform_not_anticonservative():
     assert 0.45 <= ps.mean() <= 0.55                         # calibrated, not biased
     assert (ps < 0.5).mean() >= 0.45                         # not anti-conservative
     assert sps.kstest(ps, "uniform").pvalue > 1e-3           # lenient uniformity
+
+
+def test_empirical_fdr_control_under_global_null():
+    """Under the global null (observed drawn from the null model), BH on the
+    per-rank p-vector must reject at rate <= q. Tests BH applicability to the
+    positively-dependent per-rank p's, not just the arithmetic."""
+    from utils.ica_states import subspace_rotation_null, spatial_match_pvalues
+    from utils.stats import fdr_with_nan
+    rng = np.random.default_rng(5)
+    n_pcs, P, K = 28, 48, 8
+    comps = np.linalg.qr(rng.normal(size=(P, n_pcs)))[0].T
+    q_level, n_families, false_rejections, total_rejections = 0.05, 200, 0, 0
+    for f in range(n_families):
+        hmm = rng.normal(size=(K, P))
+        null = subspace_rotation_null(comps, hmm, n_components=K, n_perm=300,
+                                      rng_seed=1000 + f)
+        obs = null[0]                       # 'observed' is itself a null draw
+        p = spatial_match_pvalues(obs, null[1:])
+        q = fdr_with_nan(p)
+        rej = int(np.sum(q < q_level))
+        total_rejections += rej
+        false_rejections += rej             # all rejections are false under global null
+    fdr = false_rejections / max(total_rejections, 1)
+    # realized FDR should not exceed q by more than Monte-Carlo slack
+    assert fdr <= q_level + 0.03, f"realized FDR {fdr:.3f} > {q_level}"
