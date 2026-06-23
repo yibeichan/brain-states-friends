@@ -93,6 +93,27 @@ def test_fdr_with_nan_excludes_nan_from_family_size():
     np.testing.assert_allclose(q[:3], expected_finite, atol=1e-12)  # family size = 3
 
 
+def test_build_evidence_rows_counts_and_below_null():
+    from sm_alt_ica_diagnostics import build_evidence_rows
+    summary = {
+        "sub_id": "sub-XX",
+        "by_K": {
+            "35": {"state_sets": {"eligible": {
+                "matched_r": [0.1, 0.5, 0.4],
+                "spatial_q": [1.0, 0.01, 0.2],
+                "null_mean": 0.3, "null_p95": 0.45}}},
+            "41": {"state_sets": {"eligible": {}}},  # empty -> skipped
+        },
+    }
+    rows = build_evidence_rows(summary)
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["sub"] == "sub-XX" and r["K"] == 35
+    assert r["n_surv"] == 1 and r["n_total"] == 3
+    assert r["mean_r"] == pytest.approx(np.mean([0.1, 0.5, 0.4]))
+    assert r["frac_below_null"] == pytest.approx(1 / 3)  # only 0.1 < 0.3
+
+
 def test_null_self_calibration_is_uniform_not_anticonservative():
     """Hold out each null draw as 'observed' vs the other n_perm-1; p must be
     ~Uniform and NOT systematically conservative (>0.5)."""
