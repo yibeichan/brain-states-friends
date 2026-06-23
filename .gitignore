@@ -1,0 +1,12 @@
+# uv / Python
+.venv/
+__pycache__/
+*.pyc
+
+# local machine config (paths) — never commit
+.env
+
+# analysis outputs and session scratch
+output/
+.claude/
+.superpowers/

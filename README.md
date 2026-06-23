@@ -57,20 +57,20 @@ expect *a priori*? Findings: [`docs/findings/sm_sim_prior_state_count.md`](docs/
 
 ## Running
 
-The scripts share the `main` branch's environment (`friends-states`); see the
-[`main` README](https://github.com/yibeichan/brain-states-friends/tree/main#environment)
-for setup. Paths are read from a local `.env` (`SCRATCH_DIR`, `BASE_DIR`, …);
-nothing is hardcoded. The `sim` supplement runs as-is; the `alt`/ICA supplement
-expects the relevant `output/` stages from a `main` pipeline run.
+This branch is a self-contained `uv` project. Set up once with `uv sync`, then
+run via `uv run`. Paths are read from a local `.env` (`SCRATCH_DIR`, `BASE_DIR`, …).
 
 ```bash
-# sim — standalone
-python script/sm_sim_prior_state_count.py
-python script/tests/test_sim_prior_state_count.py
+uv sync
 
-# alt / ICA — needs main-pipeline outputs (stages 03a/04/05e)
-python -m pytest script/tests/test_alt_ica_states.py   # unit tests (no data needed)
-sbatch script/sm_alt_ica_states.sh                 # or: python script/sm_alt_ica_states.py --help
+# sim — standalone
+uv run python script/sm_sim_prior_state_count.py
+uv run pytest script/tests/test_sim_prior_state_count.py
+
+# alt / ICA — needs main-pipeline outputs (stages 03a/04/05a/05e/06b)
+uv run pytest script/tests/test_alt_ica_states.py script/tests/test_alt_ica_diagnostics.py
+uv run python script/sm_alt_ica_diagnostics.py            # repertoire/convergence diagnostics
+sbatch script/sm_alt_ica_states.sh                        # or: uv run python script/sm_alt_ica_states.py --help
 ```
 
 ## Citation

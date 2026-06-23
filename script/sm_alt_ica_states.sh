@@ -28,9 +28,6 @@ SUB_ID="${SUB_ID:-${SUBJECTS[${SLURM_ARRAY_TASK_ID:-0}]}}"
 PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 VT="${VT:-0.95}"
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
-
 echo "=============================================="
 echo "sm_alt_ica_states - ICA Supplementary Analysis"
 echo "=============================================="
@@ -47,7 +44,7 @@ echo "=============================================="
 EXTRA_K="${EXTRA_K:-}"
 EXTRA_K_ARG="${EXTRA_K//:/,}"
 
-uv run --project "${PROJECT_DIR}" --no-sync python "${PROJECT_DIR}/script/sm_alt_ica_states.py" \
+uv run --project "${PROJECT_DIR}" python "${PROJECT_DIR}/script/sm_alt_ica_states.py" \
     --sub_id "$SUB_ID" \
     --parcellation "$PARCELLATION" \
     --vt "$VT" \
