@@ -1,7 +1,7 @@
 """Figure F5 - Cross-stimulus recurrence transfer (R5).
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
-Panels are per-cell, saved as separate .pdf + .png + .svg mini-figures for manual
+Panels are per-cell, saved as separate .png + .svg mini-figures for manual
 assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
 R5 claim (reframed 2026-06-12): a state's recurrence rank in Friends predicts
@@ -20,7 +20,7 @@ panel letter; the user arranges the composite.
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
 | A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Transfer-ρ by condition, grouped by stimulus type - Audiovisual film (4 Movie10 films) | Visual reading (Harry Potter) | Audio listening (Petit Prince); per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer is clearest for audiovisual film and weaker/variable for reduced-modality stimuli; within-film spread shown descriptively (fit-confounded, see supplement), NOT as a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
+| B | Transfer-ρ by condition (single strip; all active states). x = 4 Movie10 films + Harry Potter + Petit Prince; per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer clearest for audiovisual film, weaker/variable for reduced-modality stimuli; within-film spread descriptive (fit-confounded), NOT a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
 
 A `fig5_taxonomy_legend` file gives the 5-category color key for Panel A.
 
@@ -275,9 +275,10 @@ def panel_A_per_subject_scatter(
         _ax.plot(_xx, _b * _xx + _a, color="#D62728", lw=1.4, alpha=0.85,
                  zorder=2)
 
-        _ax.text(0.05, 0.95, f"{_sub.replace('sub-', 'S')}\nρ = {_rho:.2f}",
-                 transform=_ax.transAxes, ha="left", va="top", fontsize=6.5,
-                 bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="#DDDDDD", lw=0.5))
+        # Tag in the bottom-right (sparse corner) so it does not cover the
+        # top-left dots; no box.
+        _ax.text(0.96, 0.05, f"{_sub}\nρ = {_rho:.2f}",
+                 transform=_ax.transAxes, ha="right", va="bottom", fontsize=6.5)
         _ax.tick_params(labelsize=6)
         for _s in ("top", "right"):
             _ax.spines[_s].set_visible(False)
@@ -287,13 +288,10 @@ def panel_A_per_subject_scatter(
     _fig.supylabel("Mean Movie10 fractional occupancy", fontsize=7)
     _fig.subplots_adjust(left=0.09, right=0.985, bottom=0.11, top=0.98,
                          wspace=0.10, hspace=0.16)
-    _out_pdf = OUT_F5 / "fig5_A_recurrence_fo_scatter.pdf"
-    _fig.savefig(_out_pdf, bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT_F5 / "fig5_A_recurrence_fo_scatter.png",
-                 bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT_F5 / "fig5_A_recurrence_fo_scatter.svg",
-                 bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_out_pdf}")
+    _stem = OUT_F5 / "fig5_A_recurrence_fo_scatter"
+    _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
     return
 
@@ -319,7 +317,6 @@ def panel_B_transfer_by_condition(
 
     Per-subject markers (shape = subject, as in panel A; single neutral color).
     Cohort mean: dark line over the Movie10 films, dark ticks for HP and PP.
-    Per-condition cohort significance: Movie10 5/6 subjects, HP 2/5, PP 1/5;
     sub-04 lacks HP/PP, so only 5 markers appear in those groups.
     """
     _films = [("wolf", "Wolf of\nWall St."),
@@ -327,9 +324,6 @@ def panel_B_transfer_by_condition(
               ("bourne", "Bourne"),
               ("life", "Life")]
     _xlabels = [lab for _, lab in _films] + ["Harry\nPotter", "Petit\nPrince"]
-    _groups = [(0, len(_films) - 1, "Audiovisual film (Movie10)"),
-               (len(_films), len(_films), "Visual\nreading"),
-               (len(_films) + 1, len(_films) + 1, "Audio\nlistening")]
     _n_x = len(_xlabels)
     _rng = np.random.default_rng(20260526)
 
@@ -376,12 +370,6 @@ def panel_B_transfer_by_condition(
 
     _ax.axhline(0, color="#999999", lw=1.0, ls="--", zorder=1)
 
-    # Stimulus-type group labels beneath the per-condition ticks.
-    _tr = _ax.get_xaxis_transform()
-    for _lo, _hi, _lab in _groups:
-        _ax.text((_lo + _hi) / 2.0, -0.18, _lab, transform=_tr, ha="center",
-                 va="top", fontsize=6.5, color="#333333")
-
     _ax.set_xticks(range(_n_x))
     _ax.set_xticklabels(_xlabels, fontsize=6.5)
     _ax.set_ylabel("Recurrence → occupancy transfer ρ", fontsize=7)
@@ -394,14 +382,11 @@ def panel_B_transfer_by_condition(
     _ax.legend(handles=[_h_mean], loc="upper right",
                frameon=False, fontsize=6.5, handletextpad=0.4)
 
-    _fig.subplots_adjust(left=0.10, right=0.98, bottom=0.22, top=0.95)
-    _out_pdf = OUT_F5 / "fig5_B_transfer_by_condition.pdf"
-    _fig.savefig(_out_pdf, bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT_F5 / "fig5_B_transfer_by_condition.png",
-                 bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT_F5 / "fig5_B_transfer_by_condition.svg",
-                 bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_out_pdf}")
+    _fig.subplots_adjust(left=0.10, right=0.98, bottom=0.13, top=0.95)
+    _stem = OUT_F5 / "fig5_B_transfer_by_condition"
+    _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
     return
 
@@ -417,16 +402,14 @@ def taxonomy_legend(OUT_F5, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     _handles = [plt.Line2D([], [], marker="o", linestyle="none", markersize=7,
                            markerfacecolor=TAXONOMY_COLORS[_c], markeredgecolor="white",
                            label=_c) for _c in TAXONOMY_ORDER]
-    _fig = plt.figure(figsize=(2.1, 1.35))
+    # Horizontal legend: one row of 5 categories (matches Panel A width).
+    _fig = plt.figure(figsize=(6.7, 0.35))
     _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
-                handletextpad=0.5, labelspacing=0.6)
-    _out_pdf = OUT_F5 / "fig5_taxonomy_legend.pdf"
-    _fig.savefig(_out_pdf, bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT_F5 / "fig5_taxonomy_legend.png",
-                 bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT_F5 / "fig5_taxonomy_legend.svg",
-                 bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_out_pdf}")
+                ncol=5, handletextpad=0.4, columnspacing=1.2)
+    _stem = OUT_F5 / "fig5_taxonomy_legend"
+    _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
     return
 

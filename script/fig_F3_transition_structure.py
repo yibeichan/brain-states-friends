@@ -9,6 +9,12 @@ states, not random diffusion." Intro §5 commits to three findings -
 recurrence assortativity, FC-transition coupling, and network homophily "in
 most individuals."
 
+Panel division of labor: Panel A is DESCRIPTIVE - it shows *what* the state
+transition structure looks like (the sparse, directed transition repertoire
+per subject). Panel B is EXPLANATORY - it quantifies *why* that structure
+arises (assortativity, homophily, FC- and MFPT-coupling, each vs its null). A
+poses the structure; B explains it. The organization claims live only in B.
+
 Panel plan (chart families distinct per the manuscript-figure plot-type-variety
 rule; F1 already used bar / flow-Sankey / brain-map, so F2 avoids those within
 this figure):
@@ -19,24 +25,26 @@ separate files.
 
 | Panel | Content | Chart family | Source files | Output |
 |---|---|---|---|---|
-| A | Per-subject transition graphs, 1×6 small-multiples row (one mini graph per subject; nodes colored by dominant network, sized by recurrence; force-directed layout). Separate legend files. | network/graph | 06b transition_graph.graphml (×6 subj) | fig3_A_transition_graphs.{pdf,png,svg} + fig3_A_legend_networks.* + fig3_A_legend_recurrence.* |
-| B | Cross-subject consistency forest (4 metrics × 6 subjects; per-subject marker shapes, neutral color, no accent, no legend; assortativity CI; per-row null line) | point-based 1D | 06b transition_structure_summary.json (all subjects) | fig3_B_cross_subject_consistency.{pdf,png,svg} |
+| A | Per-subject directed state transition matrices, 2×3 small-multiples (full square; states ordered by dominant network then recurrence; self-transitions excluded; single-hue Greys cells; network margin ribbon). Separate legend files. | heatmap | 06b transition_graph.graphml (×6 subj) | fig3_A_transition_matrices.{png,svg} + fig3_A_legend_networks.{png,svg} + fig3_A_legend_prob.{png,svg} |
+| B | Cross-subject consistency forest (4 metrics × 6 subjects; 7in wide to match Panel A; per-subject marker shapes, neutral color; assortativity CI; per-row null line) + standalone subject-marker legend | point-based 1D | 06b transition_structure_summary.json (all subjects) | fig3_B_cross_subject_consistency.{png,svg} + fig3_B_legend_markers.{png,svg} |
 
 Design notes (2026-05-26 revision):
-  * Panel A: the MFPT landscape heatmap was the original design but told an
-    R1-reachability story; replaced by network-colored transition graphs (show
-    actual transitions + partial network clustering). Now a 1×6 per-subject
-    strip (not a single exemplar): states are subject-specific and transitions
-    are within-subject, so a single pooled/connected graph is undefined - the
-    honest cross-subject object is six independent graphs. Network palette is
-    colorblind-safe Okabe–Ito (plot_style.NETWORK_COLORS) - only ≤7 cortical
-    networks ever appear as dominant nodes (Vis/SomMot/DorsAttn/SalVentAttn/
-    Limbic/Cont/Default), so 7 CB-distinct hues suffice. Legends are separate
-    files per the assembly workflow (graph strip carries none).
+  * Panel A history: MFPT landscape heatmap (told an R1-reachability story) ->
+    network-colored force-directed graphs (1×6 strip; hairballs at print size,
+    transition structure illegible) -> 2×3 directed state transition matrices
+    (current). The matrices show the actual transition repertoire directly and
+    read at print size where the graphs did not. Six matrices, not one pooled
+    matrix: states are subject-specific and transitions are within-subject, so a
+    pooled matrix is undefined. Network palette is colorblind-safe Okabe–Ito
+    (plot_style.NETWORK_COLORS); only ≤7 cortical networks appear as dominant
+    (Vis/SomMot/DorsAttn/SalVentAttn/Limbic/Cont/Default). Legends are separate
+    files per the assembly workflow (the matrix grid carries none). Panel A is
+    descriptive (the transition phenomenon); the organization inferences are
+    Panel B's.
   * Old Panel B pooled FC-transition density was removed from the main figure:
     it was display-only, while the inferential statistics are the per-subject
     quantities summarized in the consistency forest. Keep this omission aligned
-    with the manuscript figure captions.
+    with docs/manuscript/figure_captions.md.
   * Panel B: subjects now use SUBJECT_MARKERS shapes (consistent with F4) in a
     single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51) is no
     longer accented - it is visible as the one homophily marker at/below the null
@@ -120,131 +128,162 @@ def load_summaries(SUBJECTS, TRANS_DIR, VT, json):
 
 
 @app.cell
-def panel_A_transition_graphs(
+def panel_A_transition_matrices(
     SUBJECTS, TRANS_DIR, VT, OUT_F3, nx, plt, np,
     NETWORK_COLORS, NETWORK_ORDER, display_network,
 ):
-    """Panel A - per-subject transition graphs, 1×6 small-multiples row.
+    """Panel A - per-subject state transition matrices, 2×3 small-multiples.
 
-    One mini directed-transition graph per subject (06b transition_graph.graphml:
-    model transmat_, self-loops removed, edges thresholded at P >= 0.01), drawn
-    as a 1-row × 6-column strip so the cohort spans the full top row of Fig 3
-    (width ≈ B + C). Each node is one active state:
-      - color = dominant network (CB-safe NETWORK_COLORS)
-      - size  = recurrence score (area ∝ recurrence; SAME scaling across all six)
-    Edges = transition probability (width + alpha ∝ weight, normalized PER subject
-    so each graph is individually legible). Layout = force-directed spring
-    (weighted by transition probability, fixed seed), so states the sequence
-    moves between most cluster together.
+    A is DESCRIPTIVE: it shows *what* the transition structure looks like - the
+    actual transition repertoire each subject's sequence uses. Panel B is
+    EXPLANATORY: it quantifies *why* the structure is shaped this way (the
+    functional-organization metrics). A poses the structure; B explains it.
 
-    Why six graphs, not one pooled graph: states are subject-specific (each
-    subject has its own HMM, states are NOT aligned across subjects) and
-    transitions exist only within a subject's own sequence - there is no
-    cross-subject edge and no pooled transition matrix. A single connected graph
-    is therefore undefined; the honest cross-subject object is six independent
-    graphs. Their shared signature - same-network nodes pulling into partial
-    local groups - is the visual counterpart of the network-homophily column in
-    Panel B (ratios 1.55–1.99 in five of six subjects).
+    One directed state-by-state transition matrix per subject (06b
+    transition_graph.graphml: model transmat_, self-loops removed, edges
+    thresholded at P >= 0.01). Row = from-state, col = to-state; the matrix is
+    asymmetric (only 84% of edges reciprocated), so the full square is shown.
+    The matrices show transitions are sparse - each state connects to only a few
+    others, far from an all-to-all (random-diffusion) matrix. States are ordered
+    by dominant network (canonical NETWORK_ORDER) then recurrence (descending)
+    for legibility. Cells use a single-hue (Greys) shared log scale so the only
+    categorical color lives on the network ribbon; zero / sub-threshold cells are
+    white. Self-transitions are excluded (a sticky-HMM diagonal would swamp the
+    repertoire).
 
-    Edges are UNDIRECTED: ~84% of directed edges are reciprocated, so arrowheads
-    add clutter without information; net directionality is a supplementary result.
+    A network-colored ribbon (grouped spans) on the top + left margins labels
+    each state's dominant network. No organization claim is made here - the
+    assortativity, homophily, and FC/MFPT-coupling inferences live entirely in
+    Panel B.
 
-    Legends are emitted as SEPARATE files (fig3_A_legend_networks,
-    fig3_A_legend_recurrence) per the user's assembly workflow - the graph strip
-    itself carries no legend.
+    Six matrices, not one pooled matrix: states are subject-specific (each
+    subject's own HMM, no cross-subject alignment) and transitions exist only
+    within a subject's sequence, so a pooled transition matrix is undefined.
+
+    Legends are SEPARATE files (fig3_A_legend_networks, fig3_A_legend_prob).
     """
+    from matplotlib.colors import LogNorm
+    from matplotlib.patches import Rectangle
+    from matplotlib.cm import ScalarMappable
+
+    _net_index = {_n: _i for _i, _n in enumerate(NETWORK_ORDER)}
+
+    # Pass 1: build each subject's network-ordered DIRECTED matrix (row = from,
+    # col = to; the matrix is asymmetric, so the full square is shown). Collect
+    # off-diagonal weights for a shared log scale + the networks present.
+    _data = {}
     _present_nets = set()
-    _fig, _axes = plt.subplots(1, len(SUBJECTS), figsize=(6.8, 1.32))
-    for _ax, _sub in zip(_axes, SUBJECTS):
+    _all_w = []
+    for _sub in SUBJECTS:
         _G = nx.read_graphml(TRANS_DIR / _sub / VT / "transition_graph.graphml")
-        _U = nx.Graph()
+        _nodes = list(_G.nodes())
+        _nets = {_n: _G.nodes[_n].get("dominant_network", "Unknown") for _n in _nodes}
+        _recs = {_n: float(_G.nodes[_n].get("recurrence_score", 0.0)) for _n in _nodes}
+        _order = sorted(_nodes, key=lambda _n: (_net_index.get(_nets[_n], 99), -_recs[_n]))
+        _idx = {_n: _i for _i, _n in enumerate(_order)}
+        _N = len(_order)
+        _M = np.zeros((_N, _N))
         for _u, _v, _d in _G.edges(data=True):
-            _w = float(_d.get("weight", 0.0))
-            if _U.has_edge(_u, _v):
-                _U[_u][_v]["weight"] = max(_U[_u][_v]["weight"], _w)
-            else:
-                _U.add_edge(_u, _v, weight=_w)
-        for _n in _G.nodes():
-            _U.add_node(_n)
+            if _u == _v:
+                continue
+            _M[_idx[_u], _idx[_v]] = max(_M[_idx[_u], _idx[_v]], float(_d.get("weight", 0.0)))
+        _ordered_nets = [_nets[_n] for _n in _order]
+        _present_nets.update(_ordered_nets)
+        _all_w.append(_M[_M > 0])
+        _data[_sub] = (_M, _ordered_nets)
+        print(f"  Panel A {_sub}: {_N} states, {int((_M > 0).sum())} directed edges")
 
-        _nets = {_n: _G.nodes[_n].get("dominant_network", "Unknown")
-                 for _n in _G.nodes()}
-        _recs = {_n: float(_G.nodes[_n].get("recurrence_score", 0.0))
-                 for _n in _G.nodes()}
-        _present_nets.update(_nets.values())
+    _all_w = np.concatenate(_all_w)
+    # Tight log scale (5/95) so the mid-range transitions read; the few
+    # strongest cells saturate to black (colorbar marked "extend=both").
+    _vmin = max(float(np.percentile(_all_w, 5)), 1e-3)
+    _vmax = float(np.percentile(_all_w, 95))
+    _cmap = plt.get_cmap("Greys").copy()
+    _cmap.set_bad("white")
+    _norm = LogNorm(vmin=_vmin, vmax=_vmax)
 
-        _pos = nx.spring_layout(_U, weight="weight", k=0.55, iterations=400, seed=7)
-        _nodelist = list(_G.nodes())
-        _node_colors = [NETWORK_COLORS.get(_nets[_n], "#BBBBBB") for _n in _nodelist]
-        _node_sizes = [5 + 90 * _recs[_n] for _n in _nodelist]  # shared scaling
+    def _groups(_seq):
+        _g, _s = [], 0
+        for _i in range(1, len(_seq) + 1):
+            if _i == len(_seq) or _seq[_i] != _seq[_s]:
+                _g.append((_seq[_s], _s, _i))
+                _s = _i
+        return _g
 
-        _edgelist = list(_U.edges(data=True))
-        _ew = np.array([_d["weight"] for *_e, _d in _edgelist])
-        _wmax = _ew.max() if _ew.size else 1.0
-        _edge_widths = 0.11 + 0.85 * (_ew / _wmax)
-        _edge_alphas = np.clip(0.12 + 0.6 * (_ew / _wmax), 0.12, 0.70)
-        for (_u, _v, _d), _lw, _al in zip(_edgelist, _edge_widths, _edge_alphas):
-            _ax.plot([_pos[_u][0], _pos[_v][0]], [_pos[_u][1], _pos[_v][1]],
-                     color="#222222", lw=_lw, alpha=_al, zorder=1,
-                     solid_capstyle="round")
-        nx.draw_networkx_nodes(
-            _G, _pos, nodelist=_nodelist, node_color=_node_colors,
-            node_size=_node_sizes, edgecolors="white", linewidths=0.4, ax=_ax,
-        )
-        _ax.set_axis_off()
-        _ax.margins(0.08)
-        _ax.set_title(_sub.replace("sub-", "S"), fontsize=6.5, pad=1.5)
-        print(f"  Panel A {_sub}: {_G.number_of_nodes()} nodes, "
-              f"{_G.number_of_edges()} edges")
+    # Pass 2: render 2×3, full directed matrix, with one network ribbon (grouped
+    # spans) on the top + left margins.
+    _fig, _axes = plt.subplots(2, 3, figsize=(7.0, 5.0))
+    for _ax, _sub in zip(_axes.ravel(), SUBJECTS):
+        _M, _onets = _data[_sub]
+        _N = _M.shape[0]
+        _rib = max(1.0, 0.035 * _N)
+        _Mm = np.ma.masked_where(_M <= 0, _M)
+        _ax.imshow(_Mm, cmap=_cmap, norm=_norm, interpolation="nearest",
+                   aspect="equal", extent=[0, _N, _N, 0], zorder=2)
+        for _net, _s, _e in _groups(_onets):
+            _c = NETWORK_COLORS.get(_net, "#BBBBBB")
+            _ax.add_patch(Rectangle((_s, -_rib), _e - _s, _rib, color=_c,
+                                    lw=0, zorder=3, clip_on=False))
+            _ax.add_patch(Rectangle((-_rib, _s), _rib, _e - _s, color=_c,
+                                    lw=0, zorder=3, clip_on=False))
+        for _net, _s, _e in _groups(_onets)[1:]:
+            _ax.axvline(_s, color="white", lw=0.5, zorder=2.5)
+            _ax.axhline(_s, color="white", lw=0.5, zorder=2.5)
+        _ax.set_xlim(-_rib, _N)
+        _ax.set_ylim(_N, -_rib)
+        _ax.set_xticks([])
+        _ax.set_yticks([])
+        _ax.set_title(_sub, fontsize=9, pad=2)
+        for _spine in _ax.spines.values():
+            _spine.set_visible(False)
 
-    _fig.subplots_adjust(left=0.005, right=0.995, bottom=0.01, top=0.90, wspace=0.04)
-    _stem = OUT_F3 / "fig3_A_transition_graphs"
-    _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
+    _left, _bottom, _top, _right = 0.045, 0.045, 0.94, 0.99
+    _fig.subplots_adjust(left=_left, right=_right, bottom=_bottom, top=_top,
+                         wspace=0.08, hspace=0.06)
+    # Figure-level direction labels, centered over the whole grid and placed
+    # tight against it: cell (row i, col j) = P(state i -> state j), so
+    # rows = from, columns = to.
+    _y_c = 0.5 * (_bottom + _top)
+    _x_c = 0.5 * (_left + _right)
+    _fig.text(0.006, _y_c, "From state", rotation=90, ha="left", va="center",
+              fontsize=10)
+    _fig.text(_x_c, 0.006, "To state", ha="center", va="bottom", fontsize=10)
+    _stem = OUT_F3 / "fig3_A_transition_matrices"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf (+ .png, .svg)")
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
 
     # ── Separate legend files ──────────────────────────────────────────────
-    # (1) Networks present across the six graphs, in canonical order.
+    # (1) Network color key (networks present, canonical order), one column.
     _present = [_net for _net in NETWORK_ORDER if _net in _present_nets]
     _net_handles = [
-        plt.Line2D([], [], marker="o", ls="none",
-                   color=NETWORK_COLORS.get(_net, "#BBBBBB"),
-                   mec="white", mew=0.4, ms=6.5, label=display_network(_net))
+        plt.Rectangle((0, 0), 1, 1, facecolor=NETWORK_COLORS.get(_net, "#BBBBBB"),
+                      edgecolor="#666666", linewidth=0.4, label=display_network(_net))
         for _net in _present
     ]
-    _figL, _axL = plt.subplots(figsize=(4.7, 0.34))
+    _figL, _axL = plt.subplots(figsize=(1.5, max(0.5, 0.26 * len(_present))))
     _axL.set_axis_off()
-    _axL.legend(handles=_net_handles, loc="center", frameon=False, fontsize=6.5,
-                ncol=len(_present), handletextpad=0.2, columnspacing=0.7)
-    _figL.savefig(OUT_F3 / "fig3_A_legend_networks.pdf", bbox_inches="tight",
-                  pad_inches=0.02)
+    _axL.legend(handles=_net_handles, loc="center", frameon=False, fontsize=7,
+                ncol=1, handlelength=1.0, handletextpad=0.4)
     _figL.savefig(OUT_F3 / "fig3_A_legend_networks.png", bbox_inches="tight",
                   pad_inches=0.02, dpi=300)
     _figL.savefig(OUT_F3 / "fig3_A_legend_networks.svg", bbox_inches="tight",
                   pad_inches=0.02)
     plt.close(_figL)
 
-    # (2) Recurrence size key (3 reference dots; same area scaling as the graphs).
-    _size_handles = [
-        plt.Line2D([], [], marker="o", ls="none", color="#BBBBBB",
-                   mec="white", mew=0.5, ms=np.sqrt(5 + 90 * _r) * 0.9,
-                   label=f"{_r:.2f}")
-        for _r in [0.2, 0.5, 0.85]
-    ]
-    _figR, _axR = plt.subplots(figsize=(1.8, 0.42))
-    _axR.set_axis_off()
-    _axR.legend(handles=_size_handles, loc="center", frameon=False, fontsize=6.5,
-                ncol=3, title="Recurrence", title_fontsize=6.5,
-                handletextpad=0.35, columnspacing=0.9, borderpad=0.25)
-    _figR.savefig(OUT_F3 / "fig3_A_legend_recurrence.pdf", bbox_inches="tight",
-                  pad_inches=0.02)
-    _figR.savefig(OUT_F3 / "fig3_A_legend_recurrence.png", bbox_inches="tight",
+    # (2) Shared transition-probability colorbar.
+    _sm = ScalarMappable(norm=_norm, cmap=_cmap)
+    _sm.set_array([])
+    _figC, _axC = plt.subplots(figsize=(2.0, 0.34))
+    _cb = _figC.colorbar(_sm, cax=_axC, orientation="horizontal", extend="both")
+    _cb.set_label("Transition probability", fontsize=7)
+    _cb.ax.tick_params(labelsize=6)
+    _figC.savefig(OUT_F3 / "fig3_A_legend_prob.png", bbox_inches="tight",
                   pad_inches=0.02, dpi=300)
-    _figR.savefig(OUT_F3 / "fig3_A_legend_recurrence.svg", bbox_inches="tight",
+    _figC.savefig(OUT_F3 / "fig3_A_legend_prob.svg", bbox_inches="tight",
                   pad_inches=0.02)
-    plt.close(_figR)
+    plt.close(_figC)
     print(f"saved: legends (networks={_present})")
     return
 
@@ -302,7 +341,7 @@ def panel_B_cross_subject_consistency(
 
     _n_rows = len(_metrics)
     _fig, _axes = plt.subplots(
-        _n_rows, 1, figsize=(3.45, 3.15), sharex=False,
+        _n_rows, 1, figsize=(7.0, 3.3), sharex=False,   # match Panel A width
     )
     _rng = np.random.default_rng(20260526)
 
@@ -339,10 +378,10 @@ def panel_B_cross_subject_consistency(
         _ax.set_yticks([])
         # The two FC rows share one grouped label drawn below; blank them here.
         _ax.set_ylabel("" if _key in _rho_keys else _label,
-                       rotation=0, ha="right", va="center", fontsize=6.5,
+                       rotation=0, ha="right", va="center", fontsize=7.5,
                        labelpad=2)
-        _ax.tick_params(axis="x", labelsize=5.5)
-        _ax.set_xlabel(_xlabel, fontsize=6.5)
+        _ax.tick_params(axis="x", labelsize=6.5)
+        _ax.set_xlabel(_xlabel, fontsize=7.5)
         for _s in ("top", "right", "left"):
             _ax.spines[_s].set_visible(False)
         if _key in _rho_keys:
@@ -352,7 +391,7 @@ def panel_B_cross_subject_consistency(
             _pad = 0.10 * (_hi - _lo + 1e-9)
             _ax.set_xlim(_lo - _pad, _hi + _pad)
 
-    _fig.subplots_adjust(left=0.22, right=0.975, bottom=0.10, top=0.99, hspace=0.95)
+    _fig.subplots_adjust(left=0.135, right=0.99, bottom=0.13, top=0.98, hspace=0.95)
 
     # Group the two functional-connectivity rows (3 & 4) under one label + a
     # left square bracket, since they are the same variable. Positions are in
@@ -360,20 +399,37 @@ def panel_B_cross_subject_consistency(
     import matplotlib.lines as _ml
     _ptop = _axes[2].get_position(); _pbot = _axes[3].get_position()
     _y0, _y1, _yc = _pbot.y0, _ptop.y1, 0.5 * (_pbot.y0 + _ptop.y1)
-    _xb, _tk = 0.157, 0.011
+    _xb, _tk = 0.085, 0.007
     for _xs, _ys in (([_xb, _xb], [_y0, _y1]),
                      ([_xb, _xb + _tk], [_y1, _y1]),
                      ([_xb, _xb + _tk], [_y0, _y0])):
         _fig.add_artist(_ml.Line2D(_xs, _ys, color="0.4", lw=1.0))
-    _fig.text(_xb - 0.010, _yc, "Functional\nconnectivity",
-              rotation=90, ha="right", va="center", fontsize=6.5)
+    _fig.text(_xb - 0.006, _yc, "Functional\nconnectivity",
+              rotation=90, ha="right", va="center", fontsize=7.5)
 
     _stem = OUT_F3 / "fig3_B_cross_subject_consistency"
-    _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf (+ .png, .svg)")
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
+
+    # Subject -> marker key (shared project-wide; same shapes as Figs 1 & 5),
+    # neutral color, one column.
+    _mk_handles = [
+        plt.Line2D([], [], marker=SUBJECT_MARKERS[_sub], ls="none",
+                   color=SUBJECT_NEUTRAL, mec="white", mew=0.5, ms=6, label=_sub)
+        for _sub in SUBJECTS
+    ]
+    _figM, _axM = plt.subplots(figsize=(1.15, 1.9))
+    _axM.set_axis_off()
+    _axM.legend(handles=_mk_handles, loc="center", frameon=False, fontsize=7,
+                ncol=1, handlelength=1.0, handletextpad=0.4)
+    _figM.savefig(OUT_F3 / "fig3_B_legend_markers.png", bbox_inches="tight",
+                  pad_inches=0.02, dpi=300)
+    _figM.savefig(OUT_F3 / "fig3_B_legend_markers.svg", bbox_inches="tight",
+                  pad_inches=0.02)
+    plt.close(_figM)
+    print("saved: fig3_B_legend_markers.png (+ .svg)")
     return
 
 

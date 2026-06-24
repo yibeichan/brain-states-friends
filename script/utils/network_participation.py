@@ -463,6 +463,96 @@ def plot_network_participation(
     plt.close(fig)
 
 
+def plot_network_pie_mosaic(
+    metrics: pd.DataFrame,
+    subject: str,
+    network_order: Sequence[str],
+    network_colors: Mapping[str, str],
+    output_stem: str | Path,
+    ncols: int = 8,
+    fig_w: float = 7.0,
+) -> int:
+    """Per-state pie mosaic for one subject's content-eligible states.
+
+    Each mini-pie is one state's canonical-network composition (13 shares),
+    colored by ``network_colors`` (shared with the Panel B Sankey), sorted by
+    dominant network then by largest-share. This is the per-state complement to
+    the aggregate Sankey: a Sankey cannot distinguish "every state is
+    multi-network" from "each state is single-network but different states pick
+    different networks". The mosaic shows the former directly - no pie is a
+    single solid wedge. Returns the number of states drawn. Saves PNG + SVG.
+    """
+    import matplotlib.pyplot as plt
+
+    sub = metrics[metrics["subject"] == subject].copy()
+    if sub.empty:
+        raise ValueError(f"No content-eligible states for {subject}")
+
+    share_cols = [f"network_share_{net}" for net in network_order]
+    order_index = {net: i for i, net in enumerate(network_order)}
+    sub["_domidx"] = sub["top1_network"].map(order_index)
+    sub = sub.sort_values(["_domidx", "top1_share"], ascending=[True, False])
+
+    colors = [network_colors[net] for net in network_order]
+    n = len(sub)
+    nrows = int(np.ceil(n / ncols))
+    cell = fig_w / ncols
+    output_stem = Path(output_stem)
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_w, cell * nrows))
+    axes = np.atleast_1d(axes).ravel()
+    for ax, (_, row) in zip(axes, sub.iterrows()):
+        comp = np.array([float(row[c]) for c in share_cols])
+        ax.pie(
+            comp, colors=colors, startangle=90, counterclock=False,
+            wedgeprops={"edgecolor": "white", "linewidth": 0.3},
+        )
+        ax.set_aspect("equal")
+        ax.text(0.5, 0.02, f"State {int(row['state'])}", transform=ax.transAxes,
+                ha="center", va="top", fontsize=10)
+    for ax in axes[n:]:
+        ax.axis("off")
+
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01,
+                        wspace=0.05, hspace=0.12)
+    for suffix in (".png", ".svg"):
+        fig.savefig(output_stem.with_suffix(suffix), bbox_inches="tight",
+                    pad_inches=0.02, dpi=300)
+    plt.close(fig)
+    return n
+
+
+def plot_network_legend(
+    network_order: Sequence[str],
+    network_colors: Mapping[str, str],
+    output_stem: str | Path,
+    display_fn=None,
+    ncol: int = 7,
+    fontsize: int = 8,
+    fig_w: float = 7.0,
+) -> None:
+    """Standalone network color key shared by the pie mosaics. Saves PNG + SVG."""
+    import matplotlib.pyplot as plt
+
+    output_stem = Path(output_stem)
+    _label = display_fn if display_fn is not None else (lambda x: x)
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, facecolor=network_colors[net],
+                      edgecolor="#666666", linewidth=0.4, label=_label(net))
+        for net in network_order
+    ]
+    _nrows = int(np.ceil(len(network_order) / ncol))
+    fig, ax = plt.subplots(figsize=(fig_w, max(0.5, 0.28 * _nrows)))
+    ax.axis("off")
+    ax.legend(handles=handles, loc="center", ncol=ncol, frameon=False,
+              fontsize=fontsize, handlelength=1.0, handletextpad=0.4,
+              columnspacing=1.2)
+    for suffix in (".png", ".svg"):
+        fig.savefig(output_stem.with_suffix(suffix), bbox_inches="tight",
+                    pad_inches=0.02, dpi=300)
+    plt.close(fig)
+
+
 def _ordered_categories(
     metrics: pd.DataFrame, category_order: Sequence[str] | None
 ) -> list[str]:

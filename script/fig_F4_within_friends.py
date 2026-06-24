@@ -26,7 +26,7 @@ depends only on (subject, lag): the 6 timing regressors carry no model features.
 Reuse is guarded by full-key equivalence asserts (lag, chance_level, n_eligible,
 eligibility_source); any mismatch hard-stops (recompute is out of scope).
 
-No on-figure panel labels / titles (added in assembly). Saves PDF + PNG + SVG.
+No on-figure panel labels / titles (added in assembly). Saves PNG + SVG.
 """
 from __future__ import annotations
 
@@ -229,7 +229,7 @@ def render_within_panel(panel, rows, ylim):
     shared ``ylim`` (passed from main) is identical across A/B/C so absolute
     magnitudes are directly comparable between modalities."""
     color = modality_color(panel["modality"])
-    fig, ax = plt.subplots(figsize=(2.0, 1.9))
+    fig, ax = plt.subplots(figsize=(7 / 3, 1.9))   # one of three lanes across 7in
     for r in rows:
         xs, acc, pk = r["rel_depth"], r["acc"], r["peak_layer"]
         # One colour per modality; subjects distinguished by marker at the peak.
@@ -247,10 +247,13 @@ def render_within_panel(panel, rows, ylim):
     ax.set_xlim(0, 1)
     ax.set_xticks([0, 0.5, 1.0])
     ax.set_xlabel("relative depth", fontsize=6.5)
-    ax.set_ylabel("balanced accuracy", fontsize=6.5)
-    ax.set_title(MODEL_DISPLAY[panel["model"]], fontsize=7)
+    # Shared y-axis lives in a separate file (fig4_ABC_yaxis); panels drop it.
+    ax.set_yticks([])
+    # Two-line title: model, then modality directly below (tight, centered).
+    ax.set_title(f"{MODEL_DISPLAY[panel['model']]}\n({panel['modality']})",
+                 fontsize=7, linespacing=0.9)
     ax.tick_params(labelsize=6)
-    for spine in ("top", "right"):
+    for spine in ("top", "right", "left"):
         ax.spines[spine].set_visible(False)
 
     _save(fig, f"fig4_{panel['name']}_within")
@@ -258,6 +261,23 @@ def render_within_panel(panel, rows, ylim):
           f"peak rel-depth {min(r['peak_rel'] for r in rows):.2f}–"
           f"{max(r['peak_rel'] for r in rows):.2f}, "
           f"floor-exceed {sum(r['exceeds_floor'] for r in rows)}/{len(rows)}")
+
+
+def make_within_yaxis(ylim):
+    """Standalone shared y-axis for the within-Friends panels A/B/C, emitted as
+    a separate file (the panels drop their inline y-axis to reach the 7/3-inch
+    lane width). Same ylim as A/B/C, so absolute magnitudes stay comparable."""
+    fig, ax = plt.subplots(figsize=(0.62, 1.9))
+    if ylim:
+        ax.set_ylim(*ylim)
+    ax.set_xlim(0, 1)
+    ax.set_xticks([])
+    ax.set_ylabel("balanced accuracy", fontsize=6.5)
+    ax.tick_params(labelsize=6)
+    for spine in ("top", "right", "bottom"):
+        ax.spines[spine].set_visible(False)
+    _save(fig, "fig4_ABC_yaxis")
+    print("  ABC_yaxis (separate shared y-axis) rendered.")
 
 
 def make_subject_legend():
@@ -279,7 +299,7 @@ def make_subject_legend():
 
 
 def _save(fig, stem):
-    for ext in ("pdf", "png", "svg"):
+    for ext in ("png", "svg"):
         fig.savefig(OUT_DIR / f"{stem}.{ext}",
                     bbox_inches="tight", pad_inches=0.02,
                     dpi=300 if ext == "png" else None)
@@ -363,7 +383,9 @@ def render_panel_d():
     cmap = plt.get_cmap("cividis_r")            # deep (high rel-depth) → dark
     norm = plt.Normalize(0.0, 1.0)
     nr, nc = len(STIM_ROWS), len(MOD_COLS)
-    fig, ax = plt.subplots(figsize=(3.9, 3.4))
+    # 7-inch-wide grid (3 modality columns => 7/3 each, matching A/B/C and
+    # E/F/G lanes); wide-short cells (aspect auto) so the grid is not tall.
+    fig, ax = plt.subplots(figsize=(8.0, 2.9))
 
     for ri, (stim, _) in enumerate(STIM_ROWS):
         y = nr - 1 - ri                          # Movie10 at top
@@ -406,23 +428,25 @@ def render_panel_d():
     ax.tick_params(length=0)
     for spine in ax.spines.values():
         spine.set_visible(False)
-    ax.set_aspect("equal")
+    # Fix the grid (3 columns) to exactly 7 inches: 8.0 * (1.0 - 0.125) = 7.0,
+    # leaving 1.0in at left for the stimulus-row labels. aspect "auto" lets the
+    # cells be wide and short. Each column is then 7/3in, matching A/B/C, E/F/G.
+    fig.subplots_adjust(left=0.125, right=1.0, bottom=0.13, top=0.93)
 
     _save(fig, "fig4_D_transfer_depth_grid")
 
-    # Colorbar emitted as a SEPARATE file for manual assembly - kept off the grid
-    # so the grid's width is unencumbered (and matches the per-film panels).
-    cfig, cax = plt.subplots(figsize=(0.45, 2.2))
+    # Colorbar emitted as a SEPARATE file for manual assembly, now HORIZONTAL
+    # with the label and ticks along the bottom.
+    cfig, cax = plt.subplots(figsize=(2.2, 0.5))
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = cfig.colorbar(sm, cax=cax, ticks=[0, 0.5, 1.0])
+    cbar = cfig.colorbar(sm, cax=cax, orientation="horizontal", ticks=[0, 0.5, 1.0])
     cbar.set_label("transfer peak relative depth", fontsize=6.5)
-    cbar.ax.set_yticklabels(["0\nshallow", "0.5\nmid", "1.0\ndeep"], fontsize=6.5)
-    # Ticks + label on the LEFT (flipped) so the bar sits to the right of them.
-    cbar.ax.yaxis.set_ticks_position("left")
-    cbar.ax.yaxis.set_label_position("left")
+    cbar.ax.set_xticklabels(["0\nshallow", "0.5\nmid", "1.0\ndeep"], fontsize=6.5)
+    cbar.ax.xaxis.set_ticks_position("bottom")
+    cbar.ax.xaxis.set_label_position("bottom")
     _save(cfig, "fig4_D_colorbar")
-    print("  D_transfer_depth_grid + D_colorbar (separate) rendered.")
+    print("  D_transfer_depth_grid + D_colorbar (separate, horizontal) rendered.")
 
 
 # ── Panel E: Movie10 video per-film depth gradient (secondary companion) ────────
@@ -493,7 +517,7 @@ def collect_perfilm(model, n_layers):
 def render_perfilm(modality, model, n_layers, letter, series, ylim):
     """One small Movie10 per-film depth-profile line plot for a modality."""
     xs = np.arange(n_layers) / (n_layers - 1)
-    fig, ax = plt.subplots(figsize=(0.9, 1.25))     # ~one heatmap-column wide (sparkline)
+    fig, ax = plt.subplots(figsize=(7 / 3, 1.25))   # one heatmap-column wide (= D column, = A/B/C lane)
     for s in series:
         ax.fill_between(xs, s["mean"] - s["sem"], s["mean"] + s["sem"],
                         color=s["color"], alpha=0.18, linewidth=0)
@@ -678,7 +702,7 @@ def render_supp_negcontrol():
             ax.spines[spine].set_visible(False)
     axes[0].set_ylabel("NES at D1 peak cell", fontsize=6.5)
     axes[0].legend(fontsize=6, loc="upper right", frameon=False)
-    for ext in ("pdf", "png", "svg"):
+    for ext in ("png", "svg"):
         fig.savefig(SUPP_DIR / f"figS_R4b_negcontrol_triple.{ext}",
                     bbox_inches="tight", pad_inches=0.02,
                     dpi=300 if ext == "png" else None)
@@ -698,6 +722,7 @@ def main():
     within_ylim = (lo - pad, hi + pad)
     for panel in WITHIN_PANELS:
         render_within_panel(panel, all_rows[panel["name"]], within_ylim)
+    make_within_yaxis(within_ylim)
     make_subject_legend()
     render_panel_d()
     render_perfilm_trio()
