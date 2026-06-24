@@ -17,10 +17,17 @@ rank ordering of recurrence reproduces under independent within-subject re-fits
 (split-half reliability). The recurrence x dwell-independence panel was moved out
 of R1 (off-message; belongs with 06a temporal dynamics).
 
+Panels A and B of Figure 1 are the brain-state element schematics (mean
+activation, functional connectivity, dwell/occupancy, transition probability)
+composed manually during assembly; this script produces only panels C and D.
+
 | Panel | Content | Chart family | Source | Output |
 |---|---|---|---|---|
-| A | Per-subject recurrence beeswarm (active states, neutral, density-stacked) + bounded half-KDE | point-based 1D + distribution | 06a state_summary_table.csv (recurrence_score) | fig1_A_recurrence_beeswarm.{pdf,png,svg} |
-| B | Per-subject split-half reliability scatter (recurrence half A vs half B, matched states) | scatter | 04rb_split_half (hungarian_matching + half_invariants + split_half_reliability) | fig1_B_split_half_reliability.{pdf,png,svg} |
+| A, B | Brain-state element schematics, added manually during assembly | schematic | n/a | n/a |
+| C | Per-subject recurrence beeswarm, decomposed into one strip file per subject (active states, density-stacked, dot color = mean dwell). x-ticks + axis label on sub-01 only. | point-based 1D | 06a state_summary_table.csv (recurrence_score, mean_dwell_s) | fig1_C_<sub>_recurrence.{png,svg} (6 files) + fig1_C_legend_dwell.{png,svg} |
+| D | Per-subject split-half reliability scatter (recurrence half A vs half B, matched states) + standalone subject->marker key | scatter | 04rb_split_half (hungarian_matching + half_invariants + split_half_reliability) | fig1_D_split_half_reliability.{png,svg} + fig1_D_legend_markers.{png,svg} |
+
+All panels save PNG + SVG only (no PDF).
 
 Key data facts (audited 2026-06-10):
   * Active states per subject (= state_summary_table.csv row count): sub-01 46,
@@ -79,7 +86,15 @@ def config(Path, os):
     # Single neutral dot color - R1 carries no taxonomy, so dots are uncolored
     # by category. Deliberately not one of the R2 category colors.
     DOT_COLOR = "#44546A"
-    return SUBJECTS, BLOCKS_DIR, SPLITHALF_DIR, OUT_F1, VT, DOT_COLOR
+
+    # Shared legibility scheme (consistent across all F1 panels).
+    FS_TICK = 7
+    FS_LABEL = 8
+    FS_ANNOT = 8
+    DOT_S = 26
+    FIG_W = 7.0
+    return (SUBJECTS, BLOCKS_DIR, SPLITHALF_DIR, OUT_F1, VT, DOT_COLOR,
+            FS_TICK, FS_LABEL, FS_ANNOT, DOT_S, FIG_W)
 
 
 @app.cell
@@ -103,29 +118,33 @@ def load_active_states(SUBJECTS, BLOCKS_DIR, VT, pd, np):
 
 
 @app.cell
-def panel_A_beeswarm(active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, plt, np):
-    """Panel A - per-subject recurrence beeswarm, colored by mean dwell time.
+def panel_C_beeswarm(
+    active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, FS_TICK, FS_LABEL, DOT_S,
+    FIG_W, plt, np
+):
+    """Panel C - per-subject recurrence beeswarm, decomposed into one strip per
+    subject plus a single shared dwell colorbar (the legend).
 
-    x = recurrence (0 -> ~0.93); one row per subject (sub-01 bottom), each row
-    drawn with that subject's marker shape (the project-wide subject key, shared
-    with Figures 3 and 5). Dots are stacked upward within fine x-bins (beeswarm)
-    so vertical height reflects local density across the graded recurrence
-    distribution. Dot color = the state's
-    mean dwell time (shared viridis scale, colorbar at right): dwell is a state
-    property orthogonal to the source taxonomy (Figure 2), and its scatter across
-    the recurrence axis shows recurrence and dwell are independent.
+    Each strip: x = recurrence (0 -> ~0.93), drawn with that subject's marker
+    shape (the project-wide subject key, shared with Figures 3 and 5). Dots are
+    stacked upward within fine x-bins (beeswarm) so height reflects local
+    density across the graded recurrence distribution. Dot color = the state's
+    mean dwell time (shared viridis scale across all strips): dwell is a state
+    property orthogonal to the source taxonomy (Figure 2), and its scatter
+    across the recurrence axis shows recurrence and dwell are independent.
 
-    Channels: x = recurrence, y(row)+marker = subject, stack height = density,
-    color = mean dwell. No taxonomy encoding (that is Figure 2).
+    All strips share x-limits, density scaling, dwell norm, and width so they
+    align when stacked in assembly. Only sub-01 carries x-tick labels and the
+    axis label; the others keep the vertical gridlines for alignment but hide
+    tick text. No taxonomy encoding (that is Figure 2).
     """
-    import matplotlib.cm as cm
     from matplotlib.colors import Normalize
 
     _all_dwell = np.concatenate(
         [active[_s]["mean_dwell_s"].values.astype(float) for _s in SUBJECTS]
     )
     _all_dwell = _all_dwell[np.isfinite(_all_dwell)]
-    _cmap = cm.get_cmap("viridis")
+    _cmap = plt.get_cmap("viridis")
     _norm = Normalize(vmin=float(np.nanpercentile(_all_dwell, 2)),
                       vmax=float(np.nanpercentile(_all_dwell, 95)))
 
@@ -152,43 +171,57 @@ def panel_A_beeswarm(active, SUBJECTS, OUT_F1, SUBJECT_MARKERS, plt, np):
         _prep[_sub] = (_rec, _dwell, _yoff)
         _gmax = max(_gmax, _mx)
 
-    # 6 stacked long subplots (one per subject), sub-01 bottom, shared x-axis.
-    _order = list(reversed(SUBJECTS))
-    _fig, _axes = plt.subplots(
-        len(SUBJECTS), 1, figsize=(6.7, 5.15), sharex=True,
-        gridspec_kw={"hspace": 0.28},
-    )
-    for _ax, _sub in zip(_axes, _order):
+    # One strip file per subject. Height scales with the shared density max so
+    # dots are not squashed; sub-01 gets extra room for the x-axis label.
+    _row_h = 0.32 + 0.085 * _gmax
+    for _sub in SUBJECTS:
         _rec, _dwell, _yoff = _prep[_sub]
+        _is_bottom = _sub == "sub-01"
+        _h = _row_h + (0.42 if _is_bottom else 0.0)
+        _fig, _ax = plt.subplots(figsize=(FIG_W, _h))
         _ax.scatter(
-            _rec, _yoff, s=22, c=_dwell, cmap=_cmap, norm=_norm,
+            _rec, _yoff, s=DOT_S, c=_dwell, cmap=_cmap, norm=_norm,
             marker=SUBJECT_MARKERS[_sub], edgecolor="white", linewidth=0.3,
             alpha=0.95, zorder=3,
         )
         _ax.set_ylim(-0.6, _gmax + 0.6)
         _ax.set_yticks([])
-        _ax.set_ylabel(_sub, rotation=0, ha="right", va="center", fontsize=6.5)
+        _ax.set_ylabel(_sub, rotation=0, ha="right", va="center",
+                       fontsize=FS_LABEL)
         _ax.set_xlim(-0.01, 1.0)
-        _ax.xaxis.grid(True, linestyle=":", linewidth=0.5, color="#E6E6E6", zorder=0)
+        _ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        _ax.xaxis.grid(True, linestyle=":", linewidth=0.5, color="#E6E6E6",
+                       zorder=0)
         _ax.set_axisbelow(True)
         for _s in ("top", "right", "left"):
             _ax.spines[_s].set_visible(False)
+        if _is_bottom:
+            _ax.set_xlabel("Recurrence (fraction of episodes active)",
+                           fontsize=FS_LABEL)
+            _ax.tick_params(axis="x", labelsize=FS_TICK)
+        else:
+            _ax.tick_params(axis="x", labelbottom=False, length=0)
 
-    _axes[-1].set_xlabel("Recurrence (fraction of episodes active)", fontsize=7)
-    _axes[-1].tick_params(axis="x", labelsize=6)
+        _stem = OUT_F1 / f"fig1_C_{_sub}_recurrence"
+        _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+        _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+        plt.close(_fig)
+        print(f"saved: {_stem.name}.png (+ .svg)")
 
+    # Single shared legend: standalone vertical dwell colorbar.
+    import matplotlib.cm as cm
     _sm = cm.ScalarMappable(cmap=_cmap, norm=_norm)
     _sm.set_array([])
-    _cbar = _fig.colorbar(_sm, ax=_axes, fraction=0.022, pad=0.02)
-    _cbar.set_label("Mean dwell time (s)", fontsize=6.5)
-    _cbar.ax.tick_params(labelsize=5.5)
-
-    _stem = OUT_F1 / "fig1_A_recurrence_beeswarm"
-    _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf (+ .png, .svg)")
-    plt.close(_fig)
+    _figc = plt.figure(figsize=(0.95, 2.2))
+    _cax = _figc.add_axes([0.08, 0.06, 0.30, 0.88])
+    _cbar = _figc.colorbar(_sm, cax=_cax)
+    _cbar.set_label("Mean dwell time (s)", fontsize=FS_LABEL)
+    _cbar.ax.tick_params(labelsize=FS_TICK)
+    _stemc = OUT_F1 / "fig1_C_legend_dwell"
+    _figc.savefig(f"{_stemc}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _figc.savefig(f"{_stemc}.svg", bbox_inches="tight", pad_inches=0.02)
+    plt.close(_figc)
+    print(f"saved: {_stemc.name}.png (+ .svg)")
     return
 
 
@@ -223,8 +256,11 @@ def load_split_half(SUBJECTS, SPLITHALF_DIR, json, np):
 
 
 @app.cell
-def panel_B_split_half(splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS, plt, np):
-    """Panel B - split-half reliability of recurrence, per subject.
+def panel_D_split_half(
+    splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS,
+    FS_TICK, FS_LABEL, FS_ANNOT, DOT_S, FIG_W, plt, np
+):
+    """Panel D - split-half reliability of recurrence, per subject.
 
     2x3 grid; x = recurrence in half A, y = recurrence in half B, one dot per
     Hungarian-matched state (independent HMM fits on interleaved episode halves
@@ -233,46 +269,71 @@ def panel_B_split_half(splithalf, SUBJECTS, OUT_F1, DOT_COLOR, SUBJECT_MARKERS, 
     whether matched-state recurrence ordering reproduces under independent
     within-subject re-fits. Dots are a
     single neutral color (per-matched-state dwell is not defined in the split
-    fits, so the dwell colormap applies to Panel A only).
+    fits, so the dwell colormap applies to Panel C only).
     """
-    _fig, _axes = plt.subplots(2, 3, figsize=(6.7, 4.75), sharex=True, sharey=True)
+    # Panel D sits a little larger than the strips, so bump its fonts +1.
+    _fs_tick = FS_TICK + 1
+    _fs_label = FS_LABEL + 1
+    _fs_annot = FS_ANNOT + 1
+
+    _fig, _axes = plt.subplots(2, 3, figsize=(FIG_W, 4.9), sharex=True, sharey=True)
     _axes = _axes.ravel()
 
     for _i, _sub in enumerate(SUBJECTS):
         _ax = _axes[_i]
         _d = splithalf[_sub]
         _ax.plot([0, 1], [0, 1], color="#BBBBBB", lw=0.8, ls="--", zorder=1)
-        _ax.scatter(_d["a"], _d["b"], s=26, c=DOT_COLOR,
+        _ax.scatter(_d["a"], _d["b"], s=DOT_S, c=DOT_COLOR,
                     marker=SUBJECT_MARKERS[_sub], edgecolor="white",
                     linewidth=0.4, alpha=0.95, zorder=3)
-        _ax.text(0.05, 0.96, _sub, transform=_ax.transAxes, fontsize=6.5,
+        # Annotation in the top-left corner (above the identity line, where
+        # reliability points are sparse), two well-separated lines so the
+        # enlarged text never overlaps itself or the markers.
+        _ax.text(0.05, 0.95, _sub, transform=_ax.transAxes, fontsize=_fs_annot,
                  va="top", ha="left")
-        _ax.text(0.05, 0.83, f"$\\rho$ = {_d['rho']:.2f}",
-                 transform=_ax.transAxes, fontsize=6.5, va="top", ha="left")
+        _ax.text(0.05, 0.78, f"$\\rho$ = {_d['rho']:.2f}",
+                 transform=_ax.transAxes, fontsize=_fs_annot, va="top", ha="left")
         _ax.set_xlim(0, 1)
         _ax.set_ylim(0, 1)
         _ax.set_xticks([0, 0.5, 1.0])
         _ax.set_yticks([0, 0.5, 1.0])
         _ax.set_aspect("equal")
-        _ax.tick_params(axis="both", labelsize=6)
+        _ax.tick_params(axis="both", labelsize=_fs_tick)
         _ax.grid(True, linestyle=":", linewidth=0.5, color="#D8D8D8")
         _ax.set_axisbelow(True)
         for _s in ("top", "right"):
             _ax.spines[_s].set_visible(False)
 
     for _i in (0, 3):
-        _axes[_i].set_ylabel("Recurrence, half B", fontsize=7)
+        _axes[_i].set_ylabel("Recurrence, half B", fontsize=_fs_label)
     for _i in (3, 4, 5):
-        _axes[_i].set_xlabel("Recurrence, half A", fontsize=7)
+        _axes[_i].set_xlabel("Recurrence, half A", fontsize=_fs_label)
 
     _fig.subplots_adjust(left=0.08, right=0.98, bottom=0.10, top=0.97,
                          wspace=0.18, hspace=0.22)
-    _stem = OUT_F1 / "fig1_B_split_half_reliability"
-    _fig.savefig(f"{_stem}.pdf", bbox_inches="tight", pad_inches=0.02)
+    _stem = OUT_F1 / "fig1_D_split_half_reliability"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-    print(f"saved: {_stem}.pdf (+ .png, .svg)")
+    print(f"saved: {_stem.name}.png (+ .svg)")
     plt.close(_fig)
+
+    # Standalone subject -> marker key (shared with Figures 3 and 5). Neutral
+    # color matches Panel D dots; one row per subject.
+    _figm, _axm = plt.subplots(figsize=(1.15, 1.9))
+    for _j, _sub in enumerate(SUBJECTS):
+        _yj = len(SUBJECTS) - 1 - _j
+        _axm.scatter([0.15], [_yj], s=DOT_S, c=DOT_COLOR,
+                     marker=SUBJECT_MARKERS[_sub], edgecolor="white",
+                     linewidth=0.4, alpha=0.95)
+        _axm.text(0.38, _yj, _sub, va="center", ha="left", fontsize=_fs_annot)
+    _axm.set_xlim(0, 1.2)
+    _axm.set_ylim(-0.6, len(SUBJECTS) - 0.4)
+    _axm.axis("off")
+    _stemm = OUT_F1 / "fig1_D_legend_markers"
+    _figm.savefig(f"{_stemm}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _figm.savefig(f"{_stemm}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stemm.name}.png (+ .svg)")
+    plt.close(_figm)
     return
 
 

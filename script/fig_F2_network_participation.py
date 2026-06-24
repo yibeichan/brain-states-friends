@@ -24,13 +24,15 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from utils.network_participation import (  # noqa: E402
     ELIGIBLE_CATEGORY,
     compute_network_participation_metrics,
-    plot_network_participation,
+    plot_network_legend,
+    plot_network_pie_mosaic,
     save_network_participation_outputs,
 )
 from utils.plot_style import (  # noqa: E402
+    NETWORK_COLORS,
     NETWORK_ORDER,
-    SUBJECT_MARKERS,
     apply_publication_style,
+    display_network,
     load_parcel_networks,
 )
 
@@ -97,18 +99,33 @@ def main() -> None:
     metrics_path, summary_path = save_network_participation_outputs(
         metrics, summary, out_dir
     )
-    plot_network_participation(
-        metrics,
-        summary,
-        out_dir / "fig2_C_network_participation",
-        args.subjects,
-        SUBJECT_MARKERS,
+
+    # Main Panel C: sub-01 per-state pie mosaic + shared network legend.
+    # Other subjects replicate into fig2/supp/<sub>/.
+    main_subject = "sub-01"
+    n_main = plot_network_pie_mosaic(
+        metrics, main_subject, NETWORK_ORDER, NETWORK_COLORS,
+        out_dir / f"fig2_C_{main_subject}_network_pies",
     )
+    plot_network_legend(
+        NETWORK_ORDER, NETWORK_COLORS, out_dir / "fig2_C_legend_networks",
+        display_fn=display_network, ncol=2, fig_w=2.6,
+    )
+    print(f"saved: fig2_C_{main_subject}_network_pies.{{png,svg}} ({n_main} states)")
+    print("saved: fig2_C_legend_networks.{png,svg}")
+    for subject in [s for s in args.subjects if s != main_subject]:
+        supp_dir = out_dir / "supp" / subject
+        supp_dir.mkdir(parents=True, exist_ok=True)
+        n_supp = plot_network_pie_mosaic(
+            metrics, subject, NETWORK_ORDER, NETWORK_COLORS,
+            supp_dir / f"fig2_C_{subject}_network_pies",
+        )
+        print(f"saved: supp/{subject}/fig2_C_{subject}_network_pies.{{png,svg}} "
+              f"({n_supp} states)")
 
     medians = summary["metric_medians"]
     print(f"saved: {metrics_path}")
     print(f"saved: {summary_path}")
-    print(f"saved: {out_dir / 'fig2_C_network_participation'}.{{pdf,png,svg}}")
     print(f"n_states={summary['n_states']} n_subjects={summary['n_subjects']}")
     print(
         "medians: "
