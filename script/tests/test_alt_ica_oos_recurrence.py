@@ -102,15 +102,19 @@ def test_recurrence_scores_threshold_excludes_below():
     np.testing.assert_allclose(rec, [0.5, 1.0])
 
 
-def test_continuous_occupancy_sums_to_one_and_orders():
+def test_continuous_occupancy_zero_variance_component_gets_zero_share():
     rng = np.random.default_rng(2)
-    # comp 0 has the largest magnitude swings -> largest share
+    # Two active components + one constant (zero-variance) component.
+    # continuous_occupancy z-scores each component per run, which sends the
+    # constant component to 0 -> ~0 occupancy share. (Amplitude scale is
+    # deliberately removed by z-scoring, so it is NOT a valid ordering signal.)
     tc = np.column_stack([
-        rng.standard_normal(50) * 5.0,
-        rng.standard_normal(50) * 1.0,
-        rng.standard_normal(50) * 0.5,
+        rng.standard_normal(40),
+        rng.standard_normal(40),
+        np.ones(40),
     ])
-    occ = continuous_occupancy(tc, [(0, 25), (25, 50)])
+    occ = continuous_occupancy(tc, [(0, 20), (20, 40)])
     assert occ.shape == (3,)
     np.testing.assert_allclose(occ.sum(), 1.0, atol=1e-10)
-    assert occ[0] > occ[1] > occ[2]
+    assert occ[2] < 1e-9
+    assert occ[0] > occ[2] and occ[1] > occ[2]
