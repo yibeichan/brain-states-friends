@@ -223,6 +223,33 @@ def temporal_correspondence(gamma, timecourses, hmm_idx, ica_idx, matched_sign,
     return {"rho": rho, "p": pval, "q": q, "occupancy": occ[np.asarray(hmm_idx)]}
 
 
+def wta_labels(timecourses, run_boundaries):
+    """Winner-take-all component label per TR.
+
+    Z-score each component WITHIN each run (so arbitrary ICA amplitude scaling
+    and per-run drift do not bias the winner), then argmax over components.
+    Shared by wta_label_agreement (Tier-3) and the out-of-stimulus recurrence
+    supplement.
+    """
+    tc = np.asarray(timecourses, dtype=float)
+    z = np.empty_like(tc)
+    for (s0, e0) in run_boundaries:
+        seg = tc[s0:e0]
+        z[s0:e0] = (seg - seg.mean(0)) / (seg.std(0) + 1e-12)
+    return z.argmax(axis=1)
+
+
+def consensus_projection(components, consensus_maps):
+    """PC-score -> consensus-component projection.
+
+    timecourses = X_pc @ proj, where proj regresses the full parcel time series
+    (X_full = X_pc @ components) onto the consensus maps:
+        proj = components @ M @ pinv(M.T @ M)        # (n_pcs, n_consensus)
+    """
+    M = np.asarray(consensus_maps)
+    return np.asarray(components) @ M @ np.linalg.pinv(M.T @ M)
+
+
 def wta_label_agreement(timecourses, viterbi, run_boundaries,
                         n_perm=1000, rng_seed=0, min_shift=1):
     """Timepoint-label agreement between z-scored-argmax ICA labels and Viterbi.
@@ -246,13 +273,7 @@ def wta_label_agreement(timecourses, viterbi, run_boundaries,
     correlation is meaningless. The orchestrator computes matched occupancy
     using the Tier-1 Hungarian matching from match_maps_hungarian.
     """
-    tc = np.asarray(timecourses, dtype=float)
-    # z-score each component within each run
-    z = np.empty_like(tc)
-    for (s0, e0) in run_boundaries:
-        seg = tc[s0:e0]
-        z[s0:e0] = (seg - seg.mean(0)) / (seg.std(0) + 1e-12)
-    ica_lab = z.argmax(axis=1)
+    ica_lab = wta_labels(timecourses, run_boundaries)
     viterbi = np.asarray(viterbi)
     ami = adjusted_mutual_info_score(viterbi, ica_lab)
     ari = adjusted_rand_score(viterbi, ica_lab)
@@ -332,7 +353,7 @@ def icasso_consensus(components, X_pc, n_components, n_restarts=25, rng_seed=0,
     # time series (X_full = X_pc @ components) onto the consensus maps M_cons.
     #   X_full ~= TC @ M_cons.T  =>  TC = X_full @ M_cons @ pinv(M_cons.T @ M_cons)
     M_cons = centro_maps                              # (P, n_consensus)
-    proj = np.asarray(components) @ M_cons @ np.linalg.pinv(M_cons.T @ M_cons)  # (n_pcs, n_consensus)
+    proj = consensus_projection(components, M_cons)   # (n_pcs, n_consensus)
     timecourses = np.asarray(X_pc) @ proj             # (T, n_consensus)
     return {"consensus_maps": centro_maps, "timecourses": timecourses,
             "iq": iq, "cluster_labels": labels,
