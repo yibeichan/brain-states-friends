@@ -187,6 +187,8 @@ def test_run_subject_emits_well_formed_summary(tmp_path):
     assert out["sub_id"] == _SUB
     assert out["K_active"] == 42
     assert len(out["friends_recurrence"]) == out["n_components"]
+    assert len(out["movie_occupancy_wta"]) == out["n_components"]
+    assert len(out["movie_occupancy_continuous"]) == out["n_components"]
     for arm in ("wta", "continuous"):
         assert -1.0 <= out["overall"][arm]["rho"] <= 1.0
         assert out["overall"][arm]["n"] == out["n_components"]

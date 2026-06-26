@@ -207,6 +207,8 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
         "fo_threshold": fo_threshold,
         "n_movie_runs": int(sum(len(rb) for _, rb in per_film_tc.values())),
         "friends_recurrence": recurrence.tolist(),
+        "movie_occupancy_wta": wta_all.tolist(),
+        "movie_occupancy_continuous": cont_all.tolist(),
         "overall": {
             "wta": _spearman(recurrence, wta_all),
             "continuous": _spearman(recurrence, cont_all),
