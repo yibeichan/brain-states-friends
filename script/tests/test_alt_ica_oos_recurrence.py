@@ -118,3 +118,77 @@ def test_continuous_occupancy_zero_variance_component_gets_zero_share():
     np.testing.assert_allclose(occ.sum(), 1.0, atol=1e-10)
     assert occ[2] < 1e-9
     assert occ[0] > occ[2] and occ[1] > occ[2]
+
+
+# ---------------------------------------------------------------------------
+# Data-gated integration tests for sm_alt_ica_oos_recurrence (Task 3)
+# ---------------------------------------------------------------------------
+import os
+import json
+from pathlib import Path
+
+from utils.ica_states import consensus_projection
+
+_SCRATCH = os.getenv("SCRATCH_DIR")
+_SUB = "sub-01"
+_PARC = "atlas-4S156Parcels"
+_VT = 0.95
+
+
+def _movie_dir():
+    if _SCRATCH is None:
+        return None
+    return Path(_SCRATCH) / "output" / "m10_03_projected" / _PARC / _SUB / f"vt{_VT}"
+
+
+def _ica_dir():
+    if _SCRATCH is None:
+        return None
+    return Path(_SCRATCH) / "output" / "sm_ica_states" / _PARC / _SUB
+
+
+def _data_ready():
+    """Return True iff SCRATCH_DIR is set and the required files exist on disk."""
+    if not _SCRATCH:
+        return False
+    md = _movie_dir()
+    id_ = _ica_dir()
+    if md is None or id_ is None:
+        return False
+    ica_maps = id_ / "ica_maps_K42.npy"
+    ica_tc = id_ / "ica_timecourses_K42.npy"
+    movie_ids = md / "movie_run_ids.json"
+    return (ica_maps.exists() and ica_maps.stat().st_size > 0
+            and ica_tc.exists() and ica_tc.stat().st_size > 0
+            and movie_ids.exists() and movie_ids.stat().st_size > 0)
+
+
+_SKIP_REASON = "SCRATCH_DIR not set or required sub-01 ICA/movie data not materialized"
+
+
+@pytest.mark.skipif(not _data_ready(), reason=_SKIP_REASON)
+def test_friends_projection_reproduces_saved_timecourses():
+    """Recompute ICA timecourses from frozen components + saved consensus maps,
+    then assert they exactly match the saved ica_timecourses_K42.npy."""
+    from sm_alt_ica_oos_recurrence import load_friends_inputs
+    inp = load_friends_inputs(_SUB, _PARC, _VT)
+    proj = consensus_projection(inp["components"], inp["consensus_maps"])
+    recomputed = inp["X_pc"] @ proj
+    saved = np.load(_ica_dir() / "ica_timecourses_K42.npy")
+    np.testing.assert_allclose(recomputed, saved, atol=1e-8)
+
+
+@pytest.mark.skipif(not _data_ready(), reason=_SKIP_REASON)
+def test_run_subject_emits_well_formed_summary(tmp_path):
+    """run_subject must write a JSON with the expected keys/shapes and valid rho."""
+    from sm_alt_ica_oos_recurrence import run_subject
+    out = run_subject(_SUB, _PARC, _VT, stimulus="movie10",
+                      fo_threshold=0.02, out_dir=str(tmp_path))
+    assert out["sub_id"] == _SUB
+    assert out["K_active"] == 42
+    assert len(out["friends_recurrence"]) == out["n_components"]
+    for arm in ("wta", "continuous"):
+        assert -1.0 <= out["overall"][arm]["rho"] <= 1.0
+        assert out["overall"][arm]["n"] == out["n_components"]
+    assert set(out["per_film"]).issubset({"bourne", "wolf", "figures", "life"})
+    assert (tmp_path / "oos_recurrence_summary.json").exists()
