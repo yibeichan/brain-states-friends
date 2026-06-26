@@ -63,7 +63,7 @@ def load_friends_inputs(sub_id, parcellation, vt):
         pca = pickle.load(f)
     # n_pcs_lookup keys are strings like "0.95"; vt may be float or string.
     n_pcs_lookup = hmm_io.load_n_pcs_lookup(pca_base)
-    n_pcs = int(n_pcs_lookup[str(vt)])
+    n_pcs = int(n_pcs_lookup[str(vt)])  # keys are strings (e.g. "0.95"); stringify vt to index
     components = pca.components_[:n_pcs]            # (n_pcs, n_parcels)
 
     # --- Consensus maps (ICA) ---

@@ -1,6 +1,6 @@
 # Findings: ICA out-of-stimulus recurrence supplement (`sm_alt_ica_oos_recurrence`)
 
-Findings for the ICA out-of-stimulus recurrence supplement. This is the ICA analogue of main-analysis Results R5. Code: `script/sm_alt_ica_oos_recurrence.py` (+`.sh`); companion figure `script/fig_sm_alt_ica_matching.py` (OOS panels).
+Findings for the ICA out-of-stimulus recurrence supplement. This is the ICA analogue of main-analysis Results R5. Code: `script/sm_alt_ica_oos_recurrence.py` (+`.sh`); companion figure `script/fig_sm_alt_ica_oos_recurrence.py` (OOS panels).
 
 ## Question
 
@@ -64,7 +64,7 @@ Sub-03 shows the strongest continuous ρ (overall 0.829), consistent across all 
 
 ## Conclusion
 
-For all 6 subjects, ICA components fit on Friends show positive and nominally significant Spearman correlation between Friends recurrence and Movie10 WTA fractional occupancy (ρ = 0.860 to 0.952). The continuous robustness arm likewise gives positive ρ for all subjects (0.431 – 0.829), confirming the result does not depend on the FO > 0.02 threshold. These are per-subject descriptive findings from Movie10 (Phase 1 only); no group statistic is computed and no comparison to other stimulus types or modalities is made. The analysis is non-circular: ICA components and the x-axis (Friends recurrence) are derived entirely from Friends data; the y-axis (Movie10 occupancy) is derived entirely from held-out Movie10 data.
+For all 6 subjects, ICA components fit on Friends show positive and nominally significant Spearman correlation between Friends recurrence and Movie10 WTA fractional occupancy (ρ = 0.860 to 0.952). The continuous robustness arm likewise gives positive ρ for all subjects (0.431 – 0.829), confirming the result does not depend on the FO > 0.02 threshold. However, because per-run z-scoring equalizes each component's variance, the continuous arm can only exploit distributional shape — not amplitude spread — to discriminate components, making it a weaker, shape-driven signal; the WTA arm retains the full discriminative spread and is the primary measure. These are per-subject descriptive findings from Movie10 (Phase 1 only); no group statistic is computed and no comparison to other stimulus types or modalities is made. The analysis is non-circular: ICA components and the x-axis (Friends recurrence) are derived entirely from Friends data; the y-axis (Movie10 occupancy) is derived entirely from held-out Movie10 data.
 
 ## Outputs
 
@@ -74,4 +74,4 @@ Fields: `sub_id`, `parcellation`, `vt`, `stimulus`, `K_active`, `n_components`, 
 
 ## Companion figure
 
-`script/fig_sm_alt_ica_matching.py` (OOS panels). Panel: scatter of Friends recurrence (x) vs Movie10 WTA fractional occupancy (y) per component, one panel per subject (6 panels), with ρ annotated. A secondary panel shows the continuous-arm scatter. These panels parallel the HMM R5 figure, enabling direct visual comparison.
+`script/fig_sm_alt_ica_oos_recurrence.py` (OOS panels). Panel: scatter of Friends recurrence (x) vs Movie10 WTA fractional occupancy (y) per component, one panel per subject (6 panels), with ρ annotated. A secondary panel shows the continuous-arm scatter. These panels parallel the HMM R5 figure, enabling direct visual comparison.

@@ -166,6 +166,12 @@ def _data_ready():
 _SKIP_REASON = "SCRATCH_DIR not set or required sub-01 ICA/movie data not materialized"
 
 
+def test_wta_labels_reexported_from_ica_oos_recurrence():
+    from utils.ica_oos_recurrence import wta_labels as wl_reexport
+    from utils.ica_states import wta_labels as wl_source
+    assert wl_reexport is wl_source
+
+
 @pytest.mark.skipif(not _data_ready(), reason=_SKIP_REASON)
 def test_friends_projection_reproduces_saved_timecourses():
     """Recompute ICA timecourses from frozen components + saved consensus maps,
