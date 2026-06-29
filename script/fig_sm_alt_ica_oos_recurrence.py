@@ -93,13 +93,18 @@ def panel_A_wta(OUT, SUBS, available_subs, summaries, np, plt):
         _x = np.array(_d["friends_recurrence"])
         _y = np.array(_d["movie_occupancy_wta"])
         _rho = _d["overall"]["wta"]["rho"]
+        _null_wta = _d["overall"]["wta"].get("null")
 
         _ax.scatter(_x, _y, s=14, color="#4A6FA5", alpha=0.75, linewidths=0,
                     zorder=2)
         _coef = np.polyfit(_x, _y, 1)
         _xfit = np.linspace(_x.min(), _x.max(), 100)
         _ax.plot(_xfit, np.polyval(_coef, _xfit), color="#C44E52", lw=1.2, zorder=3)
-        _ax.text(0.95, 0.07, f"ρ = {_rho:.2f}",
+        if _null_wta is not None:
+            _ann = f"ρ = {_rho:.2f}\nz = {_null_wta['z']:+.1f} (vs null {_null_wta['mean']:.2f})"
+        else:
+            _ann = f"ρ = {_rho:.2f}"
+        _ax.text(0.95, 0.07, _ann,
                  transform=_ax.transAxes, ha="right", va="bottom",
                  fontsize=7.5, color="0.2")
         for _sp in ("top", "right"):
@@ -148,13 +153,18 @@ def panel_B_continuous(OUT, SUBS, available_subs, summaries, np, plt):
         _x = np.array(_d["friends_recurrence"])
         _y = np.array(_d["movie_occupancy_continuous"])
         _rho = _d["overall"]["continuous"]["rho"]
+        _null_cont = _d["overall"]["continuous"].get("null")
 
         _ax.scatter(_x, _y, s=14, color="#4A6FA5", alpha=0.75, linewidths=0,
                     zorder=2)
         _coef = np.polyfit(_x, _y, 1)
         _xfit = np.linspace(_x.min(), _x.max(), 100)
         _ax.plot(_xfit, np.polyval(_coef, _xfit), color="#C44E52", lw=1.2, zorder=3)
-        _ax.text(0.95, 0.07, f"ρ = {_rho:.2f}",
+        if _null_cont is not None:
+            _ann = f"ρ = {_rho:.2f}\nΔ = {_null_cont['residual']:+.2f}"
+        else:
+            _ann = f"ρ = {_rho:.2f}"
+        _ax.text(0.95, 0.07, _ann,
                  transform=_ax.transAxes, ha="right", va="bottom",
                  fontsize=7.5, color="0.2")
         for _sp in ("top", "right"):
