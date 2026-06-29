@@ -5,7 +5,7 @@
 #SBATCH --time=12:00:00
 #SBATCH --mem=48G
 #SBATCH --cpus-per-task=4
-#SBATCH --partition=ou_bcs_normal,pi_satra
+#SBATCH --partition=ou_bcs_normal
 #SBATCH --array=0-5
 
 set -euo pipefail

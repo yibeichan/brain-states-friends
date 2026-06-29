@@ -9,7 +9,6 @@ import pytest
 from utils.ica_states import (
     wta_labels,
     consensus_projection,
-    icasso_consensus,
     wta_label_agreement,
 )
 
@@ -65,17 +64,24 @@ def test_wta_labels_matches_wta_label_agreement_internal():
     assert np.array_equal(wta_labels(tc, run_boundaries), agree["ica_labels"])
 
 
-def test_consensus_projection_reproduces_icasso_timecourses():
-    # consensus_projection(components, maps) @ X_pc must equal the timecourses
-    # icasso_consensus returns (same formula, single source of truth).
+def test_consensus_projection_matches_independent_lstsq_regression():
+    # consensus_projection must regress the full parcel time series
+    # (X_full = X_pc @ components) onto the consensus maps. Verify the closed
+    # form (components @ M @ pinv(M.T @ M)) against an INDEPENDENT least-squares
+    # solve of  X_full.T ~= M @ TC.T,  using arbitrary maps (not icasso output,
+    # which itself calls consensus_projection -- that comparison is circular).
     rng = np.random.default_rng(1)
-    n_pcs, n_parcels, T = 8, 20, 60
+    n_pcs, n_parcels, T, K = 8, 20, 60, 4
     components = rng.standard_normal((n_pcs, n_parcels))
     X_pc = rng.standard_normal((T, n_pcs))
-    out = icasso_consensus(components, X_pc, n_components=4, n_restarts=3,
-                           rng_seed=0, max_iter=200)
-    proj = consensus_projection(components, out["consensus_maps"])
-    np.testing.assert_allclose(X_pc @ proj, out["timecourses"], atol=1e-10)
+    maps = rng.standard_normal((n_parcels, K))            # full-rank, arbitrary
+
+    tc = X_pc @ consensus_projection(components, maps)     # (T, K)
+
+    X_full = X_pc @ components                             # (T, n_parcels)
+    # lstsq solves M (P,K) @ x (K,T) = X_full.T (P,T)  =>  x = TC.T
+    tc_ref = np.linalg.lstsq(maps, X_full.T, rcond=None)[0].T
+    np.testing.assert_allclose(tc, tc_ref, atol=1e-8)
 
 
 def test_fo_per_run_counts_fractions():
@@ -227,6 +233,32 @@ def test_phase_randomize_preserves_power_spectrum():
         np.abs(np.fft.rfft(X, axis=0)),
         atol=1e-8,
     )
+
+
+# ---------------------------------------------------------------------------
+# NaN-guard unit tests: json.dump(allow_nan=False) must not crash when a
+# Spearman input is constant (rho/p NaN) or the null sd is 0 (z NaN).
+# ---------------------------------------------------------------------------
+
+def test_spearman_constant_input_is_json_safe():
+    # Spearman on a constant x -> NaN rho/p; _spearman must surface JSON-null
+    # so json.dump(allow_nan=False) does not raise.
+    from sm_alt_ica_oos_recurrence import _spearman
+    with pytest.warns(Warning):  # scipy ConstantInputWarning is expected here
+        res = _spearman([1.0, 1.0, 1.0, 1.0], [0.1, 0.2, 0.3, 0.4])
+    assert res["rho"] is None and res["p"] is None
+    assert res["n"] == 4
+    json.dumps(res, allow_nan=False)  # must not raise
+
+
+def test_null_summary_zero_sd_is_json_safe():
+    # Degenerate null (sd == 0) -> z NaN; _null_summary must surface JSON-null.
+    from sm_alt_ica_oos_recurrence import _null_summary
+    res = _null_summary(0.3, np.array([0.3, 0.3, 0.3]))
+    assert res["z"] is None
+    assert res["residual"] == 0.0
+    assert res["n_draws"] == 3
+    json.dumps(res, allow_nan=False)  # must not raise
 
 
 @pytest.mark.skipif(not _data_ready(), reason=_SKIP_REASON)

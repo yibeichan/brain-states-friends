@@ -148,9 +148,35 @@ def _occupancies(tc, run_boundaries, n_components, fo_threshold):
     return wta_mean, cont
 
 
+def _safe_float(x):
+    """Convert to float, mapping NaN/inf -> None for JSON.
+
+    Spearman rho/p are NaN when an input vector is constant (e.g. all
+    components share a recurrence rank); the null z is NaN when the null sd is
+    0. json.dump uses allow_nan=False intentionally (non-standard NaN must not
+    silently enter the summary), so surface these degenerate cases as null.
+    """
+    x = float(x)
+    return x if np.isfinite(x) else None
+
+
 def _spearman(x, y):
     rho, p = spearmanr(x, y)
-    return {"rho": float(rho), "p": float(p), "n": int(len(x))}
+    return {"rho": _safe_float(rho), "p": _safe_float(p), "n": int(len(x))}
+
+
+def _null_summary(real, null_arr):
+    """Summarize a phase-randomized null draw array vs the real statistic.
+
+    NaN-safe: z is NaN when the null sd is 0 (and mean/residual are NaN if the
+    real statistic is NaN); _safe_float maps those to JSON-null.
+    """
+    m, s = float(null_arr.mean()), float(null_arr.std())
+    z = (real - m) / s if s > 0 else float("nan")
+    p = float((1 + np.sum(null_arr >= real)) / (1 + len(null_arr)))
+    return {"mean": _safe_float(m), "sd": _safe_float(s),
+            "z": _safe_float(z), "p": _safe_float(p),
+            "n_draws": int(len(null_arr)), "residual": _safe_float(real - m)}
 
 
 def _pool_occupancy_from_raw(raw_runs, proj, n_components, fo_threshold):
@@ -217,7 +243,7 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
 
     # Marginal caveat: Spearman(recurrence, friends mean WTA-FO)
     friends_wta_mean = np.mean(np.vstack(list(friends_fo.values())), axis=0)
-    rho_marginal = float(spearmanr(recurrence, friends_wta_mean).statistic)
+    rho_marginal = _safe_float(spearmanr(recurrence, friends_wta_mean).statistic)
 
     # y-axis: Movie10 occupancy per component
     per_film_tc, raw_runs = load_movie_timecourses(
@@ -248,13 +274,6 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
             wta_null.append(float(spearmanr(recurrence, w_occ).statistic))
             cont_null.append(float(spearmanr(recurrence, c_occ).statistic))
         return np.array(wta_null), np.array(cont_null)
-
-    def _null_summary(real, null_arr):
-        m, s = float(null_arr.mean()), float(null_arr.std())
-        z = float((real - m) / s) if s > 0 else float("nan")
-        p = float((1 + np.sum(null_arr >= real)) / (1 + len(null_arr)))
-        return {"mean": m, "sd": s, "z": z, "p": p,
-                "n_draws": int(len(null_arr)), "residual": float(real - m)}
 
     overall_wta = _spearman(recurrence, wta_all)
     overall_cont = _spearman(recurrence, cont_all)
