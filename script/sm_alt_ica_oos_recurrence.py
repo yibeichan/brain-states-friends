@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, str(Path(__file__).parent))
 from utils import hmm_io
 from utils.ica_states import consensus_projection, wta_labels
-from utils.ica_oos_recurrence import fo_per_run, recurrence_scores, continuous_occupancy
+from utils.ica_oos_recurrence import fo_per_run, recurrence_scores, continuous_occupancy, phase_randomize
 from utils.transformer_analysis import build_run_boundaries
 from sm_alt_ica_states import _ordered_runs
 
@@ -103,9 +103,12 @@ def load_friends_inputs(sub_id, parcellation, vt):
 def load_movie_timecourses(sub_id, parcellation, vt, n_pcs, proj):
     """Apply the frozen Friends projection to each Movie10 PC-score run.
 
-    Returns a dict {film: (timecourses, run_boundaries)} where timecourses has
-    shape (T_film, n_consensus) and run_boundaries is a list of (start, end)
-    tuples covering the concatenated film runs.
+    Returns a tuple (per_film, raw_runs) where:
+      - per_film is a dict {film: (timecourses, run_boundaries)} where timecourses
+        has shape (T_film, n_consensus) and run_boundaries is a list of (start, end)
+        tuples covering the concatenated film runs.
+      - raw_runs is a list of (film, rid, X_raw) for each run in order, where X_raw
+        is the raw PC-score matrix (T_run, n_pcs) BEFORE projection.
     """
     mdir = os.path.join(
         SCRATCH_DIR, "output", "m10_03_projected",
@@ -114,6 +117,7 @@ def load_movie_timecourses(sub_id, parcellation, vt, n_pcs, proj):
         movie_run_ids = json.load(f)        # {film: [run_id, ...]}
 
     per_film = {}
+    raw_runs = []  # list of (film, rid, X_raw) in order
     for film, run_ids in movie_run_ids.items():
         tc_parts, decoded_like, ids = [], {}, []
         for rid in run_ids:
@@ -122,6 +126,7 @@ def load_movie_timecourses(sub_id, parcellation, vt, n_pcs, proj):
                 logger.warning("missing %s; skipping", p)
                 continue
             X = np.load(p)[:, :n_pcs]
+            raw_runs.append((film, rid, X))
             tc_parts.append(X @ proj)
             decoded_like[rid] = np.empty(X.shape[0])    # length proxy for boundaries
             ids.append(rid)
@@ -131,7 +136,7 @@ def load_movie_timecourses(sub_id, parcellation, vt, n_pcs, proj):
         tc = np.vstack(tc_parts)
         per_film[film] = (tc, build_run_boundaries(ids, decoded_like))
 
-    return per_film
+    return per_film, raw_runs
 
 
 def _occupancies(tc, run_boundaries, n_components, fo_threshold):
@@ -148,7 +153,31 @@ def _spearman(x, y):
     return {"rho": float(rho), "p": float(p), "n": int(len(x))}
 
 
-def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
+def _pool_occupancy_from_raw(raw_runs, proj, n_components, fo_threshold):
+    """Project raw per-run X arrays and pool to compute occupancy.
+
+    Parameters
+    ----------
+    raw_runs : list of (film, rid, X_raw) where X_raw is (T_run, n_pcs)
+    proj : (n_pcs, n_components)
+    n_components : int
+    fo_threshold : float
+
+    Returns
+    -------
+    wta_mean, cont : each (n_components,)
+    """
+    tc_parts, rb, off = [], [], 0
+    for _film, _rid, X in raw_runs:
+        tc = X @ proj
+        rb.append((off, off + tc.shape[0]))
+        tc_parts.append(tc)
+        off += tc.shape[0]
+    all_tc = np.vstack(tc_parts)
+    return _occupancies(all_tc, rb, n_components, fo_threshold)
+
+
+def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_null=100):
     """Run the OOS recurrence analysis for one subject.
 
     Parameters
@@ -163,6 +192,9 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
         Minimum fractional occupancy for a component to count as active in a run.
     out_dir : str
         Directory to write oos_recurrence_summary.json.
+    n_null : int
+        Number of phase-randomized null draws for the overall pooled arm.
+        If 0, the null is skipped and null keys are omitted from the summary.
 
     Returns
     -------
@@ -183,8 +215,12 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
     recurrence = recurrence_scores(friends_fo, n_components, fo_threshold)
     # recurrence shape: (n_components,)
 
+    # Marginal caveat: Spearman(recurrence, friends mean WTA-FO)
+    friends_wta_mean = np.mean(np.vstack(list(friends_fo.values())), axis=0)
+    rho_marginal = float(spearmanr(recurrence, friends_wta_mean).statistic)
+
     # y-axis: Movie10 occupancy per component
-    per_film_tc = load_movie_timecourses(
+    per_film_tc, raw_runs = load_movie_timecourses(
         sub_id, parcellation, vt, inp["n_pcs"], proj)
 
     # Pool all movie runs into one big array for the overall correlation
@@ -196,6 +232,37 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
     all_tc = np.vstack(all_tc_parts)
 
     wta_all, cont_all = _occupancies(all_tc, all_rb, n_components, fo_threshold)
+    wta_real_rho = spearmanr(recurrence, wta_all).statistic
+    cont_real_rho = spearmanr(recurrence, cont_all).statistic
+
+    # Phase-randomized null distribution for overall pooled arm
+    def _null_stats(n_draws):
+        wta_null, cont_null = [], []
+        for draw in range(n_draws):
+            rng_w = np.random.default_rng(draw)
+            rng_c = np.random.default_rng(10_000 + draw)
+            raw_ph_w = [(f, r, phase_randomize(X, rng_w)) for f, r, X in raw_runs]
+            raw_ph_c = [(f, r, phase_randomize(X, rng_c)) for f, r, X in raw_runs]
+            w_occ, _ = _pool_occupancy_from_raw(raw_ph_w, proj, n_components, fo_threshold)
+            _, c_occ = _pool_occupancy_from_raw(raw_ph_c, proj, n_components, fo_threshold)
+            wta_null.append(float(spearmanr(recurrence, w_occ).statistic))
+            cont_null.append(float(spearmanr(recurrence, c_occ).statistic))
+        return np.array(wta_null), np.array(cont_null)
+
+    def _null_summary(real, null_arr):
+        m, s = float(null_arr.mean()), float(null_arr.std())
+        z = float((real - m) / s) if s > 0 else float("nan")
+        p = float((1 + np.sum(null_arr >= real)) / (1 + len(null_arr)))
+        return {"mean": m, "sd": s, "z": z, "p": p,
+                "n_draws": int(len(null_arr)), "residual": float(real - m)}
+
+    overall_wta = _spearman(recurrence, wta_all)
+    overall_cont = _spearman(recurrence, cont_all)
+
+    if n_null > 0:
+        wta_null_arr, cont_null_arr = _null_stats(n_null)
+        overall_wta["null"] = _null_summary(wta_real_rho, wta_null_arr)
+        overall_cont["null"] = _null_summary(cont_real_rho, cont_null_arr)
 
     summary = {
         "sub_id": sub_id,
@@ -209,9 +276,10 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
         "friends_recurrence": recurrence.tolist(),
         "movie_occupancy_wta": wta_all.tolist(),
         "movie_occupancy_continuous": cont_all.tolist(),
+        "recurrence_vs_friends_marginal_wta_rho": rho_marginal,
         "overall": {
-            "wta": _spearman(recurrence, wta_all),
-            "continuous": _spearman(recurrence, cont_all),
+            "wta": overall_wta,
+            "continuous": overall_cont,
         },
         "per_film": {},
     }
@@ -231,6 +299,12 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir):
     logger.info(
         "%s: overall WTA rho=%.3f (n=%d); wrote %s",
         sub_id, summary["overall"]["wta"]["rho"], n_components, out_path)
+    if n_null > 0:
+        null_info = summary["overall"]["wta"]["null"]
+        logger.info(
+            "%s: WTA null mean=%.3f sd=%.3f z=%.2f p=%.4f residual=%.3f",
+            sub_id, null_info["mean"], null_info["sd"],
+            null_info["z"], null_info["p"], null_info["residual"])
     return summary
 
 
@@ -243,12 +317,15 @@ def main():
                    help="Variance threshold for n_pcs selection (e.g. 0.95)")
     p.add_argument("--stimulus", default="movie10", choices=["movie10"])
     p.add_argument("--fo_threshold", type=float, default=0.02)
+    p.add_argument("--n_null", type=int, default=100,
+                   help="Number of phase-randomized null draws (0 to skip).")
     a = p.parse_args()
 
     out_dir = os.path.join(
         SCRATCH_DIR, "output", "sm_ica_oos_recurrence",
         a.parcellation, a.sub_id)
-    run_subject(a.sub_id, a.parcellation, a.vt, a.stimulus, a.fo_threshold, out_dir)
+    run_subject(a.sub_id, a.parcellation, a.vt, a.stimulus, a.fo_threshold,
+                out_dir, n_null=a.n_null)
 
 
 if __name__ == "__main__":

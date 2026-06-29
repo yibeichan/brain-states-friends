@@ -11,7 +11,19 @@ import numpy as np
 
 from .ica_states import wta_labels  # re-exported for callers' convenience
 
-__all__ = ["wta_labels", "fo_per_run", "recurrence_scores", "continuous_occupancy"]
+__all__ = ["wta_labels", "fo_per_run", "recurrence_scores", "continuous_occupancy",
+           "phase_randomize"]
+
+
+def phase_randomize(X, rng):
+    """Multivariate (shared-phase) FFT surrogate of a (T, D) array.
+    Preserves each column's power spectrum (autocorrelation) and the cross-column
+    covariance; destroys stimulus-specific phase/higher-order structure."""
+    T = X.shape[0]
+    F = np.fft.rfft(X, axis=0)
+    ph = rng.uniform(0, 2*np.pi, size=F.shape[0]); ph[0] = 0.0
+    if T % 2 == 0: ph[-1] = 0.0
+    return np.fft.irfft(F * np.exp(1j*ph)[:, None], n=T, axis=0)
 
 
 def fo_per_run(labels, run_boundaries, n_components):

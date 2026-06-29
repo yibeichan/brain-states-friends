@@ -200,3 +200,50 @@ def test_run_subject_emits_well_formed_summary(tmp_path):
         assert out["overall"][arm]["n"] == out["n_components"]
     assert set(out["per_film"]).issubset({"bourne", "wolf", "figures", "life"})
     assert (tmp_path / "oos_recurrence_summary.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Phase-randomize unit tests (Task 3 additions)
+# ---------------------------------------------------------------------------
+
+def test_phase_randomize_shape_and_real():
+    """phase_randomize returns a real array with the same shape as the input."""
+    from utils.ica_oos_recurrence import phase_randomize
+    rng = np.random.default_rng(42)
+    X = rng.standard_normal((200, 5))
+    surr = phase_randomize(X, rng)
+    assert surr.shape == X.shape
+    assert np.isrealobj(surr)
+
+
+def test_phase_randomize_preserves_power_spectrum():
+    """Surrogate must preserve each column's power spectrum to ~1e-8."""
+    from utils.ica_oos_recurrence import phase_randomize
+    rng = np.random.default_rng(7)
+    X = rng.standard_normal((200, 5))
+    surr = phase_randomize(X, np.random.default_rng(99))
+    np.testing.assert_allclose(
+        np.abs(np.fft.rfft(surr, axis=0)),
+        np.abs(np.fft.rfft(X, axis=0)),
+        atol=1e-8,
+    )
+
+
+@pytest.mark.skipif(not _data_ready(), reason=_SKIP_REASON)
+def test_run_subject_null_distribution(tmp_path):
+    """run_subject with n_null=20 must populate null sub-dicts and satisfy
+    ordering: real > null mean (z>0, residual>0)."""
+    from sm_alt_ica_oos_recurrence import run_subject
+    out = run_subject(_SUB, _PARC, _VT, stimulus="movie10",
+                      fo_threshold=0.02, out_dir=str(tmp_path), n_null=20)
+    for arm in ("wta", "continuous"):
+        null = out["overall"][arm].get("null")
+        assert null is not None, f"missing null key for arm={arm}"
+        for k in ("mean", "sd", "z", "p", "n_draws", "residual"):
+            assert k in null, f"missing key {k} in null for arm={arm}"
+        assert null["n_draws"] == 20
+        assert null["residual"] > 0, f"arm={arm}: real should exceed null mean"
+        assert null["z"] > 0, f"arm={arm}: z-score should be positive"
+    rho_marg = out.get("recurrence_vs_friends_marginal_wta_rho")
+    assert rho_marg is not None
+    assert 0.9 < rho_marg <= 1.0, f"marginal rho={rho_marg} expected > 0.9"
