@@ -141,10 +141,11 @@ _PARC = "atlas-4S156Parcels"
 _VT = 0.95
 
 
-def _movie_dir():
-    if _SCRATCH is None:
-        return None
-    return Path(_SCRATCH) / "output" / "m10_03_projected" / _PARC / _SUB / f"vt{_VT}"
+_STIM_PROJ = {
+    "movie10": ("m10_03_projected", "movie_run_ids.json"),
+    "harrypotter": ("hp_03_projected", "hp_run_ids.json"),
+    "petitprince": ("pp_03_projected", "pp_run_ids.json"),
+}
 
 
 def _ica_dir():
@@ -153,20 +154,29 @@ def _ica_dir():
     return Path(_SCRATCH) / "output" / "sm_ica_states" / _PARC / _SUB
 
 
-def _data_ready():
-    """Return True iff SCRATCH_DIR is set and the required files exist on disk."""
+def _proj_dir(stimulus):
+    if _SCRATCH is None:
+        return None
+    proj_dir = _STIM_PROJ[stimulus][0]
+    return Path(_SCRATCH) / "output" / proj_dir / _PARC / _SUB / f"vt{_VT}"
+
+
+def _data_ready(stimulus="movie10"):
+    """True iff SCRATCH_DIR is set and sub-01's K42 ICA + the stimulus's
+    run_ids JSON exist on disk. Pinned to sub-01 (K42, has movie10+HP+PP);
+    sub-05/06 are K41/K37 and would break the K42 assertions."""
     if not _SCRATCH:
         return False
-    md = _movie_dir()
     id_ = _ica_dir()
-    if md is None or id_ is None:
+    pd = _proj_dir(stimulus)
+    if id_ is None or pd is None:
         return False
     ica_maps = id_ / "ica_maps_K42.npy"
     ica_tc = id_ / "ica_timecourses_K42.npy"
-    movie_ids = md / "movie_run_ids.json"
+    run_ids = pd / _STIM_PROJ[stimulus][1]
     return (ica_maps.exists() and ica_maps.stat().st_size > 0
             and ica_tc.exists() and ica_tc.stat().st_size > 0
-            and movie_ids.exists() and movie_ids.stat().st_size > 0)
+            and run_ids.exists() and run_ids.stat().st_size > 0)
 
 
 _SKIP_REASON = "SCRATCH_DIR not set or required sub-01 ICA/movie data not materialized"
@@ -279,3 +289,59 @@ def test_run_subject_null_distribution(tmp_path):
     rho_marg = out.get("recurrence_vs_friends_marginal_wta_rho")
     assert rho_marg is not None
     assert 0.9 < rho_marg <= 1.0, f"marginal rho={rho_marg} expected > 0.9"
+
+
+# ---------------------------------------------------------------------------
+# Stimulus registry + generalized loader (Phase 2)
+# ---------------------------------------------------------------------------
+
+def test_stimuli_registry_has_three_stimuli():
+    from sm_alt_ica_oos_recurrence import STIMULI
+    assert set(STIMULI) == {"movie10", "harrypotter", "petitprince"}
+    assert STIMULI["harrypotter"] == {
+        "proj_dir": "hp_03_projected", "run_ids_file": "hp_run_ids.json"}
+    assert STIMULI["petitprince"] == {
+        "proj_dir": "pp_03_projected", "run_ids_file": "pp_run_ids.json"}
+    assert STIMULI["movie10"] == {
+        "proj_dir": "m10_03_projected", "run_ids_file": "movie_run_ids.json"}
+
+
+def test_load_oos_timecourses_unknown_stimulus_raises():
+    from sm_alt_ica_oos_recurrence import load_oos_timecourses
+    with pytest.raises(ValueError):
+        load_oos_timecourses("sub-01", "atlas-4S156Parcels", 0.95, 5,
+                             np.zeros((5, 3)), stimulus="nope")
+
+
+def test_load_oos_timecourses_missing_data_raises_sentinel():
+    # A subject/stimulus with no run_ids JSON must raise NoStimulusDataError
+    # (clean-skip signal), not a bare FileNotFoundError.
+    from sm_alt_ica_oos_recurrence import load_oos_timecourses, NoStimulusDataError
+    with pytest.raises(NoStimulusDataError):
+        load_oos_timecourses("sub-99", "atlas-4S156Parcels", 0.95, 5,
+                             np.zeros((5, 3)), stimulus="harrypotter")
+
+
+@pytest.mark.skipif(not _data_ready("harrypotter"),
+                    reason="SCRATCH_DIR not set or sub-01 HP data not materialized")
+def test_run_subject_harrypotter_single_group(tmp_path):
+    from sm_alt_ica_oos_recurrence import run_subject
+    out = run_subject(_SUB, _PARC, _VT, stimulus="harrypotter",
+                      fo_threshold=0.02, out_dir=str(tmp_path), n_null=20)
+    assert out["stimulus"] == "harrypotter"
+    assert out["n_null"] == 20
+    assert -1.0 <= out["overall"]["wta"]["rho"] <= 1.0
+    assert set(out["per_film"]) == {"harrypotter"}
+    assert out["per_film"]["harrypotter"]["n_runs"] >= 1
+
+
+@pytest.mark.skipif(not _data_ready("petitprince"),
+                    reason="SCRATCH_DIR not set or sub-01 PP data not materialized")
+def test_run_subject_petitprince_surfaces_fr_en_groups(tmp_path):
+    from sm_alt_ica_oos_recurrence import run_subject
+    out = run_subject(_SUB, _PARC, _VT, stimulus="petitprince",
+                      fo_threshold=0.02, out_dir=str(tmp_path), n_null=20)
+    assert out["stimulus"] == "petitprince"
+    assert {"lppFR", "lppEN"}.issubset(set(out["per_film"]))
+    for grp in ("lppFR", "lppEN"):
+        assert out["per_film"][grp]["n_runs"] >= 1

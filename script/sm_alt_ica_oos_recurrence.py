@@ -42,7 +42,24 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-MOVIE_FILMS = ("bourne", "wolf", "figures", "life")
+class NoStimulusDataError(Exception):
+    """No projected OOS data for a (subject, stimulus).
+
+    Signals a CLEAN skip (the subject simply did not do this stimulus, e.g.
+    sub-04 has no Harry Potter / Petit Prince scans) — distinct from a genuine
+    pipeline error (missing Friends inputs), which must still hard-fail.
+    """
+
+
+# Registry of out-of-stimulus datasets. Each entry's projected PC-score data
+# lives at {SCRATCH}/output/{proj_dir}/{parc}/{sub}/vt{vt}/ with one {run_id}.npy
+# per run and a {run_ids_file} mapping group -> [run_id, ...]. All three share
+# the vt-dir layout and the [:, :n_pcs] column convention.
+STIMULI = {
+    "movie10":     {"proj_dir": "m10_03_projected", "run_ids_file": "movie_run_ids.json"},
+    "harrypotter": {"proj_dir": "hp_03_projected",  "run_ids_file": "hp_run_ids.json"},
+    "petitprince": {"proj_dir": "pp_03_projected",  "run_ids_file": "pp_run_ids.json"},
+}
 
 
 def load_friends_inputs(sub_id, parcellation, vt):
@@ -100,21 +117,40 @@ def load_friends_inputs(sub_id, parcellation, vt):
     }
 
 
-def load_movie_timecourses(sub_id, parcellation, vt, n_pcs, proj):
-    """Apply the frozen Friends projection to each Movie10 PC-score run.
+def load_oos_timecourses(sub_id, parcellation, vt, n_pcs, proj, stimulus):
+    """Apply the frozen Friends projection to each out-of-stimulus run.
+
+    Generalizes the Phase-1 movie10 loader over the STIMULI registry; the
+    per-group ("per-film") keys come straight from the run_ids JSON, so
+    petitprince yields lppFR/lppEN and harrypotter a single group.
 
     Returns a tuple (per_film, raw_runs) where:
-      - per_film is a dict {film: (timecourses, run_boundaries)} where timecourses
-        has shape (T_film, n_consensus) and run_boundaries is a list of (start, end)
-        tuples covering the concatenated film runs.
-      - raw_runs is a list of (film, rid, X_raw) for each run in order, where X_raw
+      - per_film is a dict {group: (timecourses, run_boundaries)} where timecourses
+        has shape (T_group, n_consensus) and run_boundaries is a list of (start, end)
+        tuples covering the concatenated group runs.
+      - raw_runs is a list of (group, rid, X_raw) for each run in order, where X_raw
         is the raw PC-score matrix (T_run, n_pcs) BEFORE projection.
+
+    Raises
+    ------
+    ValueError
+        If `stimulus` is not in STIMULI.
+    NoStimulusDataError
+        If the stimulus's projected dir or its run_ids JSON is absent for this
+        subject (clean-skip signal, e.g. sub-04 has no HP/PP).
     """
+    if stimulus not in STIMULI:
+        raise ValueError(
+            f"unknown stimulus={stimulus!r}; expected one of {sorted(STIMULI)}")
+    spec = STIMULI[stimulus]
     mdir = os.path.join(
-        SCRATCH_DIR, "output", "m10_03_projected",
-        parcellation, sub_id, f"vt{vt}")
-    with open(os.path.join(mdir, "movie_run_ids.json")) as f:
-        movie_run_ids = json.load(f)        # {film: [run_id, ...]}
+        SCRATCH_DIR, "output", spec["proj_dir"], parcellation, sub_id, f"vt{vt}")
+    run_ids_path = os.path.join(mdir, spec["run_ids_file"])
+    if not os.path.exists(run_ids_path):
+        raise NoStimulusDataError(
+            f"no {stimulus} data for {sub_id}: {run_ids_path} absent")
+    with open(run_ids_path) as f:
+        movie_run_ids = json.load(f)        # {group: [run_id, ...]}
 
     per_film = {}
     raw_runs = []  # list of (film, rid, X_raw) in order
@@ -203,7 +239,7 @@ def _pool_occupancy_from_raw(raw_runs, proj, n_components, fo_threshold):
     return _occupancies(all_tc, rb, n_components, fo_threshold)
 
 
-def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_null=100):
+def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_null=1000):
     """Run the OOS recurrence analysis for one subject.
 
     Parameters
@@ -213,7 +249,8 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
     vt : float or str
         Variance threshold used to select n_pcs (e.g. 0.95 or "0.95").
     stimulus : str
-        Currently only "movie10" is supported.
+        Out-of-stimulus dataset; one of STIMULI ("movie10", "harrypotter",
+        "petitprince").
     fo_threshold : float
         Minimum fractional occupancy for a component to count as active in a run.
     out_dir : str
@@ -225,10 +262,13 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
     Returns
     -------
     dict : the summary written to disk.
-    """
-    if stimulus != "movie10":
-        raise NotImplementedError("Phase 1 covers movie10 only; HP/PP are Phase 2.")
 
+    Raises
+    ------
+    NoStimulusDataError
+        Propagated from load_oos_timecourses when the subject has no projected
+        data for this stimulus (clean-skip signal, e.g. sub-04 HP/PP).
+    """
     inp = load_friends_inputs(sub_id, parcellation, vt)
     n_components = inp["consensus_maps"].shape[1]
     proj = consensus_projection(inp["components"], inp["consensus_maps"])
@@ -246,8 +286,8 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
     rho_marginal = _safe_float(spearmanr(recurrence, friends_wta_mean).statistic)
 
     # y-axis: Movie10 occupancy per component
-    per_film_tc, raw_runs = load_movie_timecourses(
-        sub_id, parcellation, vt, inp["n_pcs"], proj)
+    per_film_tc, raw_runs = load_oos_timecourses(
+        sub_id, parcellation, vt, inp["n_pcs"], proj, stimulus)
 
     # Pool all movie runs into one big array for the overall correlation
     all_tc_parts, all_rb, off = [], [], 0
@@ -288,6 +328,7 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
         "parcellation": parcellation,
         "vt": vt,
         "stimulus": stimulus,
+        "n_null": n_null,
         "K_active": inp["K_active"],
         "n_components": n_components,
         "fo_threshold": fo_threshold,
@@ -306,6 +347,7 @@ def run_subject(sub_id, parcellation, vt, stimulus, fo_threshold, out_dir, n_nul
     for film, (tc, rb) in per_film_tc.items():
         wta_m, cont_m = _occupancies(tc, rb, n_components, fo_threshold)
         summary["per_film"][film] = {
+            "n_runs": len(rb),
             "wta": _spearman(recurrence, wta_m),
             "continuous": _spearman(recurrence, cont_m),
         }
@@ -334,17 +376,22 @@ def main():
     p.add_argument("--parcellation", default="atlas-4S156Parcels")
     p.add_argument("--vt", default="0.95",
                    help="Variance threshold for n_pcs selection (e.g. 0.95)")
-    p.add_argument("--stimulus", default="movie10", choices=["movie10"])
+    p.add_argument("--stimulus", default="movie10", choices=list(STIMULI),
+                   help="Out-of-stimulus dataset (movie10/harrypotter/petitprince).")
     p.add_argument("--fo_threshold", type=float, default=0.02)
-    p.add_argument("--n_null", type=int, default=100,
+    p.add_argument("--n_null", type=int, default=1000,
                    help="Number of phase-randomized null draws (0 to skip).")
     a = p.parse_args()
 
     out_dir = os.path.join(
         SCRATCH_DIR, "output", "sm_ica_oos_recurrence",
-        a.parcellation, a.sub_id)
-    run_subject(a.sub_id, a.parcellation, a.vt, a.stimulus, a.fo_threshold,
-                out_dir, n_null=a.n_null)
+        a.parcellation, a.sub_id, a.stimulus)
+    try:
+        run_subject(a.sub_id, a.parcellation, a.vt, a.stimulus, a.fo_threshold,
+                    out_dir, n_null=a.n_null)
+    except NoStimulusDataError as e:
+        logger.warning("%s; skipping %s/%s", e, a.sub_id, a.stimulus)
+        sys.exit(0)
 
 
 if __name__ == "__main__":

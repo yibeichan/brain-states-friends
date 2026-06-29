@@ -30,13 +30,26 @@ echo "=============================================="
 echo "sm_alt_ica_oos_recurrence - ICA OOS Recurrence"
 echo "=============================================="
 echo "Subject:       ${SUB_ID}"
-echo "Stimulus:      movie10"
+echo "Stimuli:       ${STIMULI:-movie10 harrypotter petitprince}"
+echo "n_null:        ${N_NULL:-1000}"
 echo "=============================================="
 
-uv run --project "${PROJECT_DIR}" python "${PROJECT_DIR}/script/sm_alt_ica_oos_recurrence.py" \
-    --sub_id "$SUB_ID" \
-    --stimulus movie10
+# Run each stimulus independently. A clean skip (e.g. sub-04 has no HP/PP)
+# exits 0 inside the Python; a genuine per-stimulus failure must NOT abort the
+# sibling stimuli under `set -e`, so guard the call and remember a nonzero rc.
+rc=0
+for STIM in ${STIMULI:-movie10 harrypotter petitprince}; do
+    echo "--- ${SUB_ID} / ${STIM} ---"
+    if ! uv run --project "${PROJECT_DIR}" python "${PROJECT_DIR}/script/sm_alt_ica_oos_recurrence.py" \
+        --sub_id "$SUB_ID" \
+        --stimulus "$STIM" \
+        --n_null "${N_NULL:-1000}"; then
+        echo "WARNING: ${SUB_ID}/${STIM} failed; continuing with remaining stimuli" >&2
+        rc=1
+    fi
+done
 
 echo "=============================================="
-echo "ICA OOS recurrence analysis complete!"
+echo "ICA OOS recurrence analysis complete (rc=${rc})!"
 echo "=============================================="
+exit $rc
