@@ -1,6 +1,6 @@
 # Supplementary Figures — Brain States Friends
 
-This directory catalogues all supplementary figures (S1–S10) for the manuscript. Each figure is provided as a PNG file under `figures/`; detailed numerical results and analysis provenance appear in the linked findings documents. Two analyses — ICA convergence diagnostics (S8) and ICA out-of-sample recurrence (S10) — reside on the orphan `supplements` branch of this repository; their findings links point to that branch on GitHub.
+This directory catalogues all supplementary figures (S1–S10) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Two analyses (ICA convergence diagnostics, S8, and ICA out-of-stimulus recurrence, S10) reside on the orphan `supplements` branch of this repository; their findings links point to that branch on GitHub.
 
 ## Catalogue
 
@@ -10,12 +10,12 @@ This directory catalogues all supplementary figures (S1–S10) for the manuscrip
 | S2 | PCA loadings diagnostics for one representative subject: loading heatmap, residual variance, motion-artifact flags, LOSO stability | [S02_pca_loadings.png](figures/S02_pca_loadings.png) | [../findings/03b_pca_loadings.md](../findings/03b_pca_loadings.md) | main |
 | S3 | Network-stratified video (DINOv2) decoding depth: per-subject montage testing whether the video depth peak localizes to specific networks (five subjects; sub-06's groups all fell below the minimum-states gate) | [S03_video_peak_depth.png](figures/S03_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S4 | Run-onset negative control for transformer depth decoding: decoding profiles anchored to run boundaries rather than stimulus content | [S04_run_onset_negative_control.png](figures/S04_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
-| S5 | Per-layer decoding depth strips across three modalities — audio (A), text (B), video (C) — for the cross-stimulus transfer analysis | [S05_decoding_depth_strips_A.png](figures/S05_decoding_depth_strips_A.png), [_B.png](figures/S05_decoding_depth_strips_B.png), [_C.png](figures/S05_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
-| S6 | Cross-stimulus validity: PCA transfer diagnostic (A), within-Friends vs. transfer fit (B), and state presence across stimuli (C) | [S06_cross_stimulus_validity_A.png](figures/S06_cross_stimulus_validity_A.png), [_B.png](figures/S06_cross_stimulus_validity_B.png), [_C.png](figures/S06_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md) | main |
+| S5 | Per-layer decoding depth strips for three transformer models (audio A, text B, video C) in the cross-stimulus analysis | [S05_decoding_depth_strips_A.png](figures/S05_decoding_depth_strips_A.png), [_B.png](figures/S05_decoding_depth_strips_B.png), [_C.png](figures/S05_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
+| S6 | Cross-stimulus validity: PCA cross-stimulus fit diagnostic (A), within-Friends versus cross-stimulus fit (B), and state presence across stimuli (C) | [S06_cross_stimulus_validity_A.png](figures/S06_cross_stimulus_validity_A.png), [_B.png](figures/S06_cross_stimulus_validity_B.png), [_C.png](figures/S06_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md) | main |
 | S7 | Individual differences in state repertoire and decoding: radar-strip summary across subjects | [S07_individual_differences.png](figures/S07_individual_differences.png) | [../findings/06b_transition_structure.md](../findings/06b_transition_structure.md), [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S8 | ICA convergence diagnostics: K-sweep heatmap (A) and per-state matched absolute correlation (B) | [S08_ica_convergence_A.png](figures/S08_ica_convergence_A.png), [_B.png](figures/S08_ica_convergence_B.png) | [sm_alt_ica_states.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_states.md) | supplements |
 | S9 | Network participation profiles of recurring brain states across cortical and subcortical systems | [S09_network_participation.png](figures/S09_network_participation.png) | [../findings/05e_temporal_trend_a4.md](../findings/05e_temporal_trend_a4.md) | main |
-| S10 | ICA out-of-sample recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S10_ica_oos_recurrence_m10_A_wta.png](figures/S10_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S10_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S10_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S10_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S10_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S10_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
+| S10 | ICA out-of-stimulus recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S10_ica_oos_recurrence_m10_A_wta.png](figures/S10_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S10_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S10_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S10_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S10_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S10_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
 
 ---
 
@@ -31,7 +31,7 @@ For each subject, the five states ranked highest by recurrence score are rendere
 
 ![PCA loadings diagnostic panels for a representative subject (sub-01): loading heatmap, residual variance by parcel and network, motion-artifact flags, and leave-one-season-out stability](figures/S02_pca_loadings.png)
 
-This figure characterizes the per-subject PCA space that the combined HMM consumes. Panels include the loading heatmap across parcels and components, per-parcel residual variance at the production variance threshold, motion-artifact flags for the leading components, and leave-one-season-out stability of residual variance. Subcortical networks — thalamus, hippocampus/amygdala, basal ganglia — showed the highest residual fractions; unimodal cortical networks were nearly fully captured by the retained components. One subject (sub-06) had a flag on a somatomotor-dominant loading; no subject had all motion-artifact criteria exceeded simultaneously.
+This figure characterizes the per-subject PCA space that the combined HMM consumes. Panels include the loading heatmap across parcels and components, per-parcel residual variance at the production variance threshold, motion-artifact flags for the leading components, and leave-one-season-out stability of residual variance. Subcortical networks (thalamus, hippocampus/amygdala, basal ganglia) showed the highest residual fractions; unimodal cortical networks were nearly fully captured by the retained components. One subject (sub-06) had a flag on a somatomotor-dominant loading; no subject had all motion-artifact criteria exceeded simultaneously.
 
 ---
 
@@ -47,7 +47,7 @@ This vision-specific analysis tests whether the DINOv2 video decoding peak local
 
 ![Decoding depth profiles using run-onset-anchored state labels as a design-driven negative control, shown alongside the content-eligible main analysis](figures/S04_run_onset_negative_control.png)
 
-Run-onset-anchored states — those whose fractional occupancy tracks episode or run boundaries rather than stimulus content — were used as a negative control to test whether the depth profile reflects content information rather than timing structure. The control profiles confirm that timing-anchored labels produce a pattern distinct from the content-eligible analysis; the main analysis results cannot be attributed to run-boundary confounds. Note that this gate was deprecated for the LLaMA text model because run-onset-anchored states are not content-free for that modality; the confound-baseline comparison is the primary apples-to-apples comparator for all three models.
+Run-onset-anchored states (those whose fractional occupancy clusters at run or episode boundaries rather than at stimulus content) were used as a negative control to test whether the depth profile reflects content information rather than timing structure. The control profiles confirm that timing-anchored labels produce a pattern distinct from the content-eligible analysis; the main analysis results cannot be attributed to run-boundary confounds. Note that this gate was deprecated for the LLaMA text model because run-onset-anchored states are not content-free for that modality; the confound-baseline comparison is the primary apples-to-apples comparator for all three models.
 
 ---
 
@@ -62,22 +62,22 @@ Run-onset-anchored states — those whose fractional occupancy tracks episode or
 **Panel C — Video (DINOv2-large)**
 ![Per-layer video-model decoding strips for the four Movie10 films (Wolf of Wall Street, Hidden Figures, The Bourne Supremacy, Life)](figures/S05_decoding_depth_strips_C.png)
 
-These strips show per-layer decoding accuracy (balanced accuracy minus chance) for the cross-stimulus transfer analysis, in which a Friends-trained classifier is applied to held-out stimuli. Each panel is one transformer model, and each line within a panel is one held-out stimulus, aggregated across subjects (shaded band). The stimulus set differs by modality: the audio model (A) covers Movie10 and Petit Prince in both languages; the text model (B) adds Harry Potter; the video model (C) covers the four Movie10 films. Cross-stimulus transfer is modest in magnitude relative to within-Friends decoding, consistent with the main cross-stimulus results.
+These strips show per-layer decoding accuracy (balanced accuracy minus chance) for the cross-stimulus analysis, in which a Friends-trained classifier is applied without retraining to held-out stimuli. Each panel is one transformer model, and each line within a panel is one held-out stimulus, aggregated across subjects (shaded band). The stimulus set differs by modality: the audio model (A) covers Movie10 and Petit Prince in both languages; the text model (B) adds Harry Potter; the video model (C) covers the four Movie10 films. Cross-stimulus decoding is modest in magnitude relative to within-Friends decoding, consistent with the main cross-stimulus results.
 
 ---
 
 ## Figure S6 — Cross-stimulus validity
 
-**Panel A — PCA transfer diagnostic**
+**Panel A — PCA cross-stimulus fit diagnostic**
 ![Variance explained by Friends-trained PCA applied to Movie10, Harry Potter, and Petit Prince data, per subject and network](figures/S06_cross_stimulus_validity_A.png)
 
-**Panel B — Within-Friends vs. transfer fit**
-![Comparison of within-Friends fit quality versus cross-stimulus transfer fit, per subject](figures/S06_cross_stimulus_validity_B.png)
+**Panel B — Within-Friends versus cross-stimulus fit**
+![Comparison of within-Friends fit quality versus cross-stimulus fit, per subject](figures/S06_cross_stimulus_validity_B.png)
 
 **Panel C — State presence across stimuli**
 ![Fractional occupancy or coverage of recurring Friends states across held-out stimuli, per subject](figures/S06_cross_stimulus_validity_C.png)
 
-These panels document the cross-stimulus generalization checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; subcortical networks (thalamus, hippocampus/amygdala) showed lower transfer variance, consistent with their higher residual variance within Friends. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C shows that states active in Friends were also recovered in the held-out stimuli, with no Friends-inactive state gaining appreciable occupancy in any held-out context.
+These panels document the cross-stimulus generalization checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; subcortical networks (thalamus, hippocampus/amygdala) explained less variance out-of-stimulus, consistent with their higher residual variance within Friends. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C shows that states active in Friends were also recovered in the held-out stimuli, with no Friends-inactive state gaining appreciable occupancy in any held-out context.
 
 ---
 
@@ -109,27 +109,27 @@ This figure shows how recurring brain states distribute their activation energy 
 
 ---
 
-## Figure S10 — ICA out-of-sample recurrence
+## Figure S10 — ICA out-of-stimulus recurrence
 
 **Movie10 — Winner-take-all assignment**
-![ICA out-of-sample recurrence for Movie10 using winner-take-all state assignment](figures/S10_ica_oos_recurrence_m10_A_wta.png)
+![ICA out-of-stimulus recurrence for Movie10 using winner-take-all state assignment](figures/S10_ica_oos_recurrence_m10_A_wta.png)
 
 **Movie10 — Continuous assignment**
-![ICA out-of-sample recurrence for Movie10 using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_m10_B_continuous.png)
+![ICA out-of-stimulus recurrence for Movie10 using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_m10_B_continuous.png)
 
 **Harry Potter — Winner-take-all assignment**
-![ICA out-of-sample recurrence for Harry Potter using winner-take-all state assignment](figures/S10_ica_oos_recurrence_hp_A_wta.png)
+![ICA out-of-stimulus recurrence for Harry Potter using winner-take-all state assignment](figures/S10_ica_oos_recurrence_hp_A_wta.png)
 
 **Harry Potter — Continuous assignment**
-![ICA out-of-sample recurrence for Harry Potter using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_hp_B_continuous.png)
+![ICA out-of-stimulus recurrence for Harry Potter using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_hp_B_continuous.png)
 
 **Petit Prince — Winner-take-all assignment**
-![ICA out-of-sample recurrence for Petit Prince using winner-take-all state assignment](figures/S10_ica_oos_recurrence_pp_A_wta.png)
+![ICA out-of-stimulus recurrence for Petit Prince using winner-take-all state assignment](figures/S10_ica_oos_recurrence_pp_A_wta.png)
 
 **Petit Prince — Continuous assignment**
-![ICA out-of-sample recurrence for Petit Prince using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_pp_B_continuous.png)
+![ICA out-of-stimulus recurrence for Petit Prince using continuous (soft) state assignment](figures/S10_ica_oos_recurrence_pp_B_continuous.png)
 
-These six panels replicate the out-of-sample recurrence test using an ICA-based alternative decomposition in place of the HMM used in the main analysis. Each panel pair presents winner-take-all (hard) and continuous (soft) assignment variants for one held-out stimulus. The three stimuli tested — Movie10, Harry Potter, and Petit Prince — are the same stimuli used in the main cross-stimulus recurrence analysis. Detailed numerical results are in the findings document on the `supplements` branch (linked in the catalogue table above).
+These six panels repeat the out-of-stimulus recurrence test using an ICA-based alternative decomposition in place of the HMM used in the main analysis. Each panel pair presents winner-take-all (hard) and continuous (soft) assignment variants for one held-out stimulus. The three stimuli (Movie10, Harry Potter, and Petit Prince) match those used in the main cross-stimulus recurrence analysis. Detailed numerical results are in the findings document on the `supplements` branch (linked in the catalogue table above).
 
 ---
 
