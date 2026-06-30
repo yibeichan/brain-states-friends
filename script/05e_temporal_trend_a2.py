@@ -446,7 +446,7 @@ def transition_confound_check(model_path, position_locked_states, n_states,
        meaning the anchored state's early position is partly inherited.
 
     Args:
-        model_path: path to best_model.pkl (HDP-HMM with transmat_ attribute)
+        model_path: path to best_model.pkl (HMM with transmat_ attribute)
         position_locked_states: set of state IDs flagged as position-locked
         n_states: total number of states
         transmat_threshold: minimum transition probability to flag (default 0.15)

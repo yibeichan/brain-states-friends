@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_hdphmm_equivalence.py - Validate JAX vs numpy StickyHDPHMM equivalence.
+test_hdphmm_equivalence.py - Validate JAX vs numpy WeakLimitHMM equivalence.
 
 Tests:
   1. Per-iteration log-likelihood agreement (10 iters, same init)
@@ -116,8 +116,8 @@ def test_decode(X, lengths, model_np, model_jax):
 
 def test_fit_trajectory(X, lengths, n_iter=10, cov_type='diag', atol_ll=1e-2):
     """Test that EM trajectories agree for n_iter iterations."""
-    from utils.hdphmm import StickyHDPHMM
-    from utils.hdphmm_jax import StickyHDPHMM_JAX
+    from utils.hdphmm import WeakLimitHMM
+    from utils.hdphmm_jax import WeakLimitHMM_JAX
 
     K = 10
     common_kwargs = dict(
@@ -128,12 +128,12 @@ def test_fit_trajectory(X, lengths, n_iter=10, cov_type='diag', atol_ll=1e-2):
     )
 
     # Fit numpy
-    model_np = StickyHDPHMM(**common_kwargs)
+    model_np = WeakLimitHMM(**common_kwargs)
     model_np.fit(X, lengths=lengths)
     ll_np = model_np.history['log_likelihood']
 
     # Fit JAX with same seed
-    model_jax = StickyHDPHMM_JAX(**common_kwargs)
+    model_jax = WeakLimitHMM_JAX(**common_kwargs)
     model_jax.fit(X, lengths=lengths)
     ll_jax = model_jax.history['log_likelihood']
 
@@ -172,7 +172,7 @@ def test_fit_trajectory(X, lengths, n_iter=10, cov_type='diag', atol_ll=1e-2):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Test JAX vs numpy HDP-HMM equivalence')
+    parser = argparse.ArgumentParser(description='Test JAX vs numpy HMM equivalence')
     parser.add_argument('--n_iter', type=int, default=10)
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
@@ -181,7 +181,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
 
     logger.info("=" * 60)
-    logger.info("StickyHDPHMM: JAX vs numpy equivalence tests")
+    logger.info("WeakLimitHMM: JAX vs numpy equivalence tests")
     logger.info("=" * 60)
 
     # Check JAX availability
@@ -198,8 +198,8 @@ def main():
     logger.info("Test data: N=%d, D=%d, %d sequences", X.shape[0], X.shape[1], len(lengths))
 
     # Initialize both models with identical params
-    from utils.hdphmm import StickyHDPHMM
-    from utils.hdphmm_jax import StickyHDPHMM_JAX
+    from utils.hdphmm import WeakLimitHMM
+    from utils.hdphmm_jax import WeakLimitHMM_JAX
 
     common_kwargs = dict(
         n_components=10, alpha=1.0, gamma=3.0, kappa=10.0, rho=1.0,
@@ -207,10 +207,10 @@ def main():
         tol=1e-10, verbose=False, min_covar=1e-3, n_jobs=1,
     )
 
-    model_np = StickyHDPHMM(**common_kwargs)
+    model_np = WeakLimitHMM(**common_kwargs)
     model_np._init_params(X)
 
-    model_jax = StickyHDPHMM_JAX(**common_kwargs)
+    model_jax = WeakLimitHMM_JAX(**common_kwargs)
     copy_params_np_to_jax(model_np, model_jax)
 
     results = []

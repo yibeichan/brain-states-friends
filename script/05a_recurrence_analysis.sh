@@ -11,8 +11,8 @@
 # =============================================================================
 # 05a - Brain State Recurrence Analysis
 # =============================================================================
-# Classifies brain states from the combined cross-season HDP-HMM as
-# context-invariant (recurring) or episode-specific.
+# Scores each brain state's recurrence across episodes (continuous gradient),
+# from states active in nearly every episode to states appearing in only a few.
 #
 # Computes:
 #   - Fractional occupancy per state per episode

@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Combined sHDP-HMM - SLURM Wrapper (Two-Stage Model Selection)
+# Combined weak-limit HMM - SLURM Wrapper (Two-Stage Model Selection)
 # =============================================================================
 #
 # Two-stage pipeline controlled by MODE and STAGE environment variables:
@@ -166,7 +166,7 @@ fi
 # =============================================================================
 
 echo "=========================================="
-echo "04 Combined sHDP-HMM"
+echo "04 Combined weak-limit HMM"
 echo "=========================================="
 echo "SLURM Job ID:     $SLURM_JOB_ID"
 echo "Array Task ID:    ${SLURM_ARRAY_TASK_ID:-N/A}"

@@ -81,10 +81,14 @@ def _transitions_single_seq(seq_fwd, seq_bwd, seq_framelogprob, transmat):
     return np.maximum(expected, 0.0)
 
 
-class StickyHDPHMM(hmm.GaussianHMM):
+class WeakLimitHMM(hmm.GaussianHMM):
     """
-    A Sticky Hierarchical Dirichlet Process Hidden Markov Model (HDP-HMM)
-    with a Gaussian emission model.
+    A Gaussian-emission hidden Markov model fit by EM, with sticky
+    self-transition and hierarchical Dirichlet concentration priors on its
+    transitions under a fixed-capacity weak-limit truncation. This borrows the
+    prior structure of the sticky hierarchical Dirichlet process HMM
+    (Fox et al. 2011) but NOT its nonparametric inference: n_components is a
+    fixed truncation cap and the number of occupied states emerges below it.
 
     This implementation uses a hybrid approach combining EM updates for emission
     parameters with Bayesian inference for transition parameters and hyperparameters.
@@ -872,7 +876,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
     def fit(self, X, lengths=None):
         """Fit model to data using EM with HDP updates."""
         if self.verbose:
-            print("Fitting Sticky HDP-HMM model...")
+            print("Fitting weak-limit HMM model...")
             print(f"Config: n_components={self.n_components}, alpha={self.alpha:.2f}, gamma={self.gamma:.2f}, "
                   f"kappa={self.kappa:.1f}, rho={self.rho:.2f}, cov={self.covariance_type}, "
                   f"min_iter={self.min_iter}, max_iter={self.n_iter}, tol={self.tol}, "
@@ -1027,7 +1031,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
                            f"alpha={self.history['alpha'][-1]:.3f}, gamma={self.history['gamma'][-1]:.3f}")
 
                  if iter_idx >= self.min_iter:
-                     # WINDOWED CONVERGENCE FOR HDP-HMM (Bayesian nonparametric methods)
+                     # WINDOWED CONVERGENCE FOR HMM (Bayesian nonparametric methods)
                      # Standard single-step convergence fails because posterior updates cause oscillations.
                      # Solution: Check if MEAN log-likelihood over windows is stable.
                      #
@@ -1219,7 +1223,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
             axs[1, 1].set_title('Final State Usage (Data Missing)')
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig.suptitle(f'Sticky HDP-HMM Training Diagnostics ({n_iterations} Iterations)', fontsize=14)
+        fig.suptitle(f'weak-limit HMM Training Diagnostics ({n_iterations} Iterations)', fontsize=14)
         return fig
 
     def _compute_posteriors(self, X):
@@ -1245,10 +1249,10 @@ class StickyHDPHMM(hmm.GaussianHMM):
         # This is more stable than trying to reimplement the forward-backward pass
         
         # Get log probability using score method from parent class
-        logprob = super(StickyHDPHMM, self).score(X)
+        logprob = super(WeakLimitHMM, self).score(X)
         
         # Get posteriors using predict_proba from parent class
-        posteriors = super(StickyHDPHMM, self).predict_proba(X)
+        posteriors = super(WeakLimitHMM, self).predict_proba(X)
         
         return logprob, posteriors
 
@@ -1571,7 +1575,7 @@ class StickyHDPHMM(hmm.GaussianHMM):
         """
         try:
             # Try using parent implementation
-            return super(StickyHDPHMM, self)._initialize_sufficient_statistics()
+            return super(WeakLimitHMM, self)._initialize_sufficient_statistics()
         except AttributeError:
             # If parent implementation doesn't exist, create our own stats dict
             stats = {
@@ -1679,12 +1683,12 @@ def infer_n_active_states(model, min_state_usage=0.01):
 
     Falls back to `model.n_components` (conservative upper bound) when usage
     history is unavailable - e.g., for freshly-loaded models or models that
-    terminated before the first usage update. This fallback is HDP-HMM
+    terminated before the first usage update. This fallback is HMM
     specific: the true active count is unknown without training history, so
     over-counting is safer than under-counting.
 
     Args:
-        model:           Fitted StickyHDPHMM instance.
+        model:           Fitted WeakLimitHMM instance.
         min_state_usage: Occupancy fraction threshold (default 0.01).
 
     Returns:
@@ -1697,3 +1701,8 @@ def infer_n_active_states(model, min_state_usage=0.01):
             if usage.size > 0 and np.all(np.isfinite(usage)):
                 return int(np.sum(usage > min_state_usage))
     return int(model.n_components)
+
+
+# Backward-compatible alias: models pickled before the 2026-06 rename store the
+# class as `utils.hdphmm.StickyHDPHMM`; pickle.load resolves that name here.
+StickyHDPHMM = WeakLimitHMM

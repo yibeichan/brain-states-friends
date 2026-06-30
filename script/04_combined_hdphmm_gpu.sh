@@ -12,7 +12,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# Combined sHDP-HMM - GPU SLURM Wrapper (JAX backend)
+# Combined weak-limit HMM - GPU SLURM Wrapper (JAX backend)
 # =============================================================================
 #
 # Same interface as 04_combined_hdphmm.sh but requests a GPU and uses JAX.
@@ -125,7 +125,7 @@ fi
 # =============================================================================
 
 echo "=========================================="
-echo "04 Combined sHDP-HMM (GPU/JAX)"
+echo "04 Combined weak-limit HMM (GPU/JAX)"
 echo "=========================================="
 echo "SLURM Job ID:     $SLURM_JOB_ID"
 echo "Array Task ID:    ${SLURM_ARRAY_TASK_ID:-N/A}"

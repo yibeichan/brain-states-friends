@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-plot_model_diagnostics.py - Post-hoc model diagnostic plots from pickled HDP-HMM models.
+plot_model_diagnostics.py - Post-hoc model diagnostic plots from pickled HMM models.
 
 Generates diagnostic figures B1–B5 from already-computed outputs (no re-fitting):
 
@@ -604,7 +604,7 @@ def plot_test_ll_per_season(final_results, output_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Post-hoc model diagnostics from HDP-HMM pickles.'
+        description='Post-hoc model diagnostics from HMM pickles.'
     )
     parser.add_argument('--sub_id', type=str, required=True,
                         help='Subject ID (e.g., sub-01)')

@@ -201,7 +201,7 @@ def back_project_states(model, pca, n_pcs):
     where W = pca.components_[:n_pcs] has shape (n_pcs, n_parcels).
 
     Args:
-        model: Fitted StickyHDPHMM with .means_ (K, n_pcs) and
+        model: Fitted WeakLimitHMM with .means_ (K, n_pcs) and
                .covars_ of shape (K, n_pcs, n_pcs) for full or
                (K, n_pcs) for diagonal covariance.
         pca:   Fitted sklearn PCA with .components_ and .mean_.
@@ -260,7 +260,7 @@ def decode_all_runs(model, split, projected_dir, n_pcs):
     (train/, valid/, or test/) within projected_dir.
 
     Args:
-        model:         Fitted StickyHDPHMM.
+        model:         Fitted WeakLimitHMM.
         split:         Dict with 'train', 'valid', 'test' run ID lists.
         projected_dir: Base projected directory (primary or LOSO variant).
         n_pcs:         Number of PCs used by this model.

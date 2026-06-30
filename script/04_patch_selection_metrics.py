@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-04_patch_selection_metrics.py - Compare model selection metrics across HDP-HMM configs.
+04_patch_selection_metrics.py - Compare model selection metrics across HMM configs.
 
 Reads all config_summary.json files for a given subject + vt, computes a battery
 of selection metrics beyond BIC, and produces a CSV + JSON + multi-panel figure
@@ -539,7 +539,7 @@ def build_recommendation(df, sub_id, vt, gap_lambda):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Compare model selection metrics across HDP-HMM configs.'
+        description='Compare model selection metrics across HMM configs.'
     )
     parser.add_argument('--sub_id', default=None,
                         help='Subject ID (e.g., sub-01). If omitted, run all.')

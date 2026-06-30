@@ -3,7 +3,7 @@
 05f_state_fc.py - Empirical within-state functional connectivity.
 
 Computes state-specific parcel-space correlation matrices from the actual BOLD
-timeseries, using decoded state assignments from the combined HDP-HMM as labels.
+timeseries, using decoded state assignments from the combined HMM as labels.
 For each state k, all TRs assigned to that state are pooled across runs and a
 Ledoit-Wolf shrinkage covariance is estimated, then converted to correlation.
 

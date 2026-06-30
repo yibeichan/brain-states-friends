@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-combined_hmm_config.py - Hyperparameter grid for the combined cross-season sHDP-HMM.
+combined_hmm_config.py - Hyperparameter grid for the combined cross-season weak-limit HMM.
 
 Two-stage model selection (2026-03-13 improvement):
 

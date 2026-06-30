@@ -694,7 +694,7 @@ def main():
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Split-half reliability analysis for combined HDP-HMM.",
+        description="Split-half reliability analysis for combined HMM.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-03a_pca4combined_hmm.py - PCA preparation for combined (cross-season) HDP-HMM.
+03a_pca4combined_hmm.py - PCA preparation for combined (cross-season) HMM.
 
 This is Step 1 of the combined-HMM pipeline. For each subject it:
   1. Creates a season-stratified 70/15/15 train/valid/test split (primary)
@@ -125,7 +125,7 @@ MIN_EPISODES_FOR_SPLIT = 6
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='PCA preparation for combined (cross-season) HDP-HMM.'
+        description='PCA preparation for combined (cross-season) HMM.'
     )
     parser.add_argument('--sub_id', type=str, required=True,
                         help='Subject ID (e.g., "sub-01")')
@@ -723,7 +723,7 @@ def main():
     parcellation = normalize_parcellation_name(args.parcellation)
 
     logger.info("=" * 70)
-    logger.info("PCA Preparation for Combined HDP-HMM")
+    logger.info("PCA Preparation for Combined HMM")
     logger.info("=" * 70)
     logger.info(f"Subject:       {args.sub_id}")
     logger.info(f"Parcellation:  {parcellation}")

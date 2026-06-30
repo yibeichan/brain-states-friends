@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-04_combined_hdphmm.py - Fit one combined sHDP-HMM per subject across all seasons.
+04_combined_hdphmm.py - Fit one combined weak-limit HMM per subject across all seasons.
 
 Two-stage model selection (2026-03-13 improvement):
 
@@ -64,15 +64,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 try:
     import jax as _jax
     if _jax.default_backend() == "gpu":
-        from utils.hdphmm_jax import StickyHDPHMM_JAX as StickyHDPHMM
+        from utils.hdphmm_jax import WeakLimitHMM_JAX as WeakLimitHMM
         from utils.hdphmm import infer_n_active_states  # utility stays numpy
         logging.getLogger(__name__).info(
             "Using JAX GPU backend on %s", _jax.devices("gpu")[0]
         )
     else:
-        from utils.hdphmm import StickyHDPHMM, infer_n_active_states
+        from utils.hdphmm import WeakLimitHMM, infer_n_active_states
 except (ImportError, RuntimeError):
-    from utils.hdphmm import StickyHDPHMM, infer_n_active_states
+    from utils.hdphmm import WeakLimitHMM, infer_n_active_states
 from utils.common import normalize_parcellation_name, _get_season
 from utils.hmm_io import (load_split, load_n_pcs_lookup, get_projected_dir,
                            load_projected_runs, decode_all_runs,
@@ -153,7 +153,7 @@ def fit_single_config(config, sub_id, parcellation, n_fit_seeds, n_jobs=1):
     """Fit one combined cross-season HMM config with multiple seeds.
 
     For each seed:
-      1. Create StickyHDPHMM with the config parameters
+      1. Create WeakLimitHMM with the config parameters
       2. Fit on full cross-season training data (multi-sequence via lengths)
       3. Score on training and validation data
       4. Score per-season validation LL (early warning for non-stationarity)
@@ -245,7 +245,7 @@ def fit_single_config(config, sub_id, parcellation, n_fit_seeds, n_jobs=1):
             np.random.seed(seed)
             random.seed(seed)
 
-            model = StickyHDPHMM(
+            model = WeakLimitHMM(
                 n_components=config['n_components'],
                 covariance_type=config['covariance_type'],
                 alpha=config['alpha'],
@@ -672,7 +672,7 @@ def select_and_refit(sub_id, parcellation, n_final_seeds, force_refit=False, n_j
         np.random.seed(seed)
         random.seed(seed)
 
-        model = StickyHDPHMM(
+        model = WeakLimitHMM(
             n_components=selected_config['n_components'],
             covariance_type=selected_config['covariance_type'],
             alpha=selected_config['alpha'],
@@ -1107,7 +1107,7 @@ def select_seed(sub_id, parcellation, seed_index, force_refit=False, n_jobs=1,
     np.random.seed(seed_index)
     random.seed(seed_index)
     
-    model = StickyHDPHMM(
+    model = WeakLimitHMM(
         n_components=selected_config['n_components'],
         covariance_type=selected_config['covariance_type'],
         alpha=selected_config['alpha'], gamma=selected_config['gamma'],
@@ -1373,7 +1373,7 @@ def _refit_fold(selected_config, config_name_str, pca, n_pcs, split,
         np.random.seed(seed)
         random.seed(seed)
 
-        model = StickyHDPHMM(
+        model = WeakLimitHMM(
             n_components=selected_config['n_components'],
             covariance_type=selected_config['covariance_type'],
             alpha=selected_config['alpha'],
@@ -1828,7 +1828,7 @@ def _resolve_vt(sub_id, parcellation, fixed_vt=None):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='Fit combined sHDP-HMM across all seasons with two-stage model selection.',
+        description='Fit combined weak-limit HMM across all seasons with two-stage model selection.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

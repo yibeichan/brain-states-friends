@@ -9,7 +9,7 @@ transitions.
 
 Framing
 -------
-The HDP-HMM assumes P(z_t | z_{<t}) = P(z_t | z_{t-1}).  Script 06b showed that
+The HMM assumes P(z_t | z_{<t}) = P(z_t | z_{t-1}).  Script 06b showed that
 multi-step chains occur far more often than this 1st-order assumption predicts
 (Chain Excess Index up to 681x).  However, high CEI alone does not tell us *why*.
 

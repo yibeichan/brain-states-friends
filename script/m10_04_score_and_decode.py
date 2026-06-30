@@ -2,7 +2,7 @@
 """
 m10_04_score_and_decode.py - Score and decode movie10 data with Friends-trained HMM.
 
-Uses the Friends-trained sHDP-HMM to score (log-likelihood) and decode (Viterbi)
+Uses the Friends-trained weak-limit HMM to score (log-likelihood) and decode (Viterbi)
 movie runs projected through the Friends PCA. Computes per-run and per-movie-type
 metrics for cross-stimulus comparison.
 

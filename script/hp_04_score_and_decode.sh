@@ -13,7 +13,7 @@
 # =============================================================================
 # Harry Potter Score & Decode - SLURM Submission Script
 # =============================================================================
-# Scores and decodes HP runs using the Friends-trained sHDP-HMM.
+# Scores and decodes HP runs using the Friends-trained weak-limit HMM.
 # 5 subjects (no sub-04 in Harry Potter).
 #
 # Prerequisites:

@@ -11,7 +11,7 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # =============================================================================
-# PCA Preparation for Combined HDP-HMM - SLURM Submission Script
+# PCA Preparation for Combined HMM - SLURM Submission Script
 # =============================================================================
 #
 # Fits PCA on primary training data and each of 6 LOSO fold training sets,
@@ -111,7 +111,7 @@ fi
 OUTPUT_DIR="${SCRATCH_DIR}/output/03a_pca4combined_hmm/${PARCELLATION}/${SUBJECT_ID}"
 
 echo "=========================================="
-echo "PCA Preparation for Combined HDP-HMM"
+echo "PCA Preparation for Combined HMM"
 echo "=========================================="
 echo "SLURM Job ID:      $SLURM_JOB_ID"
 echo "Array Task ID:     $SLURM_ARRAY_TASK_ID"

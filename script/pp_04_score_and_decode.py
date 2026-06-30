@@ -2,7 +2,7 @@
 """
 pp_04_score_and_decode.py - Score and decode Petit Prince data with Friends-trained HMM.
 
-Uses the Friends-trained sHDP-HMM to score (log-likelihood) and decode (Viterbi)
+Uses the Friends-trained weak-limit HMM to score (log-likelihood) and decode (Viterbi)
 PP runs projected through the Friends PCA. Computes per-run metrics for
 cross-stimulus comparison.
 
