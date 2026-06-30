@@ -89,6 +89,9 @@ outputs and renders the panels.
 | `fig_F4_within_friends.py` | Figure 4 (lead) | R4b |
 | `fig_F4_per_film_video.py` | Figure 4 (Movie10 per-film panel) | R4b |
 | `fig_F5_cross_stimulus_transfer.py` | Figure 5 | R5 |
+| `fig_S01_recurring_state_surface_maps.py` | Figure S1 | Supp |
+| `fig_S02_pca_loadings.py` | Figure S2 | Supp |
+| `fig_S03_video_peak_depth.py` | Figure S3 | Supp |
 | `fig_S6_cross_stimulus_validity.py` | Figure S6 | Supp |
 | `fig_S7_individual_differences.py` | Figure S7 | Supp |
 | `fig_S9_network_participation_categories.py` | Figure S9 | Supp |
