@@ -4,7 +4,7 @@ Quantifying how brain states recur across narrative contexts during longitudinal
 
 ## Overview
 
-This project maps the repertoire of brain states that recur during longitudinal naturalistic viewing, using fMRI recorded while six participants watched the television series Friends across many episodes. A Sticky Hierarchical Dirichlet Process Hidden Markov Model (sHDP-HMM), fit per subject in a PCA-reduced parcel space, segments each viewing run into latent states. For each state we compute a recurrence score (the fraction of episodes in which it is active) using fractional occupancy and a season-label permutation test; the resulting scores form a continuous recurrence gradient rather than a binary invariant-versus-specific split. We then characterize each state's canonical-network composition and transition dynamics. Finally, we test the depth at which the states are decodable from a transformer model of the stimulus (representational depth), and whether the Friends state repertoire recurs in three held-out narratives: Movie10, Harry Potter, and Petit Prince.
+This project maps the repertoire of brain states that recur during longitudinal naturalistic viewing, using fMRI recorded while six participants watched the television series Friends across many episodes. A Gaussian hidden Markov model, fit per subject in a PCA-reduced parcel space, segments each viewing run into latent states. Its transition priors (sticky self-transitions plus a hierarchical-Dirichlet concentration prior, borrowed from the sticky HDP-HMM but applied under a fixed-capacity weak-limit truncation rather than unbounded nonparametric inference) let the number of occupied states emerge from the data. For each state we compute a recurrence score (the fraction of episodes in which it is active) using fractional occupancy and a season-label permutation test; the resulting scores form a continuous recurrence gradient rather than a binary invariant-versus-specific split. We then characterize each state's canonical-network composition and transition dynamics. Finally, we test the depth at which the states are decodable from a transformer model of the stimulus (representational depth), and whether the Friends state repertoire recurs in three held-out narratives: Movie10, Harry Potter, and Petit Prince.
 
 ## Data
 
@@ -40,7 +40,7 @@ corresponding `.env` variable (see [Configuration](#configuration)) at your loca
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  03a_pca4combined_hmm.py  PCA + train/valid/test splits for combined HMM     │
 │  03b_pca_loadings.py      PCA loadings analysis                              │
-│  04_combined_hdphmm.py    Fit one sHDP-HMM per subject across all episodes   │
+│  04_combined_hdphmm.py    Fit combined HMM per subject across all episodes   │
 │                           - fit mode: grid search over configs               │
 │                           - select mode: pick best config, decode all runs   │
 └──────────────────────────────────────────────────────────────────────────────┘

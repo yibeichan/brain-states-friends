@@ -1,4 +1,4 @@
-# Findings: 03a PCA Preparation for Combined HDP-HMM
+# Findings: 03a PCA Preparation for the Combined HMM
 
 _Script: `script/03a_pca4combined_hmm.py`. Tier: MAIN (Methods)._
 

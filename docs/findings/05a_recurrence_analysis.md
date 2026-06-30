@@ -2,7 +2,7 @@
 
 _Script: `script/05a_recurrence_analysis.py`. Tier: MAIN (R1, Fig 1)._
 
-_Classifies each combined-HMM state as context-invariant vs episode-specific via fractional occupancy, a recurrence score, a season-specificity index, and a season-label permutation test with FDR correction. Per-subject; n=6 (no group statistic)._
+_Scores each combined-HMM state's recurrence across episodes (a continuous gradient, not two discrete classes) via fractional occupancy, a recurrence score, a season-specificity index, and a season-label permutation test with FDR correction. Per-subject; n=6 (no group statistic)._
 
 ## Method (as run)
 - Parcellation atlas-4S156Parcels; PCA variance threshold vt=0.95; production combined-HMM config.

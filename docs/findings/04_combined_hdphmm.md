@@ -1,8 +1,8 @@
-# Findings: 04 Combined Sticky HDP-HMM
+# Findings: 04 Combined HMM (sticky HDP-HMM priors)
 
 _Script: `script/04_combined_hdphmm.py`. Tier: MAIN (Methods, R1)._
 
-_Fits one combined sHDP-HMM per subject across all episodes; selects best config via Pareto analysis; Viterbi-decodes all TRs; validates with leave-one-season-out refits. Per-subject, n=6._
+_Fits one combined Gaussian HMM per subject across all episodes (sticky and hierarchical-Dirichlet transition priors borrowed from the sticky HDP-HMM, under a fixed-capacity weak-limit truncation); selects best config via Pareto analysis; Viterbi-decodes all TRs; validates with leave-one-season-out refits. Per-subject, n=6._
 
 ## Method (as run)
 

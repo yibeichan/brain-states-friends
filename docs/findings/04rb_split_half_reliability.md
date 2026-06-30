@@ -7,7 +7,7 @@ _Compares structural invariants and recurrence profiles between two independentl
 ## Method (as run)
 
 - **Parcellation:** atlas-4S156Parcels (156 parcels: Schaefer 100 cortical + 56 subcortical composite)
-- **Halves:** Half A = odd episodes, Half B = even episodes; each half fits its own sHDP-HMM independently (from `04_combined_hdphmm --mode split_half`)
+- **Halves:** Half A = odd episodes, Half B = even episodes; each half fits its own combined HMM independently (from `04_combined_hdphmm --mode split_half`)
 - **Active-state criterion:** FO > 0.01 of total TRs in that half
 - **Hungarian matching:** Parcel-space state-mean Pearson correlations; minimum threshold r > 0.3 for a pair to count as well-matched
 - **Recurrence scores:** Continuous (fraction of episodes with FO > 0.01); computed per half independently

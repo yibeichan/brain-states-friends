@@ -2,7 +2,7 @@
 
 _Script: `script/hp_04_score_and_decode.py`. Tier: CROSS-STIM (R5, Fig 5)._
 
-_Applies the Friends-trained sHDP-HMM to Harry Potter reading-task data (7 runs/subject, 5 subjects; no sub-04) to compute per-run log-likelihoods and Viterbi-decoded state sequences._
+_Applies the Friends-trained HMM to Harry Potter reading-task data (7 runs/subject, 5 subjects; no sub-04) to compute per-run log-likelihoods and Viterbi-decoded state sequences._
 
 ## Method (as run)
 

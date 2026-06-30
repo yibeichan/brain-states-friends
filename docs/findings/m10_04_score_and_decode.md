@@ -2,7 +2,7 @@
 
 _Script: `script/m10_04_score_and_decode.py`. Tier: CROSS-STIM (R5, Fig 5)._
 
-_Applies the Friends-trained sHDP-HMM to Movie10 data (via Viterbi decode + LL scoring), per subject (n=6), vt=0.95, atlas-4S156Parcels._
+_Applies the Friends-trained HMM to Movie10 data (via Viterbi decode + LL scoring), per subject (n=6), vt=0.95, atlas-4S156Parcels._
 
 ## Method (as run)
 

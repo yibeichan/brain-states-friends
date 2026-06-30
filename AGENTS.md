@@ -16,7 +16,7 @@ For every planning session and code review, you MUST spawn **three parallel revi
 
 ## Project Overview
 
-This project analyzes brain states during longitudinal TV watching (specifically the TV show "Friends") using fMRI data. It quantifies context-invariant and context-variant brain states across multiple subjects and episodes using Sticky Hierarchical Dirichlet Process Hidden Markov Models (HDP-HMM).
+This project analyzes brain states during longitudinal TV watching (specifically the TV show "Friends") using fMRI data. It quantifies how brain states recur across episodes, placing them along a continuous recurrence gradient rather than sorting them into context-invariant versus episode-specific classes. States are discovered with a per-subject Gaussian hidden Markov model whose transitions carry sticky and hierarchical-Dirichlet priors (a fixed-capacity weak-limit variant of the sticky HDP-HMM, not full nonparametric inference).
 
 ## Analysis Scope
 
@@ -26,11 +26,11 @@ This project analyzes brain states during longitudinal TV watching (specifically
 
 ### Introduction
 
-What does the brain do when we watch TV shows? To track who is doing what, where, how, and why, the brain transitions through dynamic states, spatiotemporal patterns of activity and coupling that shape perception, inference, and memory. But do these states reflect shared, recurring structure across episodes, or are they shaped by episode-specific content? Using fMRI data from six seasons of Friends, we fit a single combined sticky hierarchical Dirichlet process hidden Markov model (sHDP-HMM) per subject across all episodes (with PCA dimensionality reduction to manage data volume) and classified the resulting states as context-invariant or episode-specific using fractional occupancy and permutation tests.
+What does the brain do when we watch TV shows? To track who is doing what, where, how, and why, the brain transitions through dynamic states, spatiotemporal patterns of activity and coupling that shape perception, inference, and memory. But do these states reflect shared, recurring structure across episodes, or are they shaped by episode-specific content? Using fMRI data from six seasons of Friends, we fit a single combined Gaussian hidden Markov model per subject across all episodes (with PCA dimensionality reduction to manage data volume); its transitions carry sticky and hierarchical-Dirichlet priors borrowed from the sticky HDP-HMM (sHDP-HMM) under a fixed-capacity weak-limit truncation. We then scored each state's recurrence (the fraction of episodes in which it is active) using fractional occupancy and permutation tests, placing states along a continuous recurrence gradient rather than two discrete classes.
 
 ### Methods
 
-We analyzed fMRI data from six participants who each viewed all six seasons of the television show Friends (292 runs total, ~11 minutes each, TR = 1.49 s). Brain activity was parcellated using the Schaefer 100 cortical atlas (Yeo 7-network) and a subcortical composite (CIT168 + ThalamusHCP + SubcorticalHCP + Cerebellum; 56 parcels) for the primary 156-parcel analysis. PCA was fitted on training data only (70/15/15 season-stratified split) and used to project each episode's time series before model fitting (script 03a). PCA loadings diagnostics were generated (script 03b). We then fit a single combined sHDP-HMM per subject across all episodes to discover latent brain states without pre-specifying their number (script 04). States were classified as context-invariant or episode-specific by computing fractional occupancy per episode, a recurrence score (fraction of episodes where each state is active), a season specificity index, and a permutation test with FDR correction (script 05a). Dwell time distributions and temporal dynamics were examined across states (script 06). Leave-one-season-out refits validated that discovered states generalize across narrative contexts.
+We analyzed fMRI data from six participants who each viewed all six seasons of the television show Friends (292 runs total, ~11 minutes each, TR = 1.49 s). Brain activity was parcellated using the Schaefer 100 cortical atlas (Yeo 7-network) and a subcortical composite (CIT168 + ThalamusHCP + SubcorticalHCP + Cerebellum; 56 parcels) for the primary 156-parcel analysis. PCA was fitted on training data only (70/15/15 season-stratified split) and used to project each episode's time series before model fitting (script 03a). PCA loadings diagnostics were generated (script 03b). We then fit a single combined Gaussian HMM per subject across all episodes (sticky and hierarchical-Dirichlet transition priors borrowed from the sticky HDP-HMM, under a fixed-capacity weak-limit truncation), so the number of occupied states emerges from the data without being pre-specified (script 04). For each state we computed fractional occupancy per episode, a recurrence score (fraction of episodes where the state is active), a season-specificity index, and a season-label permutation test with FDR correction, placing states along a continuous recurrence gradient rather than two discrete classes (script 05a). Dwell time distributions and temporal dynamics were examined across states (script 06). Leave-one-season-out refits validated that discovered states generalize across narrative contexts.
 
 
 ## Environment Setup
@@ -80,7 +80,7 @@ sbatch --export=SUB_ID=sub-01 script/04_combined_hdphmm.sh
 # Step 4: Select best config + decode all episodes (select mode)
 sbatch --export=SUB_ID=sub-01,MODE=select script/04_combined_hdphmm.sh
 
-# Step 5a: Classify states as context-invariant vs episode-specific
+# Step 5a: Score state recurrence across episodes (continuous gradient)
 sbatch --export=SUB_ID=sub-01 script/05a_recurrence_analysis.sh
 
 # Step 5b: Visualize top recurring states on brain surface
@@ -182,8 +182,8 @@ The `.env` file defines critical paths:
 2. **Parcellation** (01–02): Supports multiple schemes (atlas-4S156 primary, atlas-4S456/1056 for validation)
 3. **PCA** (03a): Fits PCA on training data; projects episode time series for HMM input
 4. **PCA Loadings** (03b): PCA loadings analysis (A1-A7 diagnostics)
-5. **Combined HDP-HMM** (04): Fits a single sHDP-HMM per subject across all episodes (fit → select → optional loso_fit modes). Leave-one-season-out refits test whether discovered states generalize across narrative contexts.
-6. **Recurrence Analysis** (05a): Classifies states as context-invariant or episode-specific via fractional occupancy, permutation tests, and FDR correction
+5. **Combined HMM** (04): Fits a single combined Gaussian HMM per subject across all episodes (fit → select → optional loso_fit modes); sticky and hierarchical-Dirichlet transition priors are borrowed from the sticky HDP-HMM under a fixed-capacity weak-limit truncation. Leave-one-season-out refits test whether discovered states recur across narrative contexts.
+6. **Recurrence Analysis** (05a): Scores each state's recurrence across episodes (continuous gradient) via fractional occupancy, a season-specificity index, permutation tests, and FDR correction
 7. **Visualization** (05b): Surface plots of top recurring states
 8. **Temporal Dynamics** (06a): Dwell time distributions, transition matrices, recurrence assortativity, cross-subject summary. Key finding: recurrence and persistence are independent dimensions.
 8b. **Transition Structure** (06b): Graph topology, transition asymmetry, MFPT landscape, FC-transition correlation. Replaces old chain analysis.
@@ -212,10 +212,10 @@ Do brain states during naturalistic TV viewing reflect shared, recurring structu
 #### 1. State Discovery & Characterization
 - What are the fundamental brain states that spontaneously emerge during naturalistic viewing?
 - How many distinct brain states exist, and what are their spatial patterns?
-- **Method**: sHDP-HMM discovers states without pre-specifying numbers
+- **Method**: the combined HMM discovers states; the occupied-state count emerges from the data below a fixed truncation capacity (not pre-specified)
 
-#### 2. Context Invariance vs. Specificity
-- Which brain states are context-invariant (consistent across episodes) vs. context-variant (episode-specific)?
+#### 2. Recurrence Across Episodes
+- Where does each brain state fall on the recurrence gradient, from states active in nearly every episode to states appearing in only a few?
 - Do certain brain states represent general viewing processes vs. content-specific responses?
 - **Method**: Per-episode fractional occupancy, a recurrence score, a season-specificity index, and a permutation test with FDR correction (script 05a)
 
@@ -266,8 +266,8 @@ The analysis pipeline is organized around a combined cross-season HMM:
 1. **Main Pipeline Scripts** (numbered 03a–08d):
    - `03a_pca4combined_hmm.py` / `.sh`: PCA fitting + train/valid/test splits for combined HMM
    - `03b_pca_loadings.py` / `.sh`: PCA loadings analysis (A1-A7 diagnostics)
-   - `04_combined_hdphmm.py` / `.sh`: Fit combined sHDP-HMM (fit / select / loso_fit modes)
-   - `05a_recurrence_analysis.py` / `.sh`: Classify states as recurring vs episode-specific
+   - `04_combined_hdphmm.py` / `.sh`: Fit combined Gaussian HMM with sticky HDP-HMM transition priors (fit / select / loso_fit modes)
+   - `05a_recurrence_analysis.py` / `.sh`: Score state recurrence across episodes (continuous gradient)
    - `05b_visualize_recurring_states.py` / `.sh`: Cortical + subcortical surface plots (yabplot)
    - `06a_state_temp_dynamics.py` / `.sh`: Dwell time distributions, transition matrices, recurrence assortativity. Supports `--mode cross_subject_summary` for multi-panel aggregate figure.
    - `06b_transition_structure.py` / `.sh`: Graph topology, transition asymmetry, FC-transition correlation, MFPT landscape.
@@ -325,7 +325,7 @@ The parcel time series extraction pipeline (`02_extract_parcel_ts.py`) extracts 
 
 ### HDP-HMM State Discovery Strategy
 
-The brain state discovery pipeline uses **Sticky Hierarchical Dirichlet Process Hidden Markov Models (sHDP-HMM)** to identify latent brain states from fMRI time series. The primary analysis fits **one combined model per subject across all episodes** (`04_combined_hdphmm.py`), taking PCA-projected data from `03a_pca4combined_hmm.py` as input.
+The brain state discovery pipeline uses a per-subject **Gaussian hidden Markov model** with **sticky and hierarchical-Dirichlet transition priors** (borrowed from the sticky HDP-HMM, sHDP-HMM, but applied under a fixed-capacity weak-limit truncation rather than full nonparametric inference) to identify latent brain states from fMRI time series. The primary analysis fits **one combined model per subject across all episodes** (`04_combined_hdphmm.py`), taking PCA-projected data from `03a_pca4combined_hmm.py` as input.
 
 **Current production config (all 6 subjects, vt=0.95): `vt0.95_covdiag_nc50_g1`**
 
@@ -348,7 +348,7 @@ The brain state discovery pipeline uses **Sticky Hierarchical Dirichlet Process 
 
 ### Brain State Recurrence Analysis
 
-Script `05a_recurrence_analysis.py` classifies brain states as **context-invariant** or **episode-specific**, answering the central research question: **Do brain states represent recurring structure across episodes, or are they shaped by episode-specific content?**
+Script `05a_recurrence_analysis.py` scores each brain state's recurrence across episodes, placing states along a **continuous recurrence gradient** rather than two discrete classes. This addresses the central research question: **Do brain states reflect recurring structure across episodes, or are they shaped by episode-specific content?**
 
 **Prerequisites:**
 - `04_combined_hdphmm.py` (mode: select) completed; produces `decoded_states.pkl` and `final_results.json`
@@ -367,7 +367,7 @@ Script `05a_recurrence_analysis.py` classifies brain states as **context-invaria
 - `specificity_index.npy`: Per-state season-specificity indices
 - `fractional_occupancy.pkl`: Per-run, per-state FO
 - `permutation_pvalues.json`: Uncorrected and FDR-corrected p-values
-- `recurrence_summary.json`: Full results including state classifications
+- `recurrence_summary.json`: Full results including per-state recurrence scores and specificity indices
 
 **Usage:**
 ```bash

@@ -2,7 +2,7 @@
 
 _Script: `script/pp_04_score_and_decode.py`. Tier: CROSS-STIM (R5, Fig 5)._
 
-_Applies the Friends-trained sHDP-HMM to Petit Prince audiobook runs projected through the Friends PCA; computes per-run log-likelihood and Viterbi state sequences. Per-subject, n=5 (sub-04 absent from PP dataset)._
+_Applies the Friends-trained HMM to Petit Prince audiobook runs projected through the Friends PCA; computes per-run log-likelihood and Viterbi state sequences. Per-subject, n=5 (sub-04 absent from PP dataset)._
 
 ## Method (as run)
 
