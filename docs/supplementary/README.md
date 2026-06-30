@@ -8,7 +8,7 @@ This directory catalogues all supplementary figures (S1–S10) for the manuscrip
 |--------|---------------|----------------|-------------------|--------|
 | S1 | Cortical and subcortical surface maps of the top recurring brain states, per subject (six subjects, five states each) | [S01_recurring_state_surface_maps.png](figures/S01_recurring_state_surface_maps.png) | [../findings/05b_recurring_states_visualization.md](../findings/05b_recurring_states_visualization.md) | main |
 | S2 | PCA loadings diagnostics for one representative subject: loading heatmap, residual variance, motion-artifact flags, LOSO stability | [S02_pca_loadings.png](figures/S02_pca_loadings.png) | [../findings/03b_pca_loadings.md](../findings/03b_pca_loadings.md) | main |
-| S3 | Peak transformer-layer decoding depth for video features (DINOv2), shown per subject as a montage (six subjects) | [S03_video_peak_depth.png](figures/S03_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
+| S3 | Network-stratified video (DINOv2) decoding depth: per-subject montage testing whether the video depth peak localizes to specific networks (five subjects; sub-06's groups all fell below the minimum-states gate) | [S03_video_peak_depth.png](figures/S03_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S4 | Run-onset negative control for transformer depth decoding: decoding profiles anchored to run boundaries rather than stimulus content | [S04_run_onset_negative_control.png](figures/S04_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S5 | Per-layer decoding depth strips across three modalities — audio (A), text (B), video (C) — for the cross-stimulus transfer analysis | [S05_decoding_depth_strips_A.png](figures/S05_decoding_depth_strips_A.png), [_B.png](figures/S05_decoding_depth_strips_B.png), [_C.png](figures/S05_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
 | S6 | Cross-stimulus validity: PCA transfer diagnostic (A), within-Friends vs. transfer fit (B), and state presence across stimuli (C) | [S06_cross_stimulus_validity_A.png](figures/S06_cross_stimulus_validity_A.png), [_B.png](figures/S06_cross_stimulus_validity_B.png), [_C.png](figures/S06_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md) | main |
@@ -35,11 +35,11 @@ This figure characterizes the per-subject PCA space that the combined HMM consum
 
 ---
 
-## Figure S3 — Video peak decoding depth (DINOv2)
+## Figure S3 — Network-stratified video decoding depth (DINOv2)
 
-![Per-layer balanced-accuracy depth profiles for video features (DINOv2-large) across six subjects](figures/S03_video_peak_depth.png)
+![Network-stratified DINOv2-large decoding accuracy across layers, one heatmap per subject (five subjects; sub-06 excluded)](figures/S03_video_peak_depth.png)
 
-The figure displays, for each subject, the per-layer decoding accuracy of a Ridge classifier trained on DINOv2-large video features to predict brain-state labels. Peak decoding concentrated at the deepest layers for most subjects (relative depth 0.91–0.96), with normalized effect sizes exceeding the timing-confound baseline across all subjects. Permutation-based null distributions and FDR correction across the full layer-by-lag grid provided the significance reference for each profile.
+This vision-specific analysis tests whether the DINOv2 video decoding peak localizes to particular brain networks. Each subject contributes one heatmap whose rows are network-by-polarity groups and whose columns are DINOv2-large layers, colored by balanced accuracy; the best lag is fixed at the value from the main depth analysis. Only groups passing the minimum-states and minimum-TR gates are shown, and significance is assessed by Benjamini-Hochberg correction across layers within each group. Sub-06 is absent because all of its network groups fell below the minimum-states gate.
 
 ---
 
@@ -54,15 +54,15 @@ Run-onset-anchored states — those whose fractional occupancy tracks episode or
 ## Figure S5 — Decoding depth strips by modality
 
 **Panel A — Audio (Wav2Vec-BERT 2.0)**
-![Per-layer decoding depth strip for audio features across subjects](figures/S05_decoding_depth_strips_A.png)
+![Per-layer audio-model decoding strips for the held-out stimuli that carry audio (Movie10, Petit Prince FR and EN)](figures/S05_decoding_depth_strips_A.png)
 
-**Panel B — Text (LLaMA 3.2 3B)**
-![Per-layer decoding depth strip for text features across subjects](figures/S05_decoding_depth_strips_B.png)
+**Panel B — Text (LLaMA-3.2-3B)**
+![Per-layer text-model decoding strips for the held-out narrative stimuli (Movie10, Harry Potter, Petit Prince FR and EN)](figures/S05_decoding_depth_strips_B.png)
 
 **Panel C — Video (DINOv2-large)**
-![Per-layer decoding depth strip for video features across subjects](figures/S05_decoding_depth_strips_C.png)
+![Per-layer video-model decoding strips for the four Movie10 films (Wolf of Wall Street, Hidden Figures, The Bourne Supremacy, Life)](figures/S05_decoding_depth_strips_C.png)
 
-These strip panels summarize per-layer normalized decoding accuracy (balanced accuracy minus chance) across subjects and layers for each of the three transformer models in the cross-stimulus transfer analysis (Friends-trained classifier evaluated on held-out stimuli). Audio features peaked at intermediate layers; text features peaked near the middle of the model; video features peaked at the deepest layers. Significance was assessed by BH-FDR correction across layers within each subject and model.
+These strips show per-layer decoding accuracy (balanced accuracy minus chance) for the cross-stimulus transfer analysis, in which a Friends-trained classifier is applied to held-out stimuli. Each panel is one transformer model, and each line within a panel is one held-out stimulus, aggregated across subjects (shaded band). The stimulus set differs by modality: the audio model (A) covers Movie10 and Petit Prince in both languages; the text model (B) adds Harry Potter; the video model (C) covers the four Movie10 films. Cross-stimulus transfer is modest in magnitude relative to within-Friends decoding, consistent with the main cross-stimulus results.
 
 ---
 
