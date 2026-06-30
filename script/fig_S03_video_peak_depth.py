@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Re-render S03 D1-net montage with improved legibility.
+"""Renders Figure S3: D1-net balanced accuracy by network/polarity.
 
-One shared title, per-subject labels in larger font, tighter spacing,
-readable colorbar. 5 subjects (sub-06 excluded per caption).
+Produces docs/supplementary/figures/S03_video_peak_depth.png by plotting
+per-layer D1-net balanced accuracy heatmaps for 5 subjects (sub-06 excluded
+per caption) side-by-side with a shared colorbar and title.
 
 Usage:
-    uv run python script/render_S03_legibility.py
+    uv run python script/fig_S03_video_peak_depth.py
 """
 
 import json

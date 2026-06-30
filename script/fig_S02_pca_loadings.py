@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Re-render S02 PCA loadings figure with improved legibility.
+"""Renders Figure S2: PCA loadings diagnostic panels.
 
-Runs A1, A3, A4 for sub-01 with larger fonts and tighter layout,
-then composites into S02_pca_loadings.png.
+Produces docs/supplementary/figures/S02_pca_loadings.png by running panels
+A1 (loadings heatmap), A3 (residual variance), and A4 (network variance per
+PC) for sub-01, with publication-quality fonts and tight layout, then
+compositing them vertically.
 
 Usage:
-    uv run python script/render_S02_legibility.py
+    uv run python script/fig_S02_pca_loadings.py
 """
 
 import os
