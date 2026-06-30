@@ -12,7 +12,7 @@ findings and that explicitly disclose the fit confound behind R5:
 | C | Repertoire presence, gapped radial-gauge grid: 3 rows (M10/HP/PP) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
 
 Run:
-    marimo edit script/fig_S6_cross_stimulus_validity.py
+    marimo edit script/fig_S06_cross_stimulus_validity.py
 """
 
 import marimo
@@ -58,7 +58,7 @@ def config(Path, os):
     PARCELLATION = "atlas-4S156Parcels"
     VT = "vt0.95"
     SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS6"
+    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS06"
     OUT.mkdir(parents=True, exist_ok=True)
 
     out_root = SCRATCH_DIR / "output"
@@ -173,10 +173,10 @@ def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _fig.subplots_adjust(left=0.20, right=0.97, bottom=0.24, top=0.97)
-    _fig.savefig(OUT / "figS6_A_pca_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS6_A_pca_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS6_A_pca_transfer.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS6_A_pca_transfer")
+    _fig.savefig(OUT / "figS06_A_pca_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS06_A_pca_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS06_A_pca_transfer.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS06_A_pca_transfer")
     plt.close(_fig)
     return
 
@@ -246,10 +246,10 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _fig.subplots_adjust(left=0.15, right=0.97, bottom=0.18, top=0.96)
-    _fig.savefig(OUT / "figS6_B_fit_vs_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS6_B_fit_vs_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS6_B_fit_vs_transfer.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS6_B_fit_vs_transfer")
+    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS06_B_fit_vs_transfer")
     plt.close(_fig)
     return
 
@@ -314,10 +314,10 @@ def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
                          fontsize=6.5)
     _fig.subplots_adjust(left=0.07, right=0.99, bottom=0.04, top=0.92,
                          wspace=0.28, hspace=0.40)
-    _fig.savefig(OUT / "figS6_C_presence_donut.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS6_C_presence_donut.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS6_C_presence_donut.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS6_C_presence_donut")
+    _fig.savefig(OUT / "figS06_C_presence_donut.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS06_C_presence_donut.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS06_C_presence_donut.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS06_C_presence_donut")
     plt.close(_fig)
     return
 
@@ -336,10 +336,10 @@ def donut_legend(OUT, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     _fig = plt.figure(figsize=(2.25, 1.75))
     _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
                 handletextpad=0.5, labelspacing=0.6)
-    _fig.savefig(OUT / "figS6_donut_legend.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS6_donut_legend.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS6_donut_legend.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS6_donut_legend")
+    _fig.savefig(OUT / "figS06_donut_legend.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS06_donut_legend.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS06_donut_legend.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS06_donut_legend")
     plt.close(_fig)
     return
 

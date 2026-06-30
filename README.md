@@ -1,10 +1,10 @@
 # brain-states-friends
 
-Quantifying context-invariant and context-variant brain states during longitudinal TV watching under fMRI.
+Quantifying how brain states recur across narrative contexts during longitudinal naturalistic viewing under fMRI.
 
 ## Overview
 
-This project analyzes brain states during naturalistic TV viewing (the TV show "Friends") using fMRI data. It uses Sticky Hierarchical Dirichlet Process Hidden Markov Models (sHDP-HMM) to discover latent brain states and classify them as context-invariant or episode-specific using fractional occupancy and permutation tests.
+This project maps the repertoire of brain states that recur during longitudinal naturalistic viewing, using fMRI recorded while six participants watched the television series Friends across many episodes. A Sticky Hierarchical Dirichlet Process Hidden Markov Model (sHDP-HMM), fit per subject in a PCA-reduced parcel space, segments each viewing run into latent states. For each state we compute a recurrence score (the fraction of episodes in which it is active) using fractional occupancy and a season-label permutation test; the resulting scores form a continuous recurrence gradient rather than a binary invariant-versus-specific split. We then characterize each state's canonical-network composition and transition dynamics. Finally, we test the depth at which the states are decodable from a transformer model of the stimulus (representational depth), and whether the Friends state repertoire recurs in three held-out narratives: Movie10, Harry Potter, and Petit Prince.
 
 ## Data
 
@@ -47,8 +47,8 @@ corresponding `.env` variable (see [Configuration](#configuration)) at your loca
                                     │
                                     ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│  05a_recurrence_analysis.py        Classify states as context-invariant      │
-│                                    vs. episode-specific (FO + permutation)   │
+│  05a_recurrence_analysis.py        Score state recurrence across episodes    │
+│                                    (continuous gradient; FO + permutation)   │
 │  05b_visualize_recurring_states.py Cortical + subcortical surface plots      │
 │                                    (yabplot, headless PyVista rendering)     │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -149,9 +149,18 @@ noted) before invoking a figure script.
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
 | **4** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **5** | `fig_F5_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
-| **S6** | `fig_S6_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
-| **S7** | `fig_S7_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
-| **S9** | `fig_S9_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
+| **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
+| **S2** | `fig_S02_pca_loadings.py` | PCA loadings diagnostics (one representative subject) | `03b` |
+| **S3** | `fig_S03_video_peak_depth.py` | Network-stratified video (DINOv2) decoding depth | `08d` |
+| **S6** | `fig_S06_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
+| **S7** | `fig_S07_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
+| **S9** | `fig_S09_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
+
+Supplementary figures S4 and S5 have no `fig_*.py`: they are emitted directly by
+the `08d`/`08e` analysis scripts (via `script/08d_plots.py` / `script/08e_plots.py`).
+Figures S8 and S10 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch (ICA alternative decomposition). See [docs/supplementary/](docs/supplementary/)
+for the complete S1–S10 index with per-figure provenance and branch.
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,
 and `script/utils/{recurrence,temporal}_plots.py`. Network-participation metrics

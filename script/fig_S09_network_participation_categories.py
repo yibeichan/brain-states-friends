@@ -141,12 +141,12 @@ def main() -> None:
         metrics,
         summary,
         out_dir,
-        prefix="figS9_network_participation_categories",
+        prefix="figS09_network_participation_categories",
     )
     plot_network_participation_by_category(
         metrics,
         summary,
-        out_dir / "figS9_network_participation_categories",
+        out_dir / "figS09_network_participation_categories",
         args.subjects,
         NETWORK_ORDER,
         SUBJECT_MARKERS,
@@ -158,7 +158,7 @@ def main() -> None:
     print(f"saved: {metrics_path}")
     print(f"saved: {summary_path}")
     print(
-        f"saved: {out_dir / 'figS9_network_participation_categories'}.{{pdf,png,svg}}"
+        f"saved: {out_dir / 'figS09_network_participation_categories'}.{{pdf,png,svg}}"
     )
     print(f"n_states_total={len(metrics)} n_subjects={metrics['subject'].nunique()}")
     print("category counts:")

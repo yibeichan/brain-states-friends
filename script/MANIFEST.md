@@ -92,9 +92,9 @@ outputs and renders the panels.
 | `fig_S01_recurring_state_surface_maps.py` | Figure S1 | Supp |
 | `fig_S02_pca_loadings.py` | Figure S2 | Supp |
 | `fig_S03_video_peak_depth.py` | Figure S3 | Supp |
-| `fig_S6_cross_stimulus_validity.py` | Figure S6 | Supp |
-| `fig_S7_individual_differences.py` | Figure S7 | Supp |
-| `fig_S9_network_participation_categories.py` | Figure S9 | Supp |
+| `fig_S06_cross_stimulus_validity.py` | Figure S6 | Supp |
+| `fig_S07_individual_differences.py` | Figure S7 | Supp |
+| `fig_S09_network_participation_categories.py` | Figure S9 | Supp |
 
 Shared plotting helpers (imported by the figure scripts, not run directly):
 `08d_plots.py`, `08e_plots.py`, `utils/network_participation.py`,
