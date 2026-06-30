@@ -203,7 +203,7 @@ def create_multipanel_figure(
         ax_cortical.axis("off")
         ax_cortical.text(
             0.02, 0.95, f"#{idx + 1}", transform=ax_cortical.transAxes,
-            fontsize=18, fontweight="bold", color="black",
+            fontsize=22, fontweight="bold", color="black",
             verticalalignment="top",
             bbox=dict(boxstyle="circle,pad=0.3", facecolor="gold",
                       edgecolor="black", linewidth=2),
@@ -224,7 +224,7 @@ def create_multipanel_figure(
                 fontsize=8, color="red",
             )
         ax_subcortical.axis("off")
-        ax_subcortical.set_title("Subcortical*", fontsize=8, color="gray", pad=2)
+        ax_subcortical.set_title("Subcortical*", fontsize=12, color="gray", pad=2)
 
         # --- Column 2: Metrics ---
         ax_metrics = fig.add_subplot(gs[idx, 2])
@@ -236,7 +236,7 @@ def create_multipanel_figure(
         )
         ax_metrics.text(
             0.1, 0.85, metrics_text, transform=ax_metrics.transAxes,
-            fontsize=12, verticalalignment="top", fontfamily="monospace",
+            fontsize=16, verticalalignment="top", fontfamily="monospace",
             bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray",
                       alpha=0.3, edgecolor="gray"),
         )
@@ -249,20 +249,20 @@ def create_multipanel_figure(
             y_pos = range(len(runs))
             bars = ax_runs.barh(y_pos, fo_pct, color="steelblue", alpha=0.8)
             ax_runs.set_yticks(y_pos)
-            ax_runs.set_yticklabels(runs, fontsize=8)
-            ax_runs.set_xlabel("FO (%)", fontsize=9)
-            ax_runs.set_title("Top Runs", fontsize=10, fontweight="bold")
+            ax_runs.set_yticklabels(runs, fontsize=12)
+            ax_runs.set_xlabel("FO (%)", fontsize=13)
+            ax_runs.set_title("Top Runs", fontsize=14, fontweight="bold")
             ax_runs.invert_yaxis()
             for bar, pct in zip(bars, fo_pct):
                 ax_runs.text(
                     bar.get_width() + 0.3, bar.get_y() + bar.get_height() / 2,
-                    f"{pct:.1f}%", va="center", fontsize=8,
+                    f"{pct:.1f}%", va="center", fontsize=12,
                 )
         else:
             ax_runs.text(
                 0.5, 0.5, "No run\ndata",
                 transform=ax_runs.transAxes, ha="center", va="center",
-                fontsize=10, color="gray",
+                fontsize=14, color="gray",
             )
             ax_runs.axis("off")
 
@@ -271,7 +271,7 @@ def create_multipanel_figure(
         f"Top {n_rows} States by Recurrence Score - {subject_id}\n"
         f"Cortical (Schaefer-100, functionally-derived) | "
         f"Subcortical* (anatomically-defined: CIT168, HCP thalamus, Hippo/Amyg, Cerebellum)",
-        fontsize=13, fontweight="bold", y=0.998,
+        fontsize=15, fontweight="bold", y=0.998,
     )
 
     # Shared colorbar
@@ -283,7 +283,7 @@ def create_multipanel_figure(
     )
     sm.set_array([])
     cbar = plt.colorbar(sm, cax=cax, orientation="horizontal")
-    cbar.set_label("Activation (z-score)", fontsize=11, fontweight="bold")
+    cbar.set_label("Activation (z-score)", fontsize=14, fontweight="bold")
 
     # Supplementary figure footnote.
     # Marks this as a supplementary diagnostic (not a primary interpretation figure)
@@ -565,6 +565,11 @@ def main():
         help="Variance threshold subdirectory under final/ (e.g., 0.99). "
              "Reads from final/vt{VT}/. If omitted, reads from final/ directly (legacy path).",
     )
+    parser.add_argument(
+        "--output_dir", type=str, default=None,
+        help="Override the default output directory for 05b figures. "
+             "If omitted, defaults to $SCRATCH_DIR/output/05b_recurring_states_visualization/...",
+    )
     args = parser.parse_args()
     if args.n_states < 1:
         raise ValueError(f"--n_states must be >= 1, got {args.n_states}")
@@ -597,11 +602,14 @@ def main():
         )
     state_means_file = os.path.join(hmm_dir, "state_means_parcel.npy")
 
-    output_dir = os.path.join(
-        SCRATCH_DIR, "output", "05b_recurring_states_visualization", parcellation, args.sub_id
-    )
-    if args.vt is not None:
-        output_dir = os.path.join(output_dir, f"vt{args.vt}")
+    if args.output_dir is not None:
+        output_dir = args.output_dir
+    else:
+        output_dir = os.path.join(
+            SCRATCH_DIR, "output", "05b_recurring_states_visualization", parcellation, args.sub_id
+        )
+        if args.vt is not None:
+            output_dir = os.path.join(output_dir, f"vt{args.vt}")
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     logger.info("=" * 70)

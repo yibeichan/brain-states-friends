@@ -373,8 +373,9 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
             ax, sub,
             scaled_df.loc[sub].tolist(),
             valid_mask.loc[sub].tolist(),
-            show_axis_labels=(sub == SUBJECTS[0]),
+            show_axis_labels=True,
         )
+        ax.set_facecolor("white")
         ax.text(
             0.5, -0.30, sub,
             transform=ax.transAxes,
@@ -382,15 +383,16 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
             fontsize=6.5, color=SUBJECT_NEUTRAL,
         )
 
-    fig.subplots_adjust(wspace=0.95, left=0.04, right=0.96, top=0.82, bottom=0.16)
+    fig.subplots_adjust(wspace=1.35, left=0.04, right=0.96, top=0.82, bottom=0.16)
+    fig.patch.set_facecolor("white")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     pdf_path = out_dir / "figS7_radar_strip.pdf"
     png_path = out_dir / "figS7_radar_strip.png"
     svg_path = out_dir / "figS7_radar_strip.svg"
-    fig.savefig(pdf_path, bbox_inches="tight", pad_inches=0.04, transparent=True)
-    fig.savefig(png_path, bbox_inches="tight", pad_inches=0.04, transparent=True, dpi=300)
-    fig.savefig(svg_path, bbox_inches="tight", pad_inches=0.04, transparent=True)
+    fig.savefig(pdf_path, bbox_inches="tight", pad_inches=0.04, facecolor="white")
+    fig.savefig(png_path, bbox_inches="tight", pad_inches=0.04, facecolor="white", dpi=300)
+    fig.savefig(svg_path, bbox_inches="tight", pad_inches=0.04, facecolor="white")
     plt.close(fig)
     return pdf_path
 

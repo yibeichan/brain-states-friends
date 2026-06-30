@@ -308,7 +308,7 @@ def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
             _ax.text(0, -1.30, f"{int((_act & _pmask).sum())}/{int(_act.sum())}",
                      ha="center", va="top", fontsize=6.5, color="#444444")
             if _ri == 0:
-                _ax.set_title(_sub.replace("sub-", "S"), fontsize=6.5, pad=3)
+                _ax.set_title(_sub, fontsize=6.5, pad=3)
             if _ci == 0:
                 _ax.text(-1.62, 0, _row_lab, rotation=90, ha="center", va="center",
                          fontsize=6.5)
