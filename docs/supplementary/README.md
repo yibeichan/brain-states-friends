@@ -8,9 +8,9 @@ This directory catalogues all supplementary figures (S1–S10) for the manuscrip
 |--------|---------------|----------------|-------------------|--------|
 | S1 | Cortical and subcortical surface maps of the top recurring brain states, per subject (six subjects, five states each) | [S01_recurring_state_surface_maps.png](figures/S01_recurring_state_surface_maps.png) | [../findings/05b_recurring_states_visualization.md](../findings/05b_recurring_states_visualization.md) | main |
 | S2 | PCA loadings diagnostics for one representative subject: loading heatmap, residual variance, motion-artifact flags, LOSO stability | [S02_pca_loadings.png](figures/S02_pca_loadings.png) | [../findings/03b_pca_loadings.md](../findings/03b_pca_loadings.md) | main |
-| S3 | Peak transformer-layer decoding depth for video features (DINOv2), shown per subject as a montage (five subjects; sub-06 excluded by gate) | [S03_video_peak_depth.png](figures/S03_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
+| S3 | Peak transformer-layer decoding depth for video features (DINOv2), shown per subject as a montage (six subjects) | [S03_video_peak_depth.png](figures/S03_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S4 | Run-onset negative control for transformer depth decoding: decoding profiles anchored to run boundaries rather than stimulus content | [S04_run_onset_negative_control.png](figures/S04_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
-| S5 | Per-layer decoding depth strips across three modalities — audio (A), text (B), video (C) — for the within-Friends analysis | [S05_decoding_depth_strips_A.png](figures/S05_decoding_depth_strips_A.png), [_B.png](figures/S05_decoding_depth_strips_B.png), [_C.png](figures/S05_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
+| S5 | Per-layer decoding depth strips across three modalities — audio (A), text (B), video (C) — for the cross-stimulus transfer analysis | [S05_decoding_depth_strips_A.png](figures/S05_decoding_depth_strips_A.png), [_B.png](figures/S05_decoding_depth_strips_B.png), [_C.png](figures/S05_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
 | S6 | Cross-stimulus validity: PCA transfer diagnostic (A), within-Friends vs. transfer fit (B), and state presence across stimuli (C) | [S06_cross_stimulus_validity_A.png](figures/S06_cross_stimulus_validity_A.png), [_B.png](figures/S06_cross_stimulus_validity_B.png), [_C.png](figures/S06_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md) | main |
 | S7 | Individual differences in state repertoire and decoding: radar-strip summary across subjects | [S07_individual_differences.png](figures/S07_individual_differences.png) | [../findings/06b_transition_structure.md](../findings/06b_transition_structure.md), [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S8 | ICA convergence diagnostics: K-sweep heatmap (A) and per-state matched absolute correlation (B) | [S08_ica_convergence_A.png](figures/S08_ica_convergence_A.png), [_B.png](figures/S08_ica_convergence_B.png) | [sm_alt_ica_states.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_states.md) | supplements |
@@ -37,9 +37,9 @@ This figure characterizes the per-subject PCA space that the combined HMM consum
 
 ## Figure S3 — Video peak decoding depth (DINOv2)
 
-![Per-layer balanced-accuracy depth profiles for video features (DINOv2-large) across five subjects; sub-06 excluded by a gate criterion](figures/S03_video_peak_depth.png)
+![Per-layer balanced-accuracy depth profiles for video features (DINOv2-large) across six subjects](figures/S03_video_peak_depth.png)
 
-The figure displays, for each subject, the per-layer decoding accuracy of a Ridge classifier trained on DINOv2-large video features to predict brain-state labels. Peak decoding concentrated at the deepest layers for most subjects, with decoding remaining above the timing-confound baseline across the full depth range. Sub-06 did not pass the inclusion gate for this panel and is absent. Permutation-based null distributions and FDR correction across the full layer-by-lag grid provided the significance reference for each profile.
+The figure displays, for each subject, the per-layer decoding accuracy of a Ridge classifier trained on DINOv2-large video features to predict brain-state labels. Peak decoding concentrated at the deepest layers for most subjects (relative depth 0.91–0.96), with normalized effect sizes exceeding the timing-confound baseline across all subjects. Permutation-based null distributions and FDR correction across the full layer-by-lag grid provided the significance reference for each profile.
 
 ---
 
@@ -62,7 +62,7 @@ Run-onset-anchored states — those whose fractional occupancy tracks episode or
 **Panel C — Video (DINOv2-large)**
 ![Per-layer decoding depth strip for video features across subjects](figures/S05_decoding_depth_strips_C.png)
 
-These strip panels summarize per-layer normalized decoding accuracy (balanced accuracy minus chance) across subjects and layers for each of the three transformer models tested on Friends. Audio features peaked at intermediate layers; text features peaked near the middle of the model; video features peaked at the deepest layers. Each model's depth profile was evaluated against a timing-only confound baseline; effect sizes exceeded the baseline at all peak-layer cells for all subjects and modalities.
+These strip panels summarize per-layer normalized decoding accuracy (balanced accuracy minus chance) across subjects and layers for each of the three transformer models in the cross-stimulus transfer analysis (Friends-trained classifier evaluated on held-out stimuli). Audio features peaked at intermediate layers; text features peaked near the middle of the model; video features peaked at the deepest layers. Significance was assessed by BH-FDR correction across layers within each subject and model.
 
 ---
 
@@ -85,7 +85,7 @@ These panels document the cross-stimulus generalization checks. Panel A shows th
 
 ![Radar-strip summary of individual-subject variation in state repertoire properties and transformer-depth decoding outcomes](figures/S07_individual_differences.png)
 
-This assembled strip summarizes subject-level variation across multiple analyses: transition graph topology, recurrence-occupancy relationships, and per-modality decoding effect sizes. The panel spans findings documented in the transition-structure analysis (graph density, bidirectionality, community count, recurrence assortativity) and the transformer-depth analysis (peak layer and normalized effect size per model). Variation across the six subjects was present throughout these measures and is displayed here without cross-subject averaging, consistent with the per-subject analytic design used throughout the manuscript.
+This assembled strip summarizes subject-level variation across multiple analyses: transition graph topology, recurrence-occupancy relationships, and per-modality decoding effect sizes. The panel spans findings documented in the transition-structure analysis (edge count, bidirectionality index, community count, recurrence assortativity) and the transformer-depth analysis (peak layer and normalized effect size per model). Variation across the six subjects was present throughout these measures and is displayed here without cross-subject averaging, consistent with the per-subject analytic design used throughout the manuscript.
 
 ---
 
@@ -97,7 +97,7 @@ This assembled strip summarizes subject-level variation across multiple analyses
 **Panel B — Per-state matched absolute correlation**
 ![Absolute correlation between matched ICA components across repeated runs, shown per state](figures/S08_ica_convergence_B.png)
 
-These panels characterize the stability of the ICA decomposition used in the alternative-model supplement. Panel A shows convergence metrics as a function of the number of components K, used to select the production value. Panel B shows the absolute correlation between matched components across repeated ICA runs, quantifying reproducibility at the selected K. Detailed numerical results are in the findings document on the `supplements` branch (linked in the catalogue table above).
+These panels characterize the ICA decomposition used in the alternative-model supplement. Panel A shows the fraction of FDR-surviving spatially matched ICA–HMM pairs (content-eligible states) across six subjects as a function of the number of ICA components K. Panel B shows the per-state matched absolute correlation (|r|) between ICA consensus maps and HMM state-mean maps at each subject's K_active, with states coloured by HMM taxonomy category. Detailed numerical results are in the findings document on the `supplements` branch (linked in the catalogue table above).
 
 ---
 
