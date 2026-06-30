@@ -608,10 +608,10 @@ def plot_network_participation_by_category(
         net for net in network_order if f"network_share_{net}" in metrics.columns
     ]
 
-    fig = plt.figure(figsize=(11.0, 9.0))
+    fig = plt.figure(figsize=(12.0, 9.5))
     gs = GridSpec(
-        2, 2, figure=fig, hspace=0.45, wspace=0.30,
-        left=0.10, right=0.97, top=0.95, bottom=0.10,
+        2, 2, figure=fig, hspace=0.38, wspace=0.28,
+        left=0.09, right=0.97, top=0.97, bottom=0.09,
     )
     axA = fig.add_subplot(gs[0, 0])
     axB = fig.add_subplot(gs[0, 1])
@@ -637,12 +637,13 @@ def plot_network_participation_by_category(
         )
         bottoms += np.array(counts, dtype=float)
     for x, total in zip(cat_x, bottoms):
-        axA.text(x, total + 1.0, f"{int(total)}", ha="center", va="bottom", fontsize=7)
+        axA.text(x, total + 1.0, f"{int(total)}", ha="center", va="bottom", fontsize=9)
     axA.set_xticks(cat_x)
-    axA.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=7)
-    axA.set_ylabel("States", fontsize=8)
-    axA.set_title("A  State counts by category and subject", fontsize=9, loc="left")
-    axA.legend(fontsize=6, ncol=2, frameon=False, loc="upper right")
+    axA.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=9)
+    axA.set_ylabel("States", fontsize=11)
+    axA.set_title("A  State counts by category and subject", fontsize=13, loc="left", pad=6)
+    axA.legend(fontsize=8, ncol=2, frameon=False, loc="upper right")
+    axA.tick_params(axis="y", labelsize=9)
     axA.margins(y=0.12)
     for spine in ("top", "right"):
         axA.spines[spine].set_visible(False)
@@ -660,13 +661,13 @@ def plot_network_participation_by_category(
     )
     im = axB.imshow(heat, aspect="auto", cmap="magma", vmin=0.0)
     axB.set_xticks(np.arange(len(net_present)))
-    axB.set_xticklabels([display_network(n) for n in net_present], rotation=60, ha="right", fontsize=6)
+    axB.set_xticklabels([display_network(n) for n in net_present], rotation=55, ha="right", fontsize=8)
     axB.set_yticks(cat_x)
-    axB.set_yticklabels([cat_label(c) for c in categories], fontsize=7)
-    axB.set_title("B  Mean network composition by category", fontsize=9, loc="left")
+    axB.set_yticklabels([cat_label(c) for c in categories], fontsize=9)
+    axB.set_title("B  Mean network composition by category", fontsize=13, loc="left", pad=6)
     cbar = fig.colorbar(im, ax=axB, fraction=0.046, pad=0.04)
-    cbar.set_label("Mean share", fontsize=7)
-    cbar.ax.tick_params(labelsize=6)
+    cbar.set_label("Mean share", fontsize=10)
+    cbar.ax.tick_params(labelsize=8)
 
     # ── Panel C: distributions of top1/top3/entropy by category ──────────────
     metric_defs = [
@@ -698,10 +699,10 @@ def plot_network_participation_by_category(
                 axC.scatter(np.full(len(vals), xc) + jitter, vals, s=5,
                             color=color, alpha=0.35, linewidth=0, zorder=3)
     axC.set_xticks(cat_x)
-    axC.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=7)
+    axC.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=9)
     axC.set_ylim(0, 1.02)
-    axC.set_ylabel("Composition value", fontsize=8)
-    axC.set_title("C  Concentration and spread by category", fontsize=9, loc="left")
+    axC.set_ylabel("Composition value", fontsize=11)
+    axC.set_title("C  Concentration and spread by category", fontsize=13, loc="left", pad=6)
     handles = [
         plt.Line2D([0], [0], color=color, lw=3,
                    label={"top1_share": "Largest share",
@@ -709,7 +710,8 @@ def plot_network_participation_by_category(
                           "normalized_network_entropy": "Network entropy"}[metric])
         for metric, color in metric_defs
     ]
-    axC.legend(handles=handles, fontsize=6, frameon=False, loc="upper right")
+    axC.legend(handles=handles, fontsize=8, frameon=False, loc="upper right")
+    axC.tick_params(axis="y", labelsize=9)
     axC.yaxis.grid(True, linestyle=":", linewidth=0.5, color="#E2E2E2", zorder=0)
     for spine in ("top", "right"):
         axC.spines[spine].set_visible(False)
@@ -730,17 +732,18 @@ def plot_network_participation_by_category(
                 edgecolor="white", linewidth=0.4, label=f"{k}")
         bottoms += props
     axD.set_xticks(cat_x)
-    axD.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=7)
+    axD.set_xticklabels([cat_label(c) for c in categories], rotation=35, ha="right", fontsize=9)
     axD.set_ylim(0, 1.0)
-    axD.set_ylabel("Proportion of states", fontsize=8)
-    axD.set_title("D  Networks >=10% share by category", fontsize=9, loc="left")
-    axD.legend(title="Networks >=10%", fontsize=6, title_fontsize=6,
+    axD.set_ylabel("Proportion of states", fontsize=11)
+    axD.set_title("D  Networks >=10% share by category", fontsize=13, loc="left", pad=6)
+    axD.legend(title="Networks >=10%", fontsize=8, title_fontsize=8,
                ncol=2, frameon=False, loc="upper right")
+    axD.tick_params(axis="y", labelsize=9)
     for spine in ("top", "right"):
         axD.spines[spine].set_visible(False)
 
     output_stem = Path(output_stem)
-    for suffix, kwargs in ((".pdf", {}), (".png", {"dpi": 300}), (".svg", {})):
+    for suffix, kwargs in ((".pdf", {}), (".png", {"dpi": 200}), (".svg", {})):
         fig.savefig(output_stem.with_suffix(suffix), bbox_inches="tight",
-                    pad_inches=0.05, **kwargs)
+                    pad_inches=0.03, **kwargs)
     plt.close(fig)
