@@ -77,7 +77,7 @@ These strips show per-layer decoding accuracy (balanced accuracy minus chance) f
 **Panel C — State presence across stimuli**
 ![Fractional occupancy or coverage of recurring Friends states across held-out stimuli, per subject](figures/S06_cross_stimulus_validity_C.png)
 
-These panels document the cross-stimulus generalization checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; subcortical networks (thalamus, hippocampus/amygdala) explained less variance out-of-stimulus, consistent with their higher residual variance within Friends. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C shows that states active in Friends were also recovered in the held-out stimuli, with no Friends-inactive state gaining appreciable occupancy in any held-out context.
+These panels document the cross-stimulus validity checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; subcortical networks (thalamus, hippocampus/amygdala) explained less variance out-of-stimulus, consistent with their higher residual variance within Friends. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C shows that states active in Friends were also recovered in the held-out stimuli, with no Friends-inactive state gaining appreciable occupancy in any held-out context.
 
 ---
 
