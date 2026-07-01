@@ -49,6 +49,18 @@ uv sync --extra datalad     # + DataLad (output archival, script/utils/datalad_s
 `uv` must be on `PATH` (`~/.local/bin`); install with
 `curl -LsSf https://astral.sh/uv/install.sh | sh` if missing.
 
+DataLad also needs the **git-annex** binary at runtime, which is a Haskell
+program that `uv`/PyPI cannot provide. The `datalad` extra ships
+`datalad-installer` to fetch a standalone git-annex into user space (no root);
+`datalad_save.sh` errors with this command if git-annex is missing:
+
+```bash
+uv run --extra datalad datalad-installer \
+  -E ~/.local/share/git-annex-env.sh \
+  git-annex -m datalad/git-annex:release --install-dir ~/.local
+source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc
+```
+
 ## Key Commands
 
 ### Running the Pipeline

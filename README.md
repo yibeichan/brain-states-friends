@@ -214,6 +214,18 @@ uv sync --extra torch       # transformer stack (script 08c)
 uv sync --extra datalad     # DataLad for output archival (script/utils/datalad_save.sh)
 ```
 
+DataLad additionally requires the **git-annex** binary at runtime. git-annex is a
+Haskell program, not a PyPI package, so `uv` cannot install it. The `datalad`
+extra bundles `datalad-installer`, which fetches a standalone git-annex into
+user space (no root) — run it once after `uv sync --extra datalad`:
+
+```bash
+uv run --extra datalad datalad-installer \
+  -E ~/.local/share/git-annex-env.sh \
+  git-annex -m datalad/git-annex:release --install-dir ~/.local
+source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc
+```
+
 Run `uv sync` from the project root (the directory containing `pyproject.toml`).
 Install [`uv`](https://docs.astral.sh/uv/) first if it is not already on your
 `PATH` (`curl -LsSf https://astral.sh/uv/install.sh | sh`).

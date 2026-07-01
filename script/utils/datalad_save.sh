@@ -196,6 +196,18 @@ export PATH="$HOME/.local/bin:$PATH"
 # even though we run from OUTPUT_DIR (the DataLad dataset).
 DATALAD="uv run --project ${CODE_DIR} --extra datalad datalad"
 
+# datalad shells out to git-annex, a Haskell binary that uv/PyPI cannot provide.
+# It must be fetched once into user space (no root) with datalad-installer.
+if ! command -v git-annex &> /dev/null; then
+    echo "ERROR: git-annex not found on PATH. datalad needs it and uv cannot install it."
+    echo "Fetch it once (no root) with datalad-installer, then re-run this job:"
+    echo "  uv run --project ${CODE_DIR} --extra datalad datalad-installer \\"
+    echo "    -E ~/.local/share/git-annex-env.sh \\"
+    echo "    git-annex -m datalad/git-annex:release --install-dir ~/.local"
+    echo "  source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc"
+    exit 1
+fi
+
 # --- Save ---
 cd "${OUTPUT_DIR}"
 echo "Saving ${SAVE_PATH} ..."

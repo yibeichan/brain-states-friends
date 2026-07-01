@@ -44,6 +44,10 @@ torch = [
 ]
 datalad = [
   "datalad>=1.0",
+  # git-annex is a Haskell binary, not a PyPI package: uv cannot provide it.
+  # datalad-installer fetches a standalone git-annex into user space (no root).
+  # See README/AGENTS for the one-time `datalad-installer git-annex` step.
+  "datalad-installer>=1.1",
 ]
 
 [tool.uv]

@@ -288,6 +288,7 @@ dependencies = [
 [package.optional-dependencies]
 datalad = [
     { name = "datalad" },
+    { name = "datalad-installer" },
 ]
 gpu = [
     { name = "dynamax" },
@@ -307,6 +308,7 @@ torch = [
 requires-dist = [
     { name = "accelerate", marker = "extra == 'torch'", specifier = ">=0.30" },
     { name = "datalad", marker = "extra == 'datalad'", specifier = ">=1.0" },
+    { name = "datalad-installer", marker = "extra == 'datalad'", specifier = ">=1.1" },
     { name = "dynamax", marker = "extra == 'gpu'", specifier = ">=0.1.4" },
     { name = "ffmpeg-python", marker = "extra == 'torch'", specifier = ">=0.2" },
     { name = "hcp-utils" },
@@ -697,6 +699,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e5/b3/a6241175a59a6c4c5ca172f7b0d71e942f951ac508778ae90b11b6e0009d/datalad-1.6.0.tar.gz", hash = "sha256:612a8a60c31d50df435f859ef065fd528a5fc1c6c5b4bebd78edc6cea6e5f409", size = 1488291, upload-time = "2026-06-09T20:39:22.931Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/a1/c68d8c0ad0697b9e9dcf19322c80ca225e95f41899d9b7631a515820b8c8/datalad-1.6.0-py3-none-any.whl", hash = "sha256:a201c5e7ccd0e9be6f2550f677c61708c6d8fb5574c848b281f03e8f27197476", size = 1321331, upload-time = "2026-06-09T20:39:20.811Z" },
+]
+
+[[package]]
+name = "datalad-installer"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/38/ce0aa6599526acee61fd909510e866c71bc36488a334683bcf9f205c441e/datalad_installer-1.1.1.tar.gz", hash = "sha256:a784658edf34059be5e7dd62297ff34de00fcd57c424f40b3a85d4142bbf2c31", size = 52708, upload-time = "2024-12-13T22:55:29.013Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/36/930651d815f93c5ce2a83eea4bc4ead5ea7bb247161ad59da1a1409baf33/datalad_installer-1.1.1-py3-none-any.whl", hash = "sha256:c8ace57fc80f1850d05017202f71b5ced7ad7cc4b80a0826961a40ca05d5d639", size = 32061, upload-time = "2024-12-13T22:55:23.482Z" },
 ]
 
 [[package]]
