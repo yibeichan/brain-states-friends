@@ -1031,7 +1031,7 @@ class WeakLimitHMM(hmm.GaussianHMM):
                            f"alpha={self.history['alpha'][-1]:.3f}, gamma={self.history['gamma'][-1]:.3f}")
 
                  if iter_idx >= self.min_iter:
-                     # WINDOWED CONVERGENCE FOR HMM (Bayesian nonparametric methods)
+                     # WINDOWED CONVERGENCE (mitigates posterior-update oscillations)
                      # Standard single-step convergence fails because posterior updates cause oscillations.
                      # Solution: Check if MEAN log-likelihood over windows is stable.
                      #
