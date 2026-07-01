@@ -35,8 +35,8 @@ fi
 
 mkdir -p "${PROJECT_DIR}/logs"
 
-source ~/.bashrc
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # Configuration
 PARCELLATION=${PARCELLATION:-"atlas-4S156Parcels"}

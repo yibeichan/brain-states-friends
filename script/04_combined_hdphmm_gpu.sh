@@ -44,8 +44,8 @@ fi
 
 mkdir -p "${PROJECT_DIR}/logs"
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # JAX configuration
 export XLA_PYTHON_CLIENT_PREALLOCATE=false   # avoid OOM on shared GPUs
@@ -106,7 +106,7 @@ if [ "$MODE" = "loso_fit" ] || [ "$MODE" = "split_half_fit" ]; then
     if [ -n "${FIXED_VT}" ]; then
         _VT="${FIXED_VT}"
     elif [ -f "${OUTPUT_DIR}/stage1_result.json" ]; then
-        _VT=$(python3 -c "import json; print(json.load(open('${OUTPUT_DIR}/stage1_result.json'))['selected_vt'])")
+        _VT=$(uv run --project "${PROJECT_DIR}" --no-sync python3 -c "import json; print(json.load(open('${OUTPUT_DIR}/stage1_result.json'))['selected_vt'])")
     else
         echo "ERROR: Cannot determine vt for ${MODE}."
         echo "Set FIXED_VT or ensure stage1_result.json exists."

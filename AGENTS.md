@@ -35,19 +35,30 @@ We analyzed fMRI data from six participants who each viewed all six seasons of t
 
 ## Environment Setup
 
-The project uses a dual workflow:
-- `environment.yml` for micromamba bootstrap (`python`, `pip`, `uv`)
-- `pyproject.toml` for Python dependencies (managed by `uv`)
+The project is a self-contained `uv` project: `pyproject.toml` declares all
+Python dependencies and `uv` provisions a matching interpreter (no
+conda/micromamba). Set up once, then run everything via `uv run`.
 
 ```bash
-micromamba env create -f environment.yml
-micromamba activate friends-states
-uv sync
+uv sync                     # create .venv + install deps (auto-installs Python)
+uv sync --extra gpu         # + JAX/dynamax (GPU nodes)
+uv sync --extra torch       # + transformer stack (step 08c)
+uv sync --extra datalad     # + DataLad (output archival, script/utils/datalad_save.sh)
 ```
 
-If using abbreviated command:
+`uv` must be on `PATH` (`~/.local/bin`); install with
+`curl -LsSf https://astral.sh/uv/install.sh | sh` if missing.
+
+DataLad also needs the **git-annex** binary at runtime, which is a Haskell
+program that `uv`/PyPI cannot provide. The `datalad` extra ships
+`datalad-installer` to fetch a standalone git-annex into user space (no root);
+`datalad_save.sh` errors with this command if git-annex is missing:
+
 ```bash
-mmb activate friends-states
+uv run --extra datalad datalad-installer \
+  -E ~/.local/share/git-annex-env.sh \
+  git-annex -m datalad/git-annex:release --install-dir ~/.local
+source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc
 ```
 
 ## Key Commands

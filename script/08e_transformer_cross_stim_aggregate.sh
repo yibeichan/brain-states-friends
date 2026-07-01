@@ -51,8 +51,8 @@ fi
 
 mkdir -p "${PROJECT_DIR}/logs"
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 STIMULUS="${STIMULUS:-movie10}"
 MODEL="${MODEL:-llama-3.2-3b}"

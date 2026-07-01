@@ -162,8 +162,8 @@ fi
 
 # ── Normal execution (inside SLURM or direct) ────────────────────────
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"

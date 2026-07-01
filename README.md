@@ -95,10 +95,8 @@ ranges; see [MANIFEST.md](script/MANIFEST.md) for the per-script detail.
 ## Quick Start
 
 ```bash
-# One-time setup
+# One-time setup (uv installs a matching Python automatically)
 cd brain-states-friends
-micromamba env create -f environment.yml
-micromamba activate friends-states
 uv sync
 
 # Configure paths (see "Configuration" below)
@@ -205,16 +203,32 @@ Model selection uses Pareto analysis of validation log-likelihood vs active-stat
 ## Environment
 
 ```bash
-# Bootstrap base env (Python + uv)
-cd ~/brain-states-friends
-micromamba env create -f environment.yml
-micromamba activate friends-states
-
 # Sync Python dependencies from pyproject.toml
-uv sync
+# (uv provisions a matching Python interpreter automatically; no conda/micromamba needed)
+cd ~/brain-states-friends
+uv sync                     # core dependencies
+
+# Optional extras (add only what you need):
+uv sync --extra gpu         # JAX/dynamax for GPU model fitting (script 04, GPU nodes)
+uv sync --extra torch       # transformer stack (script 08c)
+uv sync --extra datalad     # DataLad for output archival (script/utils/datalad_save.sh)
+```
+
+DataLad additionally requires the **git-annex** binary at runtime. git-annex is a
+Haskell program, not a PyPI package, so `uv` cannot install it. The `datalad`
+extra bundles `datalad-installer`, which fetches a standalone git-annex into
+user space (no root) — run it once after `uv sync --extra datalad`:
+
+```bash
+uv run --extra datalad datalad-installer \
+  -E ~/.local/share/git-annex-env.sh \
+  git-annex -m datalad/git-annex:release --install-dir ~/.local
+source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc
 ```
 
 Run `uv sync` from the project root (the directory containing `pyproject.toml`).
+Install [`uv`](https://docs.astral.sh/uv/) first if it is not already on your
+`PATH` (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
 
 Surface visualizations (script `05b`) depend on [yabplot](https://github.com/yibeichan/yabplot),
 which is declared as a git dependency in `pyproject.toml` and installed
