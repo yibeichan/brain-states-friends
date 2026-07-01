@@ -3,7 +3,7 @@
 06b_transition_structure.py - Transition structure analysis of brain states.
 
 Analyzes the directed transition graph between brain states discovered by the
-combined HDP-HMM. Four analysis areas:
+combined HMM. Four analysis areas:
 
   A1. Transition Graph Topology - community detection, centrality, visualization
   A2. Transition Selectivity & Asymmetry - directional flow, concentration

@@ -13,7 +13,7 @@
 # =============================================================================
 # Movie10 Score & Decode - SLURM Submission Script
 # =============================================================================
-# Scores and decodes movie10 runs using the Friends-trained sHDP-HMM.
+# Scores and decodes movie10 runs using the Friends-trained weak-limit HMM.
 #
 # Prerequisites:
 #   - m10_03_project_movie_pca.py completed (projected movie data)

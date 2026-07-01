@@ -1,11 +1,11 @@
 """
-hdphmm_jax.py - JAX/GPU-accelerated Sticky HDP-HMM.
+hdphmm_jax.py - JAX/GPU-accelerated weak-limit HMM.
 
-Drop-in replacement for StickyHDPHMM (hdphmm.py) that runs the E-step,
+Drop-in replacement for WeakLimitHMM (hdphmm.py) that runs the E-step,
 M-step, and most of the HDP posterior update on GPU via JAX.
 
 Usage:
-    from utils.hdphmm_jax import StickyHDPHMM_JAX as StickyHDPHMM
+    from utils.hdphmm_jax import WeakLimitHMM_JAX as WeakLimitHMM
 
 The class exposes the same API (.fit, .score, .decode, .history, .means_,
 .covars_, .transmat_, .startprob_) as the numpy version. Pickled models
@@ -368,13 +368,13 @@ _viterbi_one_seq_jit = jit(_viterbi_one_seq)
 
 
 # =============================================================================
-# StickyHDPHMM_JAX - Main class
+# WeakLimitHMM_JAX - Main class
 # =============================================================================
 
-class StickyHDPHMM_JAX:
-    """JAX-accelerated Sticky HDP-HMM, API-compatible with StickyHDPHMM.
+class WeakLimitHMM_JAX:
+    """JAX-accelerated weak-limit HMM, API-compatible with WeakLimitHMM.
 
-    Parameters match the numpy StickyHDPHMM exactly. See hdphmm.py for docs.
+    Parameters match the numpy WeakLimitHMM exactly. See hdphmm.py for docs.
     """
 
     def __init__(self, n_components=10, alpha=10.0, gamma=10.0, kappa=50.0,
@@ -726,7 +726,7 @@ class StickyHDPHMM_JAX:
     # -----------------------------------------------------------------
 
     def fit(self, X, lengths=None):
-        """Fit the Sticky HDP-HMM using JAX-accelerated EM.
+        """Fit the weak-limit HMM using JAX-accelerated EM.
 
         Args:
             X:       (N_total, D) numpy array, concatenated sequences
@@ -955,7 +955,7 @@ class StickyHDPHMM_JAX:
     def prune_and_decode(self, X, lengths=None, min_usage=None):
         """Decode after masking inactive states in transmat.
 
-        Matches the numpy StickyHDPHMM.prune_and_decode() API.
+        Matches the numpy WeakLimitHMM.prune_and_decode() API.
         """
         if min_usage is None:
             min_usage = self.min_state_usage
@@ -988,3 +988,8 @@ class StickyHDPHMM_JAX:
             self.transmat_ = orig_transmat
 
         return result
+
+
+# Backward-compatible alias: models pickled before the 2026-06 rename store the
+# class as `utils.hdphmm_jax.StickyHDPHMM_JAX`; pickle.load resolves that name here.
+StickyHDPHMM_JAX = WeakLimitHMM_JAX

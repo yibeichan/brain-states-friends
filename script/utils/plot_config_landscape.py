@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-plot_config_landscape.py - Tabulate and visualize HDP-HMM config grid results.
+plot_config_landscape.py - Tabulate and visualize HMM config grid results.
 
 Reads all config_summary.json and stage1_result.json files across subjects
 to produce a comprehensive view of the variance threshold x model capacity
@@ -388,7 +388,7 @@ def print_summary_table(df):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Tabulate and visualize HDP-HMM config grid results.'
+        description='Tabulate and visualize HMM config grid results.'
     )
     parser.add_argument('--parcellation', default='atlas-4S156Parcels',
                         help='Parcellation name (default: atlas-4S156Parcels)')

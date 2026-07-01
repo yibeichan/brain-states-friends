@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_gpu_cpu_equivalence.py - Compare JAX/GPU vs numpy/CPU HDP-HMM on real data.
+test_gpu_cpu_equivalence.py - Compare JAX/GPU vs numpy/CPU HMM on real data.
 
 Loads existing CPU-fitted model (seed 0) for a fast config (vt0.80_covdiag_nc60_g5),
 fits the same config with JAX on GPU, and compares:
@@ -93,7 +93,7 @@ def load_real_data(sub_id, parcellation, variance_threshold):
 
 def fit_jax_model(X_train, lengths_train, config, seed, n_iter_override=None):
     """Fit JAX model with same config and seed as CPU."""
-    from utils.hdphmm_jax import StickyHDPHMM_JAX
+    from utils.hdphmm_jax import WeakLimitHMM_JAX
     import random
 
     n_iter = n_iter_override or config.get('n_iter', 10000)
@@ -105,7 +105,7 @@ def fit_jax_model(X_train, lengths_train, config, seed, n_iter_override=None):
     np.random.seed(seed)
     random.seed(seed)
 
-    model = StickyHDPHMM_JAX(
+    model = WeakLimitHMM_JAX(
         n_components=config['n_components'],
         covariance_type=config['covariance_type'],
         alpha=config['alpha'],
@@ -297,7 +297,7 @@ def compare_models(cpu_model, jax_model, X_valid, lengths_valid, cpu_meta):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Compare JAX/GPU vs numpy/CPU HDP-HMM on real data'
+        description='Compare JAX/GPU vs numpy/CPU HMM on real data'
     )
     parser.add_argument('--sub_id', default='sub-01')
     parser.add_argument('--parcellation', default='atlas-4S156Parcels')

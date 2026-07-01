@@ -27,7 +27,7 @@ main/supplementary boundary.
 | `01_get_parcel_label.py` | Extract parcel labels from atlas | MAIN | Methods §2 |
 | `02_extract_parcel_ts.py` | Extract parcel time series (avg + binary) | MAIN | Methods §2 |
 | `03a_pca4combined_hmm.py` | PCA fit + train/valid/test split (feeds HMM) | MAIN | Methods §3 |
-| `04_combined_hdphmm.py` | Combined sHDP-HMM per subject (fit/select/loso) | MAIN | Methods §3, R1 |
+| `04_combined_hdphmm.py` | Combined weak-limit HMM per subject (fit/select/loso) | MAIN | Methods §3, R1 |
 | `05a_recurrence_analysis.py` | Recurrence + season-specificity classification | MAIN | R1, Fig 1 |
 | `05b_visualize_recurring_states.py` | Cortical + subcortical surface plots | MAIN | Fig 2C / Fig S1 |
 | `05e_temporal_trend_a4.py` | State-flag synthesis (drift-anchored taxonomy / eligibility) | MAIN | Methods §4 (state classification) |
