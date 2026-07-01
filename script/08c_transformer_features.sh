@@ -79,10 +79,11 @@ export PATH="$HOME/.local/bin:$PATH"
 # Run `uv sync --extra torch --extra gpu` once manually, then fix with:
 #   uv pip install --reinstall nvidia-cudnn-cu13 nvidia-nccl-cu13
 
-# NVIDIA libs installed by pip (cuDNN, cuBLAS, NCCL, etc.) - not on system LD path
-NVIDIA_LIB="${PROJECT_DIR}/.venv/lib/python3.12/site-packages/nvidia"
+# NVIDIA libs installed by pip (cuDNN, cuBLAS, NCCL, etc.) - not on system LD path.
+# Glob the python* dir so this works whichever interpreter uv provisions
+# (requires-python allows 3.11 or 3.12).
 NVIDIA_LD=""
-for subdir in "${NVIDIA_LIB}"/*/lib; do
+for subdir in "${PROJECT_DIR}"/.venv/lib/python*/site-packages/nvidia/*/lib; do
     [ -d "$subdir" ] && NVIDIA_LD="${subdir}:${NVIDIA_LD}"
 done
 # FFmpeg shared libs (torchcodec needs libavutil.so etc. on LD_LIBRARY_PATH).
