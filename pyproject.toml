@@ -42,6 +42,9 @@ torch = [
   "accelerate>=0.30",
   "ffmpeg-python>=0.2",
 ]
+datalad = [
+  "datalad>=1.0",
+]
 
 [tool.uv]
 package = false

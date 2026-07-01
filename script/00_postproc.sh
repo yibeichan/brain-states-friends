@@ -32,9 +32,8 @@
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
-# Activate conda environment
-source ~/.bashrc
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # Subject array (6 subjects)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")

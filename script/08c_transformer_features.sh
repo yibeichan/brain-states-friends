@@ -72,8 +72,8 @@ mkdir -p "${PROJECT_DIR}/logs"
 
 module load ffmpeg/5.1.4
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # NOTE: Do NOT run `uv sync` here - it strips NVIDIA .so files (known uv bug).
 # Run `uv sync --extra torch --extra gpu` once manually, then fix with:
@@ -87,13 +87,13 @@ for subdir in "${NVIDIA_LIB}"/*/lib; do
 done
 # FFmpeg shared libs (torchcodec needs libavutil.so etc. on LD_LIBRARY_PATH).
 # Set FFMPEG_LIB to your ffmpeg lib dir (e.g. a spack/module install); if unset,
-# torchcodec must find ffmpeg some other way (system libs, conda, etc.).
+# torchcodec must find ffmpeg some other way (system libs, module load, etc.).
 FFMPEG_LIB="${FFMPEG_LIB:-}"
 export LD_LIBRARY_PATH="${FFMPEG_LIB:+${FFMPEG_LIB}:}${NVIDIA_LD}${LD_LIBRARY_PATH:-}"
 echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
 
-# Verify cudnn is findable
-python -c "import ctypes; ctypes.CDLL('libcudnn.so.9')" 2>/dev/null && echo "cudnn: OK" || echo "cudnn: NOT FOUND"
+# Verify cudnn is findable (venv python, via uv)
+uv run --project "${PROJECT_DIR}" --no-sync python -c "import ctypes; ctypes.CDLL('libcudnn.so.9')" 2>/dev/null && echo "cudnn: OK" || echo "cudnn: NOT FOUND"
 
 # Shared HuggingFace cache (override HF_HUB_CACHE to point at a shared location)
 export HF_HUB_CACHE="${HF_HUB_CACHE:-$HOME/.cache/huggingface/hub}"

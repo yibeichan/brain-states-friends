@@ -27,9 +27,8 @@
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
-# Activate conda environment
-source ~/.bashrc
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # Determine project directory
 if [ -n "$SLURM_SUBMIT_DIR" ]; then

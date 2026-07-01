@@ -38,8 +38,8 @@ mkdir -p "${PROJECT_DIR}/logs"
 set -a; [ -f "${PROJECT_DIR}/.env" ] && . "${PROJECT_DIR}/.env"; set +a
 
 # ---- Environment ----
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 export PYVISTA_OFF_SCREEN=1
 
 # ---- Configuration ----

@@ -189,22 +189,25 @@ ${INPUT_LINE}
 ${SLURM_INFO}"
 fi
 
-# --- Activate environment ---
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# --- Environment ---
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
+# datalad is an optional extra (pyproject.toml); --project resolves the repo venv
+# even though we run from OUTPUT_DIR (the DataLad dataset).
+DATALAD="uv run --project ${CODE_DIR} --extra datalad datalad"
 
 # --- Save ---
 cd "${OUTPUT_DIR}"
 echo "Saving ${SAVE_PATH} ..."
 echo "Code: ${CODE_BRANCH}@${CODE_SHORT}"
 
-datalad save -m "${COMMIT_MSG}" "${SAVE_PATH}"
+${DATALAD} save -m "${COMMIT_MSG}" "${SAVE_PATH}"
 echo "Saved."
 
 # --- Push ---
 if [ "$PUSH" = "true" ]; then
     echo "Pushing to ria-storage ..."
-    datalad push --to ria-storage
+    ${DATALAD} push --to ria-storage
     echo "Pushed."
 fi
 

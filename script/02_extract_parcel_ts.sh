@@ -23,10 +23,8 @@ SCRIPT_DIR="${PROJECT_DIR}/script"
 # Create logs directory using absolute path
 mkdir -p "${PROJECT_DIR}/logs"
 
-# Ensure running in the correct environment
-# Modify this line if your environment activation is different
-source ~/.bashrc
-micromamba activate friends-states # Or your specific conda/micromamba environment
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # --- HARDCODED VARIABLES ---
 # Change these values directly instead of using command line arguments

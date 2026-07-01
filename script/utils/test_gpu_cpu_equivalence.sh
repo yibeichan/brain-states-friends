@@ -28,8 +28,8 @@ fi
 
 mkdir -p "${PROJECT_DIR}/logs"
 
-eval "$(micromamba shell hook --shell bash)"
-micromamba activate friends-states
+# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
+export PATH="$HOME/.local/bin:$PATH"
 
 # JAX configuration
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
