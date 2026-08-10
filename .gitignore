@@ -11,5 +11,6 @@ __marimo__/
 
 # analysis outputs and session scratch
 output/
+logs/
 .claude/
 .superpowers/

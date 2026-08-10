@@ -55,6 +55,23 @@ expect *a priori*? Findings: [`docs/findings/sm_sim_prior_state_count.md`](docs/
 
 **Runs standalone?** Yes — pure simulation, `numpy` only.
 
+### R5 phase-randomized null (`rel`)
+
+Results R5 correlates each state's Friends recurrence score with its mean
+fractional occupancy when the frozen Friends PCA+HMM is decoded on Movie10.
+Both sides inherit low-level temporal structure, so how much of that
+correlation is stimulus-specific? Findings:
+[`docs/findings/sm_rel_r5_phase_null.md`](docs/findings/sm_rel_r5_phase_null.md).
+
+- `script/sm_rel_r5_phase_null.py` (+ `.sh` runner) — observed rho, faithfulness
+  gate against the published R5 value, and a multivariate phase-randomized
+  (Prichard-Theiler) surrogate null
+
+**Runs standalone?** No — reads main-pipeline outputs (stages `03a`/`04`/`05a`/
+`m10_03`/`m10_05`). Shares the shared-phase surrogate helper
+(`utils.ica_oos_recurrence.phase_randomize`) with the ICA supplement, so both
+nulls preserve identically what they claim to preserve.
+
 ## Running
 
 This branch is a self-contained `uv` project. Set up once with `uv sync`, then
@@ -71,6 +88,11 @@ uv run pytest script/tests/test_sim_prior_state_count.py
 uv run pytest script/tests/test_alt_ica_states.py script/tests/test_alt_ica_diagnostics.py
 uv run python script/sm_alt_ica_diagnostics.py            # repertoire/convergence diagnostics
 sbatch script/sm_alt_ica_states.sh                        # or: uv run python script/sm_alt_ica_states.py --help
+
+# rel / R5 phase null — needs main-pipeline outputs (stages 03a/04/05a/m10_03/m10_05)
+uv run pytest script/tests/test_rel_r5_phase_null.py
+sbatch script/sm_rel_r5_phase_null.sh                     # N_NULL=10000 by default
+uv run python script/sm_rel_r5_phase_null.py --sub_id sub-01 --n_null 10000
 ```
 
 ## Citation
