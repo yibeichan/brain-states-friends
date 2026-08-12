@@ -30,6 +30,10 @@ R5 reports, per subject, the Spearman correlation between each state's Friends r
 
 Ranges across subjects: observed rho 0.264 to 0.773; null mean 0.136 to 0.684; delta rho 0.069 to 0.224; z 5.97 to 15.62; p at the 0.0001 floor in all six.
 
+## Figure
+
+`script/fig_sm_rel_r5_phase_null.py` (marimo; headless via `uv run python script/fig_sm_rel_r5_phase_null.py`) renders `fig_sm_r5_phase_null_A_null_vs_observed.{png,svg}` to `$SCRATCH_DIR/output/manuscript_figures/fig_sm_r5_phase_null/`: 2x3 small multiples (sub-01 to sub-06, row-major), each cell the 10,000-draw null histogram with the observed rho as a vertical accent line, annotated with delta rho and z. Shared x-range across cells keeps the observed-null distance comparable across subjects. The loader cell asserts the draws reproduce the summary JSON's null moments and that the faithfulness gate passed, so the figure cannot silently render stale draws.
+
 **Two readings, both true.** The observed correlation exceeded the null in every subject, at the empirical floor, so the correspondence is not an artifact of Movie10's spectrum and covariance. At the same time the null mean accounts for 52% to 91% of the observed rho in each subject, so most of the raw correlation's magnitude is compatible with structure that has nothing to do with stimulus content. The effect is real and modest; reporting the raw rho alone overstates it.
 
 ## Relation to the earlier 100-draw run
