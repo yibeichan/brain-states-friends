@@ -37,9 +37,12 @@ Outputs (per subject, under
   - null_entropy_{variant}.npy, null_top1_{variant}.npy (per-draw values)
 Pooled summary: pooled_summary.json at the parcellation level.
 
-Deterministic seeding: subject index s, variant v in {0: variance_matched,
-1: isotropic} use numpy.random.default_rng(1000 * (s + 1) + v) for draws and
-default_rng(2000 * (s + 1) + v) for group resampling.
+Deterministic seeding: every stream comes from rng_for(purpose, *indices),
+which seeds numpy.random.default_rng with the SeedSequence list
+[purpose_tag, *indices] — purpose "draws" or "group" with (subject index,
+variant index), "pooled" with (variant index). The purpose tag keeps the
+streams disjoint by construction (scalar seed arithmetic previously let
+draw and group-resampling seeds collide across subjects).
 """
 
 from __future__ import annotations
@@ -114,6 +117,32 @@ def participation_metrics(maps: np.ndarray, network_masks: list[np.ndarray],
         "n_ge10": (comp >= 0.10).sum(axis=1).astype(float),
         "entropy": entropy,
     }
+
+
+SEED_PURPOSE = {"draws": 1, "group": 2, "pooled": 3}
+
+
+def rng_for(purpose: str, *indices: int) -> np.random.Generator:
+    """Deterministic stream for (purpose, indices), disjoint across purposes."""
+    return np.random.default_rng([SEED_PURPOSE[purpose], *indices])
+
+
+def descriptive_z(observed: float, null: np.ndarray) -> float | None:
+    """z of observed against the null; None when the null has zero variance.
+
+    Integer-valued metrics (n_ge10) can produce identical group medians in
+    every resample; None serializes as JSON null instead of inf/nan.
+    """
+    sd = float(null.std(ddof=1))
+    if sd == 0.0:
+        return None
+    return float((observed - float(null.mean())) / sd)
+
+
+def write_json(path, obj) -> None:
+    """json.dump with allow_nan=False so outputs are always strict RFC JSON."""
+    with open(path, "w") as f:
+        json.dump(obj, f, indent=2, allow_nan=False)
 
 
 def empirical_p_two_sided(observed: float, null: np.ndarray) -> float:
@@ -233,7 +262,7 @@ def main():
             "null": {},
         }
         for v_idx, variant in enumerate(variants):
-            rng = np.random.default_rng(1000 * (s_idx + 1) + v_idx)
+            rng = rng_for("draws", s_idx, v_idx)
             scale = np.sqrt(evar) if variant == "variance_matched" else 1.0
             draws_pc = rng.standard_normal((args.n_draws, w.shape[0])) * scale
             null_metrics = participation_metrics(
@@ -243,7 +272,7 @@ def main():
             np.save(out_dir / f"null_top1_{variant}.npy", null_metrics["top1"])
             for k in ("entropy", "top1"):
                 pooled_null[variant][k].append((null_metrics[k], k_elig))
-            rng_group = np.random.default_rng(2000 * (s_idx + 1) + v_idx)
+            rng_group = rng_for("group", s_idx, v_idx)
             variant_summary = {}
             for k in ("entropy", "top1", "top3", "n_ge10"):
                 med_null = null_median_distribution(
@@ -258,13 +287,11 @@ def main():
                          float(np.percentile(med_null, 97.5))],
                     "observed_median": obs_med,
                     "delta": obs_med - float(med_null.mean()),
-                    "z": float((obs_med - med_null.mean())
-                               / med_null.std(ddof=1)),
+                    "z": descriptive_z(obs_med, med_null),
                     "p_two_sided": empirical_p_two_sided(obs_med, med_null),
                 }
             summary["null"][variant] = variant_summary
-        with open(out_dir / "r2_network_spread_summary.json", "w") as f:
-            json.dump(summary, f, indent=2)
+        write_json(out_dir / "r2_network_spread_summary.json", summary)
         logger.info(
             "%s: entropy obs %.3f | vm null median %.3f (p=%.4g) | "
             "iso null median %.3f (p=%.4g)", sub,
@@ -280,8 +307,8 @@ def main():
                       "observed": {k: float(np.median(v))
                                    for k, v in pooled.items()},
                       "null": {}}
-    for variant in variants:
-        rng = np.random.default_rng(9000 + variants.index(variant))
+    for v_idx, variant in enumerate(variants):
+        rng = rng_for("pooled", v_idx)
         entry = {}
         for k in ("entropy", "top1"):
             groups = []
@@ -296,14 +323,13 @@ def main():
                 "null_median_ci": [float(np.percentile(med_null, 2.5)),
                                    float(np.percentile(med_null, 97.5))],
                 "observed_median": obs_med,
-                "z": float((obs_med - med_null.mean()) / med_null.std(ddof=1)),
+                "z": descriptive_z(obs_med, med_null),
                 "p_two_sided": empirical_p_two_sided(obs_med, med_null),
             }
         pooled_summary["null"][variant] = entry
     pooled_path = (Path(scratch) / "output" / "sm_rel_r2_network_spread"
                    / args.parcellation / "pooled_summary.json")
-    with open(pooled_path, "w") as f:
-        json.dump(pooled_summary, f, indent=2)
+    write_json(pooled_path, pooled_summary)
     logger.info("pooled summary -> %s", pooled_path)
 
 
