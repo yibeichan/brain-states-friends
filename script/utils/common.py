@@ -311,6 +311,7 @@ def normalize_cross_stim_run_id(run_id: str, stimulus: str) -> str:
         lppFR_run-01, ..., lppFR_run-09   (petitprince_fr)
         lppEN_run-01, ..., lppEN_run-09   (petitprince_en)
         s01e01a                                         (friends, already short)
+        rest_ses-001, ...   (hcptrt restingstate)
 
     This helper performs the long → short conversion so decode scripts and
     downstream consumers can key state pickles by the same IDs that 08c
@@ -324,7 +325,7 @@ def normalize_cross_stim_run_id(run_id: str, stimulus: str) -> str:
         Either the full BIDS ID or an already-short ID.
     stimulus : str
         One of ``"friends"``, ``"movie10"``, ``"harrypotter"``,
-        ``"petitprince_fr"``, ``"petitprince_en"``.
+        ``"petitprince_fr"``, ``"petitprince_en"``, ``"restingstate"``.
 
     Returns
     -------
@@ -414,9 +415,17 @@ def normalize_cross_stim_run_id(run_id: str, stimulus: str) -> str:
 
         return f"{expected_task}_run-{run_n:02d}"
 
+    if stimulus in ("restingstate", "rest"):
+        # hcptrt rest is always run-1; the session token is the run identity:
+        # sub-01_ses-001_task-restingstate_run-1_space-fsLR_den-91k -> rest_ses-001
+        # Idempotent: 'rest_ses-001' re-maps to itself via its ses token.
+        if "ses" in token_map:
+            return f"rest_ses-{token_map['ses']}"
+        return run_id
+
     raise ValueError(
         f"Unknown stimulus={stimulus!r}; expected one of friends, movie10, "
-        f"harrypotter, petitprince_fr, petitprince_en"
+        f"harrypotter, petitprince_fr, petitprince_en, restingstate"
     )
 
 
