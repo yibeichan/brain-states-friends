@@ -289,6 +289,10 @@ For detailed rationale: the design notes
     parser.add_argument("--fmriprep_dir", type=str, default=None,
                        help="Override fMRIPrep directory (e.g., for petit-prince whose "
                             "fmriprep lives outside cneuromod.processed/)")
+    parser.add_argument("--bids_task", type=str, default=None,
+                       help="Filter inputs to one BIDS task label (e.g., restingstate). "
+                            "Required for multi-task fMRIPrep datasets like hcptrt; "
+                            "default None keeps the historical any-task glob.")
 
     args = parser.parse_args()
 
@@ -324,13 +328,17 @@ For detailed rationale: the design notes
             data_dir, "cneuromod.processed", "fmriprep",
             args.task, args.sub_id)
 
-    # Session-based structure (friends, movie10, petit-prince)
+    # Optional task filter (multi-task datasets like hcptrt). Trailing '*' is
+    # required: real fMRIPrep names have 'run-XX_space-' between the task
+    # entity and 'fsLR'. Default (None) reproduces the historical glob exactly.
+    task_glob = f"*_task-{args.bids_task}_*" if args.bids_task else "*"
+    # Session-based structure (friends, movie10, petit-prince, hcptrt)
     subject_files = glob.glob(os.path.join(
-        fmriprep_base, "ses-*/func/*fsLR_den-91k*bold.dtseries.nii"))
+        fmriprep_base, f"ses-*/func/{task_glob}fsLR_den-91k*bold.dtseries.nii"))
     if not subject_files:
         # Fallback: session-less structure (e.g., harrypotter uses sub-XX/func/ directly)
         subject_files = glob.glob(os.path.join(
-            fmriprep_base, "func/*fsLR_den-91k*bold.dtseries.nii"))
+            fmriprep_base, f"func/{task_glob}fsLR_den-91k*bold.dtseries.nii"))
 
     if not subject_files:
         print(f"ERROR: No files found for subject {args.sub_id}, task {args.task}")
