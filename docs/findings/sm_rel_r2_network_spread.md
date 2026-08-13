@@ -30,14 +30,14 @@ All p at the 0.0002 floor (two-sided, 10,000 groups), every subject, both varian
 
 ## Reading
 
-The multi-network composition of content-eligible states is **not** inherited from the PCA basis. Arbitrary directions in the retained subspace are far *more* uniformly spread across networks (entropy ~0.93-0.96) than fitted states (~0.79-0.83). Fitted states occupy a middle ground: substantially more network-concentrated than generic subspace patterns, yet not confined to single networks (top-1 share only ~0.25). Both halves of R2's claim survive, and the null adds a positive statement: the model's states carry network structure beyond what the representation supplies.
+The multi-network composition of content-eligible states is **not** inherited from the PCA basis. Arbitrary directions in the retained subspace are far *more* uniformly spread across networks (entropy ~0.93-0.96) than fitted states (~0.79-0.83). Fitted states occupy a middle ground: substantially more network-concentrated than generic subspace patterns, yet not confined to single networks (top-1 share only ~0.25). Both halves of R2's claim survive, and fitted states carry network structure beyond what the representation supplies.
 
 ## Caveats and audit notes
 
-- **The null is about the representation, not the brain.** It tests whether the *basis* forces multi-network maps. It does not test whether network labels are the right frame (R2 already treats them as an annotation frame only).
+- **The null is about the representation, not the brain.** It tests whether the *basis* forces multi-network maps. It does not test whether network labels are the right frame (R2 treats them as an annotation frame only).
 - **Variance-matched vs isotropic differ in the expected direction.** Isotropic nulls are more uniform (higher entropy) because they weight low-variance, more localized components equally; variance-matched nulls concentrate on high-variance global components. Observed states sit below both.
 - **Entropy floor.** The 13-network normalized entropy of a map can be low only if network means differ strongly; with only 156 parcels and networks of 4-30 parcels, sampling noise alone keeps entropy well above 0 for smooth maps. The comparison is therefore always against the null, never against the theoretical [0, 1] range.
-- **Metric mirror, not import.** The metric functions mirror main-branch `utils/network_participation.py` rather than importing it (supplements is an orphan branch); the published-medians gate is what guarantees the mirror is faithful.
+- **Metric mirror, not import.** The metric functions mirror main-branch `utils/network_participation.py` rather than importing it (supplements is an orphan branch); the published-medians gate aborts the run if the mirror does not reproduce R2's pooled values.
 
 ## Manuscript integration
 
