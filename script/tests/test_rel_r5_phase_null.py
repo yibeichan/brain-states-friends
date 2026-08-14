@@ -297,3 +297,33 @@ def test_load_movie_runs_raises_on_short_columns_and_nonfinite(tmp_path, monkeyp
     _write_movie_fixture(tmp_path / "b", monkeypatch, {"run1": bad})
     with pytest.raises(ValueError, match="finite"):
         m.load_movie_runs("sub-xx", "parc", "0.95", n_pcs=4)
+
+
+# --------------------------------------------------------------------------
+# Faithfulness gate and provenance
+# --------------------------------------------------------------------------
+
+def test_check_gate_passes_within_tol_and_returns_delta():
+    assert m.check_gate(0.5, 0.5 + 1e-13, 1e-12, "sub-xx") == pytest.approx(1e-13)
+
+
+def test_check_gate_raises_on_exceedance():
+    with pytest.raises(RuntimeError, match="does not reproduce"):
+        m.check_gate(0.5, 0.6, 1e-12, "sub-xx")
+
+
+def test_check_gate_fails_closed_on_nan():
+    # NaN comparisons are False; the old `if gate > tol` let NaN sail through.
+    with pytest.raises(RuntimeError, match="not finite"):
+        m.check_gate(float("nan"), 0.5, 1e-12, "sub-xx")
+
+
+def test_published_reference_rejects_null_rho(tmp_path, monkeypatch):
+    d = tmp_path / "output" / "m10_05_cross_validation" / "parc" / "sub-xx" / "vt0.95"
+    d.mkdir(parents=True)
+    (d / "cross_stimulus_summary.json").write_text(__import__("json").dumps({
+        "n_movie_runs": 61, "n_active_states": 40,
+        "A1_recurrence_correlation": {"spearman_rho": None}}))
+    monkeypatch.setattr(m, "SCRATCH_DIR", str(tmp_path))
+    with pytest.raises(RuntimeError, match="spearman_rho"):
+        m.published_reference("sub-xx", "parc", "0.95")
