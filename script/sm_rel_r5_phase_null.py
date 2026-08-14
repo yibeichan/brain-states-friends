@@ -63,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils import hmm_io
 from utils.jax_free_model_io import _load_model_no_jax
 from utils.ica_oos_recurrence import phase_randomize
+from utils.stats import null_summary, safe_float
 
 load_dotenv()
 SCRATCH_DIR = os.getenv("SCRATCH_DIR")
@@ -76,12 +77,6 @@ logger = logging.getLogger(__name__)
 SEED_BASE = 0
 VAR_FLOOR = 1e-12
 LOG_FLOOR = 1e-300
-
-
-def _safe_float(x):
-    """Convert to float, mapping NaN/inf -> None (json.dump uses allow_nan=False)."""
-    x = float(x)
-    return x if np.isfinite(x) else None
 
 
 def hmm_params(model, n_pcs):
@@ -273,8 +268,11 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
             logger.info("%s: %d/%d draws (%.1f s elapsed)",
                         sub_id, s + 1, n_null, time.time() - t0)
 
-    null_mean, null_sd = float(null.mean()), float(null.std())
-    lo, hi = np.percentile(null, [2.5, 97.5])
+    ns = null_summary(observed, null)
+    if ns["n_finite"] < n_null:
+        logger.warning("%s: %d/%d null draws were non-finite and are excluded "
+                       "from moments and p", sub_id, n_null - ns["n_finite"], n_null)
+    lo, hi = np.percentile(null[np.isfinite(null)], [2.5, 97.5])
     summary = {
         "sub_id": sub_id,
         "parcellation": parcellation,
@@ -283,9 +281,9 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
         "n_states_active": int(len(active)),
         "n_pcs": n_pcs,
         "n_movie_runs": len(runs),
-        "observed": {"rho": _safe_float(observed), "p": _safe_float(observed_p)},
-        "gate": {"published_rho": _safe_float(ref["rho"]),
-                 "abs_delta": _safe_float(gate),
+        "observed": {"rho": safe_float(observed), "p": safe_float(observed_p)},
+        "gate": {"published_rho": safe_float(ref["rho"]),
+                 "abs_delta": safe_float(gate),
                  "tolerance": gate_tol},
         "null": {
             "kind": "phase_randomized_prichard_theiler_shared_phase",
@@ -297,18 +295,20 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
                          "higher-order temporal structure"],
             "randomized_side": "movie10_pc_scores",
             "n_draws": int(n_null),
+            "n_finite": ns["n_finite"],
             "seed_base": SEED_BASE,
             "seed_rule": "draw s uses numpy.random.default_rng(seed_base + s)",
-            "mean": _safe_float(null_mean),
-            "sd": _safe_float(null_sd),
-            "pct2.5": _safe_float(lo),
-            "pct97.5": _safe_float(hi),
+            "mean": ns["mean"],
+            "sd": ns["sd"],
+            "pct2.5": safe_float(lo),
+            "pct97.5": safe_float(hi),
         },
-        "delta_rho": _safe_float(observed - null_mean),
-        "z": _safe_float((observed - null_mean) / null_sd if null_sd > 0 else np.nan),
-        "p_empirical": _safe_float((1 + np.sum(null >= observed)) / (1 + n_null)),
-        "p_floor": _safe_float(1.0 / (1 + n_null)),
-        "null_share_of_observed": _safe_float(null_mean / observed if observed else np.nan),
+        "delta_rho": ns["residual"],
+        "z": ns["z"],
+        "p_empirical": ns["p"],
+        "p_floor": safe_float(1.0 / (1 + ns["n_finite"])) if ns["n_finite"] else None,
+        "null_share_of_observed": safe_float(
+            ns["mean"] / observed if (ns["mean"] is not None and observed) else float("nan")),
         "runtime_s": round(time.time() - t0, 1),
         "environment": {
             "python": platform.python_version(),
@@ -325,10 +325,17 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
         json.dump(summary, f, indent=2, allow_nan=False)
     np.save(os.path.join(out_dir, "null_draws.npy"), null)
 
-    logger.info("%s: null mean=%+.4f sd=%.4f | delta_rho=%+.4f z=%+.2f p=%.4f "
-                "| null is %.0f%% of observed -> %s",
-                sub_id, null_mean, null_sd, summary["delta_rho"], summary["z"],
-                summary["p_empirical"], 100 * summary["null_share_of_observed"], out_path)
+    def _fmt(v, spec):
+        return format(v, spec) if v is not None else "n/a"
+
+    logger.info("%s: null mean=%s sd=%s | delta_rho=%s z=%s p=%s "
+                "| null is %s%% of observed -> %s",
+                sub_id, _fmt(ns["mean"], "+.4f"), _fmt(ns["sd"], ".4f"),
+                _fmt(ns["residual"], "+.4f"), _fmt(ns["z"], "+.2f"),
+                _fmt(ns["p"], ".4f"),
+                _fmt(100 * summary["null_share_of_observed"]
+                     if summary["null_share_of_observed"] is not None else None, ".0f"),
+                out_path)
     return summary
 
 
