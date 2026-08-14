@@ -87,10 +87,22 @@ def _safe_float(x):
 def hmm_params(model, n_pcs):
     """Extract diagonal-Gaussian emission and transition parameters in PC space.
 
+    Preconditions: model.covariance_type must be "diag", and model.means_.shape[1]
+    must equal n_pcs (no truncation or padding).
+
     covars_ is stored either as (K, n_pcs) diagonals or as (K, n_pcs, n_pcs)
     full matrices whose diagonal is the fitted variance; both are reduced to
     (K, n_pcs) variances here and floored to keep the log-density finite.
     """
+    cov_type = getattr(model, "covariance_type", None)
+    if cov_type != "diag":
+        raise ValueError(
+            f"covariance_type={cov_type!r}: this standalone decoder reduces "
+            "covariances to diagonals, which is only valid for 'diag' fits")
+    if n_pcs != np.asarray(model.means_).shape[1]:
+        raise ValueError(
+            f"n_pcs lookup says {n_pcs} but model means have "
+            f"{np.asarray(model.means_).shape[1]} dims; refusing to decode in a mismatched subspace")
     means = np.asarray(model.means_)[:, :n_pcs]
     cov = np.asarray(model.covars_)
     if cov.ndim == 3:
@@ -147,8 +159,18 @@ def load_movie_runs(sub_id, parcellation, vt, n_pcs):
     for ids in run_ids.values():
         for rid in ids:
             path = os.path.join(mdir, f"{rid}.npy")
-            if os.path.exists(path):
-                runs.append(np.load(path)[:, :n_pcs])
+            if not os.path.exists(path):
+                raise FileNotFoundError(
+                    f"Projected Movie10 run missing: {path} (run {rid}); "
+                    "a partial m10_03 output would silently change the null's run ensemble")
+            arr = np.load(path)
+            if arr.shape[1] < n_pcs:
+                raise ValueError(
+                    f"{path}: expected >= {n_pcs} columns, found {arr.shape[1]}")
+            arr = arr[:, :n_pcs]
+            if not np.all(np.isfinite(arr)):
+                raise ValueError(f"{path}: non-finite values in projected run")
+            runs.append(arr)
     if not runs:
         raise FileNotFoundError(f"No projected Movie10 runs found under {mdir}")
     return runs
