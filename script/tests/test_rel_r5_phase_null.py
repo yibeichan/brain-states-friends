@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from utils.ica_oos_recurrence import phase_randomize
+import sm_rel_r5_phase_null as m
 from sm_rel_r5_phase_null import (
     SEED_BASE,
     hmm_params,
@@ -160,6 +161,7 @@ class _StubModel:
         self.means_, self.covars_ = means, covars
         self.transmat_, self.startprob_ = transmat, startprob
         self.n_components = len(startprob)
+        self.covariance_type = "diag"
 
 
 def test_hmm_params_accepts_diagonal_and_full_covars():
@@ -179,7 +181,7 @@ def test_hmm_params_accepts_diagonal_and_full_covars():
 
 
 def test_hmm_params_truncates_to_n_pcs_and_floors_variance():
-    n_k, n_d, n_pcs = 2, 5, 3
+    n_k, n_d, n_pcs = 2, 3, 3
     means = np.arange(n_k * n_d, dtype=float).reshape(n_k, n_d)
     covars = np.zeros((n_k, n_d))  # degenerate: must be floored, not zero
     trans = np.full((n_k, n_k), 0.5)
@@ -222,3 +224,76 @@ def test_mean_fractional_occupancy_includes_unvisited_states():
     occ = mean_fractional_occupancy([np.zeros(10, dtype=int)], 4)
     assert occ.shape == (4,)
     np.testing.assert_allclose(occ, [1.0, 0.0, 0.0, 0.0])
+
+
+# --------------------------------------------------------------------------
+# Fail-closed input loading: hmm_params and load_movie_runs
+# --------------------------------------------------------------------------
+
+def test_hmm_params_rejects_non_diag_covariance():
+    class FakeModel:
+        covariance_type = "full"
+        means_ = np.zeros((3, 4))
+        covars_ = np.stack([np.eye(4)] * 3)
+        startprob_ = np.full(3, 1 / 3)
+        transmat_ = np.full((3, 3), 1 / 3)
+        n_components = 3
+
+    with pytest.raises(ValueError, match="covariance_type"):
+        m.hmm_params(FakeModel, 4)
+
+
+def test_hmm_params_rejects_n_pcs_mismatch():
+    class FakeModel:
+        covariance_type = "diag"
+        means_ = np.zeros((3, 4))
+        covars_ = np.ones((3, 4))
+        startprob_ = np.full(3, 1 / 3)
+        transmat_ = np.full((3, 3), 1 / 3)
+        n_components = 3
+
+    with pytest.raises(ValueError, match="n_pcs"):
+        m.hmm_params(FakeModel, 5)
+
+
+def test_hmm_params_rejects_n_pcs_mismatch_model_too_large():
+    """Model with more dims than n_pcs must also raise (no silent truncation)."""
+    class FakeModel:
+        covariance_type = "diag"
+        means_ = np.zeros((3, 6))
+        covars_ = np.ones((3, 6))
+        startprob_ = np.full(3, 1 / 3)
+        transmat_ = np.full((3, 3), 1 / 3)
+        n_components = 3
+
+    with pytest.raises(ValueError, match="n_pcs"):
+        m.hmm_params(FakeModel, 4)
+
+
+def _write_movie_fixture(tmp_path, monkeypatch, run_files):
+    """movie_run_ids.json names two runs; run_files maps rid -> array or None (absent)."""
+    mdir = tmp_path / "output" / "m10_03_projected" / "parc" / "sub-xx" / "vt0.95"
+    mdir.mkdir(parents=True)
+    (mdir / "movie_run_ids.json").write_text(
+        __import__("json").dumps({"filmA": list(run_files)}))
+    for rid, arr in run_files.items():
+        if arr is not None:
+            np.save(mdir / f"{rid}.npy", arr)
+    monkeypatch.setattr(m, "SCRATCH_DIR", str(tmp_path))
+
+
+def test_load_movie_runs_raises_on_missing_run(tmp_path, monkeypatch):
+    _write_movie_fixture(tmp_path, monkeypatch,
+                         {"run1": np.zeros((10, 4)), "run2": None})
+    with pytest.raises(FileNotFoundError, match="run2"):
+        m.load_movie_runs("sub-xx", "parc", "0.95", n_pcs=4)
+
+
+def test_load_movie_runs_raises_on_short_columns_and_nonfinite(tmp_path, monkeypatch):
+    _write_movie_fixture(tmp_path, monkeypatch, {"run1": np.zeros((10, 3))})
+    with pytest.raises(ValueError, match="columns"):
+        m.load_movie_runs("sub-xx", "parc", "0.95", n_pcs=4)
+    bad = np.zeros((10, 4)); bad[3, 1] = np.nan
+    _write_movie_fixture(tmp_path / "b", monkeypatch, {"run1": bad})
+    with pytest.raises(ValueError, match="finite"):
+        m.load_movie_runs("sub-xx", "parc", "0.95", n_pcs=4)
