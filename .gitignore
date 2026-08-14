@@ -11,6 +11,7 @@ __marimo__/
 
 # analysis outputs and session scratch
 output/
-logs/
+logs/*
+!logs/.gitkeep
 .claude/
 .superpowers/
