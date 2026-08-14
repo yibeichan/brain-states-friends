@@ -176,12 +176,32 @@ def load_movie_runs(sub_id, parcellation, vt, n_pcs):
     return runs
 
 
-def published_rho(sub_id, parcellation, vt):
-    """The R5 correlation as reported by the main pipeline, for the gate."""
+def check_gate(observed, reference, gate_tol, sub_id):
+    """Fail closed: observed must be finite and within gate_tol of reference."""
+    if not np.isfinite(observed):
+        raise RuntimeError(
+            f"{sub_id}: standalone Viterbi rho is not finite ({observed!r}); "
+            "refusing to draw a null for a degenerate statistic")
+    gate = abs(observed - reference)
+    if not (gate <= gate_tol):
+        raise RuntimeError(
+            f"{sub_id}: standalone Viterbi rho={observed:.6f} does not reproduce "
+            f"the published R5 rho={reference:.6f} (|delta|={gate:.2e} > {gate_tol:.0e}). "
+            "Refusing to report a null for a statistic the manuscript does not use.")
+    return gate
+
+
+def published_reference(sub_id, parcellation, vt):
+    """Published R5 rho plus the input counts the standalone rebuild must match."""
     path = os.path.join(SCRATCH_DIR, "output", "m10_05_cross_validation",
                         parcellation, sub_id, f"vt{vt}", "cross_stimulus_summary.json")
     with open(path) as f:
-        return float(json.load(f)["A1_recurrence_correlation"]["spearman_rho"])
+        j = json.load(f)
+    rho = j["A1_recurrence_correlation"]["spearman_rho"]
+    if rho is None or not np.isfinite(float(rho)):
+        raise RuntimeError(f"{sub_id}: published spearman_rho is degenerate ({rho!r})")
+    return {"rho": float(rho), "n_movie_runs": int(j["n_movie_runs"]),
+            "n_active_states": int(j["A1_recurrence_correlation"]["n_active_states"])}
 
 
 def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
@@ -209,13 +229,13 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
 
     # Faithfulness gate: this standalone Viterbi must reproduce the published
     # statistic, or the null is testing a different quantity than R5 reports.
-    reference = published_rho(sub_id, parcellation, vt)
-    gate = abs(observed - reference)
-    if gate > gate_tol:
+    ref = published_reference(sub_id, parcellation, vt)
+    if len(runs) != ref["n_movie_runs"] or len(active) != ref["n_active_states"]:
         raise RuntimeError(
-            f"{sub_id}: standalone Viterbi rho={observed:.6f} does not reproduce "
-            f"the published R5 rho={reference:.6f} (|delta|={gate:.2e} > {gate_tol:.0e}). "
-            "Refusing to report a null for a statistic the manuscript does not use.")
+            f"{sub_id}: input drift vs published run: loaded {len(runs)} runs / "
+            f"{len(active)} active states, published {ref['n_movie_runs']} / "
+            f"{ref['n_active_states']}")
+    gate = check_gate(observed, ref["rho"], gate_tol, sub_id)
 
     logger.info("%s: observed rho=%+.4f (gate |delta|=%.2e, %d active states, "
                 "%d Movie10 runs, %d PCs) - drawing %d surrogates",
@@ -241,7 +261,7 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
         "n_pcs": n_pcs,
         "n_movie_runs": len(runs),
         "observed": {"rho": _safe_float(observed), "p": _safe_float(observed_p)},
-        "gate": {"published_rho": _safe_float(reference),
+        "gate": {"published_rho": _safe_float(ref["rho"]),
                  "abs_delta": _safe_float(gate),
                  "tolerance": gate_tol},
         "null": {
