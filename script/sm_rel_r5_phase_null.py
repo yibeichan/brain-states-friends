@@ -204,6 +204,29 @@ def published_reference(sub_id, parcellation, vt):
             "n_active_states": int(j["A1_recurrence_correlation"]["n_active_states"])}
 
 
+def normalize_vt(vt):
+    """Canonical two-decimal vt string ('0.95'): lookup keys and vt{...} dirs use it."""
+    return f"{float(vt):.2f}"
+
+
+def build_parser():
+    p = argparse.ArgumentParser(
+        description="Phase-randomized null for the R5 recurrence-occupancy correlation.")
+    p.add_argument("--sub_id", required=True)
+    p.add_argument("--parcellation", default="atlas-4S156Parcels")
+    p.add_argument("--vt", default="0.95",
+                   help="Variance threshold for n_pcs selection (e.g. 0.95)")
+    p.add_argument("--n_null", type=int, default=10000,
+                   help="Number of phase-randomized surrogate draws "
+                        "(10000 = the published run).")
+    p.add_argument("--gate_tol", type=float, default=1e-12,
+                   help="Max |observed - published| rho before aborting.")
+    p.add_argument("--out_dir", default=None,
+                   help="Override output directory. Use for test/exploratory runs "
+                        "so the published outputs are not overwritten in place.")
+    return p
+
+
 def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
     """Compute the observed R5 rho and its phase-randomized null for one subject."""
     base = os.path.join(SCRATCH_DIR, "output")
@@ -310,21 +333,12 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
 
 
 def main():
-    p = argparse.ArgumentParser(
-        description="Phase-randomized null for the R5 recurrence-occupancy correlation.")
-    p.add_argument("--sub_id", required=True)
-    p.add_argument("--parcellation", default="atlas-4S156Parcels")
-    p.add_argument("--vt", default="0.95",
-                   help="Variance threshold for n_pcs selection (e.g. 0.95)")
-    p.add_argument("--n_null", type=int, default=1000,
-                   help="Number of phase-randomized surrogate draws.")
-    p.add_argument("--gate_tol", type=float, default=1e-12,
-                   help="Max |observed - published| rho before aborting.")
-    a = p.parse_args()
-
-    out_dir = os.path.join(SCRATCH_DIR, "output", "sm_rel_r5_phase_null",
-                           a.parcellation, a.sub_id, f"vt{a.vt}")
-    run_subject(a.sub_id, a.parcellation, a.vt, a.n_null, out_dir, a.gate_tol)
+    a = build_parser().parse_args()
+    vt = normalize_vt(a.vt)
+    out_dir = a.out_dir or os.path.join(
+        SCRATCH_DIR, "output", "sm_rel_r5_phase_null",
+        a.parcellation, a.sub_id, f"vt{vt}")
+    run_subject(a.sub_id, a.parcellation, vt, a.n_null, out_dir, a.gate_tol)
 
 
 if __name__ == "__main__":

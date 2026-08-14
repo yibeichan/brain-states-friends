@@ -327,3 +327,20 @@ def test_published_reference_rejects_null_rho(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "SCRATCH_DIR", str(tmp_path))
     with pytest.raises(RuntimeError, match="spearman_rho"):
         m.published_reference("sub-xx", "parc", "0.95")
+
+
+# --------------------------------------------------------------------------
+# CLI parser and vt normalization
+# --------------------------------------------------------------------------
+
+def test_parser_defaults_match_published_run():
+    a = m.build_parser().parse_args(["--sub_id", "sub-01"])
+    assert a.n_null == 10000          # was 1000: silently overwrote the published null
+    assert a.out_dir is None
+
+
+def test_normalize_vt_canonicalizes_spellings():
+    assert m.normalize_vt("0.95") == "0.95"
+    assert m.normalize_vt("0.950") == "0.95"
+    assert m.normalize_vt(".95") == "0.95"
+    assert m.normalize_vt("0.9") == "0.90"
