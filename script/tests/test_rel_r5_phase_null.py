@@ -121,8 +121,8 @@ def _brute_force_best_path(log_emit, log_start, log_trans):
 def test_viterbi_matches_brute_force():
     rng = np.random.default_rng(0)
     n_k, n_d, n_t = 3, 2, 7
-    means = rng.normal(size=(n_k, n_d)) * 3
-    var = rng.uniform(0.5, 2.0, size=(n_k, n_d))
+    means = rng.normal(size=(n_k, n_d)) * 2
+    var = rng.uniform(0.05, 50.0, size=(n_k, n_d))
     log_start = np.log(np.full(n_k, 1 / n_k))
     trans = rng.uniform(size=(n_k, n_k)) + np.eye(n_k) * 4
     log_trans = np.log(trans / trans.sum(1, keepdims=True))
@@ -130,12 +130,12 @@ def test_viterbi_matches_brute_force():
 
     got = viterbi(X, means, var, log_start, log_trans)
 
-    inv = 1.0 / var
-    const = -0.5 * np.log(2 * np.pi * var).sum(1)
-    log_emit = np.stack([
-        [-0.5 * (((X[t] - means[k]) ** 2 * inv[k]).sum()) + const[k]
-         for k in range(n_k)] for t in range(n_t)])
-    expected = _brute_force_best_path(log_emit, log_start, log_trans)
+    from scipy.stats import norm
+    log_emit_ref = np.array([
+        [norm(means[k], np.sqrt(var[k])).logpdf(X[t]).sum() for k in range(n_k)]
+        for t in range(n_t)
+    ])
+    expected = _brute_force_best_path(log_emit_ref, log_start, log_trans)
     np.testing.assert_array_equal(got, expected)
 
 
