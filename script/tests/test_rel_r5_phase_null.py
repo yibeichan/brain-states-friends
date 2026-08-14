@@ -344,3 +344,15 @@ def test_normalize_vt_canonicalizes_spellings():
     assert m.normalize_vt("0.950") == "0.95"
     assert m.normalize_vt(".95") == "0.95"
     assert m.normalize_vt("0.9") == "0.90"
+
+
+# --------------------------------------------------------------------------
+# Sign-aware annotation formatting (plot_style.format_signed)
+# --------------------------------------------------------------------------
+
+def test_format_signed_handles_negative_and_none():
+    from utils.plot_style import format_signed
+    assert format_signed(0.12) == "+0.12"
+    assert format_signed(-0.12) == "-0.12"
+    assert format_signed(3.14159, ".1f") == "+3.1"
+    assert format_signed(None) == "n/a"

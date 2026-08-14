@@ -44,11 +44,12 @@ def imports():
         SUBJECT_ACCENT,
         SUBJECT_NEUTRAL,
         apply_publication_style,
+        format_signed,
     )
 
     load_dotenv()
     apply_publication_style()
-    return SUBJECT_ACCENT, SUBJECT_NEUTRAL, json, np, os, plt
+    return SUBJECT_ACCENT, SUBJECT_NEUTRAL, format_signed, json, np, os, plt
 
 
 @app.cell
@@ -90,7 +91,7 @@ def load_null_results(NULL_DIR, SUBS, VT, json, np, os):
 
 @app.cell
 def panel_null_vs_observed(
-    OUT, SUBJECT_ACCENT, SUBJECT_NEUTRAL, SUBS, np, null_results, plt
+    OUT, SUBJECT_ACCENT, SUBJECT_NEUTRAL, SUBS, format_signed, np, null_results, plt
 ):
     _NROWS, _NCOLS = 2, 3
     _fig, _axes = plt.subplots(_NROWS, _NCOLS, figsize=(7.0, 4.2),
@@ -112,7 +113,8 @@ def panel_null_vs_observed(
                  color=SUBJECT_NEUTRAL, alpha=0.55, linewidth=0)
         _ax.axvline(_res["observed"], color=SUBJECT_ACCENT, linewidth=1.4)
         _ax.annotate(
-            f"$\\Delta\\rho$=+{_res['delta_rho']:.2f}\nz=+{_res['z']:.1f}",
+            f"$\\Delta\\rho$={format_signed(_res['delta_rho'])}\n"
+            f"z={format_signed(_res['z'], '.1f')}",
             xy=(0.03, 0.95), xycoords="axes fraction",
             ha="left", va="top", fontsize=7.5,
         )

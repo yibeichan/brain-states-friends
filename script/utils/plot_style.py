@@ -251,6 +251,13 @@ def compute_dominant_networks(state_means, active_states, parcel_networks,
     return dominant
 
 
+def format_signed(value, spec=".2f"):
+    """Sign-aware numeric label for annotations; 'n/a' for None (degenerate stat)."""
+    if value is None:
+        return "n/a"
+    return format(value, "+" + spec)
+
+
 # ── Style application ─────────────────────────────────────────────────────────
 
 def apply_publication_style() -> None:
