@@ -108,6 +108,42 @@ def permutation_pvalue(observed, null_dist, alternative='two-sided'):
     return float((count + 1) / (n_finite + 1))
 
 
+def safe_float(x):
+    """float(x), mapping NaN/inf -> None so json.dump(allow_nan=False) succeeds.
+
+    Degenerate statistics (constant input vector, zero-sd null) must surface
+    as JSON null, not as non-standard NaN tokens.
+    """
+    x = float(x)
+    return x if np.isfinite(x) else None
+
+
+def null_summary(observed, null_dist):
+    """NaN-safe summary of a surrogate/permutation null vs an observed statistic.
+
+    Moments use finite draws only (identical to whole-array moments when all
+    draws are finite, which is the published case); p uses permutation_pvalue
+    (alternative='greater', Phipson-Smyth), which excludes non-finite draws
+    and adjusts the denominator. z is None when the finite-draw sd is 0.
+    """
+    null = np.asarray(null_dist, dtype=float)
+    finite = null[np.isfinite(null)]
+    if finite.size == 0 or not np.isfinite(observed):
+        mean = sd = z = residual = float("nan")
+        if finite.size:
+            mean, sd = float(finite.mean()), float(finite.std())
+    else:
+        mean, sd = float(finite.mean()), float(finite.std())
+        z = (observed - mean) / sd if sd > 0 else float("nan")
+        residual = observed - mean
+    return {
+        "mean": safe_float(mean), "sd": safe_float(sd), "z": safe_float(z),
+        "p": safe_float(permutation_pvalue(observed, null, alternative="greater")),
+        "residual": safe_float(residual),
+        "n_draws": int(null.size), "n_finite": int(np.isfinite(null).sum()),
+    }
+
+
 def bootstrap_mean_ci(values, n_boot=1000, seed=0, ci=0.95):
     """Percentile bootstrap CI for the mean of a 1D sample.
 
