@@ -281,9 +281,8 @@ def main():
 
     # Canonicalize keys to 08c-compatible short form ('rest_ses-NNN') so
     # downstream transformer / findings scripts can join decoded_states with
-    # 08c feature files directly. Legacy long-BIDS copies are retained during
-    # the phase-1 migration so downstream cross-stimulus scripts keep working
-    # until they are updated.
+    # 08c feature files directly. run_id_map.json records the long<->short
+    # mapping for provenance.
     long_to_short = {
         long_id: normalize_cross_stim_run_id(long_id, "restingstate")
         for long_id in decoded_states.keys()
@@ -309,12 +308,6 @@ def main():
 
     with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
         pickle.dump(fo_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'decoded_states_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(decoded_states, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'fractional_occupancy_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(fo, f, protocol=4)
 
     with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
         json.dump(run_id_map, f, indent=2)
@@ -357,12 +350,13 @@ def main():
 
         sorted_rids = sorted(per_run_ll.keys())
         n_runs = len(sorted_rids)
-        # Short labels: extract run-N from full BIDS run_id
+        # Short labels: extract ses-NNN from full BIDS run_id (hcptrt rest runs
+        # are all run-1; the session token is the run identity)
         short_labels = []
         for rid in sorted_rids:
             parts = rid.split('_')
-            run_part = [p for p in parts if p.startswith('run-')]
-            short_labels.append(run_part[0] if run_part else rid[-6:])
+            ses_part = [p for p in parts if p.startswith('ses-')]
+            short_labels.append(ses_part[0] if ses_part else rid[-6:])
 
         fig, (ax_ll, ax_st) = plt.subplots(1, 2, figsize=(10, 4))
 
