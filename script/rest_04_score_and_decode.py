@@ -16,9 +16,11 @@ Prerequisites:
 
 Outputs:
     {SCRATCH_DIR}/output/rest_04_decoded/{parcellation}/{sub_id}/
-        decoded_states.pkl         - dict: run_id -> np.array(n_trs,) state indices
-        fractional_occupancy.pkl   - dict: run_id -> np.array(n_states,)
+        decoded_states.pkl         - dict: short run_id -> np.array(n_trs,) state indices
+        fractional_occupancy.pkl   - dict: short run_id -> np.array(n_states,)
+        run_id_map.json            - long BIDS <-> short run_id mapping (rest_05 input)
         rest_ll_summary.json       - Per-run LL, overall LL, baselines
+        ll_diagnostic.png          - Per-run LL + active-states diagnostic figure
 
 Documentation: the design notes
 """
@@ -206,12 +208,6 @@ def main():
     logger.info(f"Decoded {total_runs_decoded} rest runs")
 
     # =========================================================================
-    # Compute fractional occupancy
-    # =========================================================================
-
-    fo = compute_fractional_occupancy(decoded_states, n_states)
-
-    # =========================================================================
     # Aggregate LL metrics
     # =========================================================================
 
@@ -296,7 +292,7 @@ def main():
     decoded_states_short = {
         long_to_short[rid]: seq for rid, seq in decoded_states.items()
     }
-    fo_short = {long_to_short[rid]: arr for rid, arr in fo.items()}
+    fo_short = compute_fractional_occupancy(decoded_states_short, n_states)
     run_id_map = {
         "short_to_long": {short: long for long, short in long_to_short.items()},
         "long_to_short": dict(long_to_short),
@@ -350,13 +346,11 @@ def main():
 
         sorted_rids = sorted(per_run_ll.keys())
         n_runs = len(sorted_rids)
-        # Short labels: extract ses-NNN from full BIDS run_id (hcptrt rest runs
-        # are all run-1; the session token is the run identity)
-        short_labels = []
-        for rid in sorted_rids:
-            parts = rid.split('_')
-            ses_part = [p for p in parts if p.startswith('ses-')]
-            short_labels.append(ses_part[0] if ses_part else rid[-6:])
+        # Short labels: reuse the canonical long->short mapping ('rest_ses-NNN';
+        # hcptrt rest runs are all run-1, the session token is the run identity),
+        # dropping the 'rest_' prefix for compact ticks
+        short_labels = [long_to_short[rid].removeprefix('rest_')
+                        for rid in sorted_rids]
 
         fig, (ax_ll, ax_st) = plt.subplots(1, 2, figsize=(10, 4))
 
