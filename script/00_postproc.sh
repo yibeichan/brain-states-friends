@@ -25,7 +25,8 @@
 #SBATCH --partition=mit_normal,pi_satra
 #SBATCH --output=logs/00_postproc_%A_%a.out
 #SBATCH --error=logs/00_postproc_%A_%a.err
-#SBATCH --time=01:00:00
+# Friends is ~290 runs/subject (vs ~66 for movie10 at 02:00), so allow 8h.
+#SBATCH --time=08:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --array=0-5
