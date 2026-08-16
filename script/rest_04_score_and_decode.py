@@ -37,7 +37,8 @@ import numpy as np
 
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.common import normalize_cross_stim_run_id, normalize_parcellation_name
+from utils.common import (canonicalize_and_save_decoded, normalize_parcellation_name,
+                          short_run_label)
 
 from dotenv import load_dotenv
 
@@ -51,29 +52,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-
-def compute_fractional_occupancy(decoded_states, n_states):
-    """Compute fractional occupancy per run.
-
-    FO_k_e = count(state_seq == k) / len(state_seq)
-
-    Args:
-        decoded_states: dict run_id -> np.array(n_trs,)
-        n_states: Total number of model states (n_components)
-
-    Returns:
-        fo: dict run_id -> np.array(n_states,)
-    """
-    fo = {}
-    for run_id, state_seq in decoded_states.items():
-        if len(state_seq) == 0:
-            logger.warning(f"Empty state sequence for {run_id}")
-            fo[run_id] = np.zeros(n_states)
-            continue
-        counts = np.bincount(state_seq, minlength=n_states).astype(float)
-        fo[run_id] = counts / len(state_seq)
-    return fo
 
 
 def parse_args():
@@ -275,39 +253,10 @@ def main():
     # Save outputs
     # =========================================================================
 
-    # Canonicalize keys to 08c-compatible short form ('rest_ses-NNN') so
-    # downstream transformer / findings scripts can join decoded_states with
-    # 08c feature files directly. run_id_map.json records the long<->short
-    # mapping and is a required input for rest_05_cross_stimulus_validation
-    # (which joins long-keyed run-id JSONs against the short-keyed pickles).
-    long_to_short = {
-        long_id: normalize_cross_stim_run_id(long_id, "restingstate")
-        for long_id in decoded_states.keys()
-    }
-    if len(set(long_to_short.values())) != len(long_to_short):
-        dupes = [v for v in long_to_short.values()
-                 if list(long_to_short.values()).count(v) > 1]
-        raise RuntimeError(
-            f"Short run_ids have duplicates after normalization: {set(dupes)}"
-        )
-    decoded_states_short = {
-        long_to_short[rid]: seq for rid, seq in decoded_states.items()
-    }
-    fo_short = compute_fractional_occupancy(decoded_states_short, n_states)
-    run_id_map = {
-        "short_to_long": {short: long for long, short in long_to_short.items()},
-        "long_to_short": dict(long_to_short),
-        "stimulus": "restingstate",
-    }
-
-    with open(os.path.join(out_dir, 'decoded_states.pkl'), 'wb') as f:
-        pickle.dump(decoded_states_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
-        pickle.dump(fo_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
-        json.dump(run_id_map, f, indent=2)
+    # Canonicalize keys to 08c-compatible short form ('rest_ses-NNN') and
+    # save decoded states, FO, and run_id_map.json (required by rest_05).
+    long_to_short, decoded_states_short, fo_short = canonicalize_and_save_decoded(
+        decoded_states, out_dir, "restingstate", n_states)
 
     with open(os.path.join(out_dir, 'rest_ll_summary.json'), 'w') as f:
         json.dump(ll_summary, f, indent=2)
@@ -347,10 +296,9 @@ def main():
 
         sorted_rids = sorted(per_run_ll.keys())
         n_runs = len(sorted_rids)
-        # Short labels: reuse the canonical long->short mapping ('rest_ses-NNN';
-        # hcptrt rest runs are all run-1, the session token is the run identity),
-        # dropping the 'rest_' prefix for compact ticks
-        short_labels = [long_to_short[rid].removeprefix('rest_')
+        # Compact tick labels ('ses-NNN'; hcptrt rest runs are all run-1, the
+        # session token is the run identity) from the canonical short id
+        short_labels = [short_run_label(long_to_short.get(rid, rid))
                         for rid in sorted_rids]
 
         fig, (ax_ll, ax_st) = plt.subplots(1, 2, figsize=(10, 4))

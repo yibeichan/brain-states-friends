@@ -465,6 +465,107 @@ def feature_key_for_cross_stim_run_id(short_id: str, stimulus: str) -> str:
     return short_id
 
 
+def short_run_label(short_id: str) -> str:
+    """Compact figure tick label for a canonical short cross-stim run ID.
+
+    Strips the stimulus prefix that :func:`normalize_cross_stim_run_id`
+    produces, keeping only the per-run identity::
+
+        harrypotter_run-01 -> run-01
+        rest_ses-001       -> ses-001
+        lppFR_run-01       -> FR-01
+        lppEN_run-02       -> EN-02
+
+    Movie10 / friends short IDs (``bourne01``, ``s01e01a``) and anything
+    unrecognized pass through unchanged, so this is a total function —
+    safe to call on any run ID without a fallback branch at the call site.
+    """
+    for prefix, replacement in (
+        ("harrypotter_", ""),
+        ("rest_", ""),
+        ("lppFR_run-", "FR-"),
+        ("lppEN_run-", "EN-"),
+    ):
+        if short_id.startswith(prefix):
+            return replacement + short_id[len(prefix):]
+    return short_id
+
+
+def canonicalize_and_save_decoded(decoded_states, out_dir, stimulus, n_states,
+                                  map_stimulus=None):
+    """Canonicalize decoded-state run IDs to short form and save stage-04 outputs.
+
+    Shared tail of the four ``*_04_score_and_decode.py`` scripts: builds the
+    long->short map via :func:`normalize_cross_stim_run_id`, aborts loudly on
+    short-ID collisions, computes short-keyed fractional occupancy, and writes
+    ``decoded_states.pkl``, ``fractional_occupancy.pkl``, and
+    ``run_id_map.json`` (a required input of the ``*_05`` validation scripts,
+    which join long-keyed run-id JSONs against the short-keyed pickles).
+
+    Parameters
+    ----------
+    decoded_states : dict
+        Long BIDS run_id -> np.array(n_trs,) of decoded state indices.
+    out_dir : str
+        Output directory (created by the caller).
+    stimulus : str or callable
+        Stimulus name for :func:`normalize_cross_stim_run_id`, or a callable
+        ``long_id -> stimulus`` for per-run resolution (petit-prince infers
+        the language from each run's BIDS token).
+    n_states : int
+        Total number of model states.
+    map_stimulus : str, optional
+        Value recorded in ``run_id_map.json``'s ``stimulus`` field. Defaults
+        to ``stimulus`` when it is a string; required when ``stimulus`` is a
+        callable.
+
+    Returns
+    -------
+    (long_to_short, decoded_states_short, fo_short)
+    """
+    import json
+    import pickle
+    # Deferred: recurrence_utils imports from utils.common at module level.
+    from utils.recurrence_utils import compute_fractional_occupancy
+
+    stimulus_of = stimulus if callable(stimulus) else (lambda _rid: stimulus)
+    if map_stimulus is None:
+        if callable(stimulus):
+            raise ValueError("map_stimulus is required when stimulus is a callable")
+        map_stimulus = stimulus
+
+    long_to_short = {
+        long_id: normalize_cross_stim_run_id(long_id, stimulus_of(long_id))
+        for long_id in decoded_states.keys()
+    }
+    if len(set(long_to_short.values())) != len(long_to_short):
+        dupes = [v for v in long_to_short.values()
+                 if list(long_to_short.values()).count(v) > 1]
+        raise RuntimeError(
+            f"Short run_ids have duplicates after normalization: {set(dupes)}"
+        )
+    decoded_states_short = {
+        long_to_short[rid]: seq for rid, seq in decoded_states.items()
+    }
+    fo_short = compute_fractional_occupancy(decoded_states_short, n_states)
+    run_id_map = {
+        "short_to_long": {short: long for long, short in long_to_short.items()},
+        "long_to_short": dict(long_to_short),
+        "stimulus": map_stimulus,
+    }
+
+    with open(os.path.join(out_dir, 'decoded_states.pkl'), 'wb') as f:
+        pickle.dump(decoded_states_short, f, protocol=4)
+
+    with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
+        pickle.dump(fo_short, f, protocol=4)
+
+    with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
+        json.dump(run_id_map, f, indent=2)
+
+    return long_to_short, decoded_states_short, fo_short
+
+
 def normalize_parcellation_name(parcellation: str) -> str:
     """
     Normalize parcellation argument to full directory name format.
