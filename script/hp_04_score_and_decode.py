@@ -205,12 +205,6 @@ def main():
     logger.info(f"Decoded {total_runs_decoded} HP runs")
 
     # =========================================================================
-    # Compute fractional occupancy
-    # =========================================================================
-
-    fo = compute_fractional_occupancy(decoded_states, n_states)
-
-    # =========================================================================
     # Aggregate LL metrics
     # =========================================================================
 
@@ -281,7 +275,9 @@ def main():
     # Canonicalize keys to 08c-compatible short form ('harrypotter_run-NN'
     # zero-padded) so downstream transformer / findings scripts can join
     # decoded_states with 08c feature files directly. run_id_map.json
-    # records the long<->short mapping for provenance.
+    # records the long<->short mapping and is a required input for
+    # hp_05_cross_stimulus_validation (which joins long-keyed run-id
+    # JSONs against the short-keyed pickles).
     long_to_short = {
         long_id: normalize_cross_stim_run_id(long_id, "harrypotter")
         for long_id in decoded_states.keys()
@@ -295,7 +291,7 @@ def main():
     decoded_states_short = {
         long_to_short[rid]: seq for rid, seq in decoded_states.items()
     }
-    fo_short = {long_to_short[rid]: arr for rid, arr in fo.items()}
+    fo_short = compute_fractional_occupancy(decoded_states_short, n_states)
     run_id_map = {
         "short_to_long": {short: long for long, short in long_to_short.items()},
         "long_to_short": dict(long_to_short),
