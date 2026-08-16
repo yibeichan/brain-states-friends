@@ -9,6 +9,11 @@
 #SBATCH --gres=gpu:1
 #SBATCH --array=0-5
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
+
 # =============================================================================
 # 06a - State Temporal Dynamics Analysis
 # =============================================================================
@@ -28,18 +33,6 @@
 # =============================================================================
 
 set -e
-
-# Determine project directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 # JAX configuration
 export XLA_PYTHON_CLIENT_PREALLOCATE=false

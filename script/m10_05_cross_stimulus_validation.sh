@@ -10,6 +10,11 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
+
 # =============================================================================
 # Movie10 Cross-Stimulus Validation - SLURM Submission Script
 # =============================================================================
@@ -25,18 +30,6 @@
 #   sbatch --array=0 script/m10_05_cross_stimulus_validation.sh
 #   sbatch --export=PARCELLATION=atlas-4S456Parcels script/m10_05_cross_stimulus_validation.sh
 # =============================================================================
-
-# Determine project directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 # Configuration
 PARCELLATION=${PARCELLATION:-"atlas-4S156Parcels"}

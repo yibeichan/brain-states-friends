@@ -31,7 +31,7 @@ import numpy as np
 
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.common import normalize_cross_stim_run_id, normalize_parcellation_name
+from utils.common import canonicalize_and_save_decoded, normalize_parcellation_name
 
 from dotenv import load_dotenv
 
@@ -45,29 +45,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-
-def compute_fractional_occupancy(decoded_states, n_states):
-    """Compute fractional occupancy per run.
-
-    FO_k_e = count(state_seq == k) / len(state_seq)
-
-    Args:
-        decoded_states: dict run_id -> np.array(n_trs,)
-        n_states: Total number of model states (n_components)
-
-    Returns:
-        fo: dict run_id -> np.array(n_states,)
-    """
-    fo = {}
-    for run_id, state_seq in decoded_states.items():
-        if len(state_seq) == 0:
-            logger.warning(f"Empty state sequence for {run_id}")
-            fo[run_id] = np.zeros(n_states)
-            continue
-        counts = np.bincount(state_seq, minlength=n_states).astype(float)
-        fo[run_id] = counts / len(state_seq)
-    return fo
 
 
 def parse_args():
@@ -270,40 +247,11 @@ def main():
     # Save outputs
     # =========================================================================
 
-    # Canonicalize keys to 08c-compatible short form (e.g. 'bourne01') so
-    # downstream transformer / findings scripts can join decoded_states
-    # with 08c feature files directly. run_id_map.json records the
-    # long<->short mapping and is a required input for
-    # m10_05_cross_stimulus_validation (which joins long-keyed run-id
-    # JSONs against the short-keyed pickles).
-    long_to_short = {
-        long_id: normalize_cross_stim_run_id(long_id, "movie10")
-        for long_id in decoded_states.keys()
-    }
-    if len(set(long_to_short.values())) != len(long_to_short):
-        dupes = [v for v in long_to_short.values()
-                 if list(long_to_short.values()).count(v) > 1]
-        raise RuntimeError(
-            f"Short run_ids have duplicates after normalization: {set(dupes)}"
-        )
-    decoded_states_short = {
-        long_to_short[rid]: seq for rid, seq in decoded_states.items()
-    }
-    fo_short = compute_fractional_occupancy(decoded_states_short, n_states)
-    run_id_map = {
-        "short_to_long": {short: long for long, short in long_to_short.items()},
-        "long_to_short": dict(long_to_short),
-        "stimulus": "movie10",
-    }
-
-    with open(os.path.join(out_dir, 'decoded_states.pkl'), 'wb') as f:
-        pickle.dump(decoded_states_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
-        pickle.dump(fo_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
-        json.dump(run_id_map, f, indent=2)
+    # Canonicalize keys to 08c-compatible short form (e.g. 'bourne01') and
+    # save decoded states, FO, and run_id_map.json (required by m10_05).
+    # Return values unused here: the m10 diagnostic figure is grouped by
+    # movie type and indexes decoded_states by long id (no text tick labels).
+    canonicalize_and_save_decoded(decoded_states, out_dir, "movie10", n_states)
 
     with open(os.path.join(out_dir, 'movie_ll_summary.json'), 'w') as f:
         json.dump(ll_summary, f, indent=2)

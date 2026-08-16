@@ -25,28 +25,19 @@
 #SBATCH --partition=mit_normal,pi_satra
 #SBATCH --output=logs/00_postproc_%A_%a.out
 #SBATCH --error=logs/00_postproc_%A_%a.err
-#SBATCH --time=01:00:00
+# Friends is ~290 runs/subject vs ~61 for movie10 at 02:00 — linear scaling
+# gives ~9.5h, so allow 12h.
+#SBATCH --time=12:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --array=0-5
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
-
-# Determine the project directory (do this early for path resolution).
-# Under sbatch, BASH_SOURCE points to the SLURM spool dir, so prefer
-# SLURM_SUBMIT_DIR; fall back to the script's own location otherwise.
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-SCRIPT_DIR="${PROJECT_DIR}/script"
-
-# Create logs directory using absolute path (logs/ is gitignored)
-mkdir -p "${PROJECT_DIR}/logs"
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
 # Subject array (6 subjects)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")

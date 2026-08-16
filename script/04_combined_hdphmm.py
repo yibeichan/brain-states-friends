@@ -114,6 +114,13 @@ DEFAULT_N_JOBS = 8
 # Sub-04: S5 has only 4 runs (~1,888 TRs); S6 has 0. Use S1-S4 only.
 SUB04_MAX_SEASON = 4
 
+# Result-JSON schema stamps — single source of truth so the version cannot
+# drift across the writer sites. The 3.x lineage stamps select/finalize
+# results, the 2.x lineage LOSO results. v3.1/v2.1 dropped the unsuffixed
+# legacy baseline alias keys (and the legacy_keys_preserved flag).
+SELECT_SCHEMA_INFO = {'schema_version': '3.1', 'baseline_primary': 'active_states'}
+LOSO_SCHEMA_INFO = {'schema_version': '2.1', 'baseline_primary': 'active_states'}
+
 
 
 # =============================================================================
@@ -857,9 +864,6 @@ def select_and_refit(sub_id, parcellation, n_final_seeds, force_refit=False, n_j
             'trainval_ll_per_sample': float(best_final_ll),
             'test_ll_per_sample': float(test_ll_ps),
             'test_ll_per_season': test_ll_per_season,
-            # Legacy keys retained for backward compatibility.
-            'baseline_ll_per_sample': float(baseline_ll_per_tr_active),
-            'generalizes_vs_baseline': generalizes_active,
             # Explicit dual-baseline schema.
             'baseline_ll_per_sample_total_states': float(baseline_ll_per_tr_total),
             'baseline_ll_per_sample_active_states': float(baseline_ll_per_tr_active),
@@ -889,11 +893,7 @@ def select_and_refit(sub_id, parcellation, n_final_seeds, force_refit=False, n_j
             'stage1_selected_vt': selected_config['variance_threshold'],
             'stage2_metric': selection_metric,
         },
-        'schema_info': {
-            'schema_version': '3.0',
-            'baseline_primary': 'active_states',
-            'legacy_keys_preserved': True,
-        },
+        'schema_info': dict(SELECT_SCHEMA_INFO),
         'n_decoded_runs': len(decoded_states),
         'timestamp': datetime.now().isoformat(),
     }
@@ -1232,8 +1232,6 @@ def select_finalize(sub_id, parcellation, n_final_seeds, force_refit=False, n_jo
             'n_seeds': n_final_seeds, 'best_seed': best_final_seed,
             'trainval_ll_per_sample': float(best_final_ll), 'test_ll_per_sample': float(test_ll_ps),
             'test_ll_per_season': test_ll_per_season,
-            'baseline_ll_per_sample': float(baseline_ll_per_tr_active),
-            'generalizes_vs_baseline': bool(test_ll_ps > baseline_ll_per_tr_active),
             'baseline_ll_per_sample_total_states': float(baseline_ll_per_tr_total),
             'baseline_ll_per_sample_active_states': float(baseline_ll_per_tr_active),
             'generalizes_vs_baseline_total_states': bool(test_ll_ps > baseline_ll_per_tr_total),
@@ -1257,7 +1255,7 @@ def select_finalize(sub_id, parcellation, n_final_seeds, force_refit=False, n_jo
             'stage1_selected_vt': selected_config['variance_threshold'],
             'stage2_metric': selection_metric,
         },
-        'schema_info': {'schema_version': '3.0', 'baseline_primary': 'active_states', 'legacy_keys_preserved': True},
+        'schema_info': dict(SELECT_SCHEMA_INFO),
         'n_decoded_runs': len(decoded_states),
         'timestamp': datetime.now().isoformat()
     }
@@ -1613,9 +1611,6 @@ def loso_fit(sub_id, parcellation, loso_season, n_final_seeds, force_refit=False
             'best_seed': fold_result['best_seed'],
             'trainval_ll_per_sample': fold_result['trainval_ll_per_sample'],
             'test_ll_per_sample': fold_result['test_ll_per_sample'],
-            # Legacy keys retained for backward compatibility.
-            'baseline_ll_per_sample': fold_result['baseline_active'],
-            'generalizes_vs_baseline': fold_result['generalizes_vs_active'],
             # Explicit dual-baseline schema.
             'baseline_ll_per_sample_total_states': fold_result['baseline_total'],
             'baseline_ll_per_sample_active_states': fold_result['baseline_active'],
@@ -1627,11 +1622,7 @@ def loso_fit(sub_id, parcellation, loso_season, n_final_seeds, force_refit=False
             'seed_results': fold_result['seed_results'],
         },
         'data_info': fold_result['data_info'],
-        'schema_info': {
-            'schema_version': '2.0',
-            'baseline_primary': 'active_states',
-            'legacy_keys_preserved': True,
-        },
+        'schema_info': dict(LOSO_SCHEMA_INFO),
         'n_decoded_runs': len(fold_result['decoded_states']),
         'timestamp': datetime.now().isoformat(),
     }

@@ -8,6 +8,11 @@
 #SBATCH --partition=ou_bcs_normal,pi_satra
 #SBATCH --array=0-5
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
+
 # =============================================================================
 # 08d - Transformer Depth (within-stimulus)
 # =============================================================================
@@ -58,14 +63,6 @@
 # =============================================================================
 
 set -e
-
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
 
 # ── Parse inline KEY=VALUE args (for non-SLURM invocation) ────────────
 for arg in "$@"; do
@@ -161,9 +158,6 @@ if [ "$PERLAGS" = "1" ]; then
 fi
 
 # ── Normal execution (inside SLURM or direct) ────────────────────────
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"
