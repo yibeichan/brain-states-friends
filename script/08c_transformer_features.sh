@@ -10,7 +10,9 @@
 #SBATCH --array=0-291
 
 # Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
-source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
 # =============================================================================
 # 08c - Transformer Feature Extraction (per-episode parallelization)
@@ -64,9 +66,10 @@ source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd
 
 set -e
 
-
 module load ffmpeg/5.1.4
-
+# Re-prepend after module load so user-local uv stays ahead of module bins
+# (the shared preamble's PATH export ran before the module prepended its own).
+export PATH="$HOME/.local/bin:$PATH"
 
 # NOTE: Do NOT run `uv sync` here - it strips NVIDIA .so files (known uv bug).
 # Run `uv sync --extra torch --extra gpu` once manually, then fix with:

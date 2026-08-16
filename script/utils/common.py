@@ -473,21 +473,18 @@ def short_run_label(short_id: str) -> str:
 
         harrypotter_run-01 -> run-01
         rest_ses-001       -> ses-001
-        lppFR_run-01       -> FR-01
-        lppEN_run-02       -> EN-02
+        lppFR_run-01       -> FR-01   (any lpp language code, e.g. EN, CN)
 
     Movie10 / friends short IDs (``bourne01``, ``s01e01a``) and anything
     unrecognized pass through unchanged, so this is a total function —
     safe to call on any run ID without a fallback branch at the call site.
     """
-    for prefix, replacement in (
-        ("harrypotter_", ""),
-        ("rest_", ""),
-        ("lppFR_run-", "FR-"),
-        ("lppEN_run-", "EN-"),
-    ):
+    lpp = re.match(r"^lpp([A-Z]{2,3})_run-(.+)$", short_id)
+    if lpp:
+        return f"{lpp.group(1)}-{lpp.group(2)}"
+    for prefix in ("harrypotter_", "rest_"):
         if short_id.startswith(prefix):
-            return replacement + short_id[len(prefix):]
+            return short_id[len(prefix):]
     return short_id
 
 

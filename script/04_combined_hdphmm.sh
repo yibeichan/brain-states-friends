@@ -11,7 +11,9 @@
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
 # Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
-source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
 # =============================================================================
 # Combined weak-limit HMM - SLURM Wrapper (Two-Stage Model Selection)
@@ -80,7 +82,6 @@ source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd
 # Per-seed JSON checkpointing is built in for all fit modes:
 # if a task times out and is resubmitted, completed seeds are skipped.
 # =============================================================================
-
 
 # =============================================================================
 # Configuration (override with --export on sbatch command line)

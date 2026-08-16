@@ -9,7 +9,9 @@
 #SBATCH --array=0-5
 
 # Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
-source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
 # =============================================================================
 # 08d - Transformer Depth (within-stimulus)
@@ -61,7 +63,6 @@ source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd
 # =============================================================================
 
 set -e
-
 
 # ── Parse inline KEY=VALUE args (for non-SLURM invocation) ────────────
 for arg in "$@"; do
@@ -157,7 +158,6 @@ if [ "$PERLAGS" = "1" ]; then
 fi
 
 # ── Normal execution (inside SLURM or direct) ────────────────────────
-
 
 SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"

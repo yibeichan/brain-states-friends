@@ -24,8 +24,9 @@
 #SBATCH --array=0-5
 
 # Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
-source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
-
+_ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/utils/_env.sh"
+[ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
+source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
 # hcptrt fMRIPrep derivatives (read-only, datalad-retrieved)
 HCPTRT_FMRIPREP="/orcd/data/satra/002/datasets/all_about_cneuromod/cneuromod.processed/fmriprep/hcptrt"

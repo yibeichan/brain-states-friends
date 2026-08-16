@@ -249,8 +249,9 @@ def main():
 
     # Canonicalize keys to 08c-compatible short form (e.g. 'bourne01') and
     # save decoded states, FO, and run_id_map.json (required by m10_05).
-    long_to_short, decoded_states_short, fo_short = canonicalize_and_save_decoded(
-        decoded_states, out_dir, "movie10", n_states)
+    # Return values unused here: the m10 diagnostic figure is grouped by
+    # movie type and indexes decoded_states by long id (no text tick labels).
+    canonicalize_and_save_decoded(decoded_states, out_dir, "movie10", n_states)
 
     with open(os.path.join(out_dir, 'movie_ll_summary.json'), 'w') as f:
         json.dump(ll_summary, f, indent=2)
