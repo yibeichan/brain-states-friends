@@ -66,7 +66,5 @@ Active states per run = number of distinct state indices appearing in the Viterb
 - output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/pp_ll_summary.json
 - output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/decoded_states.pkl
 - output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/fractional_occupancy.pkl
-- output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/decoded_states_legacy_keys.pkl
-- output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/fractional_occupancy_legacy_keys.pkl
 - output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/run_id_map.json
 - output/pp_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/ll_diagnostic.png

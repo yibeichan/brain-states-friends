@@ -300,8 +300,7 @@ def main():
 
     # Canonicalize keys to 08c-compatible short form ('lppFR_run-NN' /
     # 'lppEN_run-NN'). Language is inferred per-run from the BIDS token.
-    # Legacy long-BIDS copies retained during phase-1 migration so
-    # 07b/07c/pp_05 keep working until updated.
+    # run_id_map.json records the long<->short mapping for provenance.
     long_to_short = {
         long_id: normalize_cross_stim_run_id(long_id, _pp_stimulus_for(long_id))
         for long_id in decoded_states.keys()
@@ -327,12 +326,6 @@ def main():
 
     with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
         pickle.dump(fo_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'decoded_states_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(decoded_states, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'fractional_occupancy_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(fo, f, protocol=4)
 
     with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
         json.dump(run_id_map, f, indent=2)

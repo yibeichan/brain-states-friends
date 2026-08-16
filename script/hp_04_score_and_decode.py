@@ -280,9 +280,8 @@ def main():
 
     # Canonicalize keys to 08c-compatible short form ('harrypotter_run-NN'
     # zero-padded) so downstream transformer / findings scripts can join
-    # decoded_states with 08c feature files directly. Legacy long-BIDS
-    # copies are retained during the phase-1 migration so 07b/07c/hp_05
-    # keep working until they are updated.
+    # decoded_states with 08c feature files directly. run_id_map.json
+    # records the long<->short mapping for provenance.
     long_to_short = {
         long_id: normalize_cross_stim_run_id(long_id, "harrypotter")
         for long_id in decoded_states.keys()
@@ -308,12 +307,6 @@ def main():
 
     with open(os.path.join(out_dir, 'fractional_occupancy.pkl'), 'wb') as f:
         pickle.dump(fo_short, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'decoded_states_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(decoded_states, f, protocol=4)
-
-    with open(os.path.join(out_dir, 'fractional_occupancy_legacy_keys.pkl'), 'wb') as f:
-        pickle.dump(fo, f, protocol=4)
 
     with open(os.path.join(out_dir, 'run_id_map.json'), 'w') as f:
         json.dump(run_id_map, f, indent=2)
