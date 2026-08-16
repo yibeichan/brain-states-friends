@@ -59,7 +59,7 @@ echo "============================================================"
 echo ""
 
 # Run post-processing with task=harrypotter (reuses 00_postproc.py unchanged)
-uv run --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "harrypotter" --n_jobs $SLURM_CPUS_PER_TASK
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "harrypotter" --n_jobs $SLURM_CPUS_PER_TASK
 
 exit_code=$?
 

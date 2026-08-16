@@ -345,12 +345,10 @@ def main():
 
         sorted_rids = sorted(per_run_ll.keys())
         n_runs = len(sorted_rids)
-        # Short labels: extract run-N from full BIDS run_id
-        short_labels = []
-        for rid in sorted_rids:
-            parts = rid.split('_')
-            run_part = [p for p in parts if p.startswith('run-')]
-            short_labels.append(run_part[0] if run_part else rid[-6:])
+        # Short labels: reuse the canonical long->short mapping
+        # ('harrypotter_run-NN'), dropping the stimulus prefix for compact ticks
+        short_labels = [long_to_short[rid].removeprefix('harrypotter_')
+                        for rid in sorted_rids]
 
         fig, (ax_ll, ax_st) = plt.subplots(1, 2, figsize=(10, 4))
 

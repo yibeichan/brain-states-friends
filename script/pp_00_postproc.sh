@@ -64,7 +64,7 @@ echo "============================================================"
 echo ""
 
 # Run post-processing with --fmriprep_dir (PP lives outside cneuromod.processed/)
-uv run --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "petit-prince" \
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "petit-prince" \
     --fmriprep_dir "${DATA_DIR}/petit-prince.fmriprep/${TASK_ID}" \
     --n_jobs $SLURM_CPUS_PER_TASK
 

@@ -371,21 +371,10 @@ def main():
 
         sorted_rids = sorted(per_run_ll.keys())
         n_runs = len(sorted_rids)
-        # Short labels: extract language + run-N from full BIDS run_id
-        short_labels = []
-        for rid in sorted_rids:
-            # Determine language
-            if 'task-lppFR' in rid or rid.startswith('lppFR'):
-                lang = 'FR'
-            elif 'task-lppEN' in rid or rid.startswith('lppEN'):
-                lang = 'EN'
-            else:
-                lang = '??'
-            # Extract run number
-            parts = rid.split('_')
-            run_part = [p for p in parts if p.startswith('run-')]
-            run_num = run_part[0] if run_part else '?'
-            short_labels.append(f'{lang}-{run_num.replace("run-", "")}')
+        # Short labels: reuse the canonical long->short mapping
+        # ('lppFR_run-NN' / 'lppEN_run-NN'), compacted to 'FR-NN' / 'EN-NN'
+        short_labels = [long_to_short[rid].removeprefix('lpp').replace('_run-', '-')
+                        for rid in sorted_rids]
 
         # Color by language
         colors = ['#2196F3' if 'FR' in sl else '#FF9800' for sl in short_labels]

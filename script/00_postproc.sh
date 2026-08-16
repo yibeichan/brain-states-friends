@@ -35,8 +35,29 @@
 # Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
 export PATH="$HOME/.local/bin:$PATH"
 
+# Determine the project directory (do this early for path resolution).
+# Under sbatch, BASH_SOURCE points to the SLURM spool dir, so prefer
+# SLURM_SUBMIT_DIR; fall back to the script's own location otherwise.
+if [ -n "$SLURM_SUBMIT_DIR" ]; then
+    PROJECT_DIR="$SLURM_SUBMIT_DIR"
+else
+    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
+fi
+SCRIPT_DIR="${PROJECT_DIR}/script"
+
+# Create logs directory using absolute path (logs/ is gitignored)
+mkdir -p "${PROJECT_DIR}/logs"
+
 # Subject array (6 subjects)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")
+
+# A SLURM array task id is required to select the subject; without this
+# guard an unset id silently selects index 0 (sub-01).
+if [ -z "$SLURM_ARRAY_TASK_ID" ]; then
+    echo "Error: SLURM_ARRAY_TASK_ID is not set. Submit via sbatch, or test a"
+    echo "single task with: SLURM_ARRAY_TASK_ID=0 bash script/00_postproc.sh"
+    exit 1
+fi
 
 # Get subject ID for this array task
 TASK_ID=${sub_ids[$SLURM_ARRAY_TASK_ID]}
@@ -56,9 +77,7 @@ echo ""
 
 # Run post-processing with minimal confound strategy
 # Uses --n_jobs to match SLURM allocation for efficient parallelization
-# Note: BASH_SOURCE points to SLURM spool dir, so use SLURM_SUBMIT_DIR instead
-SCRIPT_DIR="${SLURM_SUBMIT_DIR}/script"
-uv run --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "movie10" --n_jobs $SLURM_CPUS_PER_TASK
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "friends" --n_jobs "${SLURM_CPUS_PER_TASK:-4}"
 
 exit_code=$?
 
