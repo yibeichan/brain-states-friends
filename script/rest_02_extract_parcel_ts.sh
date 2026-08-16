@@ -36,6 +36,6 @@ PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")
 SUBJECT_ID=${sub_ids[$SLURM_ARRAY_TASK_ID]}
 
-uv run --no-sync python "${SCRIPT_DIR}/02_extract_parcel_ts.py" \
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/02_extract_parcel_ts.py" \
     --subject_id "$SUBJECT_ID" --parcellation "$PARCELLATION" \
     --episode_id restingstate

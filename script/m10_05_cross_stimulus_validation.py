@@ -72,15 +72,6 @@ MOVIE_TYPE_LABELS = {
 }
 
 
-def load_recurrence_scores_from_summary(recurrence_summary):
-    """Extract recurrence_scores array from recurrence summary.
-
-    Returns:
-        np.ndarray: Per-state recurrence scores.
-    """
-    return np.array(recurrence_summary["recurrence_scores"], dtype=float)
-
-
 # =========================================================================
 # Content-eligibility helpers (project-wide 05e_a4 convention)
 # =========================================================================
@@ -618,7 +609,6 @@ def main():
     recurrence_dir = os.path.join(SCRATCH_DIR, 'output', '05a_recurrence_analysis', parc, sub_id)
     if args.vt is not None:
         recurrence_dir = os.path.join(recurrence_dir, f'vt{args.vt}')
-    recurrence_summary_path = os.path.join(recurrence_dir, 'recurrence_summary.json')
     recurrence_scores_path = os.path.join(recurrence_dir, 'recurrence_scores.npy')
 
     # Movie decoded states + FO (vt-aware)
@@ -642,7 +632,6 @@ def main():
 
     # Validate inputs
     required_files = {
-        recurrence_summary_path: 'recurrence_summary.json (run 05a first)',
         recurrence_scores_path: 'recurrence_scores.npy (run 05a first)',
         movie_fo_path: 'movie FO (run m10_04 first)',
         movie_ll_path: 'movie LL summary (run m10_04 first)',
@@ -658,9 +647,6 @@ def main():
     # =========================================================================
     # Load data
     # =========================================================================
-
-    with open(recurrence_summary_path, 'r') as f:
-        recurrence_summary = json.load(f)
 
     recurrence_scores = np.load(recurrence_scores_path)
     n_states = len(recurrence_scores)
