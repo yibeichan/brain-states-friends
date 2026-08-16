@@ -87,6 +87,4 @@ States used across all movies exceeds K_active (Friends) for all 6 subjects, ref
 - `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/fractional_occupancy.pkl` - short-key run_id -> FO array (n_states,)
 - `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/movie_ll_summary.json` - per-run LL, per-genre LL, overall LL, run counts, baseline
 - `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/run_id_map.json` - short/long run ID crosswalk
-- `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/decoded_states_legacy_keys.pkl` - long BIDS-key version (phase-1 compat)
-- `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/fractional_occupancy_legacy_keys.pkl` - long BIDS-key version (phase-1 compat)
 - `output/m10_04_decoded/atlas-4S156Parcels/{sub_id}/vt0.95/ll_diagnostic.png` - per-run LL dot chart + states-per-run bar chart

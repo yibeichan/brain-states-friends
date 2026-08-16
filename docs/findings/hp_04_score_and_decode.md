@@ -70,8 +70,6 @@ Sub-01, sub-05, and sub-06 activate more states across all HP runs than the Frie
 
 - output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/decoded_states.pkl (short run-id keys, 08c-compatible)
 - output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/fractional_occupancy.pkl
-- output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/decoded_states_legacy_keys.pkl (BIDS long keys, for hp_05 compatibility)
-- output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/fractional_occupancy_legacy_keys.pkl
 - output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/run_id_map.json (short-to-long key mapping)
 - output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/hp_ll_summary.json (per-run LL, overall LL, baselines)
 - output/hp_04_decoded/atlas-4S156Parcels/sub-*/vt0.95/ll_diagnostic.png (per-run LL dot chart + states/run bar chart)

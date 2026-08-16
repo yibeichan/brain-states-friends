@@ -278,7 +278,8 @@ def main():
     # Canonicalize keys to 08c-compatible short form ('rest_ses-NNN') so
     # downstream transformer / findings scripts can join decoded_states with
     # 08c feature files directly. run_id_map.json records the long<->short
-    # mapping for provenance.
+    # mapping and is a required input for rest_05_cross_stimulus_validation
+    # (which joins long-keyed run-id JSONs against the short-keyed pickles).
     long_to_short = {
         long_id: normalize_cross_stim_run_id(long_id, "restingstate")
         for long_id in decoded_states.keys()
