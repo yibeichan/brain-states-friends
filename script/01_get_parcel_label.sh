@@ -19,6 +19,12 @@ TASK_ID=${parcellations[$SLURM_ARRAY_TASK_ID]}
 
 echo "Processing parcellation: $TASK_ID"
 
-# Note: BASH_SOURCE points to SLURM spool dir, so use SLURM_SUBMIT_DIR instead
-SCRIPT_DIR="${SLURM_SUBMIT_DIR}/script"
-uv run --no-sync python "${SCRIPT_DIR}/01_get_parcel_label.py" --parcellation "$TASK_ID"
+# Under sbatch, BASH_SOURCE points to the SLURM spool dir, so prefer
+# SLURM_SUBMIT_DIR; fall back to the script's own location otherwise.
+if [ -n "$SLURM_SUBMIT_DIR" ]; then
+    PROJECT_DIR="$SLURM_SUBMIT_DIR"
+else
+    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
+fi
+SCRIPT_DIR="${PROJECT_DIR}/script"
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/01_get_parcel_label.py" --parcellation "$TASK_ID"

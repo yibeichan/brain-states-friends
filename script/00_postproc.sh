@@ -56,9 +56,15 @@ echo ""
 
 # Run post-processing with minimal confound strategy
 # Uses --n_jobs to match SLURM allocation for efficient parallelization
-# Note: BASH_SOURCE points to SLURM spool dir, so use SLURM_SUBMIT_DIR instead
-SCRIPT_DIR="${SLURM_SUBMIT_DIR}/script"
-uv run --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "movie10" --n_jobs $SLURM_CPUS_PER_TASK
+# Under sbatch, BASH_SOURCE points to the SLURM spool dir, so prefer
+# SLURM_SUBMIT_DIR; fall back to the script's own location otherwise.
+if [ -n "$SLURM_SUBMIT_DIR" ]; then
+    PROJECT_DIR="$SLURM_SUBMIT_DIR"
+else
+    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
+fi
+SCRIPT_DIR="${PROJECT_DIR}/script"
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "movie10" --n_jobs $SLURM_CPUS_PER_TASK
 
 exit_code=$?
 

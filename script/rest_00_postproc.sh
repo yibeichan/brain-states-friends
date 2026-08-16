@@ -42,7 +42,7 @@ HCPTRT_FMRIPREP="/orcd/data/satra/002/datasets/all_about_cneuromod/cneuromod.pro
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")
 TASK_ID=${sub_ids[$SLURM_ARRAY_TASK_ID]}
 
-uv run --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "hcptrt" \
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "hcptrt" \
     --fmriprep_dir "${HCPTRT_FMRIPREP}/${TASK_ID}" \
     --bids_task restingstate \
     --n_jobs "$SLURM_CPUS_PER_TASK"
