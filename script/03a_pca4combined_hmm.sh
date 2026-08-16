@@ -10,6 +10,9 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+
 # =============================================================================
 # PCA Preparation for Combined HMM - SLURM Submission Script
 # =============================================================================
@@ -40,17 +43,6 @@
 #
 # =============================================================================
 
-# Determine project directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 # =============================================================================
 # Configuration (override with --export on sbatch command line)

@@ -8,6 +8,9 @@
 #SBATCH --partition=ou_bcs_normal,pi_satra
 #SBATCH --array=0-5
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+
 # =============================================================================
 # 08e - Cross-stimulus aggregate transfer (D3a)
 # =============================================================================
@@ -43,16 +46,6 @@
 
 set -e
 
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 STIMULUS="${STIMULUS:-movie10}"
 MODEL="${MODEL:-llama-3.2-3b}"

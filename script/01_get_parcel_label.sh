@@ -8,21 +8,9 @@
 #SBATCH --mem=4G
 #SBATCH --cpus-per-task=1
 
-# Determine the project directory (do this early for path resolution).
-# Under sbatch, BASH_SOURCE points to the SLURM spool dir, so prefer
-# SLURM_SUBMIT_DIR; fall back to the script's own location otherwise.
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-SCRIPT_DIR="${PROJECT_DIR}/script"
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
 
-# Create logs directory using absolute path (logs/ is gitignored)
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 parcellations=("Schaefer2018" "4S156" "4S256" "4S356" "4S456" "4S556" "4S656" "4S756" "4S856" "4S956" "4S1056")
 

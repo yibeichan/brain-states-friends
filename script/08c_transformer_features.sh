@@ -9,6 +9,9 @@
 #SBATCH --partition=ou_bcs_normal,pi_satra
 #SBATCH --array=0-291
 
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
+
 # =============================================================================
 # 08c - Transformer Feature Extraction (per-episode parallelization)
 # =============================================================================
@@ -61,19 +64,9 @@
 
 set -e
 
-# Determine project directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-mkdir -p "${PROJECT_DIR}/logs"
 
 module load ffmpeg/5.1.4
 
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 # NOTE: Do NOT run `uv sync` here - it strips NVIDIA .so files (known uv bug).
 # Run `uv sync --extra torch --extra gpu` once manually, then fix with:

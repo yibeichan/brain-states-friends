@@ -27,18 +27,9 @@
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=YOUR_EMAIL@example.com
 
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
 
-# Determine project directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-
-SCRIPT_DIR="${PROJECT_DIR}/script"
-mkdir -p "${PROJECT_DIR}/logs"
 
 # Subject array (5 subjects - no sub-04 in Harry Potter)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-05" "sub-06")

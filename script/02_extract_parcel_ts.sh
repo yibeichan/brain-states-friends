@@ -9,22 +9,9 @@
 #SBATCH --mem=4G
 #SBATCH --cpus-per-task=1
 
-# Determine the project directory (do this early for path resolution)
-# Use SLURM_SUBMIT_DIR if available (set by sbatch), otherwise fall back to script directory
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    # Fallback for manual testing: go up one level from script directory
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
 
-SCRIPT_DIR="${PROJECT_DIR}/script"
-
-# Create logs directory using absolute path
-mkdir -p "${PROJECT_DIR}/logs"
-
-# Ensure the user-local uv install is on PATH (SLURM jobs may not inherit it)
-export PATH="$HOME/.local/bin:$PATH"
 
 # --- HARDCODED VARIABLES ---
 # Change these values directly instead of using command line arguments

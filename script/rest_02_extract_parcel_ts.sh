@@ -21,15 +21,9 @@
 #SBATCH --mem=8G
 #SBATCH --array=0-5
 
-export PATH="$HOME/.local/bin:$PATH"
+# Shared preamble: PROJECT_DIR/SCRIPT_DIR, uv on PATH, logs/ (utils/_env.sh)
+source "${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh" 2>/dev/null || source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)/script/utils/_env.sh" || exit 1
 
-if [ -n "$SLURM_SUBMIT_DIR" ]; then
-    PROJECT_DIR="$SLURM_SUBMIT_DIR"
-else
-    PROJECT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
-fi
-SCRIPT_DIR="${PROJECT_DIR}/script"
-mkdir -p "${PROJECT_DIR}/logs"
 
 PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 
