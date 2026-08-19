@@ -15,7 +15,7 @@ network-participation summaries.
 | A | Per-subject category-count stacked bars (5 categories, all 50 states) in one combined figure + standalone category legend | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{png,svg} + fig2_A_legend_categories.{png,svg} |
 | B | Sankey: 5 categories -> 13 networks, top-3 composition (category + cortical labels enlarged; subcortical at base size) | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{png,svg} |
 | C | Per-state network-participation pie mosaic (content-eligible); sub-01 main, sub-02..06 in supp/; per-state complement to B | pie | state_flags.csv + 04 state_means_parcel.npy | fig2_C_sub-01_network_pies.{png,svg} + fig2_C_legend_networks.{png,svg} + supp/<sub>/fig2_C_<sub>_network_pies.{png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
-| D | Surface exemplars per category (sub-01) + filled-line occupancy traces | brain map + line | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
+| D | Surface exemplars per category (sub-01): cortical + subcortical mean-activity maps with shared per-region colorbars. No temporal inset - the temporal screens do not share a single legible axis (only run-onset separates on within-run position; drift and content-eligible have no simple within-figure signature), so per-screen temporal diagnostics live in the supplementary figure fig_S_temporal_signatures.py instead. | brain map | 04 state_means_parcel.npy + yabplot | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
 
 Run full app:
     marimo edit script/fig_F2_recurrence_sources.py
@@ -137,16 +137,6 @@ def load_state_means(SUBJECTS, MODEL_DIR, VT, np):
         state_means[_sub] = np.load(_path)
     print({_s: _m.shape for _s, _m in state_means.items()})
     return (state_means,)
-
-
-@app.cell
-def load_decoded_states_sub01(MODEL_DIR, VT, pickle):
-    """Viterbi-decoded state sequences for sub-01 (all runs) - for Panel C strips."""
-    _path = MODEL_DIR / "sub-01" / "final" / VT / "decoded_states.pkl"
-    with open(_path, "rb") as _f:
-        decoded_states_sub01 = pickle.load(_f)
-    print(f"sub-01 decoded_states: {len(decoded_states_sub01)} runs")
-    return (decoded_states_sub01,)
 
 
 @app.cell
@@ -552,99 +542,6 @@ def panel_D_surface_contrast(state_flags, state_means, PARCELLATION, OUT_F2, plt
         _cfig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
         plt.close(_cfig)
         print(f"  saved: fig2_D_colorbar_{_region}.{{pdf,png,svg}}")
-    return
-
-
-@app.cell
-def panel_D_state_timeseries(
-    state_flags, decoded_states_sub01, OUT_F2, TAXONOMY_COLORS, plt, np,
-):
-    """Panel D inset - binary-active timeseries per category exemplar.
-
-    Same 4 picks (sub-01); each trace is a 600-bin fractional-occupancy series
-    over all runs, lightly smoothed (moving average), drawn as a filled line in
-    that category's taxonomy color. All four strips share one y-scale (common
-    peak), and each strip carries its own y-axis (Occupancy, 0 -> shared vmax)
-    and an x-axis labeled "Time" (no tick labels); the contrast across
-    categories is in occupancy density, not peak height. Window 0 disables
-    smoothing.
-    """
-    _smooth_win = 7
-    _sub = "sub-01"
-    _df = state_flags[_sub]
-    _flag_id = "state" if "state" in _df.columns else "state_id"
-    _ranked = {
-        "eligible": _df[_df["summary_category"] == "eligible_for_content_analysis"]
-                       .sort_values("recurrence_score", ascending=False),
-        "runonset": _df[_df["summary_category"] == "run_onset_anchored"]
-                       .sort_values("recurrence_score", ascending=False),
-        "lowconf":  _df[_df["summary_category"] == "low_confidence"]
-                       .sort_values("recurrence_score", ascending=False),
-        "drift":    _df[_df["summary_category"] == "season_temporal"]
-                       .sort_values("recurrence_score", ascending=False),
-    }
-    _rank_idx = {"eligible": 1, "runonset": 0, "lowconf": 0, "drift": 0}
-    _category_color = {
-        "eligible": TAXONOMY_COLORS["Content-eligible"],
-        "runonset": TAXONOMY_COLORS["Run-onset-anchored"],
-        "lowconf":  TAXONOMY_COLORS["Low-confidence"],
-        "drift":    TAXONOMY_COLORS["Drift-anchored"],
-    }
-
-    _concat = np.concatenate(
-        [decoded_states_sub01[_k] for _k in decoded_states_sub01.keys()]
-    )
-    _n_total = len(_concat)
-    _n_bins = 600
-    _edges = np.linspace(0, _n_total, _n_bins + 1, dtype=int)
-
-    # Pass 1: build the (smoothed) occupancy series and the shared y-scale.
-    _series = {}
-    for _name, _ranked_df in _ranked.items():
-        if len(_ranked_df) == 0:
-            print(f"  WARNING: no {_name} states for {_sub} - skipping")
-            continue
-        _row = _ranked_df.iloc[min(_rank_idx[_name], len(_ranked_df) - 1)]
-        _sid = int(_row[_flag_id])
-        _binary = (_concat == _sid).astype(float)
-        _binned = np.array([
-            _binary[_edges[_i]:_edges[_i + 1]].mean() if _edges[_i + 1] > _edges[_i] else 0.0
-            for _i in range(_n_bins)
-        ])
-        if _smooth_win and _smooth_win > 1:
-            _kernel = np.ones(_smooth_win) / _smooth_win
-            _binned = np.convolve(_binned, _kernel, mode="same")
-        _series[_name] = _binned
-    _vmax = max((float(_s.max()) for _s in _series.values()), default=0.01)
-    _vmax = max(_vmax * 1.05, 0.01)
-
-    # Pass 2: render each strip on the shared y-scale, each with its own
-    # y-axis (Occupancy, 0 -> vmax) and an x-axis labeled "Time" (no ticks).
-    _x = np.arange(_n_bins)
-    _fs_tick, _fs_label = 6, 7
-    for _name, _binned in _series.items():
-        _color = _category_color[_name]
-        _fig, _ax = plt.subplots(figsize=(2.4, 0.85))
-        _ax.fill_between(_x, _binned, 0.0, color=_color, alpha=0.3, linewidth=0)
-        _ax.plot(_x, _binned, color=_color, lw=1.0)
-        _ax.set_xlim(0, _n_bins - 1)
-        _ax.set_ylim(0, _vmax)
-        _ax.set_yticks([0, _vmax])
-        _ax.set_yticklabels(["0", f"{_vmax:.2f}"], fontsize=_fs_tick)
-        _ax.tick_params(axis="y", length=2, pad=1)
-        _ax.set_ylabel("Occupancy", fontsize=_fs_label, labelpad=2)
-        _ax.set_xticks([])
-        _ax.set_xlabel("Time", fontsize=_fs_label, labelpad=2)
-        for _s in ("top", "right"):
-            _ax.spines[_s].set_visible(False)
-        _ax.spines["left"].set_linewidth(0.6)
-        _ax.spines["bottom"].set_linewidth(0.6)
-        _fig.subplots_adjust(left=0.16, right=0.98, bottom=0.24, top=0.96)
-        _stem = OUT_F2 / f"fig2_D_{_name}_timeseries"
-        _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-        _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
-        plt.close(_fig)
-        print(f"  saved: fig2_D_{_name}_timeseries.{{png,svg}}")
     return
 
 

@@ -45,11 +45,11 @@ Design notes (2026-05-26 revision):
     it was display-only, while the inferential statistics are the per-subject
     quantities summarized in the consistency forest. Keep this omission aligned
     with docs/manuscript/figure_captions.md.
-  * Panel B: subjects now use SUBJECT_MARKERS shapes (consistent with F4) in a
-    single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51) is no
-    longer accented - it is visible as the one homophily marker at/below the null
-    line and noted in the caption. No per-panel legend (marker→subject key is
-    shared project-wide; cross-reference F4). Tightened top padding.
+  * Panel B: subjects now use SUBJECT_MARKERS shapes (the project-wide subject
+    key) in a single neutral color. sub-05's homophily-null (ratio 0.980, p=0.51)
+    is no longer accented - it is visible as the one homophily marker at/below the
+    null line and noted in the caption. No per-panel legend (marker→subject key is
+    shared project-wide across the subject-marker figures). Tightened top padding.
 
 Source-truth audit (2026-05-26, reproduced from raw arrays - see session log):
   * Panel B: FC-Mantel ρ 0.326–0.551, MFPT-FC ρ 0.405–0.680, assortativity
@@ -302,14 +302,14 @@ def panel_B_cross_subject_consistency(
       4. Network homophily (within/between ratio)            null = 1
 
     Each subject is a distinct SUBJECT_MARKERS shape in a single neutral color
-    (the project-wide subject key, consistent with Fig 5 - so no per-panel
+    (the project-wide subject key - so no per-panel
     legend is needed; the shapes also de-overlap clustered points). Color is NOT
     spent on subject identity here: marker shape carries it, leaving the panel
     uncluttered. sub-05's homophily null (ratio 0.980, p=0.51 - the intro's "in
     most individuals" caveat) is no longer accented; it reads as the one
     homophily marker sitting at/below the dashed null line, and is named in the
     caption. The point estimate per row is the message; which marker is which
-    individual is secondary (recoverable via the Fig 5 marker key).
+    individual is secondary (recoverable via the project-wide marker key).
     """
     # (row label, key, null value, per-row x-axis label). Each row has its own
     # x-scale - the metrics are not commensurable - so each carries its own

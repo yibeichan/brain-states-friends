@@ -27,7 +27,8 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # Optional exports:
 #   STIMULUS              Dataset (default: friends)
 #   DOWNLOAD_ONLY         Set to 1 for cache warmup (downloads model, no extraction)
-#   WINDOW_TRS            LLaMA local-window span in TRs (default: 4)
+#   WINDOW_TRS            LLaMA local-window span in TRs (default: 1, the
+#                         published value; the W-sweep used {1,3,6,9})
 #   OUTPUT_SUBDIR_SUFFIX  Suffix for the 08c output directory (default: empty)
 #                         Used by the W-sweep to avoid colliding with the
 #                         production path: e.g. "_sweep_w3" writes to
@@ -105,7 +106,7 @@ fi
 STIMULUS="${STIMULUS:-friends}"
 
 # LLaMA local-window readout - see 2026-05-01_08c_llama_local_window_design.md
-WINDOW_TRS="${WINDOW_TRS:-4}"
+WINDOW_TRS="${WINDOW_TRS:-1}"
 OUTPUT_SUBDIR_SUFFIX="${OUTPUT_SUBDIR_SUFFIX:-}"
 
 # --- Map stimulus to episode list file ---
