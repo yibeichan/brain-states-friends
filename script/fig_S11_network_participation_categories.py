@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supplementary Figure S9 - all-category canonical-network participation.
+"""Supplementary Figure S11 - all-category canonical-network participation.
 
 Applies the *same* metric definitions as the main content-eligible Figure 2C
 (``fig_F2_network_participation.py``) to every recurrence-screening category in
@@ -141,12 +141,12 @@ def main() -> None:
         metrics,
         summary,
         out_dir,
-        prefix="figS09_network_participation_categories",
+        prefix="figS11_network_participation_categories",
     )
     plot_network_participation_by_category(
         metrics,
         summary,
-        out_dir / "figS09_network_participation_categories",
+        out_dir / "figS11_network_participation_categories",
         args.subjects,
         NETWORK_ORDER,
         SUBJECT_MARKERS,
@@ -158,7 +158,7 @@ def main() -> None:
     print(f"saved: {metrics_path}")
     print(f"saved: {summary_path}")
     print(
-        f"saved: {out_dir / 'figS09_network_participation_categories'}.{{pdf,png,svg}}"
+        f"saved: {out_dir / 'figS11_network_participation_categories'}.{{pdf,png,svg}}"
     )
     print(f"n_states_total={len(metrics)} n_subjects={metrics['subject'].nunique()}")
     print("category counts:")

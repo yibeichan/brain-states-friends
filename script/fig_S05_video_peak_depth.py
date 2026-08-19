@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Renders Figure S3: D1-net balanced accuracy by network/polarity.
+"""Renders Figure S5: D1-net balanced accuracy by network/polarity.
 
-Produces docs/supplementary/figures/S03_video_peak_depth.png by plotting
+Produces docs/supplementary/figures/S05_video_peak_depth.png by plotting
 per-layer D1-net balanced accuracy heatmaps for 5 subjects (sub-06 excluded
 per caption) side-by-side with a shared colorbar and title.
 
 Usage:
-    uv run python script/fig_S03_video_peak_depth.py
+    uv run python script/fig_S05_video_peak_depth.py
 """
 
 import json
@@ -195,13 +195,13 @@ def main():
 
     out_path = Path(
         "/orcd/home/002/yibei/brain-states-friends-public/"
-        "docs/supplementary/figures/S03_video_peak_depth.png"
+        "docs/supplementary/figures/S05_video_peak_depth.png"
     )
     fig.savefig(out_path, dpi=200, bbox_inches="tight", pad_inches=0.04)
     plt.close(fig)
 
     size_kb = out_path.stat().st_size / 1024
-    print(f"S03 -> {out_path}  ({size_kb:.0f} KB, {out_path.stat().st_size} bytes)")
+    print(f"S05 -> {out_path}  ({size_kb:.0f} KB, {out_path.stat().st_size} bytes)")
 
     if size_kb > 500:
         from PIL import Image

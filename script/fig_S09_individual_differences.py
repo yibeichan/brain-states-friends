@@ -1,4 +1,4 @@
-"""fig_S07_individual_differences.py - Supplementary Figure S7.
+"""fig_S09_individual_differences.py - Supplementary Figure S9.
 
 Subject-level individual differences across F1–F5 findings, rendered as a
 1×6 horizontal strip of per-subject radar plots.
@@ -12,16 +12,16 @@ the same seven axes derived from the five main-text findings:
 | 2 | %CE        | F2.R2          | 05e_a4 state_flags.csv eligible count / K_active (from 06b)             |
 | 3 | FCρ        | F3.R3          | 06b transition_structure_summary.json → A3_fc_transition.rho            |
 | 4 | Homo       | F3.R3          | 06b transition_structure_summary.json → A3_network_homophily.ratio      |
-| 5 | Aud        | F4.R4b         | 08d friends_w2v-bert-2.0/D1_depth_profile.json → argmax(bal_acc) / 23   |
-| 6 | M10        | F5.R5          | m10_05 cross_stimulus_summary.json → A1_recurrence_correlation.rho     |
-| 7 | HP+PP      | F5.R5          | mean of hp_05 + pp_05 A1.spearman_rho (sub-04 N/A)                      |
+| 5 | Aud        | F5.R4b         | 08d friends_w2v-bert-2.0/D1_depth_profile.json → argmax(bal_acc) / 23   |
+| 6 | M10        | F4.R5          | m10_05 cross_stimulus_summary.json → A1_recurrence_correlation.rho     |
+| 7 | HP+PP      | F4.R5          | mean of hp_05 + pp_05 A1.spearman_rho (sub-04 N/A)                      |
 
 Each axis is scaled to the cohort minimum–maximum with 10% padding on each
 end. Sub-04 was not scanned during Harry Potter or Le Petit Prince, so its
 HP+PP vertex and adjacent connecting segments are omitted rather than imputed.
 
 Output:
-  $SCRATCH_DIR/output/manuscript_figures/figS07/figS07_radar_strip.{pdf,png,svg}
+  $SCRATCH_DIR/output/manuscript_figures/figS09/figS09_radar_strip.{pdf,png,svg}
 
 Manuscript-figure conventions: no in-axis titles, no panel letters, minimal
 on-figure text (axis labels + subject IDs only). Caption carries axis full
@@ -29,7 +29,7 @@ names, cohort absolute ranges, gridline meaning, and sub-04 N/A explanation
 (see the figure caption in the Supplementary Material).
 
 Run:
-    uv run --no-sync python script/fig_S07_individual_differences.py
+    uv run --no-sync python script/fig_S09_individual_differences.py
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ PARCELLATION = "atlas-4S156Parcels"
 VT = "vt0.95"
 SUBJECTS: list[str] = [f"sub-0{i}" for i in range(1, 7)]
 AXIS_LABELS: list[str] = ["K", "%CE", "FCρ", "Homo", "Aud", "M10", "HP+PP"]
-OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS07"
+OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS09"
 PAD_FRACTION = 0.10
 
 
@@ -387,9 +387,9 @@ def render_strip(scaled_df: pd.DataFrame, valid_mask: pd.DataFrame, out_dir: Pat
     fig.patch.set_facecolor("white")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    pdf_path = out_dir / "figS07_radar_strip.pdf"
-    png_path = out_dir / "figS07_radar_strip.png"
-    svg_path = out_dir / "figS07_radar_strip.svg"
+    pdf_path = out_dir / "figS09_radar_strip.pdf"
+    png_path = out_dir / "figS09_radar_strip.png"
+    svg_path = out_dir / "figS09_radar_strip.svg"
     fig.savefig(pdf_path, bbox_inches="tight", pad_inches=0.04, facecolor="white")
     fig.savefig(png_path, bbox_inches="tight", pad_inches=0.04, facecolor="white", dpi=300)
     fig.savefig(svg_path, bbox_inches="tight", pad_inches=0.04, facecolor="white")
