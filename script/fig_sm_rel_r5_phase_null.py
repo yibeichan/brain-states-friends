@@ -118,6 +118,10 @@ def panel_null_vs_observed(
             xy=(0.03, 0.95), xycoords="axes fraction",
             ha="left", va="top", fontsize=7.5,
         )
+        # Label each small multiple with its participant: the panels are
+        # otherwise indistinguishable and the reader would have to infer the
+        # order from the caption.
+        _ax.set_title(_sub, fontsize=8, pad=3)
         _ax.set_xlim(_xlim)
         _ax.set_yticks([])
         _ax.spines[["top", "right", "left"]].set_visible(False)
