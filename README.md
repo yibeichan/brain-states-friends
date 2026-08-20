@@ -11,12 +11,12 @@ This project maps the repertoire of brain states that recur during longitudinal 
 ## Supplementary material
 
 The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
-indexes Figures S1–S12 and Tables S1–S2, and for each one gives the caption, the
+indexes Figures S1–S13 and Tables S1–S2, and for each one gives the caption, the
 generating script, and the source outputs the reported values were read from.
 
 | | |
 |---|---|
-| [Figures S1–S12](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
+| [Figures S1–S13](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
 | [Tables S1–S2](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation |
 | [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
 
@@ -186,6 +186,7 @@ noted) before invoking a figure script.
 | **S10** | `fig_sm_alt_ica_matching.py` (`supplements` branch) | ICA convergence diagnostics | ICA sweep |
 | **S11** | `fig_S11_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
 | **S12** | `fig_sm_alt_ica_oos_recurrence.py` (`supplements` branch) | ICA out-of-stimulus recurrence across three stimuli | ICA OOS |
+| **S13** | `fig_sm_rel_r5_phase_null.py` (`supplements` branch) | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation | `sm_rel_r5_phase_null` |
 
 > **SI renumbering (2026-08-19).** The supplement was reordered to follow the
 > Methods reading order. `S3` and `S4` are new (model selection, reliability);
@@ -206,7 +207,7 @@ uv run python script/export_si_figures.py          # status only
 uv run python script/export_si_figures.py --copy   # place the files
 ```
 
-See [docs/supplementary/](docs/supplementary/) for the complete S1–S12 index
+See [docs/supplementary/](docs/supplementary/) for the complete S1–S13 index
 with per-figure captions, provenance, and branch.
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,
