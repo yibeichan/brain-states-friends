@@ -2,9 +2,31 @@
 
 Quantifying how brain states recur across narrative contexts during longitudinal naturalistic viewing under fMRI.
 
+**[Supplementary material](docs/supplementary/README.md)** · [Pipeline](#pipeline) · [Quick start](#quick-start) · [Reproducing the figures](#reproducing-the-figures) · [Configuration](#configuration)
+
 ## Overview
 
 This project maps the repertoire of brain states that recur during longitudinal naturalistic viewing, using fMRI recorded while six participants watched the television series Friends across many episodes. A Gaussian hidden Markov model, fit per subject in a PCA-reduced parcel space, segments each viewing run into latent states. Its transition priors (sticky self-transitions plus a hierarchical-Dirichlet concentration prior, borrowed from the sticky HDP-HMM but applied under a fixed-capacity weak-limit truncation rather than unbounded nonparametric inference) let the number of occupied states emerge from the data. For each state we compute a recurrence score (the fraction of episodes in which it is active) using fractional occupancy and a season-label permutation test; the resulting scores form a continuous recurrence gradient rather than a binary invariant-versus-specific split. We then characterize each state's canonical-network composition and transition dynamics. Finally, we test the depth at which the states are decodable from a transformer model of the stimulus (representational depth), and whether the Friends state repertoire recurs in three held-out narratives: Movie10, Harry Potter, and Petit Prince.
+
+## Supplementary material
+
+The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
+indexes Figures S1–S12 and Tables S1–S2, and for each one gives the caption, the
+generating script, and the source outputs the reported values were read from.
+
+| | |
+|---|---|
+| [Figures S1–S12](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
+| [Tables S1–S2](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation |
+| [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
+
+Two supplementary analyses (Figures S10 and S12, the ICA convergence check and its
+out-of-stimulus recurrence arm) are maintained on the orphan
+[`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch; the index links to each findings document there. To check which committed
+panel came from which script, run
+[`script/export_si_figures.py`](script/export_si_figures.py), which prints the
+figure-to-generator mapping and flags anything stale or missing.
 
 ## Data
 
@@ -244,7 +266,7 @@ uv sync --extra datalad     # DataLad for output archival (script/utils/datalad_
 DataLad additionally requires the **git-annex** binary at runtime. git-annex is a
 Haskell program, not a PyPI package, so `uv` cannot install it. The `datalad`
 extra bundles `datalad-installer`, which fetches a standalone git-annex into
-user space (no root) — run it once after `uv sync --extra datalad`:
+user space (no root). Run it once after `uv sync --extra datalad`:
 
 ```bash
 uv run --extra datalad datalad-installer \
