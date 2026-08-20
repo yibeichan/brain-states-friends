@@ -4,9 +4,9 @@
 Writes three separate panel files for sub-01 straight into
 docs/supplementary/figures/:
 
-    S02_pca_loadings_A.{pdf,png}   loadings heatmap, top 5 PCs
-    S02_pca_loadings_B.{pdf,png}   residual variance, per-parcel + per-network
-    S02_pca_loadings_C.{pdf,png}   network variance contribution per PC
+    S02_pca_loadings_A.png   loadings heatmap, top 5 PCs
+    S02_pca_loadings_B.png   residual variance, per-parcel + per-network
+    S02_pca_loadings_C.png   network variance contribution per PC
 
 One file per panel, no in-image panel letters and no titles: the panel letter
 lives in the filename and the descriptive text lives in the SI caption, so the
@@ -77,16 +77,18 @@ SI_FIG_DIR = REPO / "docs" / "supplementary" / "figures"
 
 
 def _save_panel(fig, stem):
-    """Save one panel as pdf + png at the project's publication settings."""
+    """Save one panel as PNG at the project's publication settings.
+
+    PNG only: the supplement ships PNG for every figure, so this writes the
+    same format as the other 26 rather than adding a vector file for three
+    panels alone.
+    """
     SI_FIG_DIR.mkdir(parents=True, exist_ok=True)
-    paths = []
-    for _ext in ("pdf", "png"):
-        _p = SI_FIG_DIR / f"{stem}.{_ext}"
-        fig.savefig(_p, dpi=300, bbox_inches="tight", pad_inches=0.02)
-        paths.append(_p)
+    _p = SI_FIG_DIR / f"{stem}.png"
+    fig.savefig(_p, dpi=300, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
-    print(f"saved {stem}.{{pdf,png}} -> {SI_FIG_DIR}")
-    return paths[1]
+    print(f"saved {stem}.png -> {SI_FIG_DIR}")
+    return _p
 
 
 # ── Re-render A1 ─────────────────────────────────────────────────────────────
