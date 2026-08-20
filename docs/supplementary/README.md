@@ -254,7 +254,7 @@ The comparison holds the participant's retained principal-component subspace fix
 
 ### Table S2 — Phase-randomized null for the Movie10 recurrence–occupancy correlation
 
-Phase-randomized null for the Movie10 recurrence–occupancy correlation, per participant (10,000 draws; empirical p floor 0.0001). Surrogates are shared-phase Prichard–Theiler surrogates of the Movie10 principal-component scores: they preserve each component's power spectrum and variance, the cross-component covariance, the run count, and the run lengths, while destroying stimulus-locked phase alignment along with all higher-order temporal structure.
+Phase-randomized null for the Movie10 recurrence–occupancy correlation, per participant (10,000 draws; empirical p floor 0.0001). [Figure S13](#figure-s13--phase-randomized-null-distributions-for-the-movie10-correlation) plots the corresponding null distributions with the observed correlation marked. Surrogates are shared-phase Prichard–Theiler surrogates of the Movie10 principal-component scores: they preserve each component's power spectrum and variance, the cross-component covariance, the run count, and the run lengths, while destroying stimulus-locked phase alignment along with all higher-order temporal structure.
 
 | Participant | Movie10 runs | Observed rho | Null mean (SD) | Null 2.5–97.5% | Delta rho | z | Empirical p | Null share of observed |
 |---|---|---|---|---|---|---|---|---|
