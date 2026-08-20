@@ -197,9 +197,8 @@ def main():
     # otherwise silently overwrite the primary clone's SI figure).
     out_dir = Path(__file__).resolve().parent.parent / "docs" / "supplementary" / "figures"
     out_dir.mkdir(parents=True, exist_ok=True)
+    # PNG only, matching every other supplementary figure.
     out_path = out_dir / "S05_video_peak_depth.png"
-    fig.savefig(out_dir / "S05_video_peak_depth.pdf",
-                bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
 
