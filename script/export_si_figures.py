@@ -47,7 +47,11 @@ SI_DIR = REPO / "docs" / "supplementary" / "figures"
 SI_MAP: list[tuple[str, str, str, str | None]] = [
     ("S01_recurring_state_surface_maps.png", "DIRECT",
      "script/fig_S01_recurring_state_surface_maps.py", None),
-    ("S02_pca_loadings.png", "DIRECT",
+    ("S02_pca_loadings_A.png", "DIRECT",
+     "script/fig_S02_pca_loadings.py", None),
+    ("S02_pca_loadings_B.png", "DIRECT",
+     "script/fig_S02_pca_loadings.py", None),
+    ("S02_pca_loadings_C.png", "DIRECT",
      "script/fig_S02_pca_loadings.py", None),
 
     ("S03_model_selection_A.png", "EXPORT",

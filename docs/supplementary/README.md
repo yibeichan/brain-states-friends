@@ -7,7 +7,7 @@ This directory catalogues all supplementary figures (S1–S12) for the manuscrip
 | Figure | What it shows | Figure file(s) | Findings / source | Branch |
 |--------|---------------|----------------|-------------------|--------|
 | S1 | Cortical and subcortical surface maps of the top recurring brain states, per subject (six subjects, five states each) | [S01_recurring_state_surface_maps.png](figures/S01_recurring_state_surface_maps.png) | [../findings/05b_recurring_states_visualization.md](../findings/05b_recurring_states_visualization.md) | main |
-| S2 | PCA loadings diagnostics for one representative subject: loading heatmap, residual variance, motion-artifact flags, LOSO stability | [S02_pca_loadings.png](figures/S02_pca_loadings.png) | [../findings/03b_pca_loadings.md](../findings/03b_pca_loadings.md) | main |
+| S2 | PCA loadings diagnostics for one representative subject (sub-01): loading heatmap, residual variance by parcel and network, network variance contribution per component | [A](figures/S02_pca_loadings_A.png) · [B](figures/S02_pca_loadings_B.png) · [C](figures/S02_pca_loadings_C.png) | [../findings/03b_pca_loadings.md](../findings/03b_pca_loadings.md) | main |
 | S3 | HMM model selection: validation log-likelihood against occupied states (A), occupied states against truncation capacity (B), and train-to-validation likelihood gap against capacity (C), per subject | [S03_model_selection_A.png](figures/S03_model_selection_A.png), [_B.png](figures/S03_model_selection_B.png), [_C.png](figures/S03_model_selection_C.png) | [../findings/04_combined_hdphmm.md](../findings/04_combined_hdphmm.md) | main |
 | S4 | Within-Friends reliability: matched-pair spatial correlation for LOSO and split-half refits (A), structural invariants across LOSO folds against the 10-seed initialization range (B), and the within-state functional-connectivity arm, raw (C) and mean-removed (D), each against a mismatched-pair null | [S04_reliability_A.png](figures/S04_reliability_A.png), [_B.png](figures/S04_reliability_B.png), [_C.png](figures/S04_reliability_C.png), [_D.png](figures/S04_reliability_D.png) | [04ra](../findings/04ra_loso_struct_comp.md), [04rb](../findings/04rb_split_half_reliability.md), [04rc](../findings/04rc_reliability_fc.md) | main |
 | S5 | Network-stratified video (DINOv2) decoding depth: per-subject montage testing whether the video depth peak localizes to specific networks (five subjects; sub-06's groups all fell below the minimum-states gate) | [S05_video_peak_depth.png](figures/S05_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
@@ -31,9 +31,18 @@ For each subject, the five states ranked highest by recurrence score are rendere
 
 ## Figure S2 — PCA loadings diagnostics
 
-![PCA loadings diagnostic panels for a representative subject (sub-01): loading heatmap, residual variance by parcel and network, motion-artifact flags, and leave-one-season-out stability](figures/S02_pca_loadings.png)
+All three panels come from one representative participant (sub-01) at the production variance threshold (vt = 0.95, k = 75 retained components).
 
-This figure characterizes the per-subject PCA space that the combined HMM consumes. Panels include the loading heatmap across parcels and components, per-parcel residual variance at the production variance threshold, motion-artifact flags for the leading components, and leave-one-season-out stability of residual variance. Subcortical networks (thalamus, hippocampus/amygdala, basal ganglia) showed the highest residual fractions; unimodal cortical networks were nearly fully captured by the retained components. One subject (sub-06) had a flag on a somatomotor-dominant loading; no subject had all motion-artifact criteria exceeded simultaneously.
+**Panel A — Loading weights across parcels and components**
+![Loading weights for the top 5 principal components across all 156 parcels, parcels grouped by network along the horizontal axis, diverging colour scale centred on zero; each row is labelled with the component's explained-variance share](figures/S02_pca_loadings_A.png)
+
+**Panel B — Residual variance by parcel and by network**
+![Upper: residual variance fraction for every parcel, sorted descending and coloured by network, with the median marked and the five highest parcels annotated. Lower: mean residual variance fraction per network with standard-deviation error bars, networks sorted descending](figures/S02_pca_loadings_B.png)
+
+**Panel C — Network variance contribution per component**
+![Stacked bars showing, for each of the first 20 principal components, the fraction of squared loadings contributed by each network](figures/S02_pca_loadings_C.png)
+
+These panels characterize the per-participant PCA space that the combined HMM consumes. Subcortical networks (thalamus, hippocampus/amygdala, basal ganglia) carried the highest residual fractions, while unimodal cortical networks were nearly fully captured by the retained components. Panel C annotates any component that trips the motion-artifact criteria; sub-01 has none, and across the six participants no participant exceeded all criteria simultaneously (one flag on a somatomotor-dominant loading in sub-06; see the linked 03b findings document, which also reports the leave-one-season-out residual-stability diagnostic not shown here).
 
 ---
 
