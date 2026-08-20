@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """Renders Figure S2: PCA loadings diagnostic panels.
 
-Produces docs/supplementary/figures/S02_pca_loadings.png by running panels
-A1 (loadings heatmap), A3 (residual variance), and A4 (network variance per
-PC) for sub-01, with publication-quality fonts and tight layout, then
-compositing them vertically.
+Writes three separate panel files for sub-01 straight into
+docs/supplementary/figures/:
+
+    S02_pca_loadings_A.{pdf,png}   loadings heatmap, top 5 PCs
+    S02_pca_loadings_B.{pdf,png}   residual variance, per-parcel + per-network
+    S02_pca_loadings_C.{pdf,png}   network variance contribution per PC
+
+One file per panel, no in-image panel letters and no titles: the panel letter
+lives in the filename and the descriptive text lives in the SI caption, so the
+figure can be re-lettered or re-laid-out without editing this script. The
+quantities the old in-image titles carried (PC count, k, variance threshold)
+are stated in the Figure S2 caption in docs/supplementary/README.md.
 
 Usage:
     uv run python script/fig_S02_pca_loadings.py
@@ -61,9 +69,29 @@ def _set_legibility_rc():
     })
 
 
+# Repo root derived from this file, so the script writes into the clone it was
+# run from rather than a hardcoded one (home is dual-pathed, and worktrees would
+# otherwise silently overwrite the primary clone's SI figures).
+REPO = SCRIPT_DIR.parent
+SI_FIG_DIR = REPO / "docs" / "supplementary" / "figures"
+
+
+def _save_panel(fig, stem):
+    """Save one panel as pdf + png at the project's publication settings."""
+    SI_FIG_DIR.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for _ext in ("pdf", "png"):
+        _p = SI_FIG_DIR / f"{stem}.{_ext}"
+        fig.savefig(_p, dpi=300, bbox_inches="tight", pad_inches=0.02)
+        paths.append(_p)
+    plt.close(fig)
+    print(f"saved {stem}.{{pdf,png}} -> {SI_FIG_DIR}")
+    return paths[1]
+
+
 # ── Re-render A1 ─────────────────────────────────────────────────────────────
 
-def render_A1(components, var_ratio, labels, groups, n_top_pcs, out_dir):
+def render_A1(components, var_ratio, labels, groups, n_top_pcs):
     """A1 loadings heatmap — larger fonts, tight margins."""
     _set_legibility_rc()
     n_pcs = min(n_top_pcs, components.shape[0])
@@ -104,20 +132,14 @@ def render_A1(components, var_ratio, labels, groups, n_top_pcs, out_dir):
         fontsize=TICK_SIZE,
     )
     ax.set_xlabel("Parcels (grouped by network)", fontsize=LABEL_SIZE)
-    ax.set_title(f"A1  PCA Loadings Heatmap — Top {n_pcs} PCs",
-                 fontsize=TITLE_SIZE, pad=8)
 
-    out_path = out_dir / "A1_pca_loadings_heatmap_v2.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight", pad_inches=0.05)
-    plt.close(fig)
-    print(f"saved {out_path}")
-    return out_path
+    return _save_panel(fig, "S02_pca_loadings_A")
 
 
 # ── Re-render A3 ─────────────────────────────────────────────────────────────
 
 def render_A3(components, explained_variance, labels, groups,
-              network_per_parcel, k, variance_threshold, out_dir):
+              network_per_parcel, k, variance_threshold):
     """A3 residual variance — larger fonts, tight margins."""
     _set_legibility_rc()
 
@@ -138,11 +160,6 @@ def render_A3(components, explained_variance, labels, groups,
             edgecolor="none", width=1.0)
     ax1.set_xlabel("Parcels (sorted by residual fraction)", fontsize=LABEL_SIZE)
     ax1.set_ylabel("Residual variance fraction", fontsize=LABEL_SIZE)
-    ax1.set_title(
-        f"A3a  Per-Parcel Residual Variance (k={k} PCs, "
-        f"{variance_threshold*100:.0f}% variance threshold)",
-        fontsize=TITLE_SIZE, pad=8,
-    )
     ax1.set_xlim(-0.5, len(sorted_frac) - 0.5)
     ax1.set_ylim(0, min(1.0, sorted_frac[0] * 1.15))
     med_val = np.median(residual_frac)
@@ -182,22 +199,16 @@ def render_A3(components, explained_variance, labels, groups,
     ax2.set_yticks(range(len(net_names)))
     ax2.set_yticklabels(net_names, fontsize=TICK_SIZE)
     ax2.set_xlabel("Mean residual variance fraction", fontsize=LABEL_SIZE)
-    ax2.set_title(f"A3b  Per-Network Residual Variance (k={k} PCs)",
-                  fontsize=TITLE_SIZE, pad=8)
     ax2.grid(True, axis="x", alpha=0.3)
     ax2.invert_yaxis()
     ax2.tick_params(axis="both", labelsize=TICK_SIZE)
 
-    out_path = out_dir / "A3_residual_variance_v2.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight", pad_inches=0.05)
-    plt.close(fig)
-    print(f"saved {out_path}")
-    return out_path
+    return _save_panel(fig, "S02_pca_loadings_B")
 
 
 # ── Re-render A4 ─────────────────────────────────────────────────────────────
 
-def render_A4(components, groups, n_pcs_show, out_dir, motion_flags=None):
+def render_A4(components, groups, n_pcs_show, motion_flags=None):
     """A4 network variance per PC — larger fonts, tight margins."""
     _set_legibility_rc()
 
@@ -227,8 +238,6 @@ def render_A4(components, groups, n_pcs_show, out_dir, motion_flags=None):
 
     ax.set_xlabel("Principal Component", fontsize=LABEL_SIZE)
     ax.set_ylabel("Fraction of squared loadings", fontsize=LABEL_SIZE)
-    ax.set_title(f"A4  Network Variance Contribution per PC (top {n_pcs})",
-                 fontsize=TITLE_SIZE, pad=8)
     ax.set_xticks(x)
     ax.set_xticklabels([f"{i+1}" for i in x], fontsize=SMALL_TICK)
     ax.set_ylim(0, 1)
@@ -247,48 +256,7 @@ def render_A4(components, groups, n_pcs_show, out_dir, motion_flags=None):
     ax.legend(bbox_to_anchor=(1.02, 1), loc="upper left",
               fontsize=LEGEND_SIZE - 1, ncol=1, frameon=True)
 
-    out_path = out_dir / "A4_network_variance_per_pc_v2.png"
-    fig.savefig(out_path, dpi=150, bbox_inches="tight", pad_inches=0.05)
-    plt.close(fig)
-    print(f"saved {out_path}")
-    return out_path
-
-
-# ── Composite A1 + A3 + A4 into S02 ─────────────────────────────────────────
-
-def composite_S02(a1_path, a3_path, a4_path, out_path):
-    """Stack A1, A3, A4 vertically into one PNG with minimal padding."""
-    from PIL import Image
-
-    imgs = [Image.open(p).convert("RGBA") for p in [a1_path, a3_path, a4_path]]
-
-    # Normalize widths to max width
-    max_w = max(im.width for im in imgs)
-    resized = []
-    for im in imgs:
-        if im.width != max_w:
-            scale = max_w / im.width
-            new_h = int(im.height * scale)
-            im = im.resize((max_w, new_h), Image.LANCZOS)
-        resized.append(im)
-
-    # Gap between panels: 10px
-    gap = 10
-    total_h = sum(im.height for im in resized) + gap * (len(resized) - 1)
-    composite = Image.new("RGBA", (max_w, total_h), (255, 255, 255, 255))
-
-    y = 0
-    for im in resized:
-        composite.paste(im, (0, y))
-        y += im.height + gap
-
-    # Convert to RGB for PNG (no alpha channel needed)
-    rgb = Image.new("RGB", composite.size, (255, 255, 255))
-    rgb.paste(composite, mask=composite.split()[3])
-    rgb.save(out_path, "PNG", optimize=True)
-    size_kb = out_path.stat().st_size / 1024
-    print(f"S02 composite -> {out_path}  ({size_kb:.0f} KB)")
-    return size_kb
+    return _save_panel(fig, "S02_pca_loadings_C")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -299,10 +267,6 @@ def main():
 
     sub_id = "sub-01"
     parcellation = "atlas-4S156Parcels"
-
-    # Temp output dir in scratch
-    out_dir = SCRATCH_DIR / "output" / "manuscript_figures" / "S02_legibility_v2"
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     # Load data
     components, explained_variance, var_ratio = pca_03b.load_pca_model(
@@ -317,28 +281,14 @@ def main():
     k = n_pcs_lookup.get(vt_str, 75)
     vt_float = float(vt_str)
 
-    # Render panels
-    a1 = render_A1(components, var_ratio, labels, groups, 5, out_dir)
-    a3 = render_A3(components, explained_variance, labels, groups,
-                   network_per_parcel, k, vt_float, out_dir)
-    a4 = render_A4(components, groups, 20, out_dir, motion_flags=motion_flags)
+    # Render panels, one file per panel — no composite.
+    render_A1(components, var_ratio, labels, groups, 5)
+    render_A3(components, explained_variance, labels, groups,
+              network_per_parcel, k, vt_float)
+    render_A4(components, groups, 20, motion_flags=motion_flags)
 
-    # Composite
-    final_dest = Path(
-        "/orcd/home/002/yibei/brain-states-friends-public/"
-        "docs/supplementary/figures/S02_pca_loadings.png"
-    )
-    size_kb = composite_S02(a1, a3, a4, final_dest)
-
-    if size_kb > 500:
-        # Recompress with lower quality if needed
-        from PIL import Image
-        img = Image.open(final_dest)
-        img.save(final_dest, "PNG", optimize=True, compress_level=9)
-        size_kb = final_dest.stat().st_size / 1024
-        print(f"  recompressed -> {size_kb:.0f} KB")
-
-    print(f"Done. Final size: {final_dest.stat().st_size} bytes")
+    print(f"Done. k={k} PCs at vt={vt_float:.2f} for {sub_id}; "
+          f"3 panels written to {SI_FIG_DIR}")
 
 
 if __name__ == "__main__":

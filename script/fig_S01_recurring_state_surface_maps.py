@@ -197,10 +197,12 @@ def main():
     rgb = Image.new("RGB", composite.size, (255, 255, 255))
     rgb.paste(composite, mask=composite.split()[3])
 
-    out_path = Path(
-        "/orcd/home/002/yibei/brain-states-friends-public/"
-        "docs/supplementary/figures/S01_recurring_state_surface_maps.png"
-    )
+    # Derived from this file, so the montage lands in the clone it was run from
+    # rather than a hardcoded one (home is dual-pathed, and a worktree would
+    # otherwise silently overwrite the primary clone's SI figure).
+    out_dir = Path(__file__).resolve().parent.parent / "docs" / "supplementary" / "figures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "S01_recurring_state_surface_maps.png"
 
     rgb.save(out_path, "PNG", optimize=True, compress_level=9)
     size_kb = out_path.stat().st_size / 1024

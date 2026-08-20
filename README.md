@@ -2,9 +2,31 @@
 
 Quantifying how brain states recur across narrative contexts during longitudinal naturalistic viewing under fMRI.
 
+**[Supplementary material](docs/supplementary/README.md)** · [Pipeline](#pipeline) · [Quick start](#quick-start) · [Reproducing the figures](#reproducing-the-figures) · [Configuration](#configuration)
+
 ## Overview
 
 This project maps the repertoire of brain states that recur during longitudinal naturalistic viewing, using fMRI recorded while six participants watched the television series Friends across many episodes. A Gaussian hidden Markov model, fit per subject in a PCA-reduced parcel space, segments each viewing run into latent states. Its transition priors (sticky self-transitions plus a hierarchical-Dirichlet concentration prior, borrowed from the sticky HDP-HMM but applied under a fixed-capacity weak-limit truncation rather than unbounded nonparametric inference) let the number of occupied states emerge from the data. For each state we compute a recurrence score (the fraction of episodes in which it is active) using fractional occupancy and a season-label permutation test; the resulting scores form a continuous recurrence gradient rather than a binary invariant-versus-specific split. We then characterize each state's canonical-network composition and transition dynamics. Finally, we test the depth at which the states are decodable from a transformer model of the stimulus (representational depth), and whether the Friends state repertoire recurs in three held-out narratives: Movie10, Harry Potter, and Petit Prince.
+
+## Supplementary material
+
+The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
+indexes Figures S1–S12 and Tables S1–S2, and for each one gives the caption, the
+generating script, and the source outputs the reported values were read from.
+
+| | |
+|---|---|
+| [Figures S1–S12](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
+| [Tables S1–S2](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation |
+| [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
+
+Two supplementary analyses (Figures S10 and S12, the ICA convergence check and its
+out-of-stimulus recurrence arm) are maintained on the orphan
+[`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch; the index links to each findings document there. To check which committed
+panel came from which script, run
+[`script/export_si_figures.py`](script/export_si_figures.py), which prints the
+figure-to-generator mapping and flags anything stale or missing.
 
 ## Data
 
@@ -140,29 +162,56 @@ read the analysis outputs produced by the pipeline stages listed below, so run
 the relevant stages (for all six subjects, plus the cross-stimulus stages where
 noted) before invoking a figure script.
 
+> Manuscript Figures 4 and 5 were swapped in the 2026-07 revision. Script and
+> output-directory names keep their original code IDs, so `fig_F5*`/`fig5` build
+> manuscript Figure 4 and `fig_F4*`/`fig4` build manuscript Figure 5. See
+> [`script/MANIFEST.md`](script/MANIFEST.md) for the full mapping.
+
 | Figure | Script | Shows | Reads from |
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
 | **2** | `fig_F2_recurrence_sources.py` (all panels); `fig_F2_network_participation.py` (batch Panel C) | Recurrence-screening categories + network participation (R2) | `04`, `05a`, `05e` |
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
-| **4** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
-| **5** | `fig_F5_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
+| **4** | `fig_F5_cross_stimulus_transfer.py` (code ID F5) | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
+| **5** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) (code ID F4) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
 | **S2** | `fig_S02_pca_loadings.py` | PCA loadings diagnostics (one representative subject) | `03b` |
-| **S3** | `fig_S03_video_peak_depth.py` | Network-stratified video (DINOv2) decoding depth | `08d` |
-| **S6** | `fig_S06_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
-| **S7** | `fig_S07_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
-| **S9** | `fig_S09_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
+| **S3** | `fig_S03_model_selection.py` | HMM model selection: validation likelihood vs occupied states, occupancy vs capacity, train-to-validation gap | `04` |
+| **S4** | `fig_S04_reliability.py` | Within-Friends reliability: matched-pair spatial correlation, structural invariants, within-state FC arm vs a mismatched-pair null | `04ra`, `04rb`, `04rc`, `05f` |
+| **S5** | `fig_S05_video_peak_depth.py` | Network-stratified video (DINOv2) decoding depth | `08d` |
+| **S6** | `fig_F4_within_friends.py` (`render_supp_negcontrol`) | Run-onset negative control and timing floor at the main decoding peak (disclosure panel; the control is invalidated by a class-count asymmetry) | `08d` |
+| **S7** | `script/08e_plots.py` | Per-layer decoding depth strips by modality, cross-stimulus | `08e` |
+| **S8** | `fig_S08_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence, including resting state | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_`/`rest_05` |
+| **S9** | `fig_S09_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
+| **S10** | `fig_sm_alt_ica_matching.py` (`supplements` branch) | ICA convergence diagnostics | ICA sweep |
+| **S11** | `fig_S11_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
+| **S12** | `fig_sm_alt_ica_oos_recurrence.py` (`supplements` branch) | ICA out-of-stimulus recurrence across three stimuli | ICA OOS |
 
-Supplementary figures S4 and S5 have no `fig_*.py`: they are emitted directly by
-the `08d`/`08e` analysis scripts (via `script/08d_plots.py` / `script/08e_plots.py`).
-Figures S8 and S10 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
-branch (ICA alternative decomposition). See [docs/supplementary/](docs/supplementary/)
-for the complete S1–S10 index with per-figure provenance and branch.
+> **SI renumbering (2026-08-19).** The supplement was reordered to follow the
+> Methods reading order. `S3` and `S4` are new (model selection, reliability);
+> the former `S3`–`S10` shifted to `S5`–`S12`. Older notes and plan documents
+> that cite `S8`/`S10` for the ICA figures refer to what are now `S10`/`S12`.
+
+Supplementary figures S6 and S7 have no `fig_S*.py` entry point: S6 comes from
+the Figure 5 script's companion renderer and S7 from `script/08e_plots.py`.
+Figures S10 and S12 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch (ICA alternative decomposition) and cannot be built from `main`.
+
+Because several generators emit filenames that differ from the `S<nn>_*` names
+used in the supplement, [`script/export_si_figures.py`](script/export_si_figures.py)
+owns the complete mapping and rebuilds the directory:
+
+```bash
+uv run python script/export_si_figures.py          # status only
+uv run python script/export_si_figures.py --copy   # place the files
+```
+
+See [docs/supplementary/](docs/supplementary/) for the complete S1–S12 index
+with per-figure captions, provenance, and branch.
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,
 and `script/utils/{recurrence,temporal}_plots.py`. Network-participation metrics
-(Figure 2C and Figure S9) share one implementation in
+(Figure 2C and Figure S11) share one implementation in
 `script/utils/network_participation.py`. The figure scripts import these
 helpers; do not run them directly.
 
@@ -217,7 +266,7 @@ uv sync --extra datalad     # DataLad for output archival (script/utils/datalad_
 DataLad additionally requires the **git-annex** binary at runtime. git-annex is a
 Haskell program, not a PyPI package, so `uv` cannot install it. The `datalad`
 extra bundles `datalad-installer`, which fetches a standalone git-annex into
-user space (no root) — run it once after `uv sync --extra datalad`:
+user space (no root). Run it once after `uv sync --extra datalad`:
 
 ```bash
 uv run --extra datalad datalad-installer \

@@ -148,6 +148,14 @@ MODEL_MODALITY = {
     "llama-3.2-3b": "text",
 }
 
+# LLaMA local-window readout span, in TRs. This is the published value: the
+# W-sweep over {1, 3, 6, 9} (2026-05-01_08c_llama_local_window_design.md §2.4)
+# selected W = 1, and the 2026-05-14 production re-extraction used it. Keep the
+# argparse default and the non-text guard below pinned to this one constant —
+# when they drift apart, the wrapper silently produces features that differ
+# from the published ones.
+DEFAULT_WINDOW_TRS = 1
+
 
 # ── Run discovery ─────────────────────────────────────────────────────────
 
@@ -523,7 +531,7 @@ Examples:
   # Video features for Movie10
   python script/08c_transformer_features.py --stimulus movie10 --model dinov2-large
 
-  # Text features for HP (default window_trs=4)
+  # Text features for HP (default window_trs=1, the published value)
   python script/08c_transformer_features.py --stimulus harrypotter --model llama-3.2-3b
 
   # LLaMA W-sweep variant - writes to 08c_transformer_features_sweep_w3/...
@@ -571,8 +579,9 @@ Examples:
     parser.add_argument(
         "--window_trs",
         type=int,
-        default=4,
-        help="Local-window span in TRs for LLaMA readout (default: 4). "
+        default=DEFAULT_WINDOW_TRS,
+        help=f"Local-window span in TRs for LLaMA readout "
+             f"(default: {DEFAULT_WINDOW_TRS}, the published value). "
              "Per 2026-05-01_08c_llama_local_window_design.md §2.4 sweep grid: "
              "{1, 3, 6, 9}. Ignored for audio/video models.",
     )
@@ -630,7 +639,7 @@ def main():
     # consumed only by the LLaMA local-window readout. We tolerate the
     # default value with non-text models (harmless) but reject an explicit
     # non-default to surface miswired SLURM exports.
-    if required_modality != "text" and args.window_trs != 4:
+    if required_modality != "text" and args.window_trs != DEFAULT_WINDOW_TRS:
         logger.error(
             "--window_trs %d was passed with --model %s (modality=%s); "
             "the local-window readout is text-only.",

@@ -1,4 +1,7 @@
-"""08e_plots.py - Figure F3 cross-stimulus depth correspondence (R4b slim).
+"""08e_plots.py - R4b cross-stimulus depth correspondence plots (R4b slim, decoding).
+
+NB (2026-07 figure swap): the decoding result is now manuscript Figure 5; the
+earlier "Figure F3" label on this line was stale. See MANIFEST.md.
 
 Companion figure script for ``08e_transformer_cross_stim_aggregate.py``,
 analogous to ``08d_plots.py`` for stage 08d.

@@ -525,7 +525,7 @@ def extract_text_features(
     model,
     tokenizer,
     n_trs,
-    window_trs: int = 4,
+    window_trs: int = 1,
     device: str = "cuda",
 ):
     """Extract layer-wise text features via single forward pass + local-window pool.
@@ -553,8 +553,11 @@ def extract_text_features(
         tokenizer: A *fast* tokenizer (e.g. `LlamaTokenizerFast`); the slow
             tokenizer does not support `return_offsets_mapping`.
         n_trs: Number of TRs.
-        window_trs: Local-window span in TRs (default 4; sweep grid {1,3,6,9}
-            per §2.4). Must be ≥ 1.
+        window_trs: Local-window span in TRs (default 1, the published value;
+            sweep grid {1,3,6,9} per §2.4). Must be ≥ 1. Kept in step with
+            ``08c_transformer_features.DEFAULT_WINDOW_TRS`` — production always
+            passes this explicitly, so a drift here would only bite a new
+            caller that omits it.
         device: Torch device.
 
     Returns:

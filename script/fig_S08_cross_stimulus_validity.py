@@ -1,4 +1,4 @@
-"""Figure S6 (supplementary) - Cross-stimulus validity & repertoire presence.
+"""Figure S8 (supplementary) - Cross-stimulus validity & repertoire presence.
 
 Supports the reframed R5 (transfer is clearest for audiovisual film and
 weaker/variable for reduced-modality stimuli; the cross-modality ordering does
@@ -7,12 +7,27 @@ findings and that explicitly disclose the fit confound behind R5:
 
 | Panel | Content | Chart family |
 |---|---|---|
-| A | PCA subspace transfer: per (subject, stimulus) gap = Friends R² − stimulus R². Near-zero and uniform (~0.95 R² everywhere) → the Friends low-dimensional subspace generalizes to all stimuli; the transfer differences are NOT a subspace-fit artifact. | point-1D strip |
-| B | HMM model-fit vs transfer: per-condition transfer ρ against the HMM log-likelihood gap (held-out-Friends − stimulus LL/sample). Within Movie10, ρ declines as fit worsens (the confound); Harry Potter is an OUTLIER (best fit, modest ρ), so transfer is not a single function of fit. Disclosure panel for the "within-film grading is fit-confounded" caveat. | scatter |
-| C | Repertoire presence, gapped radial-gauge grid: 3 rows (M10/HP/PP) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
+| A | PCA subspace transfer: per (subject, condition) gap = Friends R² − condition R², including Rest. Near-zero and uniform (~0.95 R² everywhere, rest gaps −0.011 to +0.007) → the Friends low-dimensional subspace generalizes to all conditions including rest; the transfer differences are NOT a subspace-fit artifact. | point-1D strip |
+| B | HMM model-fit vs transfer: per-condition transfer ρ against the HMM log-likelihood gap (held-out-Friends − condition LL/sample). Within Movie10, ρ declines as fit worsens (the confound); Harry Potter is an OUTLIER (best fit, modest ρ), so transfer is not a single function of fit. Rest shows the temporal-fit dissociation: spatial subspace transfers (Panel A) but LL gaps span the widest range of any condition (sub-01 extreme at 16.0, negative ρ). Disclosure panel for the "within-film grading is fit-confounded" caveat. | scatter |
+| C | Repertoire presence, gapped radial-gauge grid: 4 rows (M10/HP/PP/Rest) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
+
+Rest is SUPPLEMENTARY-ONLY (placement decided 2026-08-17): it appears in every
+panel here and NOT in main Figure 4. No surrogate null was run for rest, so all
+rest values are descriptive.
+
+Source-truth audit for rest (rest_05 A1, Friends-active semantics, audited
+2026-08-16): ρ = −0.289/0.324/0.138/0.099/0.274/0.445 (sub-01..06; 2/6
+uncorrected p<0.05: sub-02 p=0.028, sub-06 p=0.003); all six subjects have
+rest data (unlike HP/PP, which lack sub-04). PCA transfer gaps −0.011 to
++0.007 (rest R² 0.943–0.962). LL gaps 0.49–15.98/sample; sub-01 is the fit
+outlier (gap 15.98, negative ρ); only sub-02 sits above the heuristic
+uniform-assignment LL baseline. Rest mean ρ (0.165) is not below PP's (0.101):
+raw ρ carries a stimulus-independent covariance/stationarity floor (R5
+phase-null finding), so orderings among the weak conditions are
+fit/language/modality-confounded and uninterpretable.
 
 Run:
-    marimo edit script/fig_S06_cross_stimulus_validity.py
+    marimo edit script/fig_S08_cross_stimulus_validity.py
 """
 
 import marimo
@@ -58,7 +73,7 @@ def config(Path, os):
     PARCELLATION = "atlas-4S156Parcels"
     VT = "vt0.95"
     SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS06"
+    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS08"
     OUT.mkdir(parents=True, exist_ok=True)
 
     out_root = SCRATCH_DIR / "output"
@@ -66,15 +81,18 @@ def config(Path, os):
     FLAGS_DIR = out_root / "05e_temporal_trend_a4" / PARCELLATION
     DEC = {"M10": out_root / "m10_04_decoded" / PARCELLATION,
            "HP": out_root / "hp_04_decoded" / PARCELLATION,
-           "PP": out_root / "pp_04_decoded" / PARCELLATION}
+           "PP": out_root / "pp_04_decoded" / PARCELLATION,
+           "REST": out_root / "rest_04_decoded" / PARCELLATION}
     PROJ = {"M10": out_root / "m10_03_projected" / PARCELLATION,
             "HP": out_root / "hp_03_projected" / PARCELLATION,
-            "PP": out_root / "pp_03_projected" / PARCELLATION}
+            "PP": out_root / "pp_03_projected" / PARCELLATION,
+            "REST": out_root / "rest_03_projected" / PARCELLATION}
     XVAL = {"M10": out_root / "m10_05_cross_validation" / PARCELLATION,
             "HP": out_root / "hp_05_cross_validation" / PARCELLATION,
-            "PP": out_root / "pp_05_cross_validation" / PARCELLATION}
+            "PP": out_root / "pp_05_cross_validation" / PARCELLATION,
+            "REST": out_root / "rest_05_cross_validation" / PARCELLATION}
     LL_FILE = {"M10": "movie_ll_summary.json", "HP": "hp_ll_summary.json",
-               "PP": "pp_ll_summary.json"}
+               "PP": "pp_ll_summary.json", "REST": "rest_ll_summary.json"}
     PRESENCE_FO = 0.01
 
     TAXONOMY_ORDER = ["Content-eligible", "Run-onset-anchored", "Low-confidence",
@@ -122,9 +140,10 @@ def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
     a subspace-fit artifact (even the documentary and PP, which transfer least,
     keep ~0.95 subspace R²)."""
     _xlabels = ["Wolf of\nWall St.", "Hidden\nFigures", "Bourne", "Life",
-                "Harry\nPotter", "Petit\nPrince"]
+                "Harry\nPotter", "Petit\nPrince", "Rest"]
     _groups = [(0, 3, "Audiovisual film\n(Movie10)"), (4, 4, "Visual\nreading"),
-               (5, 5, "Audio\nlistening")]
+               (5, 5, "Audio\nlistening"), (6, 6, "No\nstimulus")]
+    _xstims = ["HP", "PP", "REST"]
     _n_x = len(_xlabels)
     _rng = np.random.default_rng(7)
 
@@ -144,20 +163,20 @@ def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
         _d = json.load(open(_f[0]))
         return _d.get("transfer_gap")
 
-    _fig, _ax = plt.subplots(figsize=(4.2, 3.3))
+    _fig, _ax = plt.subplots(figsize=(4.8, 3.3))
     for _xi in range(_n_x):
         for _sub in SUBJECTS:
             if _xi < len(FILMS):
                 _gap = _film_gap(_sub, FILMS[_xi])
             else:
-                _gap = _stim_gap(_sub, "HP" if _xi == len(FILMS) else "PP")
+                _gap = _stim_gap(_sub, _xstims[_xi - len(FILMS)])
             if _gap is None:
                 continue
             _ax.scatter(_xi + _rng.uniform(-0.12, 0.12), _gap, s=28,
                         color=SUBJECT_NEUTRAL, alpha=0.6,
                         marker=SUBJECT_MARKERS[_sub], edgecolor="white", linewidth=0.4)
     _ax.axhline(0, color="#999999", lw=1.0, ls="--", zorder=1)
-    for _d in (len(FILMS) - 0.5, len(FILMS) + 0.5):
+    for _d in (len(FILMS) - 0.5, len(FILMS) + 0.5, len(FILMS) + 1.5):
         _ax.axvline(_d, color="#BBBBBB", lw=1.0, ls="--", zorder=1)
     _tr = _ax.get_xaxis_transform()
     for _lo, _hi, _lab in _groups:
@@ -173,10 +192,10 @@ def panel_A_pca_transfer(SUBJECTS, PROJ, VT, FILMS, OUT, glob, json, np, plt,
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _fig.subplots_adjust(left=0.20, right=0.97, bottom=0.24, top=0.97)
-    _fig.savefig(OUT / "figS06_A_pca_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS06_A_pca_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS06_A_pca_transfer.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS06_A_pca_transfer")
+    _fig.savefig(OUT / "figS08_A_pca_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS08_A_pca_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS08_A_pca_transfer.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS08_A_pca_transfer")
     plt.close(_fig)
     return
 
@@ -191,12 +210,14 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
     function of fit. Condition means labeled; per-subject points drawn faint.
     """
     _cond_color = {"wolf": "#1B7837", "figures": "#5AAE61", "bourne": "#F1A340",
-                   "life": "#B2182B", "HP": "#542788", "PP": "#8073AC"}
+                   "life": "#B2182B", "HP": "#542788", "PP": "#8073AC",
+                   "REST": "#4D4D4D"}
     _cond_label = {"wolf": "Wolf", "figures": "Figures", "bourne": "Bourne",
-                   "life": "Life", "HP": "Harry Potter", "PP": "Petit Prince"}
+                   "life": "Life", "HP": "Harry Potter", "PP": "Petit Prince",
+                   "REST": "Rest"}
 
     def _rho(_stim, _sub):
-        _f = glob.glob(str(XVAL[_stim if _stim in ("HP", "PP") else "M10"]
+        _f = glob.glob(str(XVAL[_stim if _stim in ("HP", "PP", "REST") else "M10"]
                            / _sub / VT / "cross_stimulus_summary.json"))
         if not _f:
             return None
@@ -216,12 +237,13 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
             _pt = _d.get("per_type", {}).get(_stim, {}).get("ll_per_sample")
             return None if (_ft is None or _pt is None) else _ft - _pt
         for _k in ("ll_gap_friends_minus_movie", "ll_gap_friends_minus_hp",
-                   "ll_gap_friends_minus_pp", "ll_gap"):
+                   "ll_gap_friends_minus_pp", "ll_gap_friends_minus_rest",
+                   "ll_gap"):
             if _d.get(_k) is not None:
                 return _d[_k]
         return None
 
-    _conds = FILMS + ["HP", "PP"]
+    _conds = FILMS + ["HP", "PP", "REST"]
     _fig, _ax = plt.subplots(figsize=(4.2, 3.4))
     for _c in _conds:
         _xs, _ys = [], []
@@ -236,8 +258,10 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
             _mx, _my = float(np.mean(_xs)), float(np.mean(_ys))
             _ax.scatter(_mx, _my, s=80, color=_cond_color[_c], edgecolor="white",
                         linewidth=0.8, zorder=4)
+            # Rest's mean nearly coincides with Life's; label it to the lower left.
+            _off, _ha = ((-6, -12), "right") if _c == "REST" else ((6, 4), "left")
             _ax.annotate(_cond_label[_c], (_mx, _my), textcoords="offset points",
-                         xytext=(6, 4), fontsize=6.5, color=_cond_color[_c])
+                         xytext=_off, ha=_ha, fontsize=6.5, color=_cond_color[_c])
             print(f"  {_c}: mean gap={_mx:.2f} rho={_my:.3f}")
     _ax.axhline(0, color="#999999", lw=0.8, ls="--", zorder=1)
     _ax.set_xlabel("HMM model-fit gap\n(held-out Friends − stimulus LL/sample)", fontsize=7)
@@ -246,10 +270,10 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _fig.subplots_adjust(left=0.15, right=0.97, bottom=0.18, top=0.96)
-    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS06_B_fit_vs_transfer.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS06_B_fit_vs_transfer")
+    _fig.savefig(OUT / "figS08_B_fit_vs_transfer.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS08_B_fit_vs_transfer.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS08_B_fit_vs_transfer.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS08_B_fit_vs_transfer")
     plt.close(_fig)
     return
 
@@ -257,7 +281,7 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
 @app.cell
 def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
                            TAXONOMY_ORDER, TAXONOMY_COLORS):
-    """Panel C - repertoire presence, gapped radial-gauge grid (3 stimuli × 6 subjects).
+    """Panel C - repertoire presence, gapped radial-gauge grid (4 conditions × 6 subjects).
 
     Arc width = subject's Friends count for the category; outlined to full
     extent, filled for the present fraction. Caveat (caption): Viterbi forces
@@ -266,7 +290,8 @@ def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
     """
     from matplotlib.patches import Wedge as _Wedge
 
-    _stims = [("M10", "Movie10"), ("HP", "Harry Potter"), ("PP", "Petit Prince")]
+    _stims = [("M10", "Movie10"), ("HP", "Harry Potter"), ("PP", "Petit Prince"),
+              ("REST", "Rest")]
     _gap_deg, _radius, _width = 5.0, 1.0, 0.42
 
     def _draw(_ax, _fr, _pr):
@@ -290,7 +315,7 @@ def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
         _ax.set_aspect("equal")
         _ax.axis("off")
 
-    _fig, _axes = plt.subplots(len(_stims), len(SUBJECTS), figsize=(6.7, 3.7))
+    _fig, _axes = plt.subplots(len(_stims), len(SUBJECTS), figsize=(6.7, 4.9))
     for _ri, (_stim, _row_lab) in enumerate(_stims):
         for _ci, _sub in enumerate(SUBJECTS):
             _ax = _axes[_ri, _ci]
@@ -314,10 +339,10 @@ def panel_C_presence_donut(SUBJECTS, presence, OUT, plt,
                          fontsize=6.5)
     _fig.subplots_adjust(left=0.07, right=0.99, bottom=0.04, top=0.92,
                          wspace=0.28, hspace=0.40)
-    _fig.savefig(OUT / "figS06_C_presence_donut.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS06_C_presence_donut.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS06_C_presence_donut.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS06_C_presence_donut")
+    _fig.savefig(OUT / "figS08_C_presence_donut.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS08_C_presence_donut.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS08_C_presence_donut.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS08_C_presence_donut")
     plt.close(_fig)
     return
 
@@ -336,10 +361,10 @@ def donut_legend(OUT, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     _fig = plt.figure(figsize=(2.25, 1.75))
     _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
                 handletextpad=0.5, labelspacing=0.6)
-    _fig.savefig(OUT / "figS06_donut_legend.pdf", bbox_inches="tight", pad_inches=0.02)
-    _fig.savefig(OUT / "figS06_donut_legend.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
-    _fig.savefig(OUT / "figS06_donut_legend.svg", bbox_inches="tight", pad_inches=0.02)
-    print("saved figS06_donut_legend")
+    _fig.savefig(OUT / "figS08_donut_legend.pdf", bbox_inches="tight", pad_inches=0.02)
+    _fig.savefig(OUT / "figS08_donut_legend.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(OUT / "figS08_donut_legend.svg", bbox_inches="tight", pad_inches=0.02)
+    print("saved figS08_donut_legend")
     plt.close(_fig)
     return
 

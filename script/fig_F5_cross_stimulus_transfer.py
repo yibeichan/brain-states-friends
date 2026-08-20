@@ -1,4 +1,8 @@
-"""Figure F5 - Cross-stimulus recurrence transfer (R5).
+"""Figure F5 - Cross-stimulus recurrence transfer (R5) (code ID F5).
+
+NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
+Code ID "F5"/"fig5" now maps to manuscript Figure 4; R-labels are unchanged
+(R5 = cross-stimulus). See MANIFEST.md "Figure-order note".
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .png + .svg mini-figures for manual
@@ -7,7 +11,15 @@ assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 R5 claim (reframed 2026-06-12): a state's recurrence rank in Friends predicts
 out-of-stimulus occupancy most clearly during audiovisual film (Movie10), with
 weaker and more variable transfer for reduced-modality reading (Harry Potter)
-and listening (Petit Prince). The earlier "tracks social-narrative content, not
+and listening (Petit Prince).
+
+Rest placement (decided 2026-08-17): supplementary ONLY — rest appears in
+fig_S08, not in this figure. Rationale: rest transfer is descriptive only (no
+surrogate null was run), and raw ρ carries a stimulus-independent floor from
+covariance/stationary structure (the R5 phase-null finding), so rest's mean ρ
+(0.165) is NOT below PP's (0.101) and a main-figure Rest column would invite a
+monotonic-richness-gradient reading the data don't support. Audited rest
+values live in fig_S08's docstring. The earlier "tracks social-narrative content, not
 modality" framing was DROPPED: the cross-modality rho ordering does not isolate
 narrative content from modality, timing, language, run structure, or model fit.
 The within-Movie10 spread is reported descriptively and not attributed to
@@ -20,7 +32,7 @@ panel letter; the user arranges the composite.
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
 | A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Transfer-ρ by condition (single strip; all active states). x = 4 Movie10 films + Harry Potter + Petit Prince; per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer clearest for audiovisual film, weaker/variable for reduced-modality stimuli; within-film spread descriptive (fit-confounded), NOT a content axis. | point-1D strip | m10 A2_per_type + hp/pp A1 |
+| B | Transfer-ρ by condition (single strip; all active states). x = 4 Movie10 films + Harry Potter + Petit Prince; per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer clearest for audiovisual film, weaker/variable for reduced-modality stimuli; within-film spread descriptive (fit-confounded), NOT a content axis. Rest is supplementary-only (fig_S08). | point-1D strip | m10 A2_per_type + hp/pp A1 |
 
 A `fig5_taxonomy_legend` file gives the 5-category color key for Panel A.
 
@@ -318,6 +330,10 @@ def panel_B_transfer_by_condition(
     Per-subject markers (shape = subject, as in panel A; single neutral color).
     Cohort mean: dark line over the Movie10 films, dark ticks for HP and PP.
     sub-04 lacks HP/PP, so only 5 markers appear in those groups.
+
+    Rest is supplementary-only (fig_S08; see the module docstring's placement
+    note): no surrogate null was run for rest, and raw ρ's covariance floor
+    means a Rest column would not read as a gradient endpoint.
     """
     _films = [("wolf", "Wolf of\nWall St."),
               ("figures", "Hidden\nFigures"),

@@ -1,4 +1,8 @@
-"""Figure F4 Panel C - DINOv2 × Movie10 per-film depth profile.
+"""Figure F4 Panel C - DINOv2 × Movie10 per-film depth profile (code ID F4).
+
+NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
+Code ID "F4"/"fig4" now maps to manuscript Figure 5 (R4b decoding). See
+MANIFEST.md "Figure-order note".
 
 For each of the 6 subjects, this script reproduces 08e's Friends-fit /
 Movie10-project pipeline for DINOv2-large only, then **breaks the Movie10

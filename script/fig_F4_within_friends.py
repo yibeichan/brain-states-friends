@@ -1,6 +1,10 @@
-"""fig_F4_within_friends.py - Figure F4 within-Friends representational depth.
+"""fig_F4_within_friends.py - within-Friends representational depth (code ID F4).
 
-Leads manuscript Figure 4 (§R4b) with the WITHIN-Friends primary result that the
+NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
+Code ID "F4"/"fig4" now maps to manuscript Figure 5; R-labels are unchanged
+(R4b = decoding). See MANIFEST.md "Figure-order note".
+
+Leads manuscript Figure 5 (§R4b) with the WITHIN-Friends primary result that the
 old "R4b slim" figure (``08e_plots.py``, transfer only) was missing. Three
 per-modality panels keep video / audio / text separate; a fourth panel condenses
 the cross-stimulus transfer to a peak-depth grid.
@@ -727,7 +731,7 @@ def main():
     render_panel_d()
     render_perfilm_trio()
     render_supp_negcontrol()
-    print("done (Figure 4: A/B/C within-Friends + D transfer grid + E/F/G per-film + supp neg-control).")
+    print("done (manuscript Figure 5: A/B/C within-Friends + D transfer grid + E/F/G per-film + supp neg-control).")
 
 
 if __name__ == "__main__":

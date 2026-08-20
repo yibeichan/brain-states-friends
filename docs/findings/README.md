@@ -52,3 +52,6 @@ in the preprint; **SUPP** = supplementary / robustness / diagnostic;
 | `pp_03_project_pp_pca` | [pp_03_project_pp_pca.md](pp_03_project_pp_pca.md) |
 | `pp_04_score_and_decode` | [pp_04_score_and_decode.md](pp_04_score_and_decode.md) |
 | `pp_05_cross_stimulus_validation` | [pp_05_cross_stimulus_validation.md](pp_05_cross_stimulus_validation.md) |
+| `rest_03_project_rest_pca` | [rest_03_project_rest_pca.md](rest_03_project_rest_pca.md) |
+| `rest_04_score_and_decode` | [rest_04_score_and_decode.md](rest_04_score_and_decode.md) |
+| `rest_05_cross_stimulus_validation` | [rest_05_cross_stimulus_validation.md](rest_05_cross_stimulus_validation.md) |

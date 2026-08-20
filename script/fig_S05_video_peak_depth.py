@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Renders Figure S3: D1-net balanced accuracy by network/polarity.
+"""Renders Figure S5: D1-net balanced accuracy by network/polarity.
 
-Produces docs/supplementary/figures/S03_video_peak_depth.png by plotting
+Produces docs/supplementary/figures/S05_video_peak_depth.png by plotting
 per-layer D1-net balanced accuracy heatmaps for 5 subjects (sub-06 excluded
 per caption) side-by-side with a shared colorbar and title.
 
 Usage:
-    uv run python script/fig_S03_video_peak_depth.py
+    uv run python script/fig_S05_video_peak_depth.py
 """
 
 import json
@@ -187,21 +187,24 @@ def main():
         cb.set_label("Balanced accuracy", fontsize=10)
         cb.ax.tick_params(labelsize=8)
 
-    # Shared title
-    fig.suptitle(
-        "D1-net: balanced accuracy by (network, polarity) — DINOv2-large",
-        fontsize=13, fontweight="bold", y=0.97,
-    )
+    # No super-title: what the panel shows (balanced accuracy by network and
+    # polarity, DINOv2-large) belongs in the Figure S5 caption, not baked into
+    # the image. Per-subplot titles stay — they identify which participant each
+    # small multiple is.
 
-    out_path = Path(
-        "/orcd/home/002/yibei/brain-states-friends-public/"
-        "docs/supplementary/figures/S03_video_peak_depth.png"
-    )
-    fig.savefig(out_path, dpi=200, bbox_inches="tight", pad_inches=0.04)
+    # Derived from this file, so the panel lands in the clone it was run from
+    # rather than a hardcoded one (home is dual-pathed, and a worktree would
+    # otherwise silently overwrite the primary clone's SI figure).
+    out_dir = Path(__file__).resolve().parent.parent / "docs" / "supplementary" / "figures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "S05_video_peak_depth.png"
+    fig.savefig(out_dir / "S05_video_peak_depth.pdf",
+                bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(out_path, dpi=300, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
 
     size_kb = out_path.stat().st_size / 1024
-    print(f"S03 -> {out_path}  ({size_kb:.0f} KB, {out_path.stat().st_size} bytes)")
+    print(f"S05 -> {out_path}  ({size_kb:.0f} KB, {out_path.stat().st_size} bytes)")
 
     if size_kb > 500:
         from PIL import Image
