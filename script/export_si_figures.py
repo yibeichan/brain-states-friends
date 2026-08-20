@@ -118,6 +118,9 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
      "script/fig_sm_alt_ica_oos_recurrence.py (supplements branch)", None),
     ("S12_ica_oos_recurrence_pp_B_continuous.png", "SUPPLEMENTS",
      "script/fig_sm_alt_ica_oos_recurrence.py (supplements branch)", None),
+
+    ("S13_phase_randomized_null.png", "SUPPLEMENTS",
+     "script/fig_sm_rel_r5_phase_null.py (supplements branch)", None),
 ]
 
 # Legacy emitted paths, kept only so a stale tree can be diagnosed. These are

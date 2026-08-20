@@ -186,10 +186,8 @@ def plot_p1(
     fig, axes = plt.subplots(
         2, 3, figsize=(11, 6.5), sharex=True, sharey=True,
     )
-    fig.suptitle(
-        f"D1 depth profile - {MODEL_LABELS[model]} (content_eligible)",
-        y=1.00, fontsize=12,
-    )
+    # No super-title: the model is already in the output filename, and "D1" was
+    # an internal analysis code that means nothing outside this stage.
     layers_x = np.arange(n_layers)
 
     for ax, sub in zip(axes.flat, ALL_SUBJECTS):
@@ -283,7 +281,8 @@ def plot_p1(
             bbox_to_anchor=(0.5, -0.02), frameon=False,
         )
 
-    fig.tight_layout(rect=[0, 0.02, 1, 0.97])
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.97, bottom=0.13,
+                        hspace=0.22, wspace=0.12)
     save_fig(fig, out_dir / f"P1_depth_curves_{model}")
 
 
@@ -344,7 +343,7 @@ def plot_p3(results_all: dict, out_dir: Path) -> None:
     ax.set_xlabel("Subject")
     ax.set_ylabel("Peak layer / (n_layers − 1)")
     ax.set_title(
-        "P3 · Peak layer for content_eligible decoding, normalized by network depth"
+        "Peak layer for content-eligible decoding, normalized by network depth"
     )
     ax.grid(True, axis="y", alpha=0.25, linewidth=0.5)
 
@@ -369,7 +368,7 @@ def plot_p3(results_all: dict, out_dir: Path) -> None:
         fontsize=8, frameon=False,
     )
 
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.10, right=0.97, top=0.93, bottom=0.12)
     save_fig(fig, out_dir / "P3_peak_layer_summary")
 
 
@@ -420,7 +419,7 @@ def plot_p5(results_all: dict, out_dir: Path) -> None:
     ax.set_xlabel("neg-control peak accuracy / chance")
     ax.set_ylabel("main peak accuracy / chance")
     ax.set_title(
-        "P5 · content_eligible vs run_onset_anchored decodability (ratio form)"
+        "Content-eligible vs run-onset-anchored decodability (ratio form)"
     )
     ax.grid(True, alpha=0.25, linewidth=0.5)
 
@@ -447,7 +446,7 @@ def plot_p5(results_all: dict, out_dir: Path) -> None:
         ),
     )
 
-    fig.tight_layout()
+    fig.subplots_adjust(left=0.12, right=0.78, top=0.93, bottom=0.12)
     save_fig(fig, out_dir / "P5_main_vs_neg_scatter")
 
 

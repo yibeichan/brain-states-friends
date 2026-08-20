@@ -1,6 +1,6 @@
 # Supplementary Figures and Tables — Brain States Friends
 
-This directory catalogues all supplementary figures (S1–S12) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Two analyses (ICA convergence diagnostics, S10, and ICA out-of-stimulus recurrence, S12) reside on the orphan `supplements` branch of this repository; their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
+This directory catalogues all supplementary figures (S1–S13) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Three analyses reside on the orphan `supplements` branch of this repository (ICA convergence diagnostics, S10; ICA out-of-stimulus recurrence, S12; and the phase-randomized null distributions, S13); their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
 
 ## Catalogue
 
@@ -18,6 +18,7 @@ This directory catalogues all supplementary figures (S1–S12) for the manuscrip
 | S10 | ICA convergence diagnostics: K-sweep heatmap (A) and per-state matched absolute correlation (B) | [S10_ica_convergence_A.png](figures/S10_ica_convergence_A.png), [_B.png](figures/S10_ica_convergence_B.png) | [sm_alt_ica_states.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_states.md) | supplements |
 | S11 | Network participation profiles of recurring brain states across cortical and subcortical systems | [S11_network_participation.png](figures/S11_network_participation.png) | [../findings/05e_temporal_trend_a4.md](../findings/05e_temporal_trend_a4.md) | main |
 | S12 | ICA out-of-stimulus recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S12_ica_oos_recurrence_m10_A_wta.png](figures/S12_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S12_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S12_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S12_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S12_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S12_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
+| S13 | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation, with the observed correlation marked (the distributions behind Table S2) | [S13_phase_randomized_null.png](figures/S13_phase_randomized_null.png) | [sm_rel_r5_phase_null.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r5_phase_null.md) | supplements |
 
 ---
 
@@ -203,9 +204,21 @@ Two caveats govern how these panels should be read. First, the ICA recurrence sc
 
 ---
 
+## Figure S13 — Phase-randomized null distributions for the Movie10 correlation
+
+![Six small multiples, one per participant, each showing the distribution of Spearman correlations from 10,000 phase-randomized surrogate draws as a grey density histogram with a vertical line marking the observed correlation; each panel is annotated with its delta rho and z](figures/S13_phase_randomized_null.png)
+
+One panel per participant, in participant order (sub-01 to sub-06, left to right, top to bottom). The grey histogram is the density of Spearman's ρ across 10,000 phase-randomized surrogate draws; the vertical line marks the observed correlation. All six panels share one horizontal range and one set of bins so the distributions can be compared directly across participants, and the vertical axis is a density with ticks suppressed, since only the shape and the position of the observed value carry information. Each panel is annotated with its own Δρ (observed minus null mean) and z.
+
+This figure shows the distributions that Table S2 tabulates. The observed correlation fell above the surrogate distribution in every participant (Δρ = +0.07 to +0.22; z = +5.97 to +15.62; 61 Movie10 runs and 10,000 draws per participant), while the null distributions themselves sat at substantial correlations, which is the point the figure makes more directly than the table: most of the raw correlation's magnitude is reproduced by surrogates that preserve each component's power spectrum and variance together with the cross-component covariance. Table S2 gives the per-participant values and states the two limits on how the margin above the null should be read.
+
+The test covers Movie10 only. Harry Potter (7 runs per participant) and Le Petit Prince (16–18 runs) contribute too few runs to support a per-run surrogate null.
+
+---
+
 ## Note on the `supplements` branch
 
-Figures S10 and S12 derive from analyses run under a separate computational environment maintained on the orphan `supplements` branch of this repository. That branch holds its own `uv`-managed Python project, flat-named findings documents (`sm_alt_ica_states.md`, `sm_alt_ica_oos_recurrence.md`), and rendered outputs; it shares no commit history with `main`. The findings links for S10 and S12 in the catalogue table above point directly to those files on GitHub.
+Figures S10, S12, and S13 derive from analyses run under a separate computational environment maintained on the orphan `supplements` branch of this repository. That branch holds its own `uv`-managed Python project, flat-named findings documents (`sm_alt_ica_states.md`, `sm_alt_ica_oos_recurrence.md`, `sm_rel_r5_phase_null.md`), and rendered outputs; it shares no commit history with `main`. The findings links for those figures in the catalogue table above point directly to those files on GitHub.
 
 ---
 
