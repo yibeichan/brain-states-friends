@@ -79,7 +79,7 @@ For sub-04, the Friends test LL (-11.05) falls near the median of movie run LLs 
 | sub-05  | 41                 | 46                            | 37.0              | 30-41              |
 | sub-06  | 37                 | 43                            | 34.9              | 29-39              |
 
-States used across all movies exceeds K_active (Friends) for all 6 subjects, reflecting Viterbi assignments to model slots that were inactive in Friends.
+States used across all movies exceeds K_active (Friends) for all 6 subjects, because Viterbi assigns TRs to model slots that were inactive in Friends.
 
 ## Outputs
 

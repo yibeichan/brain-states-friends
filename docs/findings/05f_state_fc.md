@@ -43,7 +43,7 @@ RV is computed on the full correlation matrices (156x156). Mean RV close to 1.0 
 | sub-05 | 0.0023 | 0.0036 | 0.0013 | 0.0355 |
 | sub-06 | 0.0033 | 0.0038 | 0.0012 | 0.0124 |
 
-Most active states have low shrinkage (alpha < 0.01), indicating reliable FC estimation. Sub-02 has a large mean alpha driven by state 47 (33 TRs, alpha=0.585), the only active state with fewer than 100 TRs where shrinkage strongly dominates.
+Low shrinkage (alpha < 0.01) in most active states indicates reliable FC estimation. Sub-02 has a large mean alpha driven by state 47 (33 TRs, alpha=0.585), the only active state with fewer than 100 TRs where shrinkage strongly dominates.
 
 ### Strongest network-pair delta FC per subject
 

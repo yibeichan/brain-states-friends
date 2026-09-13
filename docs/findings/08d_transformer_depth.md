@@ -97,7 +97,7 @@ neg_control_passed is evaluated at the D1-main peak cell (main vs run_onset_anch
 | sub-05 | w2v-bert-2.0 | 0.120 | 0.313 | -0.193 | false |
 | sub-06 | w2v-bert-2.0 | 0.150 | 0.277 | -0.127 | false |
 
-Note: neg_control_passed=false reflects n_classes asymmetry (2-8 run-onset-anchored classes vs 16-31 content-eligible classes), not a reversal of the D1 existence claim; D1_confound_baseline is the apples-to-apples comparator.
+Note: neg_control_passed=false reflects n_classes asymmetry (2-8 run-onset-anchored classes vs 16-31 content-eligible classes), not a reversal of the D1 existence claim; D1_confound_baseline is the class-matched comparator.
 
 ### D1-net: network-stratified decoding (DINOv2 only, lag=3)
 

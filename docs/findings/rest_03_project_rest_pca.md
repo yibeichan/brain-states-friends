@@ -29,7 +29,7 @@ _Projects resting-state parcel time-series through each participant's Friends-tr
 
 The Friends basis recovers resting variance about as well as it recovers Friends variance. Transfer gaps span −0.0113 to +0.0072, and in three of six participants the gap is negative, meaning the basis reconstructs rest slightly better than the training stimulus. No participant triggered `flag_low_variance`.
 
-This is the load-bearing negative result for the resting-state comparison: whatever fails downstream (see `rest_04`, `rest_05`) cannot be attributed to the spatial subspace failing to cover resting data.
+Whatever fails downstream (see `rest_04`, `rest_05`) therefore cannot be attributed to the spatial subspace failing to cover resting data.
 
 ### R² by network (sub-01, lowest five)
 

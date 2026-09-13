@@ -25,9 +25,10 @@ CAVEAT on panel C: the selected config's gap is smaller than every gamma=5/10
 config of higher capacity, but NOT smaller than the gamma=1 configs at nc80 and
 nc100 for sub-01, sub-02 and sub-03. Read the gap claim as within-gamma.
 
-Sweep numbers are the stage-04 configuration sweep and are NOT the production
-model: the production model is a 10-seed refit whose active counts are 42, 42,
-42, 41, 41, 37 (sub-01..06), read from ``final_refit.n_active_states``.
+Sweep numbers are the stage-04 configuration sweep and are NOT the model reported
+in the manuscript: that is the final refit at the selected config (10 seeds on
+train+validation, best seed by per-sample likelihood), whose active counts are
+42, 42, 42, 41, 41, 37 (sub-01..06), read from ``final_refit.n_active_states``.
 
 Run:
     marimo edit script/fig_S03_model_selection.py

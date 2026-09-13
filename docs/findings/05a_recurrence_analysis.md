@@ -5,7 +5,7 @@ _Script: `script/05a_recurrence_analysis.py`. Tier: MAIN (R1, Fig 1)._
 _Scores each combined-HMM state's recurrence across episodes (a continuous gradient, not two discrete classes) via fractional occupancy, a recurrence score, a season-specificity index, and a season-label permutation test with FDR correction. Per-subject; n=6 (no group statistic)._
 
 ## Method (as run)
-- Parcellation atlas-4S156Parcels; PCA variance threshold vt=0.95; production combined-HMM config.
+- Parcellation atlas-4S156Parcels; PCA variance threshold vt=0.95; main combined-HMM config.
 - A state is "active" in a run when its fractional occupancy exceeds 0.02 (9.4 TRs, ~14.0-14.1 s at TR=1.49 s).
 - Recurrence score = fraction of episodes in which a state is active; a continuous score, not a categorical grouping. Downstream eligibility is set by 05e state flags, not by this score.
 - Season-specificity index = range of per-season recurrence (0 = invariant, 1 = specific).

@@ -9,17 +9,17 @@ _Standalone diagnostic / QC for the PCA models fit in script 03a: loadings, resi
 - This is a diagnostic script: it re-opens the PCA model from 03a and reports QC. PCA is fit once in 03a; the variance threshold only selects how many already-computed components to retain.
 - Parcellation: atlas-4S156Parcels (156 parcels: 100 cortical Schaefer/Yeo-17, 56 subcortical)
 - Input: per-subject `pca_model.pkl` and `n_pcs_lookup.json` from script 03a
-- Residual variance (A3) and LOSO stability (A5) computed at vt=0.95, the production HMM PCA truncation (script default aligned to 0.95)
+- Residual variance (A3) and LOSO stability (A5) computed at vt=0.95, the PCA truncation used for the main HMM fits (script default aligned to 0.95)
 - k at vt=0.95 varies by subject (66-77 PCs retained; see Results). The A7 panel sweeps additional thresholds (0.80-0.99) for reference.
 - Motion artifact flags: SomMotA+SomMotB fraction threshold = 0.30 for PC1-3; all-subcortical fraction threshold = 0.25 for PC1-2. These are per-PC (PC1-3) loading energies and do not depend on the retained-PC count.
 - LOSO stability flag threshold: coefficient of variation (CV) > 0.20 across season-leave-out folds
 - sub-04 has 4 LOSO folds (seasons 1-4 only); all others have 6 folds (seasons 1-6)
-- A6 cross-subject comparison was not run in production (no cross_subject output directory present)
+- A6 cross-subject comparison was not run in the main pipeline (no cross_subject output directory present)
 - Per-subject results only; no group statistic
 
 ## Results
 
-### PC count at vt=0.95 (production truncation, used for A3/A5)
+### PC count at vt=0.95 (main-analysis truncation, used for A3/A5)
 
 | Subject | k (PCs retained at vt=0.95) |
 |---|---|

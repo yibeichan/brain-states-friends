@@ -30,7 +30,7 @@ Active-state counts (42, 42, 42, 41, 41, 37) are inherited from the primary Frie
 
 Only sub-02 clears the uniform-assignment reference. Resting log-likelihood also varies far more across participants than the Friends test likelihood does, and sub-01 is an extreme case: its resting LL of −19.809 against a Friends test LL of −3.829 is the widest Friends-to-condition gap of any dataset in the project.
 
-This is the point at which the resting-state comparison diverges from the narrative stimuli. The spatial subspace transferred cleanly (`rest_03`, transfer gaps −0.011 to +0.007), but the fitted temporal model does not describe resting dynamics with comparable quality. The dissociation between those two facts is the substantive result carried into `rest_05` and the manuscript.
+The resting-state comparison diverges from the narrative stimuli here: the spatial subspace transferred cleanly (`rest_03`, transfer gaps −0.011 to +0.007), but the fitted temporal model does not describe resting dynamics with comparable quality. That dissociation is the result carried into `rest_05` and the manuscript.
 
 ## Caveats
 

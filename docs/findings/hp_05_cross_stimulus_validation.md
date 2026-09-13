@@ -142,7 +142,7 @@ HP runs are consecutive book chapters; FO vectors are serially correlated.
 | sub-05  | 7      | 0.789               | 2.0         |
 | sub-06  | 7      | 0.584               | 2.0         |
 
-All subjects: n_effective = 2.0 (Bartlett approximation). A1 p-values should be interpreted with this constraint in mind.
+All subjects: n_effective = 2.0 (Bartlett approximation), which limits what the A1 p-values can support.
 
 ## Outputs
 

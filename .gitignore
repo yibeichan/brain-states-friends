@@ -200,3 +200,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local-only site asset staging (copied onto gh-pages during the site build)
+site-staging/

@@ -338,14 +338,14 @@ The parcel time series extraction pipeline (`02_extract_parcel_ts.py`) extracts 
 
 The brain state discovery pipeline uses a per-subject **Gaussian hidden Markov model** with **sticky and hierarchical-Dirichlet transition priors** (borrowed from the sticky HDP-HMM, sHDP-HMM, but applied under a fixed-capacity weak-limit truncation rather than full nonparametric inference) to identify latent brain states from fMRI time series. The primary analysis fits **one combined model per subject across all episodes** (`04_combined_hdphmm.py`), taking PCA-projected data from `03a_pca4combined_hmm.py` as input.
 
-**Current production config (all 6 subjects, vt=0.95): `vt0.95_covdiag_nc50_g1`**
+**Current main-analysis config (all 6 subjects, vt=0.95): `vt0.95_covdiag_nc50_g1`**
 
 | Parameter | Value | Role |
 |---|---|---|
 | Parcellation | atlas-4S156Parcels | 156-parcel ROI-level (Schaefer 100 cortical + 56 subcortical composite) |
 | PCA space | 67–77 PCs (vt=0.95) | HMM fits in PC space, NOT in parcel space |
-| nc | 50 | Truncation capacity; K_active 42–47 per subject (mean 44.8, ~90% utilization). LOSO refits and split-half subsets yield smaller K (≈35–42) by ~3–5 states. |
-| γ (gamma) | 1 | Low HDP concentration; prior prefers fewer states, so arriving at K≈45 is strong evidence those states are real |
+| nc | 50 | Truncation capacity. Two different counts circulate, and they are not interchangeable: final-refit **K_active** (EM usage > 0.01 of all TRs) is 37–42 per subject (mean 40.8, 74–84% utilization), while the **active repertoire** used by 05a and the cross-stimulus scripts (recurrence > 0, i.e. FO > 0.02 in at least one episode) is larger at 42–47 (mean 44.8, 269 states total). LOSO folds give K_active 36–43 and split halves 36–41. |
+| γ (gamma) | 1 | Low HDP concentration; prior prefers fewer states, so arriving at K_active ≈ 41 is strong evidence those states are real. Compare like with like: the prior-predictive simulation counts states above a 1% usage threshold, so the matching data-side count is K_active, not the larger active repertoire |
 | κ (kappa) | 10 | Sticky bias; encourages multi-TR state persistence (~hemodynamic timescale) |
 | α (alpha) | 1 | Row-level transition concentration |
 | ρ (rho) | 1 | Sticky bias scaling |

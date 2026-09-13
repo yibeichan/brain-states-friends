@@ -37,7 +37,7 @@ _Tests whether the Friends recurrence ordering corresponds to state occupancy du
 
 Correspondence is weak and inconsistent in sign. Two of six participants reach uncorrected p < 0.05 (sub-02, sub-06); sub-01 is negative at −0.289. Mean rho across participants is 0.165.
 
-Note for interpretation: 0.165 is **not** below the Petit Prince mean (0.101). Raw rho carries a stimulus-independent covariance and stationarity floor, established by the R5 phase-randomized null, so the ordering of rho among the weakly corresponding conditions is confounded with fit quality, language, and modality. Do not read rest as a specificity floor or as the low end of a modality gradient.
+0.165 is **not** below the Petit Prince mean (0.101). Raw rho carries a stimulus-independent covariance and stationarity floor, established by the R5 phase-randomized null, so the ordering of rho among the weakly corresponding conditions is confounded with fit quality, language, and modality. Rest is therefore neither a specificity floor nor the low end of a modality gradient.
 
 ### A1 eligible: Recurrence-FO correlation (content-eligible states)
 
@@ -89,7 +89,7 @@ Coverage tracks the A1 pattern, including sub-01's negative sign.
 | sub-05 | 0.9509 | 0.9453 | +0.0057 | 67 |
 | sub-06 | 0.9504 | 0.9432 | +0.0072 | 74 |
 
-The spatial subspace transfers essentially perfectly. This is what makes the result a dissociation rather than a simple failure: the Friends subspace covers resting data (A5), while the Friends temporal model does not describe resting dynamics (A3) and the recurrence ordering does not carry (A1).
+The spatial subspace transfers essentially perfectly, which makes the result a dissociation rather than a simple failure: the Friends subspace covers resting data (A5), while the Friends temporal model does not describe resting dynamics (A3) and the recurrence ordering does not carry (A1).
 
 ### B2: Bootstrap reference against run-count-matched Movie10
 
@@ -115,7 +115,7 @@ Matching Movie10 to the resting run count rules out run count as the explanation
 | sub-05 | 0.619 | 2.0 | 4 |
 | sub-06 | 0.674 | 2.0 | 6 |
 
-Consecutive resting runs are strongly dependent, leaving roughly two effective independent observations per participant. The A1 and A4 p-values should be read with that in mind.
+Consecutive resting runs are strongly dependent, leaving roughly two effective independent observations per participant, which limits what the A1 and A4 p-values can support.
 
 ## Caveats
 
