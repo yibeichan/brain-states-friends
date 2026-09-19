@@ -74,10 +74,11 @@ nulls preserve identically what they claim to preserve.
 
 ### Strength-controlled assortativity nulls (`rel`)
 
-`script/sm_rel_r3_assortativity_null.py` recomputes the published recurrence
-assortativity from the saved transition graph and tests it against a
-strength-stratified label permutation and a π-residualized attribute, alongside
-the original unconditional null. Findings: `docs/findings/sm_rel_r3_assortativity_null.md`.
+`script/sm_rel_r3_assortativity_null.py` rebuilds the empirical transition graph
+from `06a`'s transition probabilities exactly as `06b` did (edges ≥ 0.005 over
+active states) and tests it against a strength-stratified label permutation and
+a π-residualized attribute, alongside the original unconditional null.
+Findings: `docs/findings/sm_rel_r3_assortativity_null.md`.
 
 ### Recurrence threshold sensitivity and occupancy confound (`rel`)
 
@@ -113,7 +114,7 @@ sbatch script/sm_rel_r5_phase_null.sh                     # N_NULL=10000 by defa
 STIMULUS=harrypotter sbatch script/sm_rel_r5_phase_null.sh
 uv run python script/sm_rel_r5_phase_null.py --sub_id sub-01 --n_null 10000 --stimulus harrypotter
 
-# rel / assortativity nulls — needs 04/06b outputs; minutes, runs locally
+# rel / assortativity nulls — needs 04/05a/06a/06b outputs; minutes, runs locally
 bash script/sm_rel_r3_assortativity_null.sh
 # rel / recurrence robustness — needs 04/05a/05e_a4/06b outputs; seconds, runs locally
 bash script/sm_rel_r1_recurrence_robustness.sh
