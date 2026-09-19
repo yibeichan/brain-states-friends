@@ -127,3 +127,120 @@ def range_stats(rec):
         return {"n_active": 0, "min": None, "max": None, "p10": None, "p90": None}
     return {"n_active": int(a.size), "min": float(a.min()), "max": float(a.max()),
             "p10": float(np.percentile(a, 10)), "p90": float(np.percentile(a, 90))}
+
+
+def load_inputs(sub_id, parcellation, vt):
+    """Frozen main-pipeline inputs for one subject."""
+    if SCRATCH_DIR is None:
+        raise ValueError("SCRATCH_DIR must be set in environment or .env file")
+    base = os.path.join(SCRATCH_DIR, "output")
+    rdir = os.path.join(base, "05a_recurrence_analysis", parcellation, sub_id, f"vt{vt}")
+    with open(os.path.join(rdir, "fractional_occupancy.pkl"), "rb") as f:
+        fo = pickle.load(f)
+    recurrence = np.load(os.path.join(rdir, "recurrence_scores.npy"))
+    flags = pd.read_csv(os.path.join(base, "05e_temporal_trend_a4", parcellation, sub_id,
+                                     f"vt{vt}", "state_flags.csv")).sort_values("state")
+    saved_pi = np.load(os.path.join(base, "06b_transition_structure", parcellation, sub_id,
+                                    f"vt{vt}", "stationary_distribution.npy"))
+    model_path = os.path.join(base, "04_combined_hdphmm", parcellation, sub_id,
+                              "final", f"vt{vt}", "best_model.pkl")
+    model = _load_model_no_jax(model_path)
+    return {"fo": fo, "recurrence": recurrence, "flags": flags, "saved_pi": saved_pi,
+            "transmat": np.asarray(model.transmat_), "n_states": int(model.n_components),
+            "paths": {"recurrence_dir": rdir, "model": model_path}}
+
+
+def run_subject(sub_id, parcellation, vt, out_dir):
+    """Threshold sweep, churn, and occupancy-confound correlations for one subject."""
+    inp = load_inputs(sub_id, parcellation, vt)
+    fo, recurrence, flags, K = inp["fo"], inp["recurrence"], inp["flags"], inp["n_states"]
+    if len(flags) != K:
+        raise RuntimeError(f"{sub_id}: state_flags.csv has {len(flags)} rows, model has {K} states")
+
+    # Gate 1: the reference threshold reproduces the published recurrence exactly.
+    rec_ref = recurrence_at(fo, K, REFERENCE_THRESHOLD)
+    rec_delta = float(np.max(np.abs(rec_ref - recurrence)))
+    if rec_delta != 0.0:
+        raise RuntimeError(f"{sub_id}: recurrence at {REFERENCE_THRESHOLD} deviates from saved by {rec_delta:.2e}")
+
+    # Gate 2: flag-free categories at the reference threshold match 05e_a4.
+    cats = flags["summary_category"].to_numpy()
+    flag_free = np.isin(cats, FLAG_FREE_CATEGORIES)
+    mismatches = [{"state": int(s), "saved": str(cats[s]), "recomputed": recurrence_category(rec_ref[s])}
+                  for s in np.flatnonzero(flag_free) if recurrence_category(rec_ref[s]) != cats[s]]
+    if mismatches:
+        raise RuntimeError(f"{sub_id}: {len(mismatches)} flag-free states disagree with state_flags.csv: {mismatches[:3]}")
+
+    # Gate 3: pi over active states matches 06b.
+    active = np.flatnonzero(recurrence > 0)
+    pi = stationary_distribution(inp["transmat"], active)
+    if inp["saved_pi"].shape != pi.shape:
+        raise RuntimeError(f"{sub_id}: pi shape {pi.shape} vs saved {inp['saved_pi'].shape}")
+    pi_delta = float(np.max(np.abs(inp["saved_pi"] - pi)))
+    if pi_delta > 1e-6:
+        raise RuntimeError(f"{sub_id}: recomputed pi deviates from saved by {pi_delta:.2e}")
+
+    by_threshold, matrix = {}, []
+    for t in THRESHOLDS:
+        rec_t = recurrence_at(fo, K, t)
+        matrix.append(rec_t)
+        by_threshold[f"{t:.2f}"] = {
+            "threshold_fo": t,
+            "approx_seconds_of_12min_run": round(t * 12 * 60, 1),
+            "range": range_stats(rec_t),
+            "rank_stability_vs_reference": rank_stability(rec_ref, rec_t),
+            "churn_vs_reference": churn(rec_ref, rec_t, flag_free),
+        }
+
+    mfo = mean_fo(fo)
+    confound = {
+        "n_active": int(active.size),
+        "rho_recurrence_pi": safe_float(spearmanr(recurrence[active], pi).statistic),
+        "rho_recurrence_mean_fo": safe_float(spearmanr(recurrence[active], mfo[active]).statistic),
+        "rho_pi_mean_fo": safe_float(spearmanr(pi, mfo[active]).statistic),
+    }
+
+    summary = {
+        "sub_id": sub_id, "parcellation": parcellation, "vt": float(vt),
+        "n_states_total": K, "n_runs": len(fo),
+        "reference_threshold": REFERENCE_THRESHOLD, "eligibility_recurrence": ELIGIBILITY_RECURRENCE,
+        "flag_free_categories": list(FLAG_FREE_CATEGORIES),
+        "n_flag_free_states": int(flag_free.sum()),
+        "gate": {"recurrence_max_abs_delta": rec_delta, "category_mismatches": mismatches,
+                 "stationary_max_abs_delta": pi_delta},
+        "thresholds": by_threshold,
+        "occupancy_confound": confound,
+        "environment": {"python": platform.python_version(), "numpy": np.__version__,
+                        "scipy": scipy.__version__, "pandas": pd.__version__},
+        "inputs": inp["paths"],
+    }
+    os.makedirs(out_dir, exist_ok=True)
+    with open(os.path.join(out_dir, "recurrence_robustness_summary.json"), "w") as f:
+        json.dump(summary, f, indent=2, allow_nan=False)
+    np.save(os.path.join(out_dir, "recurrence_by_threshold.npy"), np.vstack(matrix))
+    logger.info("%s: rho(rec,pi)=%.3f rho(rec,meanFO)=%.3f | rank stability vs 0.02: %s | eligible churn: %s",
+                sub_id, confound["rho_recurrence_pi"], confound["rho_recurrence_mean_fo"],
+                {k: v["rank_stability_vs_reference"]["rho_reference_active"] for k, v in by_threshold.items()},
+                {k: v["churn_vs_reference"]["eligible_changed"] for k, v in by_threshold.items()})
+    return summary
+
+
+def build_parser():
+    p = argparse.ArgumentParser(description="Recurrence threshold sensitivity and occupancy confound.")
+    p.add_argument("--sub_id", required=True)
+    p.add_argument("--parcellation", default="atlas-4S156Parcels")
+    p.add_argument("--vt", default="0.95")
+    p.add_argument("--out_dir", default=None)
+    return p
+
+
+def main():
+    a = build_parser().parse_args()
+    vt = f"{float(a.vt):.2f}"
+    out_dir = a.out_dir or os.path.join(SCRATCH_DIR, "output", "sm_rel_r1_recurrence_robustness",
+                                        a.parcellation, a.sub_id, f"vt{vt}")
+    run_subject(a.sub_id, a.parcellation, vt, out_dir)
+
+
+if __name__ == "__main__":
+    main()

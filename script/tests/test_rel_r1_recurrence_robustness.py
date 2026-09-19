@@ -102,3 +102,23 @@ def test_range_stats_uses_active_states_only():
 def test_range_stats_all_zero_returns_none_fields():
     r = m.range_stats(np.zeros(5))
     assert r == {"n_active": 0, "min": None, "max": None, "p10": None, "p90": None}
+
+
+import os
+
+
+def test_parser_defaults():
+    a = m.build_parser().parse_args(["--sub_id", "sub-03"])
+    assert (a.parcellation, a.vt, a.out_dir) == ("atlas-4S156Parcels", "0.95", None)
+
+
+@pytest.mark.skipif(not os.getenv("SCRATCH_DIR") or not os.path.isdir(
+    os.path.join(os.getenv("SCRATCH_DIR", ""), "output", "05a_recurrence_analysis")),
+    reason="pipeline outputs not available")
+def test_gates_pass_on_real_sub01(tmp_path):
+    s = m.run_subject("sub-01", "atlas-4S156Parcels", "0.95", out_dir=str(tmp_path))
+    assert s["gate"]["recurrence_max_abs_delta"] == 0.0
+    assert s["gate"]["category_mismatches"] == []
+    assert s["gate"]["stationary_max_abs_delta"] <= 1e-6
+    assert s["thresholds"]["0.02"]["range"]["n_active"] == 46
+    assert s["occupancy_confound"]["rho_recurrence_pi"] > 0.9
