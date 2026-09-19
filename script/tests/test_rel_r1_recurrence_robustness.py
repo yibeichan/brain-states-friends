@@ -28,6 +28,16 @@ def test_recurrence_at_counts_runs_strictly_above_threshold():
     np.testing.assert_allclose(rec, [1.0, 1 / 3, 1 / 3, 1.0])
 
 
+def test_recurrence_at_excludes_runs_exactly_at_threshold():
+    fo = {"r1": np.array([0.02, 0.0201, 0.0199]),
+          "r2": np.array([0.02, 0.02, 0.02])}
+    np.testing.assert_allclose(m.recurrence_at(fo, 3, 0.02), [0.0, 0.5, 0.0])
+
+
+def test_recurrence_at_empty_fo_returns_zeros():
+    np.testing.assert_array_equal(m.recurrence_at({}, 4, 0.02), np.zeros(4))
+
+
 def test_recurrence_is_non_increasing_in_threshold():
     fo = _toy_fo()
     prev = m.recurrence_at(fo, 4, 0.0)
@@ -58,6 +68,16 @@ def test_churn_counts_crossings_only_among_flag_free_states():
     assert c["n_eligible_ref"] == 1 and c["n_eligible_alt"] == 2
 
 
+def test_churn_active_line_counts_flagged_states_but_eligibility_does_not():
+    rec_ref = np.array([0.5, 0.0, 0.3])
+    rec_alt = np.array([0.5, 0.02, 0.0])
+    flag_free = np.array([True, False, False])   # states 1 and 2 are flagged
+    c = m.churn(rec_ref, rec_alt, flag_free)
+    assert c["active_changed"] == 2                # state 1 becomes active, state 2 becomes inactive
+    assert c["eligible_changed"] == 0              # flagged states never enter the eligibility count
+    assert c["n_eligible_ref"] == 1 and c["n_eligible_alt"] == 1
+
+
 def test_rank_stability_over_reference_active_set():
     rec_ref = np.array([0.9, 0.5, 0.1, 0.05, 0.0])
     rec_alt = np.array([0.8, 0.6, 0.02, 0.0, 0.0])      # state 3 drops out at the higher threshold
@@ -70,9 +90,15 @@ def test_rank_stability_over_reference_active_set():
 def test_rank_stability_returns_none_below_three_states():
     s = m.rank_stability(np.array([0.5, 0.2, 0.0]), np.array([0.4, 0.0, 0.0]))
     assert s["rho_both_active"] is None and s["n_both_active"] == 1
+    assert s["rho_reference_active"] is None and s["n_reference_active"] == 2
 
 
 def test_range_stats_uses_active_states_only():
     r = m.range_stats(np.array([0.0, 0.2, 0.4, 0.6, 0.8]))
     assert r["n_active"] == 4 and r["min"] == 0.2 and r["max"] == 0.8
     assert r["p10"] == pytest.approx(np.percentile([0.2, 0.4, 0.6, 0.8], 10))
+
+
+def test_range_stats_all_zero_returns_none_fields():
+    r = m.range_stats(np.zeros(5))
+    assert r == {"n_active": 0, "min": None, "max": None, "p10": None, "p90": None}
