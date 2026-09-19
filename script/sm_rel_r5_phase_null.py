@@ -144,31 +144,93 @@ def mean_fractional_occupancy(paths, n_states):
     return per_run.mean(0)
 
 
-def load_movie_runs(sub_id, parcellation, vt, n_pcs):
-    """Load Movie10 PC-score matrices, truncated to the subject's n_pcs."""
-    mdir = os.path.join(SCRATCH_DIR, "output", "m10_03_projected",
-                        parcellation, sub_id, f"vt{vt}")
-    with open(os.path.join(mdir, "movie_run_ids.json")) as f:
+class NoStimulusDataError(Exception):
+    """No projected data or cross-stimulus summary for (subject, stimulus).
+
+    Signals a CLEAN skip (e.g. sub-04 has no Harry Potter / Petit Prince
+    scans), distinct from a genuine pipeline error such as a missing run
+    inside an existing projection, which must still hard-fail.
+    """
+
+
+STIMULI = {
+    "movie10": {"proj_dir": "m10_03_projected", "run_ids_file": "movie_run_ids.json",
+                "summary_dir": "m10_05_cross_validation", "n_runs_key": "n_movie_runs"},
+    "harrypotter": {"proj_dir": "hp_03_projected", "run_ids_file": "hp_run_ids.json",
+                    "summary_dir": "hp_05_cross_validation", "n_runs_key": "n_hp_runs"},
+    "petitprince": {"proj_dir": "pp_03_projected", "run_ids_file": "pp_run_ids.json",
+                    "summary_dir": "pp_05_cross_validation", "n_runs_key": "n_pp_runs"},
+}
+
+
+def output_base():
+    """Root of the frozen main-pipeline outputs."""
+    return os.path.join(SCRATCH_DIR, "output")
+
+
+def _proj_dir(sub_id, parcellation, vt, stimulus, base):
+    return os.path.join(base, STIMULI[stimulus]["proj_dir"], parcellation, sub_id, f"vt{vt}")
+
+
+def _summary_path(sub_id, parcellation, vt, stimulus, base):
+    return os.path.join(base, STIMULI[stimulus]["summary_dir"], parcellation, sub_id,
+                        f"vt{vt}", "cross_stimulus_summary.json")
+
+
+def ensure_stimulus_available(sub_id, parcellation, vt, stimulus, base=None):
+    """Raise NoStimulusDataError unless both the projection and the summary exist.
+
+    Called before any model loading so a subject who never did the stimulus
+    exits cleanly instead of failing on an unrelated input.
+    """
+    base = base or output_base()
+    pdir = _proj_dir(sub_id, parcellation, vt, stimulus, base)
+    if not os.path.isdir(pdir):
+        raise NoStimulusDataError(f"{sub_id}: no projected {stimulus} data at {pdir}")
+    spath = _summary_path(sub_id, parcellation, vt, stimulus, base)
+    if not os.path.exists(spath):
+        raise NoStimulusDataError(f"{sub_id}: no {stimulus} cross-stimulus summary at {spath}")
+
+
+def load_stimulus_runs(sub_id, parcellation, vt, n_pcs, stimulus, base=None):
+    """Load one stimulus's projected PC-score runs, truncated to n_pcs.
+
+    Returns (runs, groups): `runs` is a list of (T, n_pcs) arrays in registry
+    order; `groups` maps each run-group name (film, language, ...) to the
+    indices of its runs within `runs`.
+    """
+    spec = STIMULI[stimulus]
+    base = base or output_base()
+    mdir = _proj_dir(sub_id, parcellation, vt, stimulus, base)
+    if not os.path.isdir(mdir):
+        raise NoStimulusDataError(f"{sub_id}: no projected {stimulus} data at {mdir}")
+    with open(os.path.join(mdir, spec["run_ids_file"])) as f:
         run_ids = json.load(f)
-    runs = []
-    for ids in run_ids.values():
+    runs, groups = [], {}
+    for group, ids in run_ids.items():
+        groups[group] = []
         for rid in ids:
             path = os.path.join(mdir, f"{rid}.npy")
             if not os.path.exists(path):
                 raise FileNotFoundError(
-                    f"Projected Movie10 run missing: {path} (run {rid}); "
-                    "a partial m10_03 output would silently change the null's run ensemble")
+                    f"Projected {stimulus} run missing: {path} (run {rid}); "
+                    "a partial projection output would silently change the null's run ensemble")
             arr = np.load(path)
             if arr.shape[1] < n_pcs:
-                raise ValueError(
-                    f"{path}: expected >= {n_pcs} columns, found {arr.shape[1]}")
+                raise ValueError(f"{path}: expected >= {n_pcs} columns, found {arr.shape[1]}")
             arr = arr[:, :n_pcs]
             if not np.all(np.isfinite(arr)):
                 raise ValueError(f"{path}: non-finite values in projected run")
+            groups[group].append(len(runs))
             runs.append(arr)
     if not runs:
-        raise FileNotFoundError(f"No projected Movie10 runs found under {mdir}")
-    return runs
+        raise FileNotFoundError(f"No projected {stimulus} runs found under {mdir}")
+    return runs, groups
+
+
+def load_movie_runs(sub_id, parcellation, vt, n_pcs):
+    """Backward-compatible Movie10 loader (runs only, no group map)."""
+    return load_stimulus_runs(sub_id, parcellation, vt, n_pcs, "movie10")[0]
 
 
 def check_gate(observed, reference, gate_tol, sub_id):
@@ -186,16 +248,19 @@ def check_gate(observed, reference, gate_tol, sub_id):
     return gate
 
 
-def published_reference(sub_id, parcellation, vt):
-    """Published R5 rho plus the input counts the standalone rebuild must match."""
-    path = os.path.join(SCRATCH_DIR, "output", "m10_05_cross_validation",
-                        parcellation, sub_id, f"vt{vt}", "cross_stimulus_summary.json")
+def published_reference(sub_id, parcellation, vt, stimulus="movie10", base=None):
+    """Published A1 rho plus the input counts the standalone rebuild must match."""
+    spec = STIMULI[stimulus]
+    base = base or output_base()
+    path = _summary_path(sub_id, parcellation, vt, stimulus, base)
+    if not os.path.exists(path):
+        raise NoStimulusDataError(f"{sub_id}: no {stimulus} cross-stimulus summary at {path}")
     with open(path) as f:
         j = json.load(f)
     rho = j["A1_recurrence_correlation"]["spearman_rho"]
     if rho is None or not np.isfinite(float(rho)):
         raise RuntimeError(f"{sub_id}: published spearman_rho is degenerate ({rho!r})")
-    return {"rho": float(rho), "n_movie_runs": int(j["n_movie_runs"]),
+    return {"rho": float(rho), "n_runs": int(j[spec["n_runs_key"]]),
             "n_active_states": int(j["A1_recurrence_correlation"]["n_active_states"])}
 
 
@@ -248,10 +313,10 @@ def run_subject(sub_id, parcellation, vt, n_null, out_dir, gate_tol):
     # Faithfulness gate: this standalone Viterbi must reproduce the published
     # statistic, or the null is testing a different quantity than R5 reports.
     ref = published_reference(sub_id, parcellation, vt)
-    if len(runs) != ref["n_movie_runs"] or len(active) != ref["n_active_states"]:
+    if len(runs) != ref["n_runs"] or len(active) != ref["n_active_states"]:
         raise RuntimeError(
             f"{sub_id}: input drift vs published run: loaded {len(runs)} runs / "
-            f"{len(active)} active states, published {ref['n_movie_runs']} / "
+            f"{len(active)} active states, published {ref['n_runs']} / "
             f"{ref['n_active_states']}")
     gate = check_gate(observed, ref["rho"], gate_tol, sub_id)
 
