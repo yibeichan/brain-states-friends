@@ -9,7 +9,7 @@
 - Recurrence recomputed from `fractional_occupancy.pkl` at FO thresholds 0.01 / 0.02 / 0.03 / 0.05 (≈ 7 / 14 / 22 / 36 s of a 12-min run) with the main-pipeline definition (fraction of runs with FO strictly above threshold), gated to `recurrence_scores.npy` at 0.02 (`gate.recurrence_max_abs_delta`; Δ = 0 in all six).
 - Eligibility churn counts states whose category among the flag-free set {eligible_for_content_analysis, rare, unused} changes; exclusion flags (sub-HRF, run-onset-anchored, drift-anchored) are threshold-independent and taken from `state_flags.csv`, whose categories the recomputation reproduces exactly at 0.02 (`gate.category_mismatches`; empty list in all six).
 - π from `best_model.pkl` over active states (`utils.stationary`), gated to `stationary_distribution.npy` (`gate.stationary_max_abs_delta`; 0.0 in all six).
-- Eligibility cut: recurrence > 0.10 (`eligibility_recurrence` in the JSON) among the flag-free states.
+- Eligibility cut: recurrence ≥ 0.10 (`eligibility_recurrence` in the JSON) among the flag-free states.
 
 ## Results
 
@@ -42,7 +42,7 @@ Across all six participants: min ranges 0.0034–0.0722 and max ranges 0.8166–
 
 (0.02 is the reference threshold itself, so ρ = 1.0 and all churn counts are 0 by construction — omitted from the churn table below.)
 
-**Active- and eligibility-category churn vs the 0.02 reference** (`thresholds[t].churn_vs_reference`; "active" = states with recurrence > 0 at that threshold; "eligible" = flag-free states with recurrence > 0.10):
+**Active- and eligibility-category churn vs the 0.02 reference** (`thresholds[t].churn_vs_reference`; "active" = states with recurrence > 0 at that threshold; "eligible" = flag-free states with recurrence ≥ 0.10):
 
 | sub | 0.01 active/eligible Δ | 0.01 gained/lost ids | 0.03 active/eligible Δ | 0.03 gained/lost ids | 0.05 active/eligible Δ | 0.05 gained/lost ids |
 |---|---|---|---|---|---|---|
