@@ -12,6 +12,7 @@ dependencies = [
   "python-dotenv",
   "marimo",
   "hmmlearn",
+  "networkx",
 ]
 
 [dependency-groups]
