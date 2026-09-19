@@ -6,6 +6,7 @@ endpoints; (b) the strength-stratified permutation never moves a label across
 strength bins; (c) rank residualization removes the linear rank dependence on
 pi. All on toy graphs; nothing touches pipeline outputs.
 """
+import os
 import sys
 from pathlib import Path
 
@@ -94,3 +95,47 @@ def test_stratified_null_with_one_node_per_bin_is_degenerate_constant():
     bins = {n: n for n in G.nodes}                      # nothing can move
     null = m.permutation_null(G, "recurrence_score", values, 5, np.random.default_rng(0), bins=bins)
     assert np.allclose(null, m.assortativity(G, "recurrence_score"))
+
+
+def test_build_empirical_graph_thresholds_edges_and_excludes_self_loops_and_inactive_states():
+    recurrence = np.array([1.0, 2.0, 3.0, 4.0, 0.0])   # state 4 inactive
+    active = np.flatnonzero(recurrence > 0)
+    P = np.zeros((5, 5))
+    P[0, 1] = 0.005       # exactly at threshold: kept
+    P[1, 2] = 0.004999    # just below threshold: dropped
+    P[2, 2] = 0.9         # self-loop: dropped regardless of weight
+    P[2, 3] = 0.006        # kept
+    P[3, 0] = 0.5          # kept
+    P[0, 4] = 0.9          # target state inactive: excluded regardless of weight
+    G = m.build_empirical_graph(P, active, recurrence, edge_threshold=0.005)
+    assert set(G.nodes) == {0, 1, 2, 3}
+    assert set(G.edges) == {(0, 1), (2, 3), (3, 0)}
+    assert G[0][1]["weight"] == pytest.approx(0.005)
+    assert G[2][3]["weight"] == pytest.approx(0.006)
+    assert G[3][0]["weight"] == pytest.approx(0.5)
+    assert np.isfinite(m.assortativity(G, "recurrence_score"))
+
+
+def test_null_block_reports_both_tails_and_floor():
+    null = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
+    b = m.null_block(0.35, null)
+    assert set(b) >= {"observed", "mean", "sd", "pct2.5", "pct97.5", "delta", "z",
+                      "p_greater", "p_two_sided", "p_floor", "n_finite"}
+    assert b["p_floor"] == pytest.approx(1 / 6) and b["n_finite"] == 5
+    assert b["p_greater"] == pytest.approx((1 + 1) / (5 + 1))     # one draw >= observed, Phipson-Smyth
+
+
+def test_parser_defaults():
+    a = m.build_parser().parse_args(["--sub_id", "sub-01"])
+    assert (a.n_perm, a.n_bins, a.seed, a.parcellation, a.vt) == (5000, 5, 0, "atlas-4S156Parcels", "0.95")
+
+
+@pytest.mark.skipif(not os.getenv("SCRATCH_DIR") or not os.path.isdir(
+    os.path.join(os.getenv("SCRATCH_DIR", ""), "output", "06b_transition_structure")),
+    reason="pipeline outputs not available")
+def test_gates_pass_on_real_sub01(tmp_path):
+    s = m.run_subject("sub-01", "atlas-4S156Parcels", "0.95", n_perm=10, n_bins=5, seed=0,
+                      out_dir=str(tmp_path))
+    assert s["gate"]["assortativity_abs_delta"] <= 1e-9
+    assert s["gate"]["stationary_max_abs_delta"] <= 1e-6
+    assert s["observed"]["rho_recurrence_pi"] > 0.9
