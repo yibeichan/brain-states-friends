@@ -72,6 +72,20 @@ correlation is stimulus-specific? Findings:
 (`utils.ica_oos_recurrence.phase_randomize`) with the ICA supplement, so both
 nulls preserve identically what they claim to preserve.
 
+### Strength-controlled assortativity nulls (`rel`)
+
+`script/sm_rel_r3_assortativity_null.py` recomputes the published recurrence
+assortativity from the saved transition graph and tests it against a
+strength-stratified label permutation and a π-residualized attribute, alongside
+the original unconditional null. Findings: `docs/findings/sm_rel_r3_assortativity_null.md`.
+
+### Recurrence threshold sensitivity and occupancy confound (`rel`)
+
+`script/sm_rel_r1_recurrence_robustness.py` recomputes recurrence at FO
+thresholds 0.01–0.05, reports rank stability and category churn, and the
+Spearman correlations among recurrence, stationary occupancy π, and mean FO.
+Findings: `docs/findings/sm_rel_r1_recurrence_robustness.md`.
+
 ## Running
 
 This branch is a self-contained `uv` project. Set up once with `uv sync`, then
@@ -89,10 +103,20 @@ uv run pytest script/tests/test_alt_ica_states.py script/tests/test_alt_ica_diag
 uv run python script/sm_alt_ica_diagnostics.py            # repertoire/convergence diagnostics
 sbatch script/sm_alt_ica_states.sh                        # or: uv run python script/sm_alt_ica_states.py --help
 
-# rel / R5 phase null — needs main-pipeline outputs (stages 03a/04/05a/m10_03/m10_05)
+# rel / R5 phase null — needs main-pipeline outputs (stages 03a/04/05a/m10_03/m10_05);
+# STIMULUS=harrypotter|petitprince switches sm_rel_r5_phase_null.sh off its movie10
+# default to the Harry Potter / Le Petit Prince cross-stimulus outputs (--stimulus
+# on the direct python invocation); export UV_CACHE_DIR to a writable path before
+# any of these uv run/sbatch invocations, or uv's default cache may not be writable
 uv run pytest script/tests/test_rel_r5_phase_null.py
 sbatch script/sm_rel_r5_phase_null.sh                     # N_NULL=10000 by default
-uv run python script/sm_rel_r5_phase_null.py --sub_id sub-01 --n_null 10000
+STIMULUS=harrypotter sbatch script/sm_rel_r5_phase_null.sh
+uv run python script/sm_rel_r5_phase_null.py --sub_id sub-01 --n_null 10000 --stimulus harrypotter
+
+# rel / assortativity nulls — needs 04/06b outputs; minutes, runs locally
+bash script/sm_rel_r3_assortativity_null.sh
+# rel / recurrence robustness — needs 04/05a/05e_a4/06b outputs; seconds, runs locally
+bash script/sm_rel_r1_recurrence_robustness.sh
 ```
 
 ## Citation
