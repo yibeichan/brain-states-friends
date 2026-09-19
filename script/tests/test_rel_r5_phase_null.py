@@ -459,3 +459,71 @@ def test_ensure_stimulus_available_requires_both_projection_and_summary(tmp_path
     _make_summary(tmp_path, "harrypotter")
     m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
                                 "harrypotter", base=str(tmp_path))  # no raise
+
+
+# --------------------------------------------------------------------------
+# CLI surface: output paths, per-group statistics, clean skip
+# --------------------------------------------------------------------------
+def test_default_out_dir_keeps_legacy_movie10_path(monkeypatch):
+    monkeypatch.setattr(m, "SCRATCH_DIR", "/scr")
+    assert m.default_out_dir("movie10", "atlas-4S156Parcels", "sub-01", "0.95") == \
+        "/scr/output/sm_rel_r5_phase_null/atlas-4S156Parcels/sub-01/vt0.95"
+
+
+def test_default_out_dir_nests_other_stimuli(monkeypatch):
+    monkeypatch.setattr(m, "SCRATCH_DIR", "/scr")
+    assert m.default_out_dir("harrypotter", "atlas-4S156Parcels", "sub-02", "0.95") == \
+        "/scr/output/sm_rel_r5_phase_null/harrypotter/atlas-4S156Parcels/sub-02/vt0.95"
+
+
+def test_occupancy_stats_single_group_equals_overall():
+    rng = np.random.default_rng(3)
+    n_states = 6
+    paths = [rng.integers(0, n_states, size=50) for _ in range(4)]
+    recurrence = rng.uniform(size=n_states)
+    active = np.arange(n_states)
+    overall, by_group = m.occupancy_stats(paths, n_states, recurrence, active,
+                                          groups={"all": [0, 1, 2, 3]})
+    assert by_group is not None and set(by_group) == {"all"}
+    assert by_group["all"] == pytest.approx(overall.statistic)
+
+
+def test_occupancy_stats_without_groups_returns_none():
+    paths = [np.array([0, 1, 1, 2]), np.array([2, 2, 0, 1])]
+    overall, by_group = m.occupancy_stats(paths, 3, np.array([0.2, 0.5, 0.9]),
+                                          np.arange(3), groups=None)
+    assert by_group is None and np.isfinite(overall.statistic)
+
+
+def test_occupancy_stats_group_uses_only_its_runs():
+    n_states = 3
+    p_a = np.array([0, 0, 0, 1])          # group A mostly state 0
+    p_b = np.array([2, 2, 2, 1])          # group B mostly state 2
+    recurrence = np.array([0.9, 0.5, 0.1])
+    _, by_group = m.occupancy_stats([p_a, p_b], n_states, recurrence, np.arange(n_states),
+                                    groups={"A": [0], "B": [1]})
+    assert by_group["A"] > 0 and by_group["B"] < 0
+
+
+def test_write_skip_records_reason(tmp_path):
+    path = m.write_skip(str(tmp_path / "out"), "sub-04", "harrypotter", "no data")
+    j = json.loads(open(path).read())
+    assert j == {"sub_id": "sub-04", "stimulus": "harrypotter", "skipped": True, "reason": "no data"}
+
+
+def test_main_skips_cleanly_when_stimulus_absent(tmp_path, monkeypatch):
+    scratch = tmp_path / "scratch"
+    (scratch / "output").mkdir(parents=True)
+    monkeypatch.setattr(m, "SCRATCH_DIR", str(scratch))
+    out = tmp_path / "out"
+    monkeypatch.setattr(sys, "argv", ["prog", "--sub_id", "sub-04", "--stimulus", "harrypotter",
+                                      "--n_null", "3", "--out_dir", str(out)])
+    with pytest.raises(SystemExit) as e:
+        m.main()
+    assert e.value.code == 0
+    assert (out / "skipped.json").exists()
+
+
+def test_parser_defaults_are_the_published_run():
+    a = m.build_parser().parse_args(["--sub_id", "sub-01"])
+    assert a.stimulus == "movie10" and a.per_group is False and a.n_null == 10000
