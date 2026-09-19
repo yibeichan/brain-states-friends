@@ -451,7 +451,14 @@ def test_published_reference_missing_summary_is_a_clean_skip(tmp_path):
                               stimulus="harrypotter", base=str(tmp_path))
 
 
+def _make_model_dir(base, sub="sub-01", parc="atlas-4S156Parcels", vt="0.95"):
+    d = base / "04_combined_hdphmm" / parc / sub / "final" / f"vt{vt}"
+    d.mkdir(parents=True)
+    return d
+
+
 def test_ensure_stimulus_available_requires_both_projection_and_summary(tmp_path):
+    _make_model_dir(tmp_path)
     _make_proj(tmp_path, "harrypotter", groups={"harrypotter": 1})
     with pytest.raises(m.NoStimulusDataError):   # summary missing
         m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
@@ -459,6 +466,21 @@ def test_ensure_stimulus_available_requires_both_projection_and_summary(tmp_path
     _make_summary(tmp_path, "harrypotter")
     m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
                                 "harrypotter", base=str(tmp_path))  # no raise
+
+
+def test_ensure_stimulus_available_raises_filenotfound_when_model_dir_missing(tmp_path):
+    """A mistyped --parcellation/--vt must not masquerade as a clean stimulus skip."""
+    with pytest.raises(FileNotFoundError, match="no fitted model"):
+        m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
+                                    "harrypotter", base=str(tmp_path))
+
+
+def test_ensure_stimulus_available_raises_no_stimulus_when_model_dir_present(tmp_path):
+    """sub-04's actual behaviour: model exists, but the stimulus's projection does not."""
+    _make_model_dir(tmp_path, sub="sub-04")
+    with pytest.raises(m.NoStimulusDataError):
+        m.ensure_stimulus_available("sub-04", "atlas-4S156Parcels", "0.95",
+                                    "harrypotter", base=str(tmp_path))
 
 
 # --------------------------------------------------------------------------
@@ -514,6 +536,7 @@ def test_write_skip_records_reason(tmp_path):
 def test_main_skips_cleanly_when_stimulus_absent(tmp_path, monkeypatch):
     scratch = tmp_path / "scratch"
     (scratch / "output").mkdir(parents=True)
+    _make_model_dir(scratch / "output", sub="sub-04")
     monkeypatch.setattr(m, "SCRATCH_DIR", str(scratch))
     out = tmp_path / "out"
     monkeypatch.setattr(sys, "argv", ["prog", "--sub_id", "sub-04", "--stimulus", "harrypotter",

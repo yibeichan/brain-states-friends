@@ -131,8 +131,6 @@ def range_stats(rec):
 
 def load_inputs(sub_id, parcellation, vt):
     """Frozen main-pipeline inputs for one subject."""
-    if SCRATCH_DIR is None:
-        raise ValueError("SCRATCH_DIR must be set in environment or .env file")
     base = os.path.join(SCRATCH_DIR, "output")
     rdir = os.path.join(base, "05a_recurrence_analysis", parcellation, sub_id, f"vt{vt}")
     with open(os.path.join(rdir, "fractional_occupancy.pkl"), "rb") as f:
@@ -166,6 +164,13 @@ def run_subject(sub_id, parcellation, vt, out_dir):
     # Gate 2: flag-free categories at the reference threshold match 05e_a4.
     cats = flags["summary_category"].to_numpy()
     flag_free = np.isin(cats, FLAG_FREE_CATEGORIES)
+    # 05e assigns "unused" before any exclusion flag, so an unused-at-0.02 state may
+    # carry sub-HRF/run-onset/drift flags that its category hides. Masking those
+    # states out of flag_free (via `(cats == "unused") & raw_flagged`) was tried and
+    # reverted: it left every thresholds[*].churn_vs_reference and occupancy_confound
+    # value unchanged, but it did shift n_flag_free_states (34->31 for sub-02 alone),
+    # so it is not applied here pending a decision on how n_flag_free_states is used
+    # downstream. summary_category is treated as authoritative as-is.
     mismatches = [{"state": int(s), "saved": str(cats[s]), "recomputed": recurrence_category(rec_ref[s])}
                   for s in np.flatnonzero(flag_free) if recurrence_category(rec_ref[s]) != cats[s]]
     if mismatches:
@@ -235,6 +240,8 @@ def build_parser():
 
 
 def main():
+    if SCRATCH_DIR is None:
+        raise ValueError("SCRATCH_DIR must be set in environment or .env file")
     a = build_parser().parse_args()
     vt = f"{float(a.vt):.2f}"
     out_dir = a.out_dir or os.path.join(SCRATCH_DIR, "output", "sm_rel_r1_recurrence_robustness",

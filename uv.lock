@@ -51,7 +51,7 @@ requires-dist = [
     { name = "hmmlearn" },
     { name = "marimo" },
     { name = "matplotlib" },
-    { name = "networkx" },
+    { name = "networkx", specifier = ">=3.0" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "python-dotenv" },

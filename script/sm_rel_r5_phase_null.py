@@ -226,9 +226,18 @@ def ensure_stimulus_available(sub_id, parcellation, vt, stimulus, base=None):
     """Raise NoStimulusDataError unless both the projection and the summary exist.
 
     Called before any model loading so a subject who never did the stimulus
-    exits cleanly instead of failing on an unrelated input.
+    exits cleanly instead of failing on an unrelated input. First checks the
+    subject's own fitted model dir: if that is missing, a mistyped
+    --parcellation/--vt would otherwise masquerade as a clean stimulus skip
+    (write skipped.json, exit 0) instead of the argument error it actually is.
     """
     base = base or output_base()
+    model_dir = os.path.join(base, "04_combined_hdphmm", parcellation, sub_id,
+                             "final", f"vt{vt}")
+    if not os.path.isdir(model_dir):
+        raise FileNotFoundError(
+            f"{sub_id}: no fitted model at {model_dir}; check --parcellation/--vt "
+            "(this is not a stimulus skip)")
     pdir = _proj_dir(sub_id, parcellation, vt, stimulus, base)
     if not os.path.isdir(pdir):
         raise NoStimulusDataError(f"{sub_id}: no projected {stimulus} data at {pdir}")

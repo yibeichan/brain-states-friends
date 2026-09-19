@@ -75,17 +75,6 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 
-def load_graph(path):
-    """Read the saved transition graph with int node ids and float attributes."""
-    G = nx.read_graphml(path)
-    G = nx.relabel_nodes(G, {n: int(n) for n in G.nodes()})
-    for n in G.nodes:
-        G.nodes[n]["recurrence_score"] = float(G.nodes[n]["recurrence_score"])
-    for _, _, d in G.edges(data=True):
-        d["weight"] = float(d["weight"])
-    return G
-
-
 def build_empirical_graph(P_empirical, active_states, recurrence_scores, edge_threshold=0.005):
     """Directed graph over active states from the empirical transition matrix,
     mirroring 06b_transition_structure.build_transition_graph: node attr
@@ -177,8 +166,6 @@ def null_block(observed, null):
 
 def run_subject(sub_id, parcellation, vt, n_perm, n_bins, seed, out_dir, gate_tol=1e-9):
     """Recompute the published assortativity, gate it, and test it against three nulls."""
-    if SCRATCH_DIR is None:
-        raise ValueError("SCRATCH_DIR must be set in environment or .env file")
     base = os.path.join(SCRATCH_DIR, "output")
     tdir = os.path.join(base, "06b_transition_structure", parcellation, sub_id, f"vt{vt}")
     emp_P_path = os.path.join(base, "06a_state_temp_dynamics", parcellation, sub_id,
@@ -294,6 +281,8 @@ def build_parser():
 
 
 def main():
+    if SCRATCH_DIR is None:
+        raise ValueError("SCRATCH_DIR must be set in environment or .env file")
     a = build_parser().parse_args()
     vt = f"{float(a.vt):.2f}"
     out_dir = a.out_dir or os.path.join(SCRATCH_DIR, "output", "sm_rel_r3_assortativity_null",
