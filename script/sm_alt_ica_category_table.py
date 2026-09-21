@@ -32,14 +32,14 @@ SCRATCH_DIR = os.getenv("SCRATCH_DIR")
 SHORT = {
     "eligible_for_content_analysis": "Content-eligible",
     "run_onset_anchored": "Run-onset",
-    "season_temporal": "Season",
-    "drift_anchored": "Drift",
+    # 05e's season_temporal is what the manuscript calls drift-anchored.
+    "season_temporal": "Drift-anchored",
     "low_confidence": "Low-confidence",
     "unused": "Unused",
     "rare": "Rare",
 }
 # Display order: substantive states first, then low-support / timing-confounded.
-CAT_ORDER = ["Content-eligible", "Run-onset", "Season", "Drift",
+CAT_ORDER = ["Content-eligible", "Run-onset", "Drift-anchored",
              "Low-confidence", "Unused", "Rare"]
 
 

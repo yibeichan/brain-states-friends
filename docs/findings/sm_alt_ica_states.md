@@ -36,7 +36,7 @@ FDR-surviving content-eligible matched pairs / total, vs the subspace-rotation n
 
 ### Per-category breakdown
 
-Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_active): within each subject, spatial mean r and temporal correspondence are comparable across content-eligible, run-onset, season, and low-confidence states; the dominant axis is the **subject**, not the category. Only "Unused" (lowest-occupancy) states match poorly in some subjects (sub-01/02). Because the taxonomy is a *temporal* classification, this independence is expected: whether a state's mean map is recoverable in the shared subspace is largely orthogonal to its temporal label.
+Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_active): within each subject, spatial mean r and temporal correspondence are comparable across content-eligible, run-onset, drift-anchored, and low-confidence states; the dominant axis is the **subject**, not the category. Only "Unused" (lowest-occupancy) states match poorly in some subjects (sub-01/02). Because the taxonomy is a *temporal* classification, this independence is expected: whether a state's mean map is recoverable in the shared subspace is largely orthogonal to its temporal label.
 
 **Caveat:** matches to low-confidence, unused, or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
 
