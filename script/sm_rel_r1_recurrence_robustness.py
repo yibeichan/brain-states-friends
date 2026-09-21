@@ -19,7 +19,8 @@ questions about that construct, both about analyses already in the paper:
    reproducible artifact the Methods can cite.
 
 Faithfulness gates: recurrence at 0.02 must equal recurrence_scores.npy; the
-recomputed category of every flag-free state at 0.02 must equal its
+recomputed category of every state in NO_KNOWN_FLAG_CATEGORIES at 0.02
+must equal its
 summary_category in state_flags.csv; pi must match stationary_distribution.npy.
 
 Inputs (frozen, under $SCRATCH_DIR/output):
@@ -61,8 +62,12 @@ logger = logging.getLogger(__name__)
 THRESHOLDS = (0.01, 0.02, 0.03, 0.05)
 REFERENCE_THRESHOLD = 0.02
 ELIGIBILITY_RECURRENCE = 0.10
-# Categories whose assignment depends on recurrence alone (no exclusion flag).
-FLAG_FREE_CATEGORIES = ("eligible_for_content_analysis", "rare", "unused")
+# The three summary categories that do not name a known noise flag. Within this
+# set, and only within it, recurrence decides which of the three applies:
+# unused (recurrence == 0), rare (< 0.10), eligible_for_content_analysis (>= 0.10).
+# "eligible_for_content_analysis" is a residual label — it means none of the four
+# known-noise categories applied, not that the state is positively content-driven.
+NO_KNOWN_FLAG_CATEGORIES = ("eligible_for_content_analysis", "rare", "unused")
 
 
 def recurrence_at(fo, n_states, threshold):
@@ -81,7 +86,7 @@ def mean_fo(fo):
 
 
 def recurrence_category(rec_value):
-    """Category of a flag-free state from its recurrence alone."""
+    """Category of a state carrying no known flag, from its recurrence."""
     if rec_value <= 0:
         return "unused"
     if rec_value < ELIGIBILITY_RECURRENCE:
@@ -89,12 +94,12 @@ def recurrence_category(rec_value):
     return "eligible_for_content_analysis"
 
 
-def churn(rec_ref, rec_alt, flag_free):
+def churn(rec_ref, rec_alt, no_known_flag):
     """States crossing the active and eligibility lines between two thresholds."""
-    rec_ref = np.asarray(rec_ref); rec_alt = np.asarray(rec_alt); flag_free = np.asarray(flag_free, bool)
+    rec_ref = np.asarray(rec_ref); rec_alt = np.asarray(rec_alt); no_known_flag = np.asarray(no_known_flag, bool)
     active_changed = int(np.sum((rec_ref > 0) != (rec_alt > 0)))
-    elig_ref = flag_free & (rec_ref >= ELIGIBILITY_RECURRENCE)
-    elig_alt = flag_free & (rec_alt >= ELIGIBILITY_RECURRENCE)
+    elig_ref = no_known_flag & (rec_ref >= ELIGIBILITY_RECURRENCE)
+    elig_alt = no_known_flag & (rec_alt >= ELIGIBILITY_RECURRENCE)
     return {
         "active_changed": active_changed,
         "eligible_changed": int(np.sum(elig_ref != elig_alt)),
@@ -161,20 +166,24 @@ def run_subject(sub_id, parcellation, vt, out_dir):
     if rec_delta != 0.0:
         raise RuntimeError(f"{sub_id}: recurrence at {REFERENCE_THRESHOLD} deviates from saved by {rec_delta:.2e}")
 
-    # Gate 2: flag-free categories at the reference threshold match 05e_a4.
+    # Gate 2: the no-known-flag categories at the reference threshold match 05e_a4.
     cats = flags["summary_category"].to_numpy()
-    flag_free = np.isin(cats, FLAG_FREE_CATEGORIES)
-    # 05e assigns "unused" before any exclusion flag, so an unused-at-0.02 state may
-    # carry sub-HRF/run-onset/drift flags that its category hides. Masking those
-    # states out of flag_free (via `(cats == "unused") & raw_flagged`) was tried and
-    # reverted: it left every thresholds[*].churn_vs_reference and occupancy_confound
-    # value unchanged, but it did shift n_flag_free_states (34->31 for sub-02 alone),
-    # so it is not applied here pending a decision on how n_flag_free_states is used
-    # downstream. summary_category is treated as authoritative as-is.
+    no_known_flag = np.isin(cats, NO_KNOWN_FLAG_CATEGORIES)
+    # 05e assigns "unused" before it checks any exclusion flag, so an unused-at-0.02
+    # state may carry a sub-HRF/run-onset/drift flag that its category hides. The
+    # category names no flag; the individual state may still have one. Masking those
+    # states out (via `(cats == "unused") & raw_flagged`) was tried and reverted: it
+    # left every thresholds[*].churn_vs_reference and occupancy_confound value
+    # unchanged, because unused states have recurrence 0 and never reach the 0.10
+    # eligibility bar. It does lower n_no_known_flag_states in four of six subjects
+    # (sub-02 37->34, sub-03 32->28, sub-04 34->31, sub-06 25->24; sub-01 and sub-05
+    # unchanged), so the count below is an upper bound. Not applied pending a
+    # decision on how that count is used downstream; summary_category is
+    # authoritative as-is.
     mismatches = [{"state": int(s), "saved": str(cats[s]), "recomputed": recurrence_category(rec_ref[s])}
-                  for s in np.flatnonzero(flag_free) if recurrence_category(rec_ref[s]) != cats[s]]
+                  for s in np.flatnonzero(no_known_flag) if recurrence_category(rec_ref[s]) != cats[s]]
     if mismatches:
-        raise RuntimeError(f"{sub_id}: {len(mismatches)} flag-free states disagree with state_flags.csv: {mismatches[:3]}")
+        raise RuntimeError(f"{sub_id}: {len(mismatches)} no-known-flag states disagree with state_flags.csv: {mismatches[:3]}")
 
     # Gate 3: pi over active states matches 06b.
     active = np.flatnonzero(recurrence > 0)
@@ -194,7 +203,7 @@ def run_subject(sub_id, parcellation, vt, out_dir):
             "approx_seconds_of_12min_run": round(t * 12 * 60, 1),
             "range": range_stats(rec_t),
             "rank_stability_vs_reference": rank_stability(rec_ref, rec_t),
-            "churn_vs_reference": churn(rec_ref, rec_t, flag_free),
+            "churn_vs_reference": churn(rec_ref, rec_t, no_known_flag),
         }
 
     mfo = mean_fo(fo)
@@ -209,8 +218,8 @@ def run_subject(sub_id, parcellation, vt, out_dir):
         "sub_id": sub_id, "parcellation": parcellation, "vt": float(vt),
         "n_states_total": K, "n_runs": len(fo),
         "reference_threshold": REFERENCE_THRESHOLD, "eligibility_recurrence": ELIGIBILITY_RECURRENCE,
-        "flag_free_categories": list(FLAG_FREE_CATEGORIES),
-        "n_flag_free_states": int(flag_free.sum()),
+        "no_known_flag_categories": list(NO_KNOWN_FLAG_CATEGORIES),
+        "n_no_known_flag_states": int(no_known_flag.sum()),
         "gate": {"recurrence_max_abs_delta": rec_delta, "category_mismatches": mismatches,
                  "stationary_max_abs_delta": pi_delta},
         "thresholds": by_threshold,

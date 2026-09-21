@@ -4,7 +4,7 @@ Load-bearing claims: (a) recurrence_at reproduces the main pipeline's
 definition (fraction of runs with FO strictly above the threshold);
 (b) recurrence is non-increasing in the threshold; (c) churn counts states
 that cross the active (>0) and eligibility (>=0.10) lines; (d) the category
-mapping for flag-free states depends on recurrence alone."""
+mapping for states carrying no known flag depends on recurrence alone."""
 import sys
 from pathlib import Path
 
@@ -57,11 +57,11 @@ def test_recurrence_category_thresholds():
     assert m.recurrence_category(0.10) == "eligible_for_content_analysis"
 
 
-def test_churn_counts_crossings_only_among_flag_free_states():
+def test_churn_counts_crossings_only_among_no_known_flag_states():
     rec_ref = np.array([0.5, 0.09, 0.0, 0.12])
     rec_alt = np.array([0.5, 0.11, 0.02, 0.08])
-    flag_free = np.array([True, True, True, False])   # state 3 is flagged (e.g. run-onset)
-    c = m.churn(rec_ref, rec_alt, flag_free)
+    no_known_flag = np.array([True, True, True, False])   # state 3 is flagged (e.g. run-onset)
+    c = m.churn(rec_ref, rec_alt, no_known_flag)
     assert c["active_changed"] == 1                     # state 2: 0 -> 0.02
     assert c["eligible_changed"] == 1                   # state 1 crosses 0.10; state 3 ignored (flagged)
     assert c["gained_eligible"] == [1] and c["lost_eligible"] == []
@@ -71,8 +71,8 @@ def test_churn_counts_crossings_only_among_flag_free_states():
 def test_churn_active_line_counts_flagged_states_but_eligibility_does_not():
     rec_ref = np.array([0.5, 0.0, 0.3])
     rec_alt = np.array([0.5, 0.02, 0.0])
-    flag_free = np.array([True, False, False])   # states 1 and 2 are flagged
-    c = m.churn(rec_ref, rec_alt, flag_free)
+    no_known_flag = np.array([True, False, False])   # states 1 and 2 are flagged
+    c = m.churn(rec_ref, rec_alt, no_known_flag)
     assert c["active_changed"] == 2                # state 1 becomes active, state 2 becomes inactive
     assert c["eligible_changed"] == 0              # flagged states never enter the eligibility count
     assert c["n_eligible_ref"] == 1 and c["n_eligible_alt"] == 1

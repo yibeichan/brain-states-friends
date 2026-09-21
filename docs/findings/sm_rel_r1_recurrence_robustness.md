@@ -7,9 +7,9 @@
 ## Method (as run)
 
 - Recurrence recomputed from `fractional_occupancy.pkl` at FO thresholds 0.01 / 0.02 / 0.03 / 0.05 (≈ 7 / 14 / 22 / 36 s of a 12-min run) with the main-pipeline definition (fraction of runs with FO strictly above threshold), gated to `recurrence_scores.npy` at 0.02 (`gate.recurrence_max_abs_delta`; Δ = 0 in all six).
-- Eligibility churn counts states whose category among the flag-free set {eligible_for_content_analysis, rare, unused} changes; exclusion flags (sub-HRF, run-onset-anchored, drift-anchored) are threshold-independent and taken from `state_flags.csv`, whose categories the recomputation reproduces exactly at 0.02 (`gate.category_mismatches`; empty list in all six).
-- π from `best_model.pkl` over active states (`utils.stationary`), gated to `stationary_distribution.npy` (`gate.stationary_max_abs_delta`; 0.0 in all six).
-- Eligibility cut: recurrence ≥ 0.10 (`eligibility_recurrence` in the JSON) among the flag-free states.
+- Eligibility churn counts states whose category among the no-known-flag set {eligible_for_content_analysis, rare, unused} changes; exclusion flags (sub-HRF, run-onset-anchored, drift-anchored) are threshold-independent and taken from `state_flags.csv`, whose categories the recomputation reproduces exactly at 0.02 (`gate.category_mismatches`; empty list in all six).
+- π from `best_model.pkl` over active states (`utils.stationary`), gated to `stationary_distribution.npy` (`gate.stationary_max_abs_delta`; below 1e-15 in all six, against a 1e-6 gate tolerance — the eigen-solve differs at machine epsilon between runs, so this is not exactly zero).
+- Eligibility cut: recurrence ≥ 0.10 (`eligibility_recurrence` in the JSON) among the states carrying no known flag.
 
 ## Results
 
@@ -26,7 +26,7 @@
 
 Across all six participants: min ranges 0.0034–0.0722 and max ranges 0.8166–0.9247, i.e. the overall span is ≈ 0.003–0.925 — consistent with the Results text's pooled 0.003–0.925. The p10/p90 band ranges 0.111–0.223 / 0.700–0.870 across participants, i.e. within the Results text's pooled middle-80% band of 0.11–0.87.
 
-**Gate** (all six): `recurrence_max_abs_delta` = 0.0, `stationary_max_abs_delta` = 0.0, `category_mismatches` = [] (n_runs 194–292, n_states_total 50 in all six).
+**Gate** (all six): `recurrence_max_abs_delta` = 0.0, `stationary_max_abs_delta` < 1e-15 (tolerance 1e-6), `category_mismatches` = [] (n_runs 194–292, n_states_total 50 in all six).
 
 **Rank stability vs the 0.02 reference** (`thresholds[t].rank_stability_vs_reference.rho_reference_active`, Spearman ρ over the reference-active state set):
 
@@ -42,7 +42,7 @@ Across all six participants: min ranges 0.0034–0.0722 and max ranges 0.8166–
 
 (0.02 is the reference threshold itself, so ρ = 1.0 and all churn counts are 0 by construction — omitted from the churn table below.)
 
-**Active- and eligibility-category churn vs the 0.02 reference** (`thresholds[t].churn_vs_reference`; "active" = states with recurrence > 0 at that threshold; "eligible" = flag-free states with recurrence ≥ 0.10):
+**Active- and eligibility-category churn vs the 0.02 reference** (`thresholds[t].churn_vs_reference`; "active" = states with recurrence > 0 at that threshold; "eligible" = no-known-flag states with recurrence ≥ 0.10):
 
 | sub | 0.01 active/eligible Δ | 0.01 gained/lost ids | 0.03 active/eligible Δ | 0.03 gained/lost ids | 0.05 active/eligible Δ | 0.05 gained/lost ids |
 |---|---|---|---|---|---|---|
