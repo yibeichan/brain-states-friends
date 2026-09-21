@@ -60,7 +60,7 @@ CATEGORY_LABELS = {
     "low_confidence": "Low confidence",
     "unused": "Unused",
     "rare": "Rare",
-    "season_temporal": "Season/temporal",
+    "season_temporal": "Drift-anchored",
 }
 
 
