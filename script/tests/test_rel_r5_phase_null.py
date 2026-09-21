@@ -356,3 +356,197 @@ def test_format_signed_handles_negative_and_none():
     assert format_signed(-0.12) == "-0.12"
     assert format_signed(3.14159, ".1f") == "+3.1"
     assert format_signed(None) == "n/a"
+
+
+# --------------------------------------------------------------------------
+# Stimulus registry and loaders (HP/PP extension)
+# --------------------------------------------------------------------------
+import json
+
+
+def _make_proj(base, stimulus, sub="sub-01", parc="atlas-4S156Parcels", vt="0.95",
+               groups=None, n_t=40, n_cols=8):
+    """Write a fake projected-run tree for one stimulus under `base`."""
+    groups = groups or {"g1": 2, "g2": 1}
+    spec = m.STIMULI[stimulus]
+    d = base / spec["proj_dir"] / parc / sub / f"vt{vt}"
+    d.mkdir(parents=True)
+    rng = np.random.default_rng(0)
+    ids = {}
+    for g, n in groups.items():
+        ids[g] = [f"{g}_run{i}" for i in range(n)]
+        for rid in ids[g]:
+            np.save(d / f"{rid}.npy", rng.normal(size=(n_t, n_cols)))
+    (d / spec["run_ids_file"]).write_text(json.dumps(ids))
+    return d
+
+
+def _make_summary(base, stimulus, rho=0.3, n_runs=3, n_active=5,
+                  sub="sub-01", parc="atlas-4S156Parcels", vt="0.95"):
+    spec = m.STIMULI[stimulus]
+    d = base / spec["summary_dir"] / parc / sub / f"vt{vt}"
+    d.mkdir(parents=True)
+    (d / "cross_stimulus_summary.json").write_text(json.dumps({
+        spec["n_runs_key"]: n_runs,
+        "A1_recurrence_correlation": {"spearman_rho": rho, "n_active_states": n_active},
+    }))
+    return d
+
+
+def test_registry_covers_the_three_held_out_stimuli():
+    assert set(m.STIMULI) == {"movie10", "harrypotter", "petitprince"}
+    for spec in m.STIMULI.values():
+        assert set(spec) == {"proj_dir", "run_ids_file", "summary_dir", "n_runs_key"}
+
+
+def test_load_stimulus_runs_truncates_and_returns_group_indices(tmp_path):
+    _make_proj(tmp_path, "harrypotter", groups={"harrypotter": 3}, n_cols=8)
+    runs, groups = m.load_stimulus_runs("sub-01", "atlas-4S156Parcels", "0.95",
+                                        n_pcs=6, stimulus="harrypotter", base=str(tmp_path))
+    assert len(runs) == 3 and all(r.shape == (40, 6) for r in runs)
+    assert groups == {"harrypotter": [0, 1, 2]}
+
+
+def test_group_indices_follow_registry_order(tmp_path):
+    _make_proj(tmp_path, "petitprince", groups={"lppFR": 2, "lppEN": 2})
+    runs, groups = m.load_stimulus_runs("sub-01", "atlas-4S156Parcels", "0.95",
+                                        n_pcs=6, stimulus="petitprince", base=str(tmp_path))
+    assert groups == {"lppFR": [0, 1], "lppEN": [2, 3]}
+    assert len(runs) == 4
+
+
+def test_missing_projection_dir_is_a_clean_skip(tmp_path):
+    with pytest.raises(m.NoStimulusDataError):
+        m.load_stimulus_runs("sub-04", "atlas-4S156Parcels", "0.95",
+                             n_pcs=6, stimulus="harrypotter", base=str(tmp_path))
+
+
+def test_missing_single_run_is_a_hard_failure(tmp_path):
+    d = _make_proj(tmp_path, "harrypotter", groups={"harrypotter": 2})
+    (d / "harrypotter_run1.npy").unlink()
+    with pytest.raises(FileNotFoundError):
+        m.load_stimulus_runs("sub-01", "atlas-4S156Parcels", "0.95",
+                             n_pcs=6, stimulus="harrypotter", base=str(tmp_path))
+
+
+def test_movie_wrapper_returns_runs_only(tmp_path, monkeypatch):
+    _make_proj(tmp_path, "movie10", groups={"bourne": 1, "wolf": 1})
+    (tmp_path / "scratch").mkdir()
+    (tmp_path / "scratch" / "output").symlink_to(tmp_path)
+    monkeypatch.setattr(m, "SCRATCH_DIR", str(tmp_path / "scratch"))  # output_base() = SCRATCH_DIR/output
+    runs = m.load_movie_runs("sub-01", "atlas-4S156Parcels", "0.95", n_pcs=6)
+    assert isinstance(runs, list) and len(runs) == 2
+
+
+def test_published_reference_reads_the_stimulus_run_count_key(tmp_path):
+    _make_summary(tmp_path, "petitprince", rho=0.12, n_runs=18, n_active=46)
+    ref = m.published_reference("sub-01", "atlas-4S156Parcels", "0.95",
+                                stimulus="petitprince", base=str(tmp_path))
+    assert ref == {"rho": 0.12, "n_runs": 18, "n_active_states": 46}
+
+
+def test_published_reference_missing_summary_is_a_clean_skip(tmp_path):
+    with pytest.raises(m.NoStimulusDataError):
+        m.published_reference("sub-04", "atlas-4S156Parcels", "0.95",
+                              stimulus="harrypotter", base=str(tmp_path))
+
+
+def _make_model_dir(base, sub="sub-01", parc="atlas-4S156Parcels", vt="0.95"):
+    d = base / "04_combined_hdphmm" / parc / sub / "final" / f"vt{vt}"
+    d.mkdir(parents=True)
+    return d
+
+
+def test_ensure_stimulus_available_requires_both_projection_and_summary(tmp_path):
+    _make_model_dir(tmp_path)
+    _make_proj(tmp_path, "harrypotter", groups={"harrypotter": 1})
+    with pytest.raises(m.NoStimulusDataError):   # summary missing
+        m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
+                                    "harrypotter", base=str(tmp_path))
+    _make_summary(tmp_path, "harrypotter")
+    m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
+                                "harrypotter", base=str(tmp_path))  # no raise
+
+
+def test_ensure_stimulus_available_raises_filenotfound_when_model_dir_missing(tmp_path):
+    """A mistyped --parcellation/--vt must not masquerade as a clean stimulus skip."""
+    with pytest.raises(FileNotFoundError, match="no fitted model"):
+        m.ensure_stimulus_available("sub-01", "atlas-4S156Parcels", "0.95",
+                                    "harrypotter", base=str(tmp_path))
+
+
+def test_ensure_stimulus_available_raises_no_stimulus_when_model_dir_present(tmp_path):
+    """sub-04's actual behaviour: model exists, but the stimulus's projection does not."""
+    _make_model_dir(tmp_path, sub="sub-04")
+    with pytest.raises(m.NoStimulusDataError):
+        m.ensure_stimulus_available("sub-04", "atlas-4S156Parcels", "0.95",
+                                    "harrypotter", base=str(tmp_path))
+
+
+# --------------------------------------------------------------------------
+# CLI surface: output paths, per-group statistics, clean skip
+# --------------------------------------------------------------------------
+def test_default_out_dir_keeps_legacy_movie10_path(monkeypatch):
+    monkeypatch.setattr(m, "SCRATCH_DIR", "/scr")
+    assert m.default_out_dir("movie10", "atlas-4S156Parcels", "sub-01", "0.95") == \
+        "/scr/output/sm_rel_r5_phase_null/atlas-4S156Parcels/sub-01/vt0.95"
+
+
+def test_default_out_dir_nests_other_stimuli(monkeypatch):
+    monkeypatch.setattr(m, "SCRATCH_DIR", "/scr")
+    assert m.default_out_dir("harrypotter", "atlas-4S156Parcels", "sub-02", "0.95") == \
+        "/scr/output/sm_rel_r5_phase_null/harrypotter/atlas-4S156Parcels/sub-02/vt0.95"
+
+
+def test_occupancy_stats_single_group_equals_overall():
+    rng = np.random.default_rng(3)
+    n_states = 6
+    paths = [rng.integers(0, n_states, size=50) for _ in range(4)]
+    recurrence = rng.uniform(size=n_states)
+    active = np.arange(n_states)
+    overall, by_group = m.occupancy_stats(paths, n_states, recurrence, active,
+                                          groups={"all": [0, 1, 2, 3]})
+    assert by_group is not None and set(by_group) == {"all"}
+    assert by_group["all"] == pytest.approx(overall.statistic)
+
+
+def test_occupancy_stats_without_groups_returns_none():
+    paths = [np.array([0, 1, 1, 2]), np.array([2, 2, 0, 1])]
+    overall, by_group = m.occupancy_stats(paths, 3, np.array([0.2, 0.5, 0.9]),
+                                          np.arange(3), groups=None)
+    assert by_group is None and np.isfinite(overall.statistic)
+
+
+def test_occupancy_stats_group_uses_only_its_runs():
+    n_states = 3
+    p_a = np.array([0, 0, 0, 1])          # group A mostly state 0
+    p_b = np.array([2, 2, 2, 1])          # group B mostly state 2
+    recurrence = np.array([0.9, 0.5, 0.1])
+    _, by_group = m.occupancy_stats([p_a, p_b], n_states, recurrence, np.arange(n_states),
+                                    groups={"A": [0], "B": [1]})
+    assert by_group["A"] > 0 and by_group["B"] < 0
+
+
+def test_write_skip_records_reason(tmp_path):
+    path = m.write_skip(str(tmp_path / "out"), "sub-04", "harrypotter", "no data")
+    j = json.loads(open(path).read())
+    assert j == {"sub_id": "sub-04", "stimulus": "harrypotter", "skipped": True, "reason": "no data"}
+
+
+def test_main_skips_cleanly_when_stimulus_absent(tmp_path, monkeypatch):
+    scratch = tmp_path / "scratch"
+    (scratch / "output").mkdir(parents=True)
+    _make_model_dir(scratch / "output", sub="sub-04")
+    monkeypatch.setattr(m, "SCRATCH_DIR", str(scratch))
+    out = tmp_path / "out"
+    monkeypatch.setattr(sys, "argv", ["prog", "--sub_id", "sub-04", "--stimulus", "harrypotter",
+                                      "--n_null", "3", "--out_dir", str(out)])
+    with pytest.raises(SystemExit) as e:
+        m.main()
+    assert e.value.code == 0
+    assert (out / "skipped.json").exists()
+
+
+def test_parser_defaults_are_the_published_run():
+    a = m.build_parser().parse_args(["--sub_id", "sub-01"])
+    assert a.stimulus == "movie10" and a.per_group is False and a.n_null == 10000

@@ -55,7 +55,7 @@ CATEGORY_DISPLAY_NAMES = {
     "unused": "Unused",
     "low_confidence": "Low confidence",
     "run_onset_anchored": "Run-onset anchored",
-    "season_temporal": "Season/temporal",
+    "season_temporal": "Drift-anchored",
     "eligible_for_content_analysis": "Eligible",
     "rare": "Rare",
     "unknown": "Unknown",
