@@ -15,3 +15,12 @@ logs/*
 !logs/.gitkeep
 .claude/
 .superpowers/
+
+# git worktrees checked out inside the repo (embedded repos, never content)
+.worktrees/
+
+# plans and specs from tooling; not part of the supplement
+docs/superpowers/
+
+# local project-page staging (see main's site-staging rule)
+site-staging/
