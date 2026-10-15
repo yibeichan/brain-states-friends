@@ -88,8 +88,9 @@ def test_fit_spatial_ica_orientation_and_reconstruction():
 def test_fit_spatial_ica_full_rank_on_degenerate_spectrum():
     # Orthonormal loadings give an all-equal SVD spectrum. sklearn's
     # np.sign(u[0]) step zeroed whitening directions on about a third of these
-    # inputs (data seed 19 / random_state 2 among them), which broke the
-    # full-rank reconstruction. Every fit must keep all directions.
+    # data seeds (19 among them), depending on the BLAS kernel, which broke
+    # the full-rank reconstruction. The whitening does not depend on
+    # random_state, so one fit per data seed suffices.
     from utils.ica_states import fit_spatial_ica
     n_pcs, P, T = 8, 156, 400
     for data_seed in range(20):
@@ -97,14 +98,13 @@ def test_fit_spatial_ica_full_rank_on_degenerate_spectrum():
         Q, _ = np.linalg.qr(rng.normal(size=(P, n_pcs)))
         components = Q.T
         X_pc = rng.normal(size=(T, n_pcs))
-        for rs in (0, 2):
-            out = fit_spatial_ica(components, X_pc, n_components=n_pcs,
-                                  random_state=rs)
-            assert np.linalg.matrix_rank(out["components_"]) == n_pcs
-            recon = (out["timecourses"] @ out["maps"].T
-                     + (X_pc @ out["mean_"])[:, None])
-            r = np.corrcoef((X_pc @ components).ravel(), recon.ravel())[0, 1]
-            assert r > 0.999999, (data_seed, rs, r)
+        out = fit_spatial_ica(components, X_pc, n_components=n_pcs,
+                              random_state=0)
+        assert np.linalg.matrix_rank(out["components_"]) == n_pcs
+        recon = (out["timecourses"] @ out["maps"].T
+                 + (X_pc @ out["mean_"])[:, None])
+        r = np.corrcoef((X_pc @ components).ravel(), recon.ravel())[0, 1]
+        assert r > 0.999999, (data_seed, r)
 
 
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")

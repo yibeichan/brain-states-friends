@@ -44,7 +44,8 @@ def fit_spatial_ica(components, X_pc, n_components, random_state=0,
     sklearn's classical whitening step for step (same centring, same SVD on
     the same Fortran-ordered array, same sqrt(n_samples) scaling, same
     w_init draw), except that a zero sign is taken as +1. When no zero
-    occurs the result is bit-identical to ``whiten="arbitrary-variance"``.
+    occurs and the input is float64 the result is bit-identical to
+    ``whiten="arbitrary-variance"``; float32 input is computed in float64.
     """
     X_spatial = np.asarray(components, dtype=float).T   # (n_parcels, n_pcs)
     n_parcels, n_pcs = X_spatial.shape
@@ -60,7 +61,10 @@ def fit_spatial_ica(components, X_pc, n_components, random_state=0,
     u *= sign
     K = (u / d).T[:n_components]                         # whitening matrix
     X1 = (K @ XT) * np.sqrt(n_parcels)
-    ica = FastICA(n_components=n_components, fun=fun, max_iter=max_iter,
+    # n_components=None: with whiten=False sklearn takes the component count
+    # from the data (X1 already has n_components columns) and would otherwise
+    # warn that the argument is ignored.
+    ica = FastICA(n_components=None, fun=fun, max_iter=max_iter,
                   whiten=False, random_state=random_state)
     ica.fit(X1.T)
     unmixing = ica.components_ @ K                       # (K, n_pcs)
