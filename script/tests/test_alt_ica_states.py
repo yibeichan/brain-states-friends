@@ -84,6 +84,47 @@ def test_fit_spatial_ica_orientation_and_reconstruction():
     assert r > 0.99
 
 
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_fit_spatial_ica_full_rank_on_degenerate_spectrum():
+    # Orthonormal loadings give an all-equal SVD spectrum. sklearn's
+    # np.sign(u[0]) step zeroed whitening directions on about a third of these
+    # inputs (data seed 19 / random_state 2 among them), which broke the
+    # full-rank reconstruction. Every fit must keep all directions.
+    from utils.ica_states import fit_spatial_ica
+    n_pcs, P, T = 8, 156, 400
+    for data_seed in range(20):
+        rng = np.random.default_rng(data_seed)
+        Q, _ = np.linalg.qr(rng.normal(size=(P, n_pcs)))
+        components = Q.T
+        X_pc = rng.normal(size=(T, n_pcs))
+        for rs in (0, 2):
+            out = fit_spatial_ica(components, X_pc, n_components=n_pcs,
+                                  random_state=rs)
+            assert np.linalg.matrix_rank(out["components_"]) == n_pcs
+            recon = (out["timecourses"] @ out["maps"].T
+                     + (X_pc @ out["mean_"])[:, None])
+            r = np.corrcoef((X_pc @ components).ravel(), recon.ravel())[0, 1]
+            assert r > 0.999999, (data_seed, rs, r)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_fit_spatial_ica_matches_sklearn_whitening_when_no_zero_sign():
+    # On a non-degenerate spectrum the explicit whitening must reproduce
+    # FastICA(whiten="arbitrary-variance") exactly.
+    from sklearn.decomposition import FastICA
+    from utils.ica_states import fit_spatial_ica
+    rng = np.random.default_rng(3)
+    components = rng.normal(size=(10, 156)) * np.linspace(3, 0.5, 10)[:, None]
+    X_pc = rng.normal(size=(200, 10))
+    out = fit_spatial_ica(components, X_pc, n_components=6, random_state=1)
+    ref = FastICA(n_components=6, max_iter=1000, whiten="arbitrary-variance",
+                  random_state=1)
+    ref_maps = ref.fit_transform(components.T)
+    np.testing.assert_array_equal(out["maps"], ref_maps)
+    np.testing.assert_array_equal(out["mixing"], ref.mixing_)
+    np.testing.assert_array_equal(out["components_"], ref.components_)
+
+
 def test_match_maps_hungarian_recovers_permutation_and_sign():
     from utils.ica_states import match_maps_hungarian
     rng = np.random.default_rng(0)
