@@ -6,8 +6,8 @@ pipeline).
 - Panel A (headline): K-sweep convergence heatmap. Spatial agreement between
   ICA components and HDP-HMM state-mean maps is granularity-dependent (null at
   coarse, HMM-independent K; emerging only as ICA dimensionality approaches each
-  subject's K_active) and strongly subject-variable.
-- Panel B: per-state matched spatial correlation at K_active, one dot per HMM
+  subject's K_used) and strongly subject-variable.
+- Panel B: per-state matched spatial correlation at K_used, one dot per HMM
   state (subject on x, category by colour). Convergence is taxonomy-agnostic
   (categories intermix across the |r| range within each subject) while the
   per-subject median shifts (subject is a dominant axis).
@@ -23,7 +23,7 @@ assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 | Panel | Content | Source files |
 |---|---|---|
 | A | Convergence heatmap: 6 subjects x ICA K; colour = FDR-surviving fraction of eligible pairs, cell text = surviving/total counts | sm_ica_states/*/ica_match_summary.json |
-| B | Per-state matched spatial |r| at K_active; x = subject, colour = taxonomy category, black tick = per-subject median | sm_ica_states/*/ica_match_summary.json + 05e_temporal_trend_a4/*/state_flags.csv |
+| B | Per-state matched spatial |r| at K_used; x = subject, colour = taxonomy category, black tick = per-subject median | sm_ica_states/*/ica_match_summary.json + 05e_temporal_trend_a4/*/state_flags.csv |
 
 Run:
     marimo edit script/fig_sm_alt_ica_matching.py
@@ -58,7 +58,7 @@ def config(json, os):
     SCRATCH = os.getenv("SCRATCH_DIR")
     PARC = "atlas-4S156Parcels"
     SUBS = [f"sub-0{i}" for i in range(1, 7)]
-    # K columns: primary HMM-independent low-dim set | near-K_active sensitivity grid
+    # K columns: primary HMM-independent low-dim set | near-K sensitivity grid
     KS = ["15", "25", "35", "41", "42", "43", "44", "45", "46", "47"]
     SEP_AFTER = 2  # divider between column index 2 (K=35) and 3 (K=41)
     OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "fig_sm_ica")
@@ -139,7 +139,7 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
             _ax.text(_j, _i, f"{_surv[_i, _j]}/{_tot[_i, _j]}",
                      ha="center", va="center", fontsize=6, color=_txt_c)
 
-    # divider between the primary low-dim set {15,25,35} and the near-K_active
+    # divider between the primary low-dim set {15,25,35} and the near-K
     # sensitivity grid {41-47}; grey so it stays visible over the light cells
     _ax.axvline(SEP_AFTER + 0.5, color="0.35", lw=1.2)
 
@@ -167,7 +167,7 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
 @app.cell
 def panel_B_per_state(OUT, RAW2DISP, SUBS, TAX_COLORS, TAX_ORDER,
                       ica_summaries, state_cats, np, plt):
-    # One dot per matched HMM state at K_active. Subject = x-position,
+    # One dot per matched HMM state at K_used. Subject = x-position,
     # category = colour (CB-safe manuscript palette), matched spatial |r| = y.
     # Shows the full per-subject distribution and category composition, rather
     # than a per-category mean. Median |r| per subject drawn as a short tick.

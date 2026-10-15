@@ -44,9 +44,9 @@ far below the truncation capacity:
 
 The two estimators agree, and results are stable across seeds.
 
-**Against the data.** Applying the same 1% global occupancy threshold to each
-participant's full Viterbi-decoded sequence yields 37–42 occupied states — an order
-of magnitude above the prior. (That is the usage-based count; the recurrence-based
+**Against the data.** The fitted models' occupied-state count under the same 1%
+threshold (K_used: posterior usage at the final EM iteration above 0.01) is 37–42
+per participant, an order of magnitude above the prior. (That is the usage-based count; the recurrence-based
 repertoire of 42–47 used in downstream analyses applies a different per-run 2%
 threshold and is not the comparison here.)
 

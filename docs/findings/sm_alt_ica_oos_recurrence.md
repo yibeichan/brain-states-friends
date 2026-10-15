@@ -8,15 +8,15 @@ Do the consensus ICA maps fit to Friends also emerge as recurring states when th
 
 ## Method (as run)
 
-- **Inputs, frozen:** the same vt=0.95 PCA subspace used in the main analysis (saved from `script/03a_pca.py`), per-subject K_active consensus ICA maps from `sm_alt_ica_states`, and per-subject PC scores for the OOS runs (Movie10 from `m10_03`, Harry Potter from `hp_03`, Petit Prince from `pp_03`). The Friends side (recurrence x-axis) is identical across all three stimuli — only the OOS occupancy (y-axis) changes.
+- **Inputs, frozen:** the same vt=0.95 PCA subspace used in the main analysis (saved from `script/03a_pca.py`), per-subject K_used consensus ICA maps from `sm_alt_ica_states` (K_used is the fitted model's occupied-state count (posterior usage above 0.01 at the final EM iteration; 37–42 per subject), stored as `K_active` in the output JSONs. It is distinct from the active-state count (fractional occupancy above 0.02 in at least one run; 42–47 per subject).), and per-subject PC scores for the OOS runs (Movie10 from `m10_03`, Harry Potter from `hp_03`, Petit Prince from `pp_03`). The Friends side (recurrence x-axis) is identical across all three stimuli — only the OOS occupancy (y-axis) changes.
 - **Stimulus registry:** the three datasets are resolved through a `STIMULI` registry (`{proj_dir, run_ids_file}`); the per-group ("per-film") breakdown comes straight from each dataset's `run_ids.json` keys (Movie10 → 4 films; Harry Potter → single `harrypotter` group; Petit Prince → `lppFR` + `lppEN`).
-- **Projection (no refit):** given the consensus ICA component matrix `C` (K_active × n_pcs) and the PCA component matrix `M` (n_pcs × n_parcels), the ICA projection into parcel space is reconstructed as `proj = C @ M @ pinv(MᵀM)`. This projects each OOS TR into the ICA component space using only the frozen Friends-derived components; no parameters are estimated from OOS data.
+- **Projection (no refit):** given the consensus ICA component matrix `C` (K_used × n_pcs) and the PCA component matrix `M` (n_pcs × n_parcels), the ICA projection into parcel space is reconstructed as `proj = C @ M @ pinv(MᵀM)`. This projects each OOS TR into the ICA component space using only the frozen Friends-derived components; no parameters are estimated from OOS data.
 - **Winner-take-all (WTA) labels:** each OOS run's PC scores are z-scored across time; the signed argmax across ICA components at each TR gives the WTA label. Recurrence is scored per component: a component is "recurrent" in a given run if its fractional occupancy (FO) exceeds 0.02. The primary metric is the Spearman correlation (ρ) between per-component Friends recurrence (fraction of Friends runs with FO > 0.02) and per-component OOS WTA fractional occupancy (mean across the dataset's runs).
 - **Continuous arm (secondary):** per-run z-scored ICA activations are L1-normalized to give magnitude shares (continuous occupancy) and the same Spearman ρ is computed against Friends recurrence. Because per-run z-scoring equalizes each component's variance, this arm can only exploit distributional shape, not amplitude spread.
 - **Phase-randomized null:** the raw ρ above is dominated by structure shared between any two scans of the same brain in the same PC subspace (power spectrum + covariance), independent of stimulus content. To isolate the genuinely stimulus-specific component we compute a multivariate phase-randomized (Prichard–Theiler) null: each OOS run's PC scores are FFT phase-scrambled with a shared random phase across PCs (preserving each PC's power spectrum *and* the cross-PC covariance, destroying only stimulus-specific phase/higher-order structure), re-projected through the frozen ICA, and the overall Spearman recomputed. **1000 draws** per subject give a null mean, a z = (real − null mean)/null sd, a one-sided empirical p = (1 + #{null ≥ real}) / (1 + n_draws), and a residual = real − null mean. The residual is the part of the correlation attributable to the stimulus's stimulus-specific structure. (Phase 1 used 100 draws; the n=100 movie10 values are preserved below as a frozen block. The empirical p floor is 1/1001 ≈ 0.001 at 1000 draws.)
 - **Run-count asymmetry:** Movie10 has ~61 runs/subject, Harry Potter 7, Petit Prince 18 (16 for sub-06). The phase-randomized null per draw has only as many independent segments as there are runs, so the null mean/sd (hence z and the residual) are estimated more noisily for Harry Potter (7 runs) than for Movie10. For Harry Potter the Gaussian-style z is read as descriptive only; the empirical p and the null distribution are the appropriate summaries.
 - **Recurrence ≈ marginal occupancy (caveat, applies to all three stimuli):** the Friends recurrence score is nearly identical to each component's marginal Friends WTA-occupancy (Spearman ρ = 0.985–0.994 across subjects). This is an x-axis-only property (derived entirely from Friends), so it carries **identically** to all three OOS datasets. "Recurrence" here is essentially a long-run occupancy measure, and the cross-stimulus result is best read as "intrinsically high-occupancy components are preferentially occupied out-of-stimulus," not as transfer of a distinct recurrence property.
-- **Model naming:** the upstream HMM whose PCA subspace and K_active value are inherited here is a finite (weak-limit, K_max=50) Gaussian-emission HMM with sticky self-transition and hierarchical-Dirichlet transition-concentration priors — not the nonparametric Bayesian model those priors are borrowed from.
+- **Model naming:** the upstream HMM whose PCA subspace and K_used value are inherited here is a finite (weak-limit, K_max=50) Gaussian-emission HMM with sticky self-transition and hierarchical-Dirichlet transition-concentration priors — not the nonparametric Bayesian model those priors are borrowed from.
 - **Independent data sources:** the x-axis (Friends recurrence) derives entirely from Friends data; the y-axis (OOS occupancy) derives entirely from the held-out stimulus. The ICA components were fit on Friends. No OOS information enters the ICA fitting or the projection.
 
 ## Subject coverage
@@ -29,7 +29,7 @@ Do the consensus ICA maps fit to Friends also emerge as recurring states when th
 
 ## Results
 
-All statistics are per-subject descriptive values (Spearman ρ with two-sided p, n = K_active components). There is no across-subject test, pooled ρ, or cohort-level significance, and **no cross-stimulus / modality comparison is made** — the run-count differences (61 / 7 / 18) and subject-set differences (n=6 vs n=5) make any apparent Movie10-vs-HP/PP difference uninterpretable even descriptively. Movie10 is audiovisual; Harry Potter and Petit Prince are auditory; we draw no audiovisual-vs-auditory contrast.
+All statistics are per-subject descriptive values (Spearman ρ with two-sided p, n = K_used components). There is no across-subject test, pooled ρ, or cohort-level significance, and **no cross-stimulus / modality comparison is made** — the run-count differences (61 / 7 / 18) and subject-set differences (n=6 vs n=5) make any apparent Movie10-vs-HP/PP difference uninterpretable even descriptively. Movie10 is audiovisual; Harry Potter and Petit Prince are auditory; we draw no audiovisual-vs-auditory contrast.
 
 ### Movie10 (audiovisual)
 
@@ -48,7 +48,7 @@ Overall WTA arm, real ρ vs the 100-draw phase-randomized null (these are the or
 
 #### Overall (n_null = 1000, live)
 
-| sub | K_active | WTA ρ | WTA p | continuous ρ | continuous p |
+| sub | K_used | WTA ρ | WTA p | continuous ρ | continuous p |
 |-----|----------|--------|-------|--------------|--------------|
 | 01 | 42 | 0.952 | 3.3e-22 | 0.641 | 4.7e-06 |
 | 02 | 42 | 0.916 | 1.9e-17 | 0.541 | 2.2e-04 |
@@ -74,7 +74,7 @@ The 1000-draw re-run reproduces the real ρ exactly (it is RNG-independent) and 
 
 Overall WTA arm, real ρ vs the 1000-draw null:
 
-| sub | K_active | WTA real ρ | null mean | z | p (null) | residual | recurrence≈marginal ρ |
+| sub | K_used | WTA real ρ | null mean | z | p (null) | residual | recurrence≈marginal ρ |
 |-----|----------|-----------|-----------|------|----------|----------|-----------------------|
 | 01 | 42 | 0.876 | 0.743 | +3.33 | 0.0020 | +0.133 | 0.990 |
 | 02 | 42 | 0.632 | 0.606 | +0.39 | 0.3506 | +0.026 | 0.994 |
@@ -90,7 +90,7 @@ The residual is **positive for all 5 subjects but exceeds the null significantly
 
 Overall WTA arm, real ρ vs the 1000-draw null:
 
-| sub | K_active | WTA real ρ | null mean | z | p (null) | residual | recurrence≈marginal ρ |
+| sub | K_used | WTA real ρ | null mean | z | p (null) | residual | recurrence≈marginal ρ |
 |-----|----------|-----------|-----------|------|----------|----------|-----------------------|
 | 01 | 42 | 0.881 | 0.821 | +2.19 | 0.0100 | +0.060 | 0.990 |
 | 02 | 42 | 0.808 | 0.694 | +2.31 | 0.0120 | +0.115 | 0.994 |
@@ -126,7 +126,7 @@ Against the phase-randomized null the continuous-occupancy residual is mostly **
 
 #### WTA ρ per film
 
-| sub | K_active | bourne | wolf | figures | life |
+| sub | K_used | bourne | wolf | figures | life |
 |-----|----------|--------|------|---------|------|
 | 01 | 42 | 0.814 | 0.937 | 0.924 | 0.761 |
 | 02 | 42 | 0.814 | 0.899 | 0.920 | 0.741 |
@@ -137,7 +137,7 @@ Against the phase-randomized null the continuous-occupancy residual is mostly **
 
 #### Continuous ρ per film
 
-| sub | K_active | bourne | wolf | figures | life |
+| sub | K_used | bourne | wolf | figures | life |
 |-----|----------|--------|------|---------|------|
 | 01 | 42 | 0.596 | 0.590 | 0.613 | 0.312 |
 | 02 | 42 | 0.507 | 0.523 | 0.496 | 0.430 |
@@ -156,7 +156,7 @@ The ICA decomposition reproduces the main-analysis R5 pattern across three held-
 
 `output/sm_ica_oos_recurrence/atlas-4S156Parcels/{sub}/{stimulus}/oos_recurrence_summary.json` (in SCRATCH, not tracked in this repository), one per (subject, stimulus). The published Phase-1 movie10 100-draw summaries are archived at `…/{sub}/_phase1_n100/oos_recurrence_summary.json`.
 
-Fields: `sub_id`, `parcellation`, `vt`, `stimulus`, `n_null`, `K_active`, `n_components`, `fo_threshold`, `n_movie_runs` (historical name = total OOS runs for the stimulus), `friends_recurrence` (per-component), `movie_occupancy_wta` (per-component OOS WTA occupancy; historical key name), `movie_occupancy_continuous` (per-component), `recurrence_vs_friends_marginal_wta_rho` (the ≈0.99 caveat), `overall` (WTA + continuous ρ/p/n, each with a `null` block `{mean, sd, z, p, n_draws, residual}` from the phase-randomized null), `per_film` (per-group, each with `n_runs` + WTA + continuous ρ/p/n — raw, not null-corrected). Note: the `movie_*` key names are historical/generic and apply to all three stimuli.
+Fields: `sub_id`, `parcellation`, `vt`, `stimulus`, `n_null`, `K_active` (= K_used), `n_components`, `fo_threshold`, `n_movie_runs` (historical name = total OOS runs for the stimulus), `friends_recurrence` (per-component), `movie_occupancy_wta` (per-component OOS WTA occupancy; historical key name), `movie_occupancy_continuous` (per-component), `recurrence_vs_friends_marginal_wta_rho` (the ≈0.99 caveat), `overall` (WTA + continuous ρ/p/n, each with a `null` block `{mean, sd, z, p, n_draws, residual}` from the phase-randomized null), `per_film` (per-group, each with `n_runs` + WTA + continuous ρ/p/n — raw, not null-corrected). Note: the `movie_*` key names are historical/generic and apply to all three stimuli.
 
 ## Companion figure
 

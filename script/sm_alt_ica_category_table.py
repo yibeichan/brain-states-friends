@@ -2,14 +2,14 @@
 """Supplement table: ICA-HMM correspondence by HMM-state taxonomy category.
 
 Pure post-hoc AGGREGATION of the saved sm_ica_states results -- no ICA re-run,
-no re-matching, no new statistics. For each subject, takes the K_active "all"
-state-set matched pairs (ICA components Hungarian-matched to the full active HMM
-repertoire), labels each matched HMM state by its summary_category (from the 05e
+no re-matching, no new statistics. For each subject, takes the K_used (key "K_active") "all"
+state-set matched pairs (ICA components Hungarian-matched to every HMM state the
+Viterbi path visits at least once), labels each matched HMM state by its summary_category (from the 05e
 state_flags.csv), and tabulates spatial (Tier-1) and temporal (Tier-2)
 correspondence per category.
 
 FDR note: spatial_q / tier2_q are read straight from the JSON, where BH-FDR was
-applied within the full active-set family at that K. The per-category "surviving"
+applied within the all-visited-set family at that K. The per-category "surviving"
 counts are therefore descriptive subsets of that single within-subject family
 (not separately re-corrected per category).
 
@@ -160,7 +160,7 @@ def to_markdown(df):
         "",
         "Temporal mean rho is signed (one-sided test for positive sign-aligned "
         "correspondence); negative values indicate directional mismatch, not "
-        "magnitude. Spatial q is BH-FDR within each subject's full active-set "
+        "magnitude. Spatial q is BH-FDR within each subject's all-visited-set "
         "family; per-category counts are descriptive subsets, not re-corrected. "
         "Tier-2 p-values are conditional on the Tier-1 spatial match; "
         "low-occupancy states are excluded from the temporal test (–).",

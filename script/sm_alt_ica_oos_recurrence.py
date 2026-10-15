@@ -8,7 +8,7 @@ group-level statistic.
 
 Inputs (frozen, from earlier pipeline):
     03a/04: PCA model, n_pcs lookup, projected Friends runs, decoded states.
-    sm_ica_states: K_active consensus maps (ica_maps_K{K_active}.npy).
+    sm_ica_states: K_used consensus maps (ica_maps_K{K_active}.npy; key "K_active").
     m10_03: Movie10 PC-score projections (movie_run_ids.json + {run_id}.npy).
 
 Output:
@@ -63,7 +63,7 @@ STIMULI = {
 
 
 def load_friends_inputs(sub_id, parcellation, vt):
-    """Load frozen PCA components, K_active consensus maps, Friends X_pc, and run
+    """Load frozen PCA components, K_used consensus maps, Friends X_pc, and run
     boundaries.  Mirrors sm_alt_ica_states.run_subject exactly: same split order,
     same projected-dir, same n_pcs slice.
     """

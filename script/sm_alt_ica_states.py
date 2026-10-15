@@ -2,9 +2,11 @@
 """Supplementary: ICA as an alternative state-discovery method.
 
 Per subject: spatial ICA on the vt=0.95 PC subspace (sweep K in {15,25,35} plus
-K_active), matched against HMM state maps (Tier 1), with temporal correspondence
-(Tier 2) and WTA label agreement (Tier 3). Both eligible-only and all-active
-HMM state sets are computed.
+K_used, the fitted model's occupied-state count, final_refit.n_active_states;
+stored under the key "K_active"), matched against HMM state maps (Tier 1), with temporal correspondence
+(Tier 2) and WTA label agreement (Tier 3). Both eligible-only and all-visited
+HMM state sets are computed ("all" = every state the Viterbi path visits at
+least once, a looser set than the active states, FO > 0.02 in at least one run).
 """
 import os
 import sys
@@ -138,7 +140,7 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
 
     elig = load_content_eligibility(sub_id, parcellation, SCRATCH_DIR, vt=vt)
     eligible = sorted(int(s) for s in elig.get("content_eligible", []))
-    # 'all active' = states the Viterbi path actually visits (posteriors are
+    # 'all' = states the Viterbi path actually visits (posteriors are
     # dense, so a mean>0 proxy would include every state).
     all_active = sorted(int(s) for s in np.unique(viterbi))
 
