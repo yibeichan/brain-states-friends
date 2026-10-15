@@ -32,7 +32,9 @@ Analyses (per subject × stimulus × model):
                             states in ``DMN_pos``. Uses the best lag from
                             D1 main (with lag=0 excluded).
     D2                    - per-state, per-layer LORO Logistic+AUC on the
-                            ``content_eligible`` state set (FO ≥ 1%). Null
+                            ``content_eligible`` state set (no further FO
+                            floor; every eligible state has pooled FO above
+                            1%). Null
                             via precomputed circular-shift sequences.
                             Selectivity flags the canonical threshold
                             (``max − median < 0.05``) PLUS sensitivity
@@ -93,7 +95,7 @@ from utils.transformer_analysis import (
     batch_loro_ridge_per_state_auc, build_layer_feature_matrix,
     build_loro_folds, build_run_boundaries, compute_effect_size,
     layer_selectivity, load_content_eligibility, load_or_fit_pca_cache,
-    loro_logistic_auc_cv, loro_ridge_classifier_cv,
+    loro_ridge_classifier_cv,
     precompute_eligible_null_state_sequences,
     precompute_null_state_sequences, stratify_states_by_dominant_network,
     stream_pca_features,
@@ -124,7 +126,6 @@ LAGS_TO_TEST = [0, 1, 2, 3, 4, 5, 6, 7, 8]   # TRs - ~0–12s HRF window.
 PEAK_LAG_EXCLUDE = {0}
 N_PERMUTATIONS_DEFAULT = 1000
 PCA_VARIANCE_THRESHOLD = 0.95
-D2_MIN_FRACTIONAL_OCCUPANCY = 0.01        # raised from 0.005 (old 08d)
 # D2_SELECTIVITY_THRESHOLD is imported from utils.transformer_analysis so
 # that 08d, 08f, and 08g share the same source of truth (== 0.05).
 D2_SELECTIVITY_THRESHOLDS_REPORT = (0.03, 0.05, 0.10)  # sensitivity levels
@@ -881,87 +882,6 @@ def _plot_d2_heatmap(d2_results, n_layers, out_path):
 D2_SCHEMA_VERSION = 3  # Bumped 2026-04-30: vectorised Ridge AUC + n_perm=1000 + per-layer checkpointing
 
 
-def _d2_one_state(
-    state_id, all_states, layer_matrices, null_seqs, folds, n_perm,
-):
-    """Process a single state for D2 (per-state layer AUC).  Designed to be
-    called from ``joblib.Parallel``.
-
-    Returns ``(state_id, result_dict)`` or ``(state_id, None)`` on skip.
-    """
-    y = (all_states == state_id).astype(int)
-    fo = float(y.mean())
-    if fo < D2_MIN_FRACTIONAL_OCCUPANCY:
-        return state_id, None
-
-    layer_auc: dict[int, float] = {}
-    layer_p: dict[int, float] = {}
-    n_pos_obs = int(y.sum())
-    n_pos_per_fold = [int(y[test_idx].sum()) for _, test_idx in folds]
-
-    for layer_idx, X in layer_matrices.items():
-        observed = loro_logistic_auc_cv(X, y, folds)
-        if observed is None:
-            continue
-
-        null_vals = []
-        for i in range(n_perm):
-            y_perm = (null_seqs[i] == state_id).astype(int)
-            if y_perm.sum() < 2:
-                continue
-            null_res = loro_logistic_auc_cv(X, y_perm, folds)
-            if null_res is not None:
-                null_vals.append(null_res["roc_auc"])
-
-        p = permutation_pvalue(
-            observed["roc_auc"], null_vals, alternative="greater",
-        )
-        layer_auc[layer_idx] = round(float(observed["roc_auc"]), 4)
-        layer_p[layer_idx] = round(float(p), 4)
-
-    if not layer_auc:
-        return state_id, None
-
-    # BH-FDR per state across layers.
-    layer_keys = sorted(layer_auc.keys())
-    raw_p = np.array([layer_p[k] for k in layer_keys])
-    p_fdr = benjamini_hochberg(raw_p)
-    layer_p_fdr = {k: round(float(f), 4) for k, f in zip(layer_keys, p_fdr)}
-
-    selectivity = layer_selectivity(layer_auc)
-    m_minus_med = selectivity["max_minus_median"]
-    m_minus_med_finite = (
-        m_minus_med is not None and np.isfinite(m_minus_med)
-    )
-    non_selective = (
-        m_minus_med_finite
-        and m_minus_med < D2_SELECTIVITY_THRESHOLD
-    )
-    non_selective_at = {
-        f"{t:g}": bool(m_minus_med_finite and m_minus_med < t)
-        for t in D2_SELECTIVITY_THRESHOLDS_REPORT
-    }
-
-    result = {
-        "fractional_occupancy": round(fo, 4),
-        "n_positive": n_pos_obs,
-        "n_positive_per_fold_min": int(min(n_pos_per_fold)) if n_pos_per_fold else 0,
-        "n_positive_per_fold_median": int(np.median(n_pos_per_fold)) if n_pos_per_fold else 0,
-        "layer_auc": {str(k): layer_auc[k] for k in layer_keys},
-        "layer_p": {str(k): layer_p[k] for k in layer_keys},
-        "layer_p_fdr": {str(k): layer_p_fdr[k] for k in layer_keys},
-        "selectivity": {
-            k: (int(v) if k == "peak_layer" and v is not None else
-                (round(float(v), 4) if v is not None and np.isfinite(v) else None))
-            for k, v in selectivity.items()
-        },
-        "non_selective": bool(non_selective),
-        "non_selective_at": non_selective_at,
-        "selectivity_threshold_primary": D2_SELECTIVITY_THRESHOLD,
-    }
-    return state_id, result
-
-
 def _build_d2_folds(
     run_ids, run_boundaries, total_trs, n_splits=10, seed=42,
     eligible_mask=None,
@@ -1044,8 +964,6 @@ def _run_d2(
     Design: ``the design notes``
     Schema: v3 (Ridge engine + n_perm=1000 + selectivity_score continuous).
 
-    The legacy ``_d2_one_state`` (LogReg per state × layer) is retained
-    elsewhere in this file for the validation harness only.
     """
     if n_jobs > 1:
         logger.warning(

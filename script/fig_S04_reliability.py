@@ -4,27 +4,27 @@ Home of the matched-pair spatial correlation distribution that Methods cites as
 the reproducibility evidence behind the permissive r > 0.3 Hungarian screen.
 NOTE (2026-08-19): Methods previously attributed that distribution to main
 Figure 1D, but Figure 1D is the split-half *recurrence* scatter (recurrence in
-half A vs half B, Spearman rho 0.60-0.82). The spatial matched-pair r
+half A vs half B, Spearman rho 0.48-0.84 at FO > 0.02). The spatial matched-pair r
 distribution was never in the manuscript; it lives here.
 
 | Panel | Content | Chart family |
 |---|---|---|
 | A | Hungarian-matched parcel-space Pearson r, LOSO folds pooled vs split-half, one small multiple per subject. Violin + strip, mean marked, r = 0.3 screen drawn. | distribution |
-| B | Structural invariants across LOSO folds (k_active, transition entropy, self-transition probability, median Viterbi dwell), one small multiple per invariant, subjects on x. Shaded band is the 10-seed initialization range of the primary model, a relative-scale anchor only, NOT a confidence interval. | point-based 1D |
+| B | Structural invariants across LOSO folds (K_used = states with fitted-model posterior usage > 0.01, transition entropy and self-transition probability over those states, median Viterbi dwell), one small multiple per invariant, subjects on x. Shaded band is the 10-seed initialization range of the primary model, a relative-scale anchor only, NOT a confidence interval. | point-based 1D |
 | C | Raw within-state FC RV for matched pairs and a mismatched-pair null, LOSO and split-half. Ceiling panel: shows that raw RV does not discriminate. | point-based 1D |
 | D | Mean-removed within-state FC cosine, same four groups. The arm that actually discriminates. | point-based 1D |
 
-Audited values (2026-08-19, against 04ra/04rb JSONs):
+Audited values (2026-10-15, against 04ra/04rb JSONs; matching over active
+states, FO > 0.02 in at least one run):
   * Matched-pair r MEAN (not median) per subject.
-    LOSO:       0.912 0.890 0.910 0.910 0.883 0.884  (sub-01..06)
-    Split-half: 0.823 0.811 0.867 0.815 0.850 0.882
-    These reproduce the annotations on the legacy 04rv fig1. The medians are
-    higher (LOSO 0.952-0.985, split-half 0.838-0.958); the distribution is
-    left-skewed, so mean and median differ by design. Panel A marks the mean and
-    labels it as such.
-  * LOSO pooled pair counts: 232 226 234 145 236 221 (sub-04 has 4 folds, not 6).
-  * Fraction of matched pairs above the r = 0.3 screen: 0.946-0.991 (LOSO),
-    0.949-1.000 (split-half).
+    LOSO:       0.905 0.872 0.922 0.882 0.892 0.882  (sub-01..06)
+    Split-half: 0.830 0.805 0.857 0.812 0.793 0.852
+    The medians are higher (LOSO 0.952-0.987, split-half 0.838-0.962); the
+    distribution is left-skewed, so mean and median differ by design. Panel A
+    marks the mean and labels it as such.
+  * LOSO pooled pair counts: 251 248 263 167 256 250 (sub-04 has 4 folds, not 6).
+  * Fraction of matched pairs above the r = 0.3 screen: 0.944-0.996 (LOSO),
+    0.930-1.000 (split-half).
 
 Panels C and D add the within-state FC arm that Methods describes. Correction to
 an earlier note in this file: the legacy ``04rv`` fig7a-d outputs are NOT blank.
@@ -98,7 +98,7 @@ def config(Path, os):
     BAND_COLOR = "#B0B0B0"
 
     INVARIANTS = [
-        ("k_active", "Active states"),
+        ("k_used", "States used\n(K_used)"),
         ("transition_entropy", "Transition entropy"),
         ("self_transition_prob", "Self-transition\nprobability"),
         ("dwell_median_tr", "Median dwell (TR)"),
@@ -418,16 +418,17 @@ def load_fc_rv(LOSO_DIR, PARCELLATION_FC, SH_DIR, SUBJECTS, json, np):
         }
 
     print("=== S4 audit: FC RV (mean) ===")
-    print(f"{'sub':7}{'raw m':>8}{'raw mm':>8}{'del m':>8}{'del mm':>8}{'diff':>7}  (split-half)")
-    for _sub in SUBJECTS:
-        _d = fc_rv[_sub]
-        _rm = _d[("split_half", "matched")]["raw"].mean()
-        _rn = _d[("split_half", "mismatched")]["raw"].mean()
-        _dm = _d[("split_half", "matched")]["delta"].mean()
-        _dn = _d[("split_half", "mismatched")]["delta"].mean()
-        _neg = np.mean(_d[("split_half", "matched")]["delta"] < 0)
-        print(f"{_sub:7}{_rm:>8.3f}{_rn:>8.3f}{_dm:>8.3f}{_dn:>8.3f}{_dm - _dn:>7.3f}"
-              f"   frac_neg_matched={_neg:.3f}")
+    for _grp in ("loso", "split_half"):
+        print(f"{'sub':7}{'raw m':>8}{'raw mm':>8}{'del m':>8}{'del mm':>8}{'diff':>7}  ({_grp})")
+        for _sub in SUBJECTS:
+            _d = fc_rv[_sub]
+            _rm = _d[(_grp, "matched")]["raw"].mean()
+            _rn = _d[(_grp, "mismatched")]["raw"].mean()
+            _dm = _d[(_grp, "matched")]["delta"].mean()
+            _dn = _d[(_grp, "mismatched")]["delta"].mean()
+            _neg = np.mean(_d[(_grp, "matched")]["delta"] < 0)
+            print(f"{_sub:7}{_rm:>8.3f}{_rn:>8.3f}{_dm:>8.3f}{_dn:>8.3f}{_dm - _dn:>7.3f}"
+                  f"   frac_neg_matched={_neg:.3f}")
     return fc_rv
 
 

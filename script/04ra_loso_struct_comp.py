@@ -35,7 +35,10 @@ from scipy.optimize import linear_sum_assignment
 
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.recurrence_utils import compute_fractional_occupancy, compute_recurrence_scores
+from utils.recurrence_utils import (
+    ACTIVE_FO_THRESHOLD, active_state_indices,
+    compute_fractional_occupancy, compute_recurrence_scores,
+)
 from utils.common import normalize_parcellation_name
 from utils.plot_style import NETWORK_ORDER, assign_network
 
@@ -80,8 +83,8 @@ def get_final_dir(output_base, vt):
 # Per-fold metrics
 # =============================================================================
 
-def identify_active_states(decoded_states, n_total_states, min_state_usage=0.01):
-    """Identify active states from decoded sequences.
+def identify_active_states(decoded_states, n_total_states):
+    """Identify active states (FO > ACTIVE_FO_THRESHOLD in at least one run).
 
     Returns:
         active_mask: boolean array (n_total_states,)
@@ -89,17 +92,9 @@ def identify_active_states(decoded_states, n_total_states, min_state_usage=0.01)
     """
     if not decoded_states:
         return np.zeros(n_total_states, dtype=bool), np.array([], dtype=int)
-
-    non_empty = [np.asarray(seq) for seq in decoded_states.values() if len(seq) > 0]
-    if not non_empty:
-        return np.zeros(n_total_states, dtype=bool), np.array([], dtype=int)
-
-    all_states = np.concatenate(non_empty)
-    total_trs = len(all_states)
-    counts = np.bincount(all_states, minlength=n_total_states)
-    occupancy = counts / total_trs
-    active_mask = occupancy > min_state_usage
-    active_indices = np.where(active_mask)[0]
+    active_indices = active_state_indices(decoded_states, n_total_states)
+    active_mask = np.zeros(n_total_states, dtype=bool)
+    active_mask[active_indices] = True
     return active_mask, active_indices
 
 
@@ -243,11 +238,18 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
         loso_results = json.load(f)
     k_active_reported = loso_results['loso_refit']['n_active_states']
 
-    # Identify active states from decoded sequences
+    # Active states (decoded, FO > ACTIVE_FO_THRESHOLD in >= 1 run) carry the
+    # recurrence and network-composition invariants. The transition-matrix
+    # invariants use the states the fitted model uses (K_used, posterior
+    # usage > 0.01), the same set the seed initialization band is built from.
     active_mask, active_indices = identify_active_states(
         decoded_states, n_total_states
     )
     k_active = len(active_indices)
+    used_indices = extract_active_indices_from_history(model)
+    if len(used_indices) == 0:
+        raise ValueError(f"{fold_dir}: fold model has no state_usage history")
+    k_used = len(used_indices)
 
     # Recurrence scores
     fo = compute_fractional_occupancy(decoded_states, n_total_states)
@@ -255,10 +257,10 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
 
     # Transition entropy (normalized)
     transmat = model.transmat_
-    trans_entropy = compute_transition_entropy(transmat, active_indices)
+    trans_entropy = compute_transition_entropy(transmat, used_indices)
 
     # Self-transition probability
-    self_trans = compute_self_transition_prob(transmat, active_indices)
+    self_trans = compute_self_transition_prob(transmat, used_indices)
 
     # Dwell times
     dwells = compute_dwell_times(decoded_states)
@@ -282,6 +284,7 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
 
     invariants = {
         'k_active': k_active,
+        'k_used': k_used,
         'k_active_reported': k_active_reported,
         'transition_entropy': trans_entropy,
         'self_transition_prob': self_trans,
@@ -327,17 +330,17 @@ def extract_active_indices_from_history(model, seed_idx=None, min_state_usage=0.
 
 
 def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
-    """Compute K_active and transition entropy for each primary-model seed.
+    """Compute K_used and transition entropy for each primary-model seed.
 
     Args:
         seeds_dir: path to final/vt{vt}/seeds/
         n_seeds: number of seeds to check
-        min_state_usage: threshold for active state identification
+        min_state_usage: posterior-usage threshold for K_used (config min_state_usage)
 
     Returns:
-        dict with seed-level K_active and entropy arrays
+        dict with seed-level K_used and entropy arrays
     """
-    seed_k_active = []
+    seed_k_used = []
     seed_entropy = []
     seed_self_trans = []
     seeds_loaded = []
@@ -367,8 +370,8 @@ def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
             )
             continue
 
-        k_active = len(active_indices)
-        seed_k_active.append(k_active)
+        k_used = len(active_indices)
+        seed_k_used.append(k_used)
 
         transmat = model.transmat_
         h = compute_transition_entropy(transmat, active_indices)
@@ -383,20 +386,20 @@ def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
         logger.warning("No valid primary-model seeds found for noise floor.")
         return {
             'n_seeds_loaded': 0,
-            'k_active': {'values': [], 'mean': None, 'std': None, 'range': None},
+            'k_used': {'values': [], 'mean': None, 'std': None, 'range': None},
             'transition_entropy': {'values': [], 'mean': None, 'std': None, 'range': None},
             'self_transition_prob': {'values': [], 'mean': None, 'std': None, 'range': None},
         }
 
-    k_arr = np.array(seed_k_active)
+    k_arr = np.array(seed_k_used)
     h_arr = np.array(seed_entropy)
     st_arr = np.array(seed_self_trans)
 
     return {
         'n_seeds_loaded': len(seeds_loaded),
         'seeds_used': seeds_loaded,
-        'k_active': {
-            'values': seed_k_active,
+        'k_used': {
+            'values': seed_k_used,
             'mean': float(np.mean(k_arr)),
             'std': float(np.std(k_arr)),
             'range': [int(np.min(k_arr)), int(np.max(k_arr))],
@@ -436,7 +439,7 @@ def compute_cross_fold_consistency(fold_invariants):
     # CV is only meaningful for unbounded positive metrics; for bounded
     # metrics (transition_entropy, self_transition_prob, recurrence_mean)
     # we report std and range instead.
-    scalar_keys = ['k_active', 'transition_entropy', 'self_transition_prob',
+    scalar_keys = ['k_active', 'k_used', 'transition_entropy', 'self_transition_prob',
                    'dwell_median_tr', 'recurrence_mean']
     bounded_keys = {'transition_entropy', 'self_transition_prob', 'recurrence_mean'}
     scalar_stats = {}
@@ -638,8 +641,9 @@ def main():
     parser.add_argument('--vt', type=str, default='0.95',
                         help='Variance threshold subdirectory under final/ '
                              '(default: 0.95)')
-    parser.add_argument('--fo_threshold', type=float, default=0.01,
-                        help='Fractional occupancy threshold for recurrence (default: 0.01)')
+    parser.add_argument('--fo_threshold', type=float, default=ACTIVE_FO_THRESHOLD,
+                        help='Fractional occupancy threshold for recurrence '
+                             f'(default: {ACTIVE_FO_THRESHOLD})')
     parser.add_argument('--match_threshold', type=float, default=0.3,
                         help='Minimum correlation for well-matched states (default: 0.3)')
     args = parser.parse_args()
@@ -736,7 +740,7 @@ def main():
         fold_active_cache[season] = fold_active_idx
 
         logger.info(
-            f"  K_active={inv['k_active']}, "
+            f"  K_active={inv['k_active']}, K_used={inv['k_used']}, "
             f"H_trans={inv['transition_entropy']:.3f}, "
             f"P_self={inv['self_transition_prob']:.3f}, "
             f"dwell_median={inv['dwell_median_tr']:.1f} TR"
@@ -776,11 +780,11 @@ def main():
     logger.info(
         f"  Seeds loaded: {noise_floor['n_seeds_loaded']}"
     )
-    if noise_floor['k_active']['mean'] is not None:
+    if noise_floor['k_used']['mean'] is not None:
         logger.info(
-            f"  K_active: {noise_floor['k_active']['mean']:.1f} "
-            f"+/- {noise_floor['k_active']['std']:.1f} "
-            f"(range {noise_floor['k_active']['range']})"
+            f"  K_used: {noise_floor['k_used']['mean']:.1f} "
+            f"+/- {noise_floor['k_used']['std']:.1f} "
+            f"(range {noise_floor['k_used']['range']})"
         )
         logger.info(
             f"  H_trans:  {noise_floor['transition_entropy']['mean']:.3f} "
@@ -792,7 +796,7 @@ def main():
     logger.info("\n--- Cross-Fold Consistency ---")
     consistency = compute_cross_fold_consistency(fold_invariants)
 
-    for key in ['k_active', 'transition_entropy', 'self_transition_prob',
+    for key in ['k_active', 'k_used', 'transition_entropy', 'self_transition_prob',
                 'dwell_median_tr', 'recurrence_mean']:
         stats = consistency['scalar_invariants'][key]
         cv_str = f"CV={stats['cv']:.3f}" if stats['cv'] is not None else "CV=N/A (bounded)"

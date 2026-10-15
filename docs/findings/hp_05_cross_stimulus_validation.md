@@ -6,7 +6,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal word-by-wor
 
 ## Method (as run)
 
-- Parcellation: atlas-4S156Parcels; vt=0.95; FO threshold for "active" state = 0.01
+- Parcellation: atlas-4S156Parcels; vt=0.95; FO threshold for state presence in an HP run = 0.02 (`ACTIVE_FO_THRESHOLD`, the Friends rule; the A1 active set comes from 05a)
 - Inputs: Friends recurrence scores (05a), HP decoded states and FO (hp_04), PCA transfer diagnostic (hp_03), Movie10 FO (m10_04, for B1/B2)
 - 7 HP runs per subject (consecutive book chapters); n_active_states: sub-01=46, sub-02=46, sub-03=44, sub-05=47, sub-06=42
 - Eligibility filtering: content-eligible states from 05e_a4 state_flags.csv; n_content_eligible: sub-01=31, sub-02=30, sub-03=26, sub-05=29, sub-06=16
@@ -59,17 +59,17 @@ Negative LL gap means HP is better explained than Friends test data. 3/5 subject
 
 ### A4: State Coverage (recurrence vs HP coverage Spearman)
 
-Coverage = fraction of 7 HP runs in which each state has FO > 0.01. No Friends-inactive states were activated in HP for any subject.
+Coverage = fraction of 7 HP runs in which each state has FO > 0.02. No Friends-inactive state exceeded FO 0.02 in any HP run, for any subject.
 
 | Subject | n_active_states | Recurrence-coverage rho | p      | Significant |
 |---------|----------------|------------------------|--------|-------------|
-| sub-01  | 46             | 0.296                  | 0.046  | Yes         |
-| sub-02  | 46             | 0.414                  | 0.004  | Yes         |
-| sub-03  | 44             | 0.310                  | 0.041  | Yes         |
-| sub-05  | 47             | 0.179                  | 0.229  | No          |
-| sub-06  | 42             | 0.445                  | 0.003  | Yes         |
+| sub-01  | 46             | 0.199                  | 0.185  | No          |
+| sub-02  | 46             | 0.465                  | 0.001  | Yes         |
+| sub-03  | 44             | 0.377                  | 0.012  | Yes         |
+| sub-05  | 47             | 0.281                  | 0.055  | No          |
+| sub-06  | 42             | 0.515                  | <0.001 | Yes         |
 
-4/5 subjects significant (all except sub-05).
+3/5 subjects at p < 0.05, uncorrected (sub-02, sub-03, sub-06).
 
 ### A5: PCA Transfer Diagnostic (overall R2)
 

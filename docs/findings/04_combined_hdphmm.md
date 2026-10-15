@@ -9,7 +9,8 @@ _Fits one combined Gaussian HMM per subject across all episodes (sticky and hier
 - **Parcellation:** atlas-4S156Parcels (156 parcels: 100 cortical Schaefer + 56 subcortical)
 - **Input:** PCA-projected episode time series from 03a (vt=0.95; n_pcs varies by subject, 67-77)
 - **Selected config:** `vt0.95_covdiag_nc50_g1` (nc=50 capacity, gamma=1, kappa=10, alpha=1, rho=1, diagonal covariance in PC space, 5-seed grid search)
-- **Config selection:** Pareto analysis of validation LL vs K_active (not BIC, not LL-based metrics); nc=50 gamma=1 sits in the middle Pareto cluster (K_active approx 35-45) with high capacity utilization and small overfit gap
+- **K_used:** states whose posterior usage at the final EM iteration exceeds 0.01 (config `min_state_usage`); distinct from the active-state count (FO > 0.02 in at least one run) used from 05a onward
+- **Config selection:** Pareto analysis of validation LL vs K_used (not BIC, not LL-based metrics); nc=50 gamma=1 sits in the middle Pareto cluster (K_used approx 35-45) with high capacity utilization and small overfit gap
 - **Final refit:** 10 seeds on combined train+validation data; best seed selected by trainval_ll_per_sample; test set is 15% of episodes held out during all fitting
 - **Decoding:** Viterbi (single most probable state sequence); all episodes decoded (train + valid + test)
 - **sub-04 scope:** seasons 1-4 only (seasons 5-6 absent from data)
@@ -19,7 +20,7 @@ _Fits one combined Gaussian HMM per subject across all episodes (sticky and hier
 
 ### Final model: active states and PCA dimensionality
 
-| Subject | n_components | K_active | n_pcs (vt=0.95) | Capacity used |
+| Subject | n_components | K_used | n_pcs (vt=0.95) | Capacity used |
 |---|---|---|---|---|
 | sub-01 | 50 | 42 | 75 | 84% |
 | sub-02 | 50 | 42 | 72 | 84% |
@@ -28,7 +29,7 @@ _Fits one combined Gaussian HMM per subject across all episodes (sticky and hier
 | sub-05 | 50 | 41 | 67 | 82% |
 | sub-06 | 50 | 37 | 74 | 74% |
 
-Mean K_active: 40.8; range 37-42.
+Mean K_used: 40.8; range 37-42.
 
 ### Final model: generalization metrics (test set)
 
@@ -41,7 +42,7 @@ Mean K_active: 40.8; range 37-42.
 | sub-05 | -9.106 | -9.699 | -3.714 | 0.593 | 1 |
 | sub-06 | -9.362 | -9.393 | -3.611 | 0.030 | 3 |
 
-Baseline is log(1/K_active), the uniform-over-active-states null. Only sub-02 test_ll exceeds the active-state baseline (test=-0.421 vs baseline=-3.738); all other subjects fall below baseline.
+Baseline is log(1/K_used), the uniform-over-active-states null. Only sub-02 test_ll exceeds the active-state baseline (test=-0.421 vs baseline=-3.738); all other subjects fall below baseline.
 
 ### Per-season test log-likelihood
 
@@ -58,7 +59,7 @@ sub-05 shows the widest seasonal range (s4=-8.428 vs s6=-10.572); sub-02 s3 and 
 
 ### Grid search: chosen config summary (5-seed, vt=0.95_covdiag_nc50_g1)
 
-| Subject | n_pcs | mean K_active (5 seeds) | mean valid_ll/TR (5 seeds) |
+| Subject | n_pcs | mean K_used (5 seeds) | mean valid_ll/TR (5 seeds) |
 |---|---|---|---|
 | sub-01 | 75 | 32.2 | -3.689 |
 | sub-02 | 72 | 32.2 | -0.252 |
@@ -67,9 +68,9 @@ sub-05 shows the widest seasonal range (s4=-8.428 vs s6=-10.572); sub-02 s3 and 
 | sub-05 | 67 | 32.6 | -9.543 |
 | sub-06 | 74 | 31.0 | -9.973 |
 
-Final-refit K_active (42, 42, 42, 41, 41, 37) exceeds grid-search mean K across all subjects, consistent with 10-seed best selection finding a higher-utilization optimum.
+Final-refit K_used (42, 42, 42, 41, 41, 37) exceeds grid-search mean K across all subjects, consistent with 10-seed best selection finding a higher-utilization optimum.
 
-### LOSO validation: K_active per fold
+### LOSO validation: K_used per fold
 
 | Subject | s1 | s2 | s3 | s4 | s5 | s6 |
 |---|---|---|---|---|---|---|
@@ -80,7 +81,7 @@ Final-refit K_active (42, 42, 42, 41, 41, 37) exceeds grid-search mean K across 
 | sub-05 | 41 | 38 | 43 | 42 | 39 | 42 |
 | sub-06 | 39 | 39 | 39 | 38 | 38 | 40 |
 
-K_active is stable across folds: within-subject range 2-5 states (sub-06 range=2; sub-05 range=5); all folds remain in the 36-43 band.
+K_used is stable across folds: within-subject range 2-5 states (sub-06 range=2; sub-05 range=5); all folds remain in the 36-43 band.
 
 ### LOSO validation: test log-likelihood and overfit gap per fold
 
@@ -123,9 +124,9 @@ K_active is stable across folds: within-subject range 2-5 states (sub-06 range=2
 
 34 folds total (6 per subject for sub-01/02/03/05/06; 4 for sub-04). sub-02 is the only subject where all 6 folds exceed the active-state baseline. Negative overfit gaps indicate the held-out season was easier to model than training data.
 
-### Split-half reliability: K_active and LL
+### Split-half reliability: K_used and LL
 
-| Subject | Half A K_active | Half B K_active | Half A trainval_ll | Half B trainval_ll | Half A valid_ll | Half B valid_ll |
+| Subject | Half A K_used | Half B K_used | Half A trainval_ll | Half B trainval_ll | Half A valid_ll | Half B valid_ll |
 |---|---|---|---|---|---|---|
 | sub-01 | 38 | 38 | -3.446 | -3.510 | -3.579 | -3.604 |
 | sub-02 | 39 | 39 | -0.718 | -0.079 | -1.036 | 0.061 |
@@ -134,7 +135,7 @@ K_active is stable across folds: within-subject range 2-5 states (sub-06 range=2
 | sub-05 | 37 | 41 | -9.751 | -9.028 | -9.660 | -9.609 |
 | sub-06 | 36 | 36 | -8.728 | -9.471 | -8.691 | -9.556 |
 
-Split-half K_active matches to within 0-4 states across halves (sub-05 the widest at 37 vs 41).
+Split-half K_used matches to within 0-4 states across halves (sub-05 the widest at 37 vs 41).
 
 ## Outputs
 

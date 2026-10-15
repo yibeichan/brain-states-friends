@@ -16,6 +16,15 @@ from utils.common import _get_season
 
 logger = logging.getLogger(__name__)
 
+# A state is "active" in a run when its fractional occupancy in that run
+# exceeds this value, and belongs to a participant's active repertoire when
+# it is active in at least one run. Every analysis that labels states active
+# from decoded sequences (Friends and the held-out stimuli) uses this value.
+# It is distinct from K_used, the count of states whose posterior usage in the
+# fitted model exceeds config min_state_usage (0.01), which sets the BIC
+# parameter count.
+ACTIVE_FO_THRESHOLD = 0.02
+
 
 def compute_fractional_occupancy(decoded_states, n_states):
     """Compute fractional occupancy per run and per state.
@@ -65,6 +74,32 @@ def compute_recurrence_scores(fo, n_states, fo_threshold):
     for fo_vec in fo.values():
         active_counts += (fo_vec > fo_threshold).astype(float)
     return active_counts / n_units
+
+
+def active_state_indices(decoded_states, n_states,
+                         fo_threshold=ACTIVE_FO_THRESHOLD):
+    """Indices of states active (FO > fo_threshold) in at least one run."""
+    fo = compute_fractional_occupancy(decoded_states, n_states)
+    recurrence = compute_recurrence_scores(fo, n_states, fo_threshold)
+    return np.where(recurrence > 0)[0]
+
+
+def used_state_indices(model, min_state_usage=0.01):
+    """Indices of states the fitted model uses (K_used).
+
+    A state is used when its posterior usage at the last EM iteration exceeds
+    ``min_state_usage`` (config ``min_state_usage``, 0.01), the same rule as
+    ``utils.hdphmm.infer_n_active_states``. Returns an empty array when the
+    model carries no usage history.
+    """
+    history = getattr(model, "history", None) or {}
+    usage_hist = history.get("state_usage")
+    if not usage_hist:
+        return np.array([], dtype=int)
+    usage = np.asarray(usage_hist[-1], dtype=float)
+    if usage.size == 0 or not np.all(np.isfinite(usage)):
+        return np.array([], dtype=int)
+    return np.where(usage > min_state_usage)[0]
 
 
 def compute_pooled_decoded_occupancy(decoded_states, n_states):

@@ -6,7 +6,7 @@ _Tests whether the Friends recurrence ordering corresponds to state occupancy du
 
 ## Method (as run)
 
-- Parcellation: atlas-4S156Parcels; vt=0.95; fo_threshold=0.01; exclude_sub_hrf=False
+- Parcellation: atlas-4S156Parcels; vt=0.95; fo_threshold=0.02 (`ACTIVE_FO_THRESHOLD`, the Friends rule); exclude_sub_hrf=False
 - Inputs: Friends recurrence scores from `05a`; resting FO and LL from `rest_04`; PCA diagnostic from `rest_03`
 - n=6 subjects. Resting state is the only out-of-Friends condition covering all six participants.
 - Resting runs: 5, 5, 5, 5, 4, 6 for sub-01 through sub-06
@@ -15,7 +15,7 @@ _Tests whether the Friends recurrence ordering corresponds to state occupancy du
 - A1: Spearman rho between Friends recurrence score and mean resting FO across all active states. p-values are approximate: FO is compositional (sums to 1 per run) and resting runs carry serial dependence, so p is an upper bound on confidence.
 - A1 eligible: same analysis restricted to content-eligible states
 - A3: LL per sample, Friends test vs resting overall, against the heuristic log(1/n_active) reference
-- A4: recurrence vs resting coverage Spearman, where coverage is the fraction of resting runs with state FO > 0.01
+- A4: recurrence vs resting coverage Spearman, where coverage is the fraction of resting runs with state FO > 0.02
 - A5: PCA transfer R², Friends training vs rest, network-stratified
 - B2: bootstrap reference, 1000 subsamples of Movie10 runs matched to the resting run count, positioning the resting rho against that distribution
 - C1: within-run drift, first-third vs last-third FO L1 shift per run
@@ -69,12 +69,12 @@ Gaps span 0.495 to 15.980 per sample, the widest range of any condition in the p
 
 | Subject | Spearman rho | p | n |
 |---------|--------------|-----|---|
-| sub-01 | −0.275 | 0.064 | 46 |
-| sub-02 | 0.281 | 0.058 | 46 |
-| sub-03 | 0.168 | 0.276 | 44 |
-| sub-04 | 0.140 | 0.364 | 44 |
-| sub-05 | 0.285 | 0.052 | 47 |
-| sub-06 | 0.586 | <0.001 | 42 |
+| sub-01 | −0.365 | 0.013 | 46 |
+| sub-02 | 0.269 | 0.071 | 46 |
+| sub-03 | 0.134 | 0.386 | 44 |
+| sub-04 | 0.060 | 0.698 | 44 |
+| sub-05 | 0.225 | 0.128 | 47 |
+| sub-06 | 0.436 | 0.004 | 42 |
 
 Coverage tracks the A1 pattern, including sub-01's negative sign.
 

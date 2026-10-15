@@ -63,6 +63,7 @@ from utils.plot_style import (recurrence_color, make_recurrence_colorbar,
                                apply_publication_style,
                                NETWORK_ORDER, NETWORK_COLORS)
 from utils.common import normalize_parcellation_name
+from utils.recurrence_utils import ACTIVE_FO_THRESHOLD
 from utils.state_blocks import load_eligible_states
 from utils.transformer_analysis import load_content_eligibility
 
@@ -392,9 +393,15 @@ def analysis_a4_state_coverage(rest_fo, rest_run_ids, recurrence_scores, n_state
     inactive_states = [i for i in range(n_states) if recurrence_scores[i] == 0]
     inactive_activated = {}
     for state_id in inactive_states:
-        rest_mean_fo = float(np.mean([rest_fo[rid][state_id] for rid in all_run_ids]))
-        if rest_mean_fo > fo_threshold:
-            inactive_activated[int(state_id)] = float(rest_mean_fo)
+        # Same rule as Friends-active: FO > fo_threshold in at least one run.
+        _run_fo = np.array([rest_fo[rid][state_id] for rid in all_run_ids])
+        if _run_fo.size and _run_fo.max() > fo_threshold:
+            rest_mean_fo = float(_run_fo.mean())
+            inactive_activated[int(state_id)] = {
+                'max_run_fo': float(_run_fo.max()),
+                'mean_fo': rest_mean_fo,
+                'n_runs_active': int((_run_fo > fo_threshold).sum()),
+            }
 
     result = {
         'state_coverage': coverage,
@@ -726,8 +733,9 @@ Examples:
                         help='Subject ID (e.g., "sub-01")')
     parser.add_argument('--parcellation', type=str, default='atlas-4S156Parcels',
                         help='Parcellation name (default: atlas-4S156Parcels)')
-    parser.add_argument('--fo_threshold', type=float, default=0.01,
-                        help='FO threshold for "active" state (default: 0.01)')
+    parser.add_argument('--fo_threshold', type=float, default=ACTIVE_FO_THRESHOLD,
+                        help='Per-run FO above which a state counts as present '
+                             f'(default: {ACTIVE_FO_THRESHOLD}, as for Friends)')
     parser.add_argument('--vt', type=str, default=None,
                         help="Variance threshold subdirectory (e.g., 0.95). "
                              "Reads from vt{VT}/ subdirs. If omitted, reads flat (legacy).")

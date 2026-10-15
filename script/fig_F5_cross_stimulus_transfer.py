@@ -119,9 +119,10 @@ def config(Path, os):
     HP_DEC_DIR = SCRATCH_DIR / "output" / "hp_04_decoded" / PARCELLATION
     PP_DEC_DIR = SCRATCH_DIR / "output" / "pp_04_decoded" / PARCELLATION
 
-    # Per-run FO above which a state counts as "present" in that run (matches
-    # the m10_05 / cross-stimulus active-state convention).
-    PRESENCE_FO = 0.01
+    # Per-run FO above which a state counts as "present" in that run:
+    # ACTIVE_FO_THRESHOLD in utils/recurrence_utils.py, the same cut that
+    # defines Friends-active states.
+    PRESENCE_FO = 0.02
 
     def xstim_dir(stim):
         return SCRATCH_DIR / "output" / f"{stim}_05_cross_validation" / PARCELLATION

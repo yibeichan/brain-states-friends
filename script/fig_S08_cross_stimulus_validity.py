@@ -9,7 +9,7 @@ findings and that explicitly disclose the fit confound behind R5:
 |---|---|---|
 | A | PCA subspace transfer: per (subject, condition) gap = Friends R² − condition R², including Rest. Near-zero and uniform (~0.95 R² everywhere, rest gaps −0.011 to +0.007) → the Friends low-dimensional subspace generalizes to all conditions including rest; the transfer differences are NOT a subspace-fit artifact. | point-1D strip |
 | B | HMM model-fit vs transfer: per-condition transfer ρ against the HMM log-likelihood gap (held-out-Friends − condition LL/sample). Within Movie10, ρ declines as fit worsens (the confound); Harry Potter is an OUTLIER (best fit, modest ρ), so transfer is not a single function of fit. Rest shows the temporal-fit dissociation: spatial subspace transfers (Panel A) but LL gaps span the widest range of any condition (sub-01 extreme at 16.0, negative ρ). Disclosure panel for the "within-film grading is fit-confounded" caveat. | scatter |
-| C | Repertoire presence, gapped radial-gauge grid: 4 rows (M10/HP/PP/Rest) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.01 in ≥1 run). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
+| C | Repertoire presence, gapped radial-gauge grid: 4 rows (M10/HP/PP/Rest) × 6 subjects. Per category, arc width = subject's Friends count, outlined to full extent, filled for the present fraction (active at FO>0.02 in ≥1 run, the Friends rule). Caveat: Viterbi forces every TR onto a state, so presence is biased upward - this is a descriptive existence view, not a clean transfer test. | pie / donut |
 
 Rest is SUPPLEMENTARY-ONLY (placement decided 2026-08-17): it appears in every
 panel here and NOT in main Figure 4. No surrogate null was run for rest, so all
@@ -93,7 +93,9 @@ def config(Path, os):
             "REST": out_root / "rest_05_cross_validation" / PARCELLATION}
     LL_FILE = {"M10": "movie_ll_summary.json", "HP": "hp_ll_summary.json",
                "PP": "pp_ll_summary.json", "REST": "rest_ll_summary.json"}
-    PRESENCE_FO = 0.01
+    # Per-run FO above which a state counts as present: ACTIVE_FO_THRESHOLD in
+    # utils/recurrence_utils.py, the same cut that defines Friends-active states.
+    PRESENCE_FO = 0.02
 
     TAXONOMY_ORDER = ["Content-eligible", "Run-onset-anchored", "Low-confidence",
                       "Drift-anchored", "Unused + rare"]

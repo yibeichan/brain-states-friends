@@ -37,8 +37,11 @@ from utils.plot_style import (
     NETWORK_ORDER, assign_network, load_parcel_networks, compute_dominant_networks,
 )
 from utils.recurrence_utils import (
+    ACTIVE_FO_THRESHOLD,
+    active_state_indices,
     compute_fractional_occupancy,
     compute_recurrence_scores,
+    used_state_indices,
 )
 
 from dotenv import load_dotenv
@@ -126,24 +129,14 @@ def load_half_data(half_dir, half_label):
 # Per-half invariant computation
 # =============================================================================
 
-def identify_active_states(decoded_states, n_components, min_state_usage=0.01):
-    """Identify active states from decoded sequences.
-
-    A state is active if it occupies > min_state_usage fraction of total TRs.
+def identify_active_states(decoded_states, n_components):
+    """Active states: FO > ACTIVE_FO_THRESHOLD in at least one run.
 
     Returns sorted array of active state indices.
     """
-    total_trs = sum(len(seq) for seq in decoded_states.values())
-    if total_trs == 0:
+    if sum(len(seq) for seq in decoded_states.values()) == 0:
         return np.array([], dtype=int)
-
-    counts = np.zeros(n_components, dtype=float)
-    for seq in decoded_states.values():
-        counts += np.bincount(seq, minlength=n_components)
-    fractions = counts / total_trs
-
-    active = np.where(fractions > min_state_usage)[0]
-    return active
+    return active_state_indices(decoded_states, n_components)
 
 
 def compute_transition_entropy(transmat, active_states):
@@ -220,7 +213,7 @@ def compute_self_transition_prob(transmat, active_states):
     return float(np.mean(diag[active_states]))
 
 
-def compute_half_invariants(half_data, fo_threshold=0.01, min_state_usage=0.01,
+def compute_half_invariants(half_data, fo_threshold=ACTIVE_FO_THRESHOLD,
                             parcel_networks=None):
     """Compute all 6 structural invariants for one half.
 
@@ -234,23 +227,29 @@ def compute_half_invariants(half_data, fo_threshold=0.01, min_state_usage=0.01,
     n_states = results_json["refit"]["n_states"]
     K_active_json = results_json["refit"]["n_active_states"]
 
-    # 1. K_active - from results JSON
-    active_states = identify_active_states(decoded, n_states, min_state_usage)
+    # 1. Active states (decoded, FO > ACTIVE_FO_THRESHOLD in >= 1 run) carry
+    #    recurrence and network composition. Transition-matrix invariants use
+    #    the states the fitted model uses (K_used), as in 04ra.
+    active_states = identify_active_states(decoded, n_states)
     K_active = len(active_states)
-    logger.info(f"  K_active: {K_active} (JSON: {K_active_json})")
+    used_states = used_state_indices(model)
+    if len(used_states) == 0:
+        raise ValueError("half model has no state_usage history")
+    K_used = len(used_states)
+    logger.info(f"  K_active: {K_active}, K_used: {K_used} (JSON: {K_active_json})")
 
     # 2. Recurrence scores
     fo = compute_fractional_occupancy(decoded, n_states)
     recurrence = compute_recurrence_scores(fo, n_states, fo_threshold)
 
     # 3. Transition entropy
-    trans_entropy = compute_transition_entropy(model.transmat_, active_states)
+    trans_entropy = compute_transition_entropy(model.transmat_, used_states)
 
     # 4. Dwell time
     dwell = compute_dwell_stats(decoded)
 
     # 5. Self-transition probability
-    self_trans = compute_self_transition_prob(model.transmat_, active_states)
+    self_trans = compute_self_transition_prob(model.transmat_, used_states)
 
     # 6. Network composition
     net_composition = {}
@@ -266,6 +265,7 @@ def compute_half_invariants(half_data, fo_threshold=0.01, min_state_usage=0.01,
 
     return {
         "K_active": int(K_active),
+        "K_used": int(K_used),
         "n_states_model": int(n_states),
         "recurrence_scores": recurrence.tolist(),
         "recurrence_mean": float(np.mean(recurrence[active_states])) if K_active > 0 else float("nan"),
@@ -290,7 +290,7 @@ def compare_scalar_invariants(inv_a, inv_b):
     Returns dict of absolute differences and ratios for each scalar metric.
     """
     metrics = [
-        "K_active", "transition_entropy", "median_dwell",
+        "K_active", "K_used", "transition_entropy", "median_dwell",
         "iqr_dwell", "self_transition_prob",
         "recurrence_mean", "recurrence_median",
     ]
@@ -708,8 +708,8 @@ Examples:
         help="Parcellation name (default: atlas-4S156Parcels)",
     )
     parser.add_argument(
-        "--fo_threshold", type=float, default=0.01,
-        help="FO threshold for recurrence scores (default: 0.01)",
+        "--fo_threshold", type=float, default=ACTIVE_FO_THRESHOLD,
+        help=f"FO threshold for recurrence scores (default: {ACTIVE_FO_THRESHOLD})",
     )
     parser.add_argument(
         "--match_threshold", type=float, default=0.3,
