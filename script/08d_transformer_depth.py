@@ -32,9 +32,8 @@ Analyses (per subject × stimulus × model):
                             states in ``DMN_pos``. Uses the best lag from
                             D1 main (with lag=0 excluded).
     D2                    - per-state, per-layer LORO Logistic+AUC on the
-                            ``content_eligible`` state set (no further FO
-                            floor; every eligible state has pooled FO above
-                            1%). Null
+                            ``content_eligible`` state set, with no further
+                            FO floor. Null
                             via precomputed circular-shift sequences.
                             Selectivity flags the canonical threshold
                             (``max − median < 0.05``) PLUS sensitivity

@@ -102,6 +102,34 @@ def used_state_indices(model, min_state_usage=0.01):
     return np.where(usage > min_state_usage)[0]
 
 
+def states_present_in_runs(fo_by_run, states, fo_threshold=ACTIVE_FO_THRESHOLD):
+    """States among ``states`` with FO > fo_threshold in at least one run.
+
+    Used to ask whether a state inactive in Friends becomes present in a
+    held-out stimulus, under the same rule that defines Friends-active states.
+
+    Args:
+        fo_by_run: list of np.array(n_states,), one FO vector per run.
+        states:    iterable of state indices to check.
+
+    Returns:
+        dict state -> {'max_run_fo', 'mean_fo', 'n_runs_active'}.
+    """
+    if not fo_by_run:
+        return {}
+    fo = np.vstack(fo_by_run)
+    out = {}
+    for k in states:
+        col = fo[:, k]
+        if col.max() > fo_threshold:
+            out[int(k)] = {
+                'max_run_fo': float(col.max()),
+                'mean_fo': float(col.mean()),
+                'n_runs_active': int((col > fo_threshold).sum()),
+            }
+    return out
+
+
 def compute_pooled_decoded_occupancy(decoded_states, n_states):
     """Compute pooled decoded occupancy across all runs."""
     total_counts = np.zeros(n_states, dtype=float)

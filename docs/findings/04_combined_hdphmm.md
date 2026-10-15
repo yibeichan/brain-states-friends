@@ -42,7 +42,7 @@ Mean K_used: 40.8; range 37-42.
 | sub-05 | -9.106 | -9.699 | -3.714 | 0.593 | 1 |
 | sub-06 | -9.362 | -9.393 | -3.611 | 0.030 | 3 |
 
-Baseline is log(1/K_used), the uniform-over-active-states null. Only sub-02 test_ll exceeds the active-state baseline (test=-0.421 vs baseline=-3.738); all other subjects fall below baseline.
+Baseline is log(1/K_used), the uniform-over-used-states null. Only sub-02 test_ll exceeds the used-state baseline (test=-0.421 vs baseline=-3.738); all other subjects fall below baseline.
 
 ### Per-season test log-likelihood
 
@@ -122,7 +122,7 @@ K_used is stable across folds: within-subject range 2-5 states (sub-06 range=2; 
 | sub-06 | s5 | -9.062 | -0.359 | no |
 | sub-06 | s6 | -8.302 | -1.261 | no |
 
-34 folds total (6 per subject for sub-01/02/03/05/06; 4 for sub-04). sub-02 is the only subject where all 6 folds exceed the active-state baseline. Negative overfit gaps indicate the held-out season was easier to model than training data.
+34 folds total (6 per subject for sub-01/02/03/05/06; 4 for sub-04). sub-02 is the only subject where all 6 folds exceed the used-state baseline. Negative overfit gaps indicate the held-out season was easier to model than training data.
 
 ### Split-half reliability: K_used and LL
 

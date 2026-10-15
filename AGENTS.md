@@ -344,18 +344,18 @@ The brain state discovery pipeline uses a per-subject **Gaussian hidden Markov m
 |---|---|---|
 | Parcellation | atlas-4S156Parcels | 156-parcel ROI-level (Schaefer 100 cortical + 56 subcortical composite) |
 | PCA space | 67–77 PCs (vt=0.95) | HMM fits in PC space, NOT in parcel space |
-| nc | 50 | Truncation capacity. Two different counts circulate, and they are not interchangeable: final-refit **K_active** (EM usage > 0.01 of all TRs) is 37–42 per subject (mean 40.8, 74–84% utilization), while the **active repertoire** used by 05a and the cross-stimulus scripts (recurrence > 0, i.e. FO > 0.02 in at least one episode) is larger at 42–47 (mean 44.8, 269 states total). LOSO folds give K_active 36–43 and split halves 36–41. |
-| γ (gamma) | 1 | Low HDP concentration; prior prefers fewer states, so arriving at K_active ≈ 41 is strong evidence those states are real. Compare like with like: the prior-predictive simulation counts states above a 1% usage threshold, so the matching data-side count is K_active, not the larger active repertoire |
+| nc | 50 | Truncation capacity. Two different counts circulate, and they are not interchangeable: final-refit **K_used** (posterior usage > 0.01 at the last EM iteration) is 37–42 per subject (mean 40.8, 74–84% utilization), while the **active repertoire** used by 05a and the cross-stimulus scripts (recurrence > 0, i.e. FO > 0.02 in at least one episode) is larger at 42–47 (mean 44.8, 269 states total). LOSO folds give K_active 36–43 and split halves 36–41. |
+| γ (gamma) | 1 | Low HDP concentration; prior prefers fewer states, so arriving at K_used ≈ 41 is strong evidence those states are real. Compare like with like: the prior-predictive simulation counts states above a 1% usage threshold, so the matching data-side count is K_used, not the larger active repertoire |
 | κ (kappa) | 10 | Sticky bias; encourages multi-TR state persistence (~hemodynamic timescale) |
 | α (alpha) | 1 | Row-level transition concentration |
 | ρ (rho) | 1 | Sticky bias scaling |
 | covariance | **diag** (in PC space) | Each state = per-PC mean + diagonal variance. Back-projected to parcel space, state covariance is non-diagonal (PCA mixing), so states still carry within-state coupling structure when visualized in brain-region space. |
 
-**Model selection uses Pareto analysis (LL vs K_active), NOT BIC or any LL-based metric:** all LL-based scores (raw LL, LL/dim, BIC, 6-metric battery) systematically favor higher complexity. The Pareto middle cluster across subjects is K≈35–45; nc=50 γ=1 is the simplest model in that cluster.
+**Model selection uses Pareto analysis (LL vs K_used), NOT BIC or any LL-based metric:** all LL-based scores (raw LL, LL/dim, BIC, 6-metric battery) systematically favor higher complexity. The Pareto middle cluster across subjects is K≈35–45; nc=50 γ=1 is the simplest model in that cluster.
 
 **Validation:**
 - LOSO refits (6 folds per subject, each with its own PCA to avoid leakage) test whether discovered states generalize across narrative contexts.
-- Split-half (interleaved episode halves) reliability: 04rb Spearman ρ = 0.60–0.82.
+- Split-half (interleaved episode halves) reliability: 04rb Spearman ρ = 0.48–0.84 (recurrence at FO > 0.02 per run).
 
 ### Brain State Recurrence Analysis
 

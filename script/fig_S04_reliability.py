@@ -273,6 +273,8 @@ def panel_B_invariants(
             _vals = np.asarray(list(_inv["per_fold"].values()), dtype=float)
 
             # 10-seed initialization range: relative-scale anchor only.
+            if _key != "dwell_median_tr" and _key not in noise_floor[_sub]:
+                raise KeyError(f"{_sub} noise_floor.json has no {_key!r}; rerun 04ra")
             _nf = noise_floor[_sub].get(_key)
             if isinstance(_nf, dict) and "range" in _nf:
                 _lo, _hi = _nf["range"]

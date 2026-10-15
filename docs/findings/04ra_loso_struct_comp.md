@@ -83,7 +83,7 @@ Seed-to-seed variability of 10 primary-model seeds (same data, different EM star
 | sub-05 | 10 | 34.5 | 4.70 | 1.77 | 0.38 |
 | sub-06 | 10 | 32.1 | 4.68 | 0.69 | 0.15 |
 
-Seed transition-entropy std (0.004-0.006) and self-transition-prob std (0.007-0.022).
+Across seeds, transition-entropy std is 0.004-0.006 and self-transition-prob std is 0.007-0.022.
 
 ## Outputs
 

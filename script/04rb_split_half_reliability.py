@@ -129,14 +129,15 @@ def load_half_data(half_dir, half_label):
 # Per-half invariant computation
 # =============================================================================
 
-def identify_active_states(decoded_states, n_components):
-    """Active states: FO > ACTIVE_FO_THRESHOLD in at least one run.
+def identify_active_states(decoded_states, n_components,
+                           fo_threshold=ACTIVE_FO_THRESHOLD):
+    """Active states: FO > fo_threshold in at least one run.
 
     Returns sorted array of active state indices.
     """
     if sum(len(seq) for seq in decoded_states.values()) == 0:
         return np.array([], dtype=int)
-    return active_state_indices(decoded_states, n_components)
+    return active_state_indices(decoded_states, n_components, fo_threshold)
 
 
 def compute_transition_entropy(transmat, active_states):
@@ -230,7 +231,7 @@ def compute_half_invariants(half_data, fo_threshold=ACTIVE_FO_THRESHOLD,
     # 1. Active states (decoded, FO > ACTIVE_FO_THRESHOLD in >= 1 run) carry
     #    recurrence and network composition. Transition-matrix invariants use
     #    the states the fitted model uses (K_used), as in 04ra.
-    active_states = identify_active_states(decoded, n_states)
+    active_states = identify_active_states(decoded, n_states, fo_threshold)
     K_active = len(active_states)
     used_states = used_state_indices(model)
     if len(used_states) == 0:

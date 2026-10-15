@@ -36,7 +36,7 @@ from scipy.optimize import linear_sum_assignment
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.recurrence_utils import (
-    ACTIVE_FO_THRESHOLD, active_state_indices,
+    ACTIVE_FO_THRESHOLD, active_state_indices, used_state_indices,
     compute_fractional_occupancy, compute_recurrence_scores,
 )
 from utils.common import normalize_parcellation_name
@@ -83,8 +83,9 @@ def get_final_dir(output_base, vt):
 # Per-fold metrics
 # =============================================================================
 
-def identify_active_states(decoded_states, n_total_states):
-    """Identify active states (FO > ACTIVE_FO_THRESHOLD in at least one run).
+def identify_active_states(decoded_states, n_total_states,
+                           fo_threshold=ACTIVE_FO_THRESHOLD):
+    """Identify active states (FO > fo_threshold in at least one run).
 
     Returns:
         active_mask: boolean array (n_total_states,)
@@ -92,7 +93,7 @@ def identify_active_states(decoded_states, n_total_states):
     """
     if not decoded_states:
         return np.zeros(n_total_states, dtype=bool), np.array([], dtype=int)
-    active_indices = active_state_indices(decoded_states, n_total_states)
+    active_indices = active_state_indices(decoded_states, n_total_states, fo_threshold)
     active_mask = np.zeros(n_total_states, dtype=bool)
     active_mask[active_indices] = True
     return active_mask, active_indices
@@ -243,10 +244,10 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
     # invariants use the states the fitted model uses (K_used, posterior
     # usage > 0.01), the same set the seed initialization band is built from.
     active_mask, active_indices = identify_active_states(
-        decoded_states, n_total_states
+        decoded_states, n_total_states, fo_threshold
     )
     k_active = len(active_indices)
-    used_indices = extract_active_indices_from_history(model)
+    used_indices = used_state_indices(model)
     if len(used_indices) == 0:
         raise ValueError(f"{fold_dir}: fold model has no state_usage history")
     k_used = len(used_indices)
@@ -309,26 +310,6 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
 # fold variability exceeds initialization sensitivity.
 # =============================================================================
 
-def extract_active_indices_from_history(model, seed_idx=None, min_state_usage=0.01):
-    """Extract active-state indices from stored training usage history.
-
-    Returns array of active state indices, or empty array if history unavailable.
-    """
-    seed_label = f"seed {seed_idx}" if seed_idx is not None else "model"
-    if not hasattr(model, 'history') or not model.history:
-        logger.debug("%s: no history attribute, cannot extract active states", seed_label)
-        return np.array([], dtype=int)
-    usage_hist = model.history.get('state_usage')
-    if not usage_hist:
-        logger.debug("%s: no state_usage in history", seed_label)
-        return np.array([], dtype=int)
-    usage = np.asarray(usage_hist[-1], dtype=float)
-    if usage.size == 0 or not np.all(np.isfinite(usage)):
-        logger.debug("%s: state_usage is empty or contains non-finite values", seed_label)
-        return np.array([], dtype=int)
-    return np.where(usage > min_state_usage)[0]
-
-
 def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
     """Compute K_used and transition entropy for each primary-model seed.
 
@@ -361,9 +342,7 @@ def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
         with open(seed_model_path, 'rb') as f:
             model = pickle.load(f)
 
-        active_indices = extract_active_indices_from_history(
-            model, seed_idx=i, min_state_usage=min_state_usage
-        )
+        active_indices = used_state_indices(model, min_state_usage=min_state_usage)
         if len(active_indices) == 0:
             logger.warning(
                 "Skipping seed %d: no usable state_usage history.", i
@@ -691,7 +670,7 @@ def main():
 
     n_primary_total = primary_means.shape[0]
     primary_active_mask, primary_active_indices = identify_active_states(
-        primary_decoded, n_primary_total
+        primary_decoded, n_primary_total, fo_threshold
     )
     logger.info(
         f"Primary model: {n_primary_total} total states, "

@@ -46,7 +46,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from utils.stats import benjamini_hochberg
 from utils.plot_style import recurrence_color, make_recurrence_colorbar, apply_publication_style
 from utils.common import normalize_parcellation_name
-from utils.recurrence_utils import ACTIVE_FO_THRESHOLD
+from utils.recurrence_utils import ACTIVE_FO_THRESHOLD, states_present_in_runs
 from utils.state_blocks import load_eligible_states
 from utils.transformer_analysis import load_content_eligibility
 
@@ -461,18 +461,12 @@ def analysis_a4_state_coverage(movie_fo, movie_run_ids, recurrence_scores, n_sta
 
     # Check for Friends-inactive states that become active in movies
     inactive_states = [i for i in range(n_states) if recurrence_scores[i] == 0]
-    inactive_activated = {}
-    for state_id in inactive_states:
-        # Same rule as Friends-active: FO > fo_threshold in at least one run.
-        _run_fo = np.array([movie_fo[rid][state_id] for rid in all_run_ids])
-        if _run_fo.size and _run_fo.max() > fo_threshold:
-            movie_mean_fo = float(_run_fo.mean())
-            inactive_activated[int(state_id)] = {
-                'max_run_fo': float(_run_fo.max()),
-                'mean_fo': movie_mean_fo,
-                'n_runs_active': int((_run_fo > fo_threshold).sum()),
-            }
-            logger.warning(f"A4: Friends-inactive state {state_id} has mean movie FO={movie_mean_fo:.4f}")
+    # Same rule as Friends-active: FO > fo_threshold in at least one run.
+    inactive_activated = states_present_in_runs(
+        [movie_fo[rid] for rid in all_run_ids], inactive_states, fo_threshold)
+    for state_id, info in inactive_activated.items():
+        logger.warning(f"A4: Friends-inactive state {state_id} exceeds FO {fo_threshold} "
+                       f"in {info['n_runs_active']} movie run(s) (max {info['max_run_fo']:.4f})")
 
     result = {
         'state_coverage': coverage,

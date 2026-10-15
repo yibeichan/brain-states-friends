@@ -64,7 +64,7 @@ from utils.plot_style import (recurrence_color, make_recurrence_colorbar,
                                apply_publication_style,
                                NETWORK_ORDER, NETWORK_COLORS)
 from utils.common import normalize_parcellation_name
-from utils.recurrence_utils import ACTIVE_FO_THRESHOLD
+from utils.recurrence_utils import ACTIVE_FO_THRESHOLD, states_present_in_runs
 from utils.state_blocks import load_eligible_states
 from utils.transformer_analysis import load_content_eligibility
 
@@ -417,17 +417,9 @@ def analysis_a4_state_coverage(pp_fo, pp_run_ids, recurrence_scores, n_states,
         coverage_corr = {'rho': float(rho), 'p': float(p), 'n': len(rec_vals)}
 
     inactive_states = [i for i in range(n_states) if recurrence_scores[i] == 0]
-    inactive_activated = {}
-    for state_id in inactive_states:
-        # Same rule as Friends-active: FO > fo_threshold in at least one run.
-        _run_fo = np.array([pp_fo[rid][state_id] for rid in all_run_ids])
-        if _run_fo.size and _run_fo.max() > fo_threshold:
-            pp_mean_fo = float(_run_fo.mean())
-            inactive_activated[int(state_id)] = {
-                'max_run_fo': float(_run_fo.max()),
-                'mean_fo': pp_mean_fo,
-                'n_runs_active': int((_run_fo > fo_threshold).sum()),
-            }
+    # Same rule as Friends-active: FO > fo_threshold in at least one run.
+    inactive_activated = states_present_in_runs(
+        [pp_fo[rid] for rid in all_run_ids], inactive_states, fo_threshold)
 
     result = {
         'state_coverage': coverage,
