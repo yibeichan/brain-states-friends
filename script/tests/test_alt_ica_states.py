@@ -166,12 +166,33 @@ def test_subspace_rotation_null_topk_stays_in_top_k_span():
         subspace_rotation_null(C, hmm_maps, n_components=K, n_perm=5, subspace="topk")
     finally:
         ica_mod.match_maps_hungarian = orig
-    B = C[:K].T
+    assert len(seen) == 5
+    B = C[:K].T - C[:K].T.mean(axis=0)          # centred top-K loadings
     for maps in seen:
         coef, *_ = np.linalg.lstsq(B, maps, rcond=None)
         assert np.abs(B @ coef - maps).max() < 1e-10
+        # orthonormal frame: the null rotates a whitened basis
+        assert np.allclose(maps.T @ maps, np.eye(K), atol=1e-10)
     with pytest.raises(ValueError):
         subspace_rotation_null(C, hmm_maps, n_components=K, n_perm=1, subspace="other")
+
+
+def test_null_and_ica_rotate_the_same_whitened_basis():
+    """ICA maps are Z @ R.T with R orthogonal, Z the whitened centred top-K
+    loadings; the null draws Z @ Q. Both must span the same subspace and, once
+    scaled to unit norm, differ only by an orthogonal K x K matrix."""
+    from utils.ica_states import fit_spatial_ica, symmetric_whiten
+    rng = np.random.default_rng(3)
+    P, n_pcs, K = 156, 12, 5
+    C = np.linalg.qr(rng.normal(size=(P, n_pcs)))[0].T
+    X_pc = rng.laplace(size=(400, n_pcs))
+    maps = fit_spatial_ica(C, X_pc, n_components=K, random_state=0)["maps"]
+    _, _, Z = symmetric_whiten(C[:K].T)
+    basis = Z / np.sqrt(P)
+    R = basis.T @ maps                                   # (K, K) coordinates
+    assert np.abs(basis @ R - maps).max() < 1e-8         # same span
+    Rn = R / np.linalg.norm(R, axis=0)
+    assert np.allclose(Rn.T @ Rn, np.eye(K), atol=1e-6)  # orthogonal rotation
 
 
 def test_match_maps_hungarian_recovers_permutation_and_sign():

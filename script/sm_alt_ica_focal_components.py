@@ -2,7 +2,8 @@
 """Per-rank view of the ICA-HMM spatial match and the focal ICA components.
 
 Post-hoc analysis of the saved sm_alt_ica_states outputs at each subject's
-K_used ("all" = active state set). No ICA re-run. For each subject:
+K_used, over the full active state set (FO > 0.02 in at least one run; the
+"all" set's `state_ids`). No ICA re-run. For each subject:
 
 - the per-rank rotation null: the i-th strongest observed matched |r| against
   the 2.5/50/97.5 percentiles of the i-th strongest match across null draws
@@ -58,7 +59,7 @@ def run_subject(sub, parcellation, vt, n_perm, rng_seed):
     with open(os.path.join(icadir, "ica_match_summary.json")) as f:
         summary = json.load(f)
     K = int(summary["K_active"])          # K_used
-    ids = sorted(int(x) for x in summary["by_K"][str(K)]["state_sets"]["all"]["hmm_state_ids"])
+    ids = [int(x) for x in summary["by_K"][str(K)]["state_sets"]["all"]["state_ids"]]
     hmm_maps = state_maps[ids]
     ica_maps = np.load(os.path.join(icadir, f"ica_maps_K{K}.npy"))   # (n_parcels, K)
 

@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import hmm_io
 from utils.ica_states import (
     ICA_STATES_DIR, icasso_consensus, match_maps_hungarian, subspace_rotation_null,
-    spatial_match_pvalues, temporal_correspondence, wta_label_agreement,
+    spatial_match_pvalues, median_match_test, temporal_correspondence, wta_label_agreement,
 )
 from utils.stats import fdr_with_nan
 from utils.transformer_analysis import (
@@ -244,6 +244,7 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
                                           n_components=K, n_perm=n_perm_spatial,
                                           rng_seed=rng_seed, subspace="topk")
             pvals = spatial_match_pvalues(m["matched_r"], null)
+            median_excess, median_p = median_match_test(m["matched_r"], null)
             spatial_q = fdr_with_nan(np.asarray(pvals))
             null_full = subspace_rotation_null(components, hmm_maps,
                                                n_components=K, n_perm=n_perm_spatial,
@@ -265,13 +266,16 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
             occ_corr = _matched_occupancy_corr(
                 ica_labels, viterbi, m["ica_idx"], hmm_state_ids)
             entry["state_sets"][set_name] = {
+                "state_ids": [int(s) for s in state_list],   # full set tested
                 "matched_r": _np(m["matched_r"]),
-                "hmm_state_ids": hmm_state_ids,
+                "hmm_state_ids": hmm_state_ids,                # matched subset
                 "ica_idx": _np(m["ica_idx"]),
                 "spatial_p": _np(pvals),
                 "spatial_q": _np(spatial_q),
                 "null_mean": float(null.mean()),
                 "null_p95": float(np.percentile(null, 95)),
+                "median_excess": median_excess,
+                "median_p": median_p,
                 "spatial_p_full": _np(pvals_full),
                 "spatial_q_full": _np(fdr_with_nan(np.asarray(pvals_full))),
                 "null_mean_full": float(null_full.mean()),
