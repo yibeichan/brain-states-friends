@@ -11,6 +11,10 @@ _spec = importlib.util.spec_from_file_location(
 
 
 def _module():
+    # The module requires SCRATCH_DIR at import; these tests touch no files.
+    import os
+    import tempfile
+    os.environ.setdefault("SCRATCH_DIR", tempfile.gettempdir())
     m = importlib.util.module_from_spec(_spec)
     _spec.loader.exec_module(m)
     return m
