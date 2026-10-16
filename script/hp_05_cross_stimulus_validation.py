@@ -60,7 +60,9 @@ from utils.plot_style import (recurrence_color, make_recurrence_colorbar,
                                apply_publication_style,
                                NETWORK_ORDER, NETWORK_COLORS)
 from utils.common import normalize_parcellation_name
-from utils.recurrence_utils import ACTIVE_FO_THRESHOLD, states_present_in_runs
+from utils.recurrence_utils import (
+    ACTIVE_FO_THRESHOLD, check_fo_threshold_matches_05a, states_present_in_runs,
+)
 from utils.state_blocks import load_eligible_states
 from utils.transformer_analysis import load_content_eligibility
 
@@ -801,6 +803,7 @@ def main():
         if not os.path.exists(path):
             logger.error(f"Missing: {path} - {label}")
             sys.exit(1)
+    check_fo_threshold_matches_05a(recurrence_dir, fo_threshold)
 
     # =========================================================================
     # Load data

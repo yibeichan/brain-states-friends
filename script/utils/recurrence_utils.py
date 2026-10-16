@@ -25,6 +25,30 @@ logger = logging.getLogger(__name__)
 # parameter count.
 ACTIVE_FO_THRESHOLD = 0.02
 
+# Posterior-usage cut that defines K_used. It must equal config
+# min_state_usage and the StickyHDPHMM default, which apply the same rule
+# during fitting.
+USED_STATE_THRESHOLD = 0.01
+
+
+def check_fo_threshold_matches_05a(recurrence_dir, fo_threshold):
+    """Raise if 05a labelled Friends states with a different FO threshold.
+
+    The held-out stages take the Friends-inactive set from 05a's saved
+    recurrence scores and test held-out presence with ``fo_threshold``; the
+    comparison assumes both sides use the same rule.
+    """
+    import json
+    import os
+    path = os.path.join(recurrence_dir, "recurrence_summary.json")
+    with open(path) as f:
+        used = float(json.load(f)["fo_active_threshold"])
+    if abs(used - float(fo_threshold)) > 1e-12:
+        raise ValueError(
+            f"--fo_threshold {fo_threshold} differs from the {used} that 05a "
+            f"used for the Friends active set ({path}); rerun 05a with the "
+            "same threshold or pass the same value here.")
+
 
 def compute_fractional_occupancy(decoded_states, n_states):
     """Compute fractional occupancy per run and per state.
@@ -84,7 +108,7 @@ def active_state_indices(decoded_states, n_states,
     return np.where(recurrence > 0)[0]
 
 
-def used_state_indices(model, min_state_usage=0.01):
+def used_state_indices(model, min_state_usage=USED_STATE_THRESHOLD):
     """Indices of states the fitted model uses (K_used).
 
     A state is used when its posterior usage at the last EM iteration exceeds

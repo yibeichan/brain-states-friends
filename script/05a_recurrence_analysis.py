@@ -67,6 +67,7 @@ from utils.state_blocks import (
 )
 from utils.recurrence_utils import (
     ACTIVE_FO_THRESHOLD,
+    USED_STATE_THRESHOLD,
     compute_fractional_occupancy,
     compute_recurrence_scores,
     compute_pooled_decoded_occupancy,
@@ -883,8 +884,9 @@ def parse_args():
     parser.add_argument('--fo_threshold', type=float, default=ACTIVE_FO_THRESHOLD,
                         help="Minimum FO to count a state as active in a run "
                              f"(default: {ACTIVE_FO_THRESHOLD})")
-    parser.add_argument('--model_usage_threshold', type=float, default=0.01,
-                        help="Threshold for model-history active states in the activity comparison (default: 0.01)")
+    parser.add_argument('--model_usage_threshold', type=float, default=USED_STATE_THRESHOLD,
+                        help="Posterior-usage threshold for model-used states (K_used) in the "
+                             f"activity comparison (default: {USED_STATE_THRESHOLD})")
     
     parser.add_argument('--n_permutations', type=int, default=5000,
                         help="Number of permutations for specificity test (default: 5000)")

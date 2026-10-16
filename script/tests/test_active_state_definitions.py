@@ -57,3 +57,25 @@ def test_figure_presence_threshold_matches_shared_rule():
         text = (script_dir / name).read_text()
         values = re.findall(r"^\s*PRESENCE_FO\s*=\s*([0-9.]+)\s*$", text, re.M)
         assert values and all(float(v) == ACTIVE_FO_THRESHOLD for v in values), name
+
+
+def test_used_state_threshold_matches_fit_defaults():
+    import inspect
+    import re
+    from utils.recurrence_utils import USED_STATE_THRESHOLD
+    src = (Path(__file__).resolve().parents[1] / "utils" / "hdphmm.py").read_text()
+    m = re.search(r"min_state_usage=([0-9.]+)", src)
+    assert m and float(m.group(1)) == USED_STATE_THRESHOLD
+    from utils.recurrence_utils import used_state_indices
+    default = inspect.signature(used_state_indices).parameters["min_state_usage"].default
+    assert default == USED_STATE_THRESHOLD
+
+
+def test_fo_threshold_check_against_05a(tmp_path):
+    import json
+    import pytest
+    from utils.recurrence_utils import check_fo_threshold_matches_05a
+    (tmp_path / "recurrence_summary.json").write_text(json.dumps({"fo_active_threshold": 0.02}))
+    check_fo_threshold_matches_05a(str(tmp_path), 0.02)
+    with pytest.raises(ValueError, match="differs"):
+        check_fo_threshold_matches_05a(str(tmp_path), 0.01)
