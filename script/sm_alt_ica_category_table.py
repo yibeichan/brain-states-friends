@@ -9,7 +9,7 @@ state_flags.csv), and tabulates spatial (Tier-1) and temporal (Tier-2)
 correspondence per category.
 
 FDR note: spatial_q / tier2_q are read straight from the JSON, where BH-FDR was
-applied within the all-visited-set family at that K. The per-category "surviving"
+applied within the active-set family at that K. The per-category "surviving"
 counts are therefore descriptive subsets of that single within-subject family
 (not separately re-corrected per category).
 
@@ -140,7 +140,7 @@ def build_table(parcellation, vt):
 
 def to_markdown(df):
     lines = [
-        "| Subject | K_active | Category | n states | Spatial mean r | "
+        "| Subject | K_used | Category | n states | Spatial mean r | "
         "Spatial sig (q<.05) | Temporal mean rho (signed) | "
         "Temporal sig (q<.05) |",
         "|---|---|---|---|---|---|---|---|",
@@ -163,7 +163,7 @@ def to_markdown(df):
         "",
         "Temporal mean rho is signed (one-sided test for positive sign-aligned "
         "correspondence); negative values indicate directional mismatch, not "
-        "magnitude. Spatial q is BH-FDR within each subject's all-visited-set "
+        "magnitude. Spatial q is BH-FDR within each subject's active-set "
         "family; per-category counts are descriptive subsets, not re-corrected. "
         "Tier-2 p-values are conditional on the Tier-1 spatial match; "
         "low-occupancy states are excluded from the temporal test (–).",

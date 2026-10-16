@@ -1,6 +1,6 @@
 # Findings: ICA convergent-validity supplement (`sm_alt_ica_states`)
 
-Findings for the ICA-vs-HMM convergent-validity supplement. Code: `script/sm_alt_ica_states.py` (+`.sh`), `script/sm_alt_ica_category_table.py`; companion figure `script/fig_sm_alt_ica_matching.py`.
+Findings for the ICA-vs-HMM convergent-validity supplement. Code: `script/sm_alt_ica_states.py` (+`.sh`), `script/sm_alt_ica_category_table.py`, `script/sm_alt_ica_focal_components.py`; companion figure `script/fig_sm_alt_ica_matching.py`.
 
 ## Question
 
@@ -26,38 +26,65 @@ Do the recurring co-activation patterns the sticky-HDP-HMM discovers re-emerge u
 
 ### Tier 1: spatial convergence
 
-FDR-surviving content-eligible matched pairs / total, vs the subspace-rotation null:
+FDR-surviving content-eligible matched pairs / total, against the same-subspace rotation null:
 
-| sub | K_act | K15 | K25 | K35 | K41 | K42 | K43 | K44 | K45 | K46 | K47 |
+| sub | K_used | K15 | K25 | K35 | K41 | K42 | K43 | K44 | K45 | K46 | K47 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 01 | 42 | 0 | 0 | 8/31 | 19 | 15 | 12 | 18 | 25 | 18 | 24 |
-| 02 | 42 | 0 | 8/25 | 5/30 | 12 | 8 | 10 | 10 | 7 | 13 | 9 |
-| 03 | 42 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 04 | 41 | 0 | 0 | 7/27 | 2 | 3 | 4 | 2 | 10 | 2 | 2 |
-| 05 | 41 | 0 | 0 | 18/29 | 18 | 28 | 29/29 | 29/29 | 25 | 28 | 24 |
-| 06 | 37 | 0 | 1/16 | 11/16 | 7 | 7 | 9 | 14/16 | 5 | 10 | 13 |
+| 01 | 42 | 9/15 | 14/25 | 18/31 | 20/31 | 19/31 | 18/31 | 17/31 | 23/31 | 23/31 | 22/31 |
+| 02 | 42 | 9/15 | 14/25 | 18/30 | 23/30 | 23/30 | 24/30 | 24/30 | 25/30 | 24/30 | 22/30 |
+| 03 | 42 | 5/15 | 14/25 | 23/26 | 22/26 | 23/26 | 22/26 | 23/26 | 23/26 | 23/26 | 21/26 |
+| 04 | 41 | 9/15 | 12/25 | 21/27 | 20/27 | 19/27 | 23/27 | 19/27 | 19/27 | 23/27 | 19/27 |
+| 05 | 41 | 12/15 | 16/25 | 20/29 | 23/29 | 21/29 | 23/29 | 23/29 | 24/29 | 24/29 | 25/29 |
+| 06 | 37 | 3/15 | 8/16 | 15/16 | 14/16 | 15/16 | 14/16 | 14/16 | 14/16 | 14/16 | 14/16 |
 
-- At the low-dim settings, ICA matches the HMM no better than a random rotation of the shared subspace: K=15 is null for all 6 subjects; K=25 is null for four subjects, with sub-02 at 8/25 and a single matched pair in sub-06.
-- Surviving pairs appear at K=35 and increase toward the HMM's state count (K_used and the 41–47 grid): sub-01 and sub-05 have the most, sub-02 and sub-06 fewer, sub-04 few, and sub-03 none at any K. Because those K set the ICA dimensionality close to the HMM's, those columns are reported as a sensitivity analysis rather than the primary comparison.
-- Mechanism: a random orthonormal rotation of the vt=0.95 PC subspace already matches the HMM state-mean maps about as well as ICA's independence-maximizing rotation; the agreement that exceeds the null is what counts. Verified not a deflation bug (z-scoring removes global mean; consensus maps used; all maps share the subspace; sub-05 K=35 matched r reproduced to 1e-16).
+Median matched |r| minus the mean of the same-subspace rotation null (content-eligible pairs):
+
+| sub | K_used | K15 | K25 | K35 | K41 | K42 | K43 | K44 | K45 | K46 | K47 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 01 | 42 | +0.07 | +0.06 | +0.05 | +0.05 | +0.04 | +0.04 | +0.02 | +0.03 | +0.07 | +0.05 |
+| 02 | 42 | +0.08 | +0.06 | +0.06 | +0.08 | +0.08 | +0.06 | +0.07 | +0.06 | +0.07 | +0.08 |
+| 03 | 42 | +0.03 | +0.07 | +0.04 | +0.06 | +0.03 | +0.04 | +0.05 | +0.04 | +0.05 | +0.05 |
+| 04 | 41 | +0.06 | +0.02 | +0.07 | +0.06 | +0.05 | +0.07 | +0.06 | +0.09 | +0.07 | +0.05 |
+| 05 | 41 | +0.12 | +0.05 | +0.02 | +0.04 | +0.02 | +0.04 | +0.04 | +0.05 | +0.03 | +0.03 |
+| 06 | 37 | +0.05 | +0.02 | +0.05 | +0.05 | +0.07 | +0.07 | +0.07 | +0.06 | +0.06 | +0.08 |
+
+- Most of the raw agreement comes from the subspace the two methods share. Random K-frames spread over all n_pcs PCs reach a mean matched |r| of 0.21–0.28; random rotations of the top-K PCs reach 0.45–0.51 at K = 15 and 0.33–0.36 at K = 42. HMM state means lie almost entirely in the leading PCs (`hmm_topk_capture` median 0.93–0.96 at K = 15, 0.99 at K = 42 in sub-01, 03 and 05), so any map set confined to them matches the HMM well.
+- ICA's rotation exceeds the same-subspace null in every subject at every K, including K = 15, which is set independently of the HMM. The median excess is +0.02 to +0.12.
+- The excess does not grow as K approaches the HMM's state count. Raw |r| and the null both fall with K (median matched |r| about 0.5–0.6 at K = 15 and about 0.4 at K = 42), because random maps in a higher-dimensional space correlate less.
+- The surviving counts are per rank: the i-th strongest observed match is compared with the i-th strongest match of each null draw. Neighbouring ranks are correlated, so the counts are not the number of individually validated states; they should be read together with the excess and the per-rank pattern below.
+- Individual maps are not recovered one to one. Per-subject median matched |r| is 0.35–0.62 across K, and single pairs range from near 0 to 0.93.
+
+### Focal ICA components and the per-rank pattern
+
+At K_used the matched |r| values are bimodal: 8–11 pairs per subject fall below 0.15, separated by a gap from the rest (`sm_alt_ica_focal_components.py`, `focal_components.json`, active state set):
+
+- 7–11 of the 37–42 ICA components are focal: their best |r| to any HMM state is below 0.15, about 99% of their map energy lies in three parcels (median 0.55–0.64 for the other components), and their kurtosis is about 148 (21–29 for the others). The ICA components in the near-zero pairs are the most stable across ICASSO restarts (median I_q 1.00, against 0.94–0.99 for the others).
+- No HMM state lacks a counterpart. Every state's best |r| to any ICA map is at least 0.30 (subject minima 0.30–0.37). The near-zero pairs arise because the one-to-one assignment gives the focal components to the states left over once the better matches are taken.
+- Rank by rank, 24–31 of the observed matches exceed the 97.5th percentile of the rotation null at the same rank, and 9–15 (the focal pairs at the bottom ranks) fall below its 2.5th percentile.
+- At K = 15 only 1–3 pairs per subject fall below 0.15.
+
+ICA therefore spends part of its dimensions on focal, near-single-parcel sources that the HMM does not represent as states, and the remaining components align with HMM state maps clearly above chance. The median excess in the table above mixes the two groups and understates the agreement of the non-focal components.
+- The secondary full-subspace null (`spatial_q_full`) passes nearly every pair. As described under Method, it does not isolate the ICA rotation.
 
 ### Per-category breakdown
 
-Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_used): within each subject, spatial mean r and temporal correspondence are comparable across content-eligible, run-onset, drift-anchored, and low-confidence states; the dominant axis is the **subject**, not the category. Only "Unused" (lowest-occupancy) states match poorly in some subjects (sub-01/02). Because the taxonomy is a *temporal* classification, this independence is expected: whether a state's mean map is recoverable in the shared subspace is largely orthogonal to its temporal label.
+Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_used, over the active set): spatial mean r is 0.31–0.42 across subjects for content-eligible states and 0.24–0.42 for low-confidence states; categories with one or two states per subject are descriptive only. Run-onset states match somewhat better than content-eligible states in five of six subjects (mean r 0.40–0.50 vs 0.31–0.42), consistent with high-variance, run-locked patterns sitting in the leading PCs. Because the taxonomy is a *temporal* classification, whether a state's mean map is recoverable in the shared subspace is largely independent of its label.
 
 **Caveat:** matches to low-confidence, unused, or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
 
 ### Tier 2: temporal correspondence
 
-Nearly every tested matched pair survives the within-run shift null across all categories and all subjects, including the spatial non-convergers (sub-03: content 20/21, run-onset 5/5). But the shift null is weaker than the subspace-rotation null and these p-values are conditional on the Tier-1 spatial selection, so this is complementary, not independent, confirmation.
+At K = 15, 35 and K_used, every tested content-eligible matched pair survives the within-run shift null in every subject except one pair (sub-05 at K = 35, 28/29). The shift null is weaker than the subspace-rotation null and these p-values are conditional on the Tier-1 spatial selection, so this is complementary, not independent, confirmation.
 
 ## Conclusion
 
-Spatial convergence between ICA and the HMM depends on granularity: it is null at coarse, HMM-independent K and appears only as the ICA dimensionality approaches the HMM's state count. It varies by subject (most surviving pairs in sub-01 and sub-05, none in sub-03) and is not specific to content-eligible states (artifact-category matches reflect subspace recoverability, not validation). Temporal correspondence is broad but rests on a weaker null and is conditional on the spatial match. An independent decomposition does not cleanly rediscover the HMM repertoire.
+ICA and the HMM share the dominant PC subspace, and most of their spatial agreement follows from that alone. Within the subspace, ICA's independence-maximizing axes align with HMM state-mean maps better than random rotations of the same subspace, in all six subjects and at every dimensionality tested, including K = 15, which does not depend on the HMM. The agreement does not depend on matching the HMM's state count. At the HMM's own dimensionality, about a quarter of the ICA components are focal, near-single-parcel sources with no HMM counterpart; the rest match HMM states clearly above chance, and every HMM state has a moderately similar ICA map, but the one-to-one correspondence is incomplete. A decomposition with no temporal model therefore converges on the HMM's spatial axes beyond chance, but does not reproduce its repertoire state by state.
+
+An earlier version of this analysis let FastICA reduce all n_pcs loadings to K itself. Because the loadings' singular values are tied, that kept an arbitrary, BLAS-dependent K-dimensional subspace whose overlap with the top-K PCs was at chance (mean cos² 0.18 at K = 15). Its reported pattern (null at coarse K, convergence only near the HMM's state count, none in sub-03) reflected how much of the leading PCs that arbitrary subspace happened to cover, and is superseded by the results above.
 
 ## Outputs
 
-`output/sm_ica_states/atlas-4S156Parcels/{sub-*/ica_match_summary.json, ica_maps_K*.npy, ica_timecourses_K*.npy, category_correspondence_table.{csv,md}}`.
+`output/sm_ica_states_topk/atlas-4S156Parcels/{sub-*/ica_match_summary.json, ica_maps_K*.npy, ica_timecourses_K*.npy, category_correspondence_table.{csv,md}, focal_components.json, diagnostics/}` (directory name: `ICA_STATES_DIR` in `script/utils/ica_states.py`). The earlier `output/sm_ica_states/` outputs come from the superseded truncated whitening and are not read by any script.
 
 ## Companion figure
 
