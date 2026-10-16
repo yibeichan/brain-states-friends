@@ -710,7 +710,9 @@ Examples:
     )
     parser.add_argument(
         "--fo_threshold", type=float, default=ACTIVE_FO_THRESHOLD,
-        help=f"FO threshold for recurrence scores (default: {ACTIVE_FO_THRESHOLD})",
+        help=("FO threshold for active states: sets the active set, the "
+              "recurrence cut and the states entering Hungarian matching "
+              f"(default: {ACTIVE_FO_THRESHOLD})"),
     )
     parser.add_argument(
         "--match_threshold", type=float, default=0.3,

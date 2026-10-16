@@ -36,7 +36,7 @@ from scipy.optimize import linear_sum_assignment
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 from utils.recurrence_utils import (
-    ACTIVE_FO_THRESHOLD, active_state_indices, used_state_indices,
+    ACTIVE_FO_THRESHOLD, USED_STATE_THRESHOLD, active_state_indices, used_state_indices,
     compute_fractional_occupancy, compute_recurrence_scores,
 )
 from utils.common import normalize_parcellation_name
@@ -237,7 +237,7 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
     results_path = os.path.join(fold_dir, 'loso_results.json')
     with open(results_path, 'r') as f:
         loso_results = json.load(f)
-    k_active_reported = loso_results['loso_refit']['n_active_states']
+    k_used_reported = loso_results['loso_refit']['n_active_states']   # K_used, as the fit recorded it
 
     # Active states (decoded, FO > ACTIVE_FO_THRESHOLD in >= 1 run) carry the
     # recurrence and network-composition invariants. The transition-matrix
@@ -286,7 +286,7 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
     invariants = {
         'k_active': k_active,
         'k_used': k_used,
-        'k_active_reported': k_active_reported,
+        'k_used_reported': k_used_reported,
         'transition_entropy': trans_entropy,
         'self_transition_prob': self_trans,
         'dwell_median_tr': dwell_median,
@@ -310,7 +310,7 @@ def compute_fold_invariants(fold_dir, n_total_states, fo_threshold, parcel_label
 # fold variability exceeds initialization sensitivity.
 # =============================================================================
 
-def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=0.01):
+def compute_noise_floor(seeds_dir, n_seeds=10, min_state_usage=USED_STATE_THRESHOLD):
     """Compute K_used and transition entropy for each primary-model seed.
 
     Args:
@@ -621,7 +621,9 @@ def main():
                         help='Variance threshold subdirectory under final/ '
                              '(default: 0.95)')
     parser.add_argument('--fo_threshold', type=float, default=ACTIVE_FO_THRESHOLD,
-                        help='Fractional occupancy threshold for recurrence '
+                        help='Fractional occupancy threshold for active states: '
+                             'sets the active set, the recurrence cut and the '
+                             'states entering Hungarian matching '
                              f'(default: {ACTIVE_FO_THRESHOLD})')
     parser.add_argument('--match_threshold', type=float, default=0.3,
                         help='Minimum correlation for well-matched states (default: 0.3)')
@@ -735,6 +737,7 @@ def main():
     for s, inv in fold_invariants.items():
         inv_copy = dict(inv)
         inv_copy['dwell_iqr'] = list(inv_copy['dwell_iqr'])
+        inv_copy['fo_threshold'] = float(fo_threshold)
         fold_inv_serializable[str(s)] = inv_copy
 
     fold_inv_path = os.path.join(out_dir, 'fold_invariants.json')
@@ -829,6 +832,7 @@ def main():
         if matching_results[s]['correlation_mean'] is not None
     ]
     matching_summary = {
+        'fo_threshold': float(fo_threshold),
         'per_fold': matching_results,
         'summary': {
             'mean_fraction_well_matched': float(np.mean(all_fracs)) if all_fracs else None,
