@@ -21,6 +21,9 @@ Prerequisites:
 Outputs:
     Multi-subject: {SCRATCH_DIR}/output/04rv_reliability_vis/{parcellation}/
     Per-subject:   {SCRATCH_DIR}/output/04rv_reliability_vis/{parcellation}/{sub_id}/
+    fc_rv_summary.json (multi-subject dir): per-pair and per-subject RV between
+        matched states' FC, the numbers behind Fig 7b-7d. --fc_rv_only writes
+        just this file.
 """
 
 import argparse
@@ -1263,6 +1266,86 @@ def fig7d_fc_vs_mean(all_sh, parcellation, out_dir):
 
 
 # =============================================================================
+# FC similarity values (the numbers behind Fig 7b-7d)
+# =============================================================================
+
+def _summary(values):
+    v = np.asarray(values, dtype=float)
+    v = v[np.isfinite(v)]
+    if len(v) == 0:
+        return {"n": 0, "median": None, "mean": None, "min": None, "max": None}
+    return {"n": int(len(v)), "median": float(np.median(v)), "mean": float(np.mean(v)),
+            "min": float(v.min()), "max": float(v.max())}
+
+
+def write_fc_rv_summary(all_loso, all_sh, parcellation, out_dir):
+    """Write per-pair and per-subject RV between matched states' FC to JSON.
+
+    Uses the same inputs and pair sets as Figs 7b-7d: LOSO compares the primary
+    model's FC (05f) with each fold's FC over that fold's well-matched pairs;
+    split-half compares half A with half B over all Hungarian pairs, and also
+    reports Spearman rho between the pairs' mean-map correlation and their RV.
+    """
+    from utils.state_fc import compute_fc_similarity_pairs
+    from scipy.stats import spearmanr
+
+    out = {"parcellation": parcellation,
+           "metric": "RV coefficient between Ledoit-Wolf state FC matrices",
+           "pair_sets": {"loso": "well_matched pairs per fold (04ra)",
+                         "split_half": "all Hungarian pairs (04rb)"},
+           "subjects": {}}
+    for loso, sh in zip(all_loso, all_sh):
+        sub_id = loso["sub_id"]
+        rec = {"loso": {"pairs": []}, "split_half": {"pairs": []}}
+
+        primary_fc = _load_primary_fc(parcellation, sub_id)
+        if primary_fc is not None:
+            per_fold = loso["hungarian_matching"]["per_fold"]
+            for season_key in sorted(per_fold.keys(), key=int):
+                fold_fc_path = os.path.join(
+                    SCRATCH_DIR, "output", "04_combined_hdphmm",
+                    parcellation, sub_id, "loso", f"season_{season_key}",
+                    "state_empirical_corr.npy",
+                )
+                if not os.path.exists(fold_fc_path):
+                    continue
+                pairs = _remap_loso_pairs(per_fold[season_key]["matches"])
+                if not pairs:
+                    continue
+                rvs = compute_fc_similarity_pairs(primary_fc, np.load(fold_fc_path), pairs)
+                for pair, rv in zip(pairs, rvs):
+                    rec["loso"]["pairs"].append({
+                        "season": int(season_key), "primary_state": int(pair["state_A"]),
+                        "fold_state": int(pair["state_B"]), "rv": rv})
+        rec["loso"]["summary"] = _summary([p["rv"] for p in rec["loso"]["pairs"]])
+
+        fc_a_path = os.path.join(SCRATCH_DIR, "output", "04_combined_hdphmm",
+                                 parcellation, sub_id, "split_half", "A",
+                                 "state_empirical_corr.npy")
+        fc_b_path = fc_a_path.replace(f"{os.sep}A{os.sep}", f"{os.sep}B{os.sep}")
+        if os.path.exists(fc_a_path) and os.path.exists(fc_b_path):
+            pairs = sh["hungarian_matching"]["matching"]["pairs"]
+            rvs = compute_fc_similarity_pairs(np.load(fc_a_path), np.load(fc_b_path), pairs)
+            for pair, rv in zip(pairs, rvs):
+                rec["split_half"]["pairs"].append({
+                    "state_A": int(pair["state_A"]), "state_B": int(pair["state_B"]),
+                    "mean_map_r": float(pair["correlation"]), "rv": rv})
+        sh_pairs = [p for p in rec["split_half"]["pairs"] if np.isfinite(p["rv"])]
+        rec["split_half"]["summary"] = _summary([p["rv"] for p in sh_pairs])
+        if len(sh_pairs) >= 3:
+            rho, pval = spearmanr([p["mean_map_r"] for p in sh_pairs], [p["rv"] for p in sh_pairs])
+            rec["split_half"]["mean_map_r_vs_rv_spearman"] = {"rho": float(rho), "p": float(pval)}
+        out["subjects"][sub_id] = rec
+
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "fc_rv_summary.json")
+    with open(path, "w") as f:
+        json.dump(out, f, indent=2)
+    logger.info("Saved FC RV summary to %s", path)
+    return out
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1282,7 +1365,13 @@ def main():
         "--skip_fc", action="store_true",
         help="Skip Fig 7 (FC stability) if FC not computed yet.",
     )
+    parser.add_argument(
+        "--fc_rv_only", action="store_true",
+        help="Write fc_rv_summary.json only; render no figures.",
+    )
     args = parser.parse_args()
+    if args.fc_rv_only and args.skip_fc:
+        parser.error("--fc_rv_only and --skip_fc are mutually exclusive")
 
     parcellation = normalize_parcellation_name(args.parcellation)
     apply_publication_style()
@@ -1337,6 +1426,10 @@ def main():
     )
     per_sub_out = multi_out  # per-subject figs go into {multi_out}/{sub_id}/
 
+    if args.fc_rv_only:
+        write_fc_rv_summary(all_loso, all_sh, parcellation, multi_out)
+        return
+
     # ── Multi-subject figures ─────────────────────────────────────────────
     logger.info("--- Fig 1: State Spatial Reproducibility ---")
     fig1_spatial_reproducibility(all_loso, all_sh, multi_out)
@@ -1377,6 +1470,9 @@ def main():
 
         logger.info("--- Fig 7d: FC vs Mean Correlation ---")
         fig7d_fc_vs_mean(all_sh, parcellation, multi_out)
+
+        logger.info("--- FC RV summary (JSON) ---")
+        write_fc_rv_summary(all_loso, all_sh, parcellation, multi_out)
 
     logger.info("All figures complete.")
 
