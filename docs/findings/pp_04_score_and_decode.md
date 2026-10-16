@@ -49,9 +49,9 @@ LL gap = Friends test LL minus PP overall LL (positive = Friends better explaine
 | sub-05  | 18     | 7798      | -25.01 | -10.81 | -18.41  | 4.93  |
 | sub-06  | 16     | 6941      | -19.38 | -8.26  | -14.82  | 2.80  |
 
-### Active States per PP Run (Viterbi-decoded)
+### States Visited per PP Run (Viterbi-decoded)
 
-| Subject | Friends K_used | PP min active | PP max active | PP mean active |
+| Subject | Friends K_used | PP min visited | PP max visited | PP mean visited |
 |---------|-----------------|--------------|--------------|---------------|
 | sub-01  | 42              | 28           | 39           | 34.4          |
 | sub-02  | 42              | 27           | 36           | 31.7          |

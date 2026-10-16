@@ -249,7 +249,7 @@ Production config: `vt0.95_covdiag_nc50_g1`.
 | HDP concentration `gamma` | 1 | Low; prior prefers fewer states |
 | Covariance | diagonal (PC space) | Back-projected to parcel space it is non-diagonal (PCA mixing), so states still carry within-state coupling structure |
 
-Model selection uses Pareto analysis of validation log-likelihood vs active-state count (not BIC).
+Model selection uses Pareto analysis of validation log-likelihood vs K_used, the fitted model's occupied-state count (not BIC).
 
 ## Environment
 
