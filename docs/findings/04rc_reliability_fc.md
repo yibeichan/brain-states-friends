@@ -9,7 +9,7 @@ _Computes state-conditioned Ledoit-Wolf empirical FC for every LOSO fold and spl
 - **Parcellation:** atlas-4S156Parcels (156 parcels: Schaefer 100 cortical + 56 subcortical composite)
 - **Modes:** LOSO (6 folds per subject; sub-04 has 4 folds) and split-half (halves A and B per subject)
 - **Inputs:** `decoded_states.pkl` and fold/half results JSON from script 04 loso\_fit / split\_half\_fit modes; raw parcel time series from script 02
-- **Method:** Viterbi-decoded state labels pool all TRs assigned to each state across episodes; Ledoit-Wolf shrinkage covariance is computed per state; converted to Pearson correlation. States with fewer than 30 TRs are flagged as unreliable (not saved with FC).
+- **Method:** Viterbi-decoded state labels pool all TRs assigned to each state across episodes; Ledoit-Wolf shrinkage covariance is computed per state; converted to Pearson correlation. States with fewer than 30 TRs are flagged as unreliable in `fc_metadata.json` (`n_trs_per_state`, `n_reliable_states`); their FC is still computed and saved for any state with at least 2 TRs, so downstream comparisons must apply the flag themselves.
 - **K:** 50 (truncation capacity, as in primary model); n\_reliable\_states counts states that meet the 30-TR threshold.
 - **Per-subject, no group statistic.** Outputs are saved in-place alongside existing LOSO/split-half model outputs under `output/04_combined_hdphmm/`.
 
@@ -65,24 +65,30 @@ _Computes state-conditioned Ledoit-Wolf empirical FC for every LOSO fold and spl
 | sub-05 | 486 | 1084 | 0.0163 |
 | sub-06 | 450 | 1310 | 0.0222 |
 
-### Matched-pair FC reproduction (RV)
+### Matched-pair FC reproduction
 
-For state pairs matched across fits, within-state FC is compared by the RV coefficient between the two Ledoit-Wolf correlation matrices (`04rv_reliability_vis.py`, `fc_rv_summary.json`; the same values as Fig 7b–7d). LOSO pairs are each fold's well-matched pairs against the primary model; split-half pairs are all Hungarian pairs between halves.
+For state pairs matched across fits, within-state FC is compared in two ways (`04rv_reliability_vis.py`, `fc_rv_summary.json`): the RV coefficient used by Fig 7a–7d, and the Pearson r between the matrices' off-diagonal entries. RV is uncentred and includes the unit diagonal, so it is close to 1 for almost any two correlation matrices; the off-diagonal r separates states more sharply. LOSO pairs are each fold's well-matched pairs against the primary model; split-half pairs are all Hungarian pairs between halves. Pairs are counted as reliable when both states have at least 30 TRs. The unmatched baseline pairs each reliable split-half state with every state in the other half except its own partner.
 
-| Subject | median RV (LOSO) | LOSO pairs | median RV (split-half) | split-half pairs | mean-map r vs RV, Spearman rho (split-half) |
-|---|---|---|---|---|---|
-| sub-01 | 0.993 | 249 | 0.995 | 43 | 0.24 |
-| sub-02 | 0.995 | 238 | 0.996 | 44 | 0.50 |
-| sub-03 | 0.981 | 262 | 0.986 | 44 | 0.23 |
-| sub-04 | 0.979 | 161 | 0.975 | 42 | 0.42 |
-| sub-05 | 0.991 | 252 | 0.993 | 44 | 0.56 |
-| sub-06 | 0.986 | 236 | 0.990 | 43 | 0.63 |
+| Subject | LOSO, RV / off-diag r (pairs) | split-half, RV / off-diag r (pairs) | split-half unmatched baseline, RV / off-diag r | mean-map r vs RV, Spearman rho (split-half) |
+|---|---|---|---|---|
+| sub-01 | 0.994 / 0.974 (245) | 0.995 / 0.982 (38) | 0.992 / 0.969 | -0.03 |
+| sub-02 | 0.995 / 0.977 (237) | 0.996 / 0.983 (38) | 0.993 / 0.970 | 0.42 |
+| sub-03 | 0.981 / 0.944 (262) | 0.986 / 0.958 (41) | 0.971 / 0.914 | 0.09 |
+| sub-04 | 0.979 / 0.942 (161) | 0.975 / 0.929 (40) | 0.955 / 0.877 | 0.36 |
+| sub-05 | 0.991 / 0.960 (244) | 0.993 / 0.972 (41) | 0.987 / 0.946 | 0.47 |
+| sub-06 | 0.986 / 0.951 (236) | 0.991 / 0.967 (38) | 0.982 / 0.936 | 0.47 |
 
-Matched-pair FC reproduces closely in every subject under both schemes (median RV 0.979–0.995 for LOSO and 0.975–0.996 for split-half). Agreement on the mean map does not guarantee agreement on FC for every pair: 26 of the 260 split-half pairs have RV below 0.9 (lowest 0.31), and 5 of them combine a mean-map correlation above 0.7 with an RV below 0.8. Mean-map similarity and RV are positively associated within subjects (Spearman rho 0.23–0.63). The lowest LOSO RV is 0.71 across 1398 pairs.
+Values are per-subject medians over reliable pairs.
+
+- All states share most of their FC structure: unmatched states already reach a median off-diagonal r of 0.88–0.97.
+- Matched partners exceed that baseline in every subject, by +0.012 to +0.052 in median off-diagonal r. The state-specific part of FC therefore reproduces across fits, but it is a small share of the total similarity, and the high RV values mostly reflect the shared structure.
+- The low-similarity pairs concentrate in states with few TRs, consistent with estimation noise: all 24 split-half pairs with a state under 30 TRs in one half have RV below 0.9, against 2 of the 236 reliable pairs (lowest reliable RV 0.71).
+- Among reliable pairs, mean-map similarity and RV are associated in 4 of 6 subjects (Spearman rho -0.03–0.47; p < 0.05, uncorrected, in sub-02, sub-04, sub-05 and sub-06); this is descriptive.
+- LOSO covers 1398 well-matched pairs, 13 of them involving a state under 30 TRs.
 
 ## Outputs
 
-- output/04rv\_reliability\_vis/atlas-4S156Parcels/fc\_rv\_summary.json - per-pair and per-subject RV for matched states (LOSO and split-half), written by `04rv_reliability_vis.py` (`--fc_rv_only` writes only this file)
+- output/04rv\_reliability\_vis/atlas-4S156Parcels/fc\_rv\_summary.json - per-pair RV and off-diagonal r for matched states (LOSO and split-half) with TR counts and reliability flags, per-subject summaries, and the split-half unmatched baseline, written by `04rv_reliability_vis.py` (`--fc_rv_only` writes only this file)
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/loso/season\_{N}/state\_empirical\_corr.npy - (50, 156, 156) Ledoit-Wolf Pearson correlation per state, per LOSO fold
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/loso/season\_{N}/fc\_metadata.json - K, n\_parcels, n\_runs, total\_trs, min\_trs, n\_reliable\_states, n\_trs\_per\_state, shrinkage\_alpha\_per\_state
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/split\_half/{A,B}/state\_empirical\_corr.npy - (50, 156, 156) as above, per split-half
