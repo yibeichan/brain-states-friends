@@ -11,7 +11,8 @@ K_used, over the full active state set (FO > 0.02 in at least one run; the
 - each HMM state's best |r| to any ICA map, which separates a poor one-to-one
   assignment from a state that no ICA map resembles;
 - focal ICA components: maps whose best |r| to any HMM state is below 0.15,
-  with their kurtosis and the share of map energy in their top three parcels.
+  with their kurtosis, ICASSO stability (I_q) and the share of map energy in
+  their top three parcels.
 
 Output: {ICA_STATES_DIR}/{parcellation}/focal_components.json
 """
@@ -74,6 +75,7 @@ def run_subject(sub, parcellation, vt, n_perm, rng_seed):
     comp_best = R.max(0)
     focal = comp_best < FOCAL_R
     kz = kurtosis(ica_maps, axis=0)
+    iq = np.asarray(summary["by_K"][str(K)]["iq"], float)
     e = np.sort(_z(ica_maps.T) ** 2, axis=1)[:, ::-1]
     share = e[:, :TOP_PARCELS].sum(1) / e.sum(1)
 
@@ -92,6 +94,8 @@ def run_subject(sub, parcellation, vt, n_perm, rng_seed):
         "other_kurtosis_median": float(np.median(kz[~focal])),
         "focal_top3_energy_share_median": float(np.median(share[focal])) if focal.any() else None,
         "other_top3_energy_share_median": float(np.median(share[~focal])),
+        "focal_iq_median": float(np.median(iq[focal])) if focal.any() else None,
+        "other_iq_median": float(np.median(iq[~focal])),
     }
 
 

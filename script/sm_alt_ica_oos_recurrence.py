@@ -8,11 +8,11 @@ group-level statistic.
 
 Inputs (frozen, from earlier pipeline):
     03a/04: PCA model, n_pcs lookup, projected Friends runs, decoded states.
-    sm_ica_states: K_used consensus maps (ica_maps_K{K_active}.npy; key "K_active").
+    {ICA_STATES_DIR}: K_used consensus maps (ica_maps_K{K_active}.npy; key "K_active").
     m10_03: Movie10 PC-score projections (movie_run_ids.json + {run_id}.npy).
 
 Output:
-    {SCRATCH_DIR}/output/sm_ica_oos_recurrence/{parc}/{sub}/oos_recurrence_summary.json
+    {SCRATCH_DIR}/output/{ICA_OOS_DIR}/{parc}/{sub}/oos_recurrence_summary.json
 """
 import os
 import sys

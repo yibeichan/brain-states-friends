@@ -134,8 +134,11 @@ import os
 import json
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from utils.ica_states import consensus_projection
 
+load_dotenv()
 _SCRATCH = os.getenv("SCRATCH_DIR")
 _SUB = "sub-01"
 _PARC = "atlas-4S156Parcels"

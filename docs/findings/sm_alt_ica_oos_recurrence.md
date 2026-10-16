@@ -73,6 +73,8 @@ The residual is **positive for all 5 subjects but exceeds the null in only 2** (
 
 ### Petit Prince (auditory; 18 runs/subject, n=5; FR + EN pooled)
 
+`petitprince` is treated as one stimulus with `lppFR` and `lppEN` as per-group breakdowns. **Assumption:** each subject heard both languages of the same narrative, so pooling assumes language-invariance of recurrence (and the within-run phase-randomized null does not absorb the FR/EN block structure). The per-group ρ below are reported to check FR/EN concordance.
+
 Overall WTA arm, real ρ vs the 1000-draw null:
 
 | sub | K_used | WTA real ρ | null mean | z | p (null) | residual | recurrence≈marginal ρ |
@@ -95,9 +97,9 @@ The residual is **positive and exceeds the null for all 5 subjects** (p ≤ 0.00
 | 05 | 0.782 (9) | 0.821 (9) |
 | 06 | 0.768 (7) | 0.803 (9) |
 
-FR and EN per-group ρ fall in a similar range (0.67–0.84), so the pooled petitprince ρ is not driven by one language. EN is higher than FR in all five subjects, by 0.03–0.09. These per-group values are raw, not null-corrected, and each rests on 7–9 runs, so the direction is not interpreted.
+FR and EN per-group ρ fall in a similar range (0.67–0.84), but EN is higher than FR in all five subjects, by 0.03–0.09, so the language-invariance assumption behind pooling holds only approximately. These per-group values are raw, not null-corrected, and each rests on 7–9 runs, so the direction is not interpreted further.
 
-### Continuous arm does not survive the null (all three stimuli)
+### Continuous arm: no reliable signal beyond the null (all three stimuli)
 
 Against the phase-randomized null the continuous-occupancy residual is mostly **negative or near-zero**, so the continuous arm carries no reliable stimulus-specific signal beyond shared structure. Two subject-stimulus pairs exceed the null (Harry Potter sub-01, p = 0.026; Petit Prince sub-05, p = 0.003) with no consistent pattern across subjects or stimuli. The arm is reported for completeness and does **not** corroborate the WTA result.
 

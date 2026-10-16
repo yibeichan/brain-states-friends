@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Supplement table: ICA-HMM correspondence by HMM-state taxonomy category.
 
-Pure post-hoc AGGREGATION of the saved sm_ica_states results -- no ICA re-run,
+Pure post-hoc AGGREGATION of the saved sm_alt_ica_states results -- no ICA re-run,
 no re-matching, no new statistics. For each subject, takes the K_used (key "K_active") "all"
 state-set matched pairs (ICA components Hungarian-matched to every HMM state the
 Viterbi path visits at least once), labels each matched HMM state by its summary_category (from the 05e
@@ -13,7 +13,7 @@ applied within the active-set family at that K. The per-category "surviving"
 counts are therefore descriptive subsets of that single within-subject family
 (not separately re-corrected per category).
 
-Outputs (to sm_ica_states/{parcellation}/):
+Outputs (to {ICA_STATES_DIR}/{parcellation}/):
   category_correspondence_table.csv  -- long format, one row per (subject, category)
   category_correspondence_table.md   -- supplement-ready markdown
 """
