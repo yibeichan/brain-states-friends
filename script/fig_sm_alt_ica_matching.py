@@ -46,15 +46,16 @@ def imports():
     from dotenv import load_dotenv
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from utils.ica_states import ICA_STATES_DIR
     from utils.plot_style import apply_publication_style
 
     load_dotenv()
     apply_publication_style()
-    return json, np, os, plt
+    return ICA_STATES_DIR, json, np, os, plt
 
 
 @app.cell
-def config(json, os):
+def config(ICA_STATES_DIR, json, os):
     SCRATCH = os.getenv("SCRATCH_DIR")
     PARC = "atlas-4S156Parcels"
     SUBS = [f"sub-0{i}" for i in range(1, 7)]
@@ -65,7 +66,7 @@ def config(json, os):
     os.makedirs(OUT, exist_ok=True)
 
     def _load(sub):
-        p = os.path.join(SCRATCH, "output", "sm_ica_states", PARC, sub,
+        p = os.path.join(SCRATCH, "output", ICA_STATES_DIR, PARC, sub,
                          "ica_match_summary.json")
         return json.load(open(p))
 

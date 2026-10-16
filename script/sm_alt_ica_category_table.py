@@ -26,6 +26,9 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils.ica_states import ICA_STATES_DIR
+
 load_dotenv()
 SCRATCH_DIR = os.getenv("SCRATCH_DIR")
 
@@ -48,7 +51,7 @@ def _arr(x):
 
 
 def build_table(parcellation, vt):
-    ica_base = os.path.join(SCRATCH_DIR, "output", "sm_ica_states", parcellation)
+    ica_base = os.path.join(SCRATCH_DIR, "output", ICA_STATES_DIR, parcellation)
     flag_base = os.path.join(SCRATCH_DIR, "output",
                              "05e_temporal_trend_a4", parcellation)
     rows = []
@@ -182,7 +185,7 @@ def main():
     if SCRATCH_DIR is None:
         raise SystemExit("SCRATCH_DIR must be set in .env")
     df = build_table(a.parcellation, a.vt)
-    out_dir = os.path.join(SCRATCH_DIR, "output", "sm_ica_states", a.parcellation)
+    out_dir = os.path.join(SCRATCH_DIR, "output", ICA_STATES_DIR, a.parcellation)
     csv_path = os.path.join(out_dir, "category_correspondence_table.csv")
     md_path = os.path.join(out_dir, "category_correspondence_table.md")
     # Outputs may already be read-only git-annex symlinks (after a datalad save);

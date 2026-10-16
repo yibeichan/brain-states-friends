@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from utils.ica_states import (
+    ICA_STATES_DIR,
     wta_labels,
     consensus_projection,
     wta_label_agreement,
@@ -151,7 +152,7 @@ _STIM_PROJ = {
 def _ica_dir():
     if _SCRATCH is None:
         return None
-    return Path(_SCRATCH) / "output" / "sm_ica_states" / _PARC / _SUB
+    return Path(_SCRATCH) / "output" / ICA_STATES_DIR / _PARC / _SUB
 
 
 def _proj_dir(stimulus):

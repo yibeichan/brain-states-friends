@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from scipy.stats import kurtosis, spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # put script/ on path
+from utils.ica_states import ICA_STATES_DIR  # noqa: E402
 
 
 def participation_ratio(singular_values):
@@ -127,7 +128,7 @@ def _load_json(path):
 def _subjects(scratch, parc, requested):
     if requested:
         return list(requested)
-    base = os.path.join(scratch, "output", "sm_ica_states", parc)
+    base = os.path.join(scratch, "output", ICA_STATES_DIR, parc)
     return sorted(d for d in os.listdir(base)
                   if d.startswith("sub-") and os.path.isdir(os.path.join(base, d)))
 
@@ -136,7 +137,7 @@ def run_subject(scratch, parc, vt, sub):
     """Assemble evidence rows + geometry + corroboration for one subject."""
     from utils.jax_free_model_io import _load_model_no_jax
     import pickle
-    icadir = os.path.join(scratch, "output", "sm_ica_states", parc, sub)
+    icadir = os.path.join(scratch, "output", ICA_STATES_DIR, parc, sub)
     summary = _load_json(os.path.join(icadir, "ica_match_summary.json"))
     rows = build_evidence_rows(summary)
 
@@ -195,7 +196,7 @@ def main(argv=None):
     eff_rank = [geom_by[s]["eff_rank_norm"] for s in geom_by]
     spear = spearman_illustrative(convergence, eff_rank) if len(geom_by) > 2 else None
 
-    out_dir = os.path.join(scratch, "output", "sm_ica_states", a.parcellation, "diagnostics")
+    out_dir = os.path.join(scratch, "output", ICA_STATES_DIR, a.parcellation, "diagnostics")
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "diagnostics_summary.json"), "w") as f:
         json.dump({"evidence": ev_all, "geometry": geom_by, "corroboration": corr_by,

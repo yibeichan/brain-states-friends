@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # put script/ on path
+from utils.ica_states import ICA_STATES_DIR  # noqa: E402
 
 
 def test_nojax_unpickler_substitutes_jax_class_only():
@@ -228,7 +229,7 @@ def _scratch_or_skip():
     from dotenv import load_dotenv
     load_dotenv()
     s = os.environ.get("SCRATCH_DIR")
-    base = os.path.join(s or "", "output", "sm_ica_states", "atlas-4S156Parcels")
+    base = os.path.join(s or "", "output", ICA_STATES_DIR, "atlas-4S156Parcels")
     if not s or not os.path.isdir(base):
         pytest.skip("SCRATCH ICA outputs absent")
     return s
@@ -243,7 +244,7 @@ def test_recompute_matched_r_matches_stored_multiset():
     from utils.jax_free_model_io import _load_model_no_jax
     scratch = _scratch_or_skip()
     parc, vt, sub, K = "atlas-4S156Parcels", "0.95", "sub-03", "42"
-    icadir = os.path.join(scratch, "output", "sm_ica_states", parc, sub)
+    icadir = os.path.join(scratch, "output", ICA_STATES_DIR, parc, sub)
     with open(os.path.join(icadir, "ica_match_summary.json")) as f:
         summary = json.load(f)
     stored = np.sort(np.asarray(

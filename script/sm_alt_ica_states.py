@@ -25,7 +25,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils import hmm_io
 from utils.ica_states import (
-    icasso_consensus, match_maps_hungarian, subspace_rotation_null,
+    ICA_STATES_DIR, icasso_consensus, match_maps_hungarian, subspace_rotation_null,
     spatial_match_pvalues, temporal_correspondence, wta_label_agreement,
 )
 from utils.stats import fdr_with_nan
@@ -320,7 +320,7 @@ def main():
     p.add_argument("--n_perm_temporal", type=int, default=1000)
     p.add_argument("--rng_seed", type=int, default=0)
     p.add_argument("--force", action="store_true")
-    p.add_argument("--out_name", default="sm_ica_states",
+    p.add_argument("--out_name", default=ICA_STATES_DIR,
                    help="Output directory under $SCRATCH_DIR/output.")
     p.add_argument("--extra_k", default="",
                    help="Comma-separated sensitivity K(s) to compute and MERGE "

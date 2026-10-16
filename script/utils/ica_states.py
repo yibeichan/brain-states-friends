@@ -19,6 +19,12 @@ from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score
 from .stats import fdr_with_nan
 from .transformer_analysis import circular_shift_states_by_run
 
+# Output directories under $SCRATCH_DIR/output. The top-K runs replace the
+# earlier sm_ica_states / sm_ica_oos_recurrence outputs, whose truncated
+# whitening kept an arbitrary subspace of the PC span (see fit_spatial_ica).
+ICA_STATES_DIR = "sm_ica_states_topk"
+ICA_OOS_DIR = "sm_ica_oos_recurrence_topk"
+
 
 def fit_spatial_ica(components, X_pc, n_components, random_state=0,
                     fun="logcosh", max_iter=1000):
