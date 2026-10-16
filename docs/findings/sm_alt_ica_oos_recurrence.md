@@ -147,6 +147,15 @@ An earlier version of this analysis used ICA maps from the superseded truncated 
 
 Fields: `sub_id`, `parcellation`, `vt`, `stimulus`, `n_null`, `K_active` (= K_used), `n_components`, `fo_threshold`, `n_movie_runs` (historical name = total OOS runs for the stimulus), `friends_recurrence` (per-component), `movie_occupancy_wta` (per-component OOS WTA occupancy; historical key name), `movie_occupancy_continuous` (per-component), `recurrence_vs_friends_marginal_wta_rho` (the ≈0.99 caveat), `overall` (WTA + continuous ρ/p/n, each with a `null` block `{mean, sd, z, p, n_draws, residual}` from the phase-randomized null), `per_film` (per-group, each with `n_runs` + WTA + continuous ρ/p/n — raw, not null-corrected). Note: the `movie_*` key names are historical/generic and apply to all three stimuli.
 
+## Reproduce
+
+```bash
+# needs the sm_alt_ica_states outputs and the m10_03 / hp_03 / pp_03 projections
+uv run python -m pytest script/tests/test_alt_ica_oos_recurrence.py
+sbatch script/sm_alt_ica_oos_recurrence.sh                                 # all three stimuli, 1000 null draws
+uv run python script/fig_sm_alt_ica_oos_recurrence.py                      # companion figure
+```
+
 ## Companion figure
 
 `script/fig_sm_alt_ica_oos_recurrence.py` (OOS panels), rendered per stimulus as `fig_sm_ica_oos_recurrence_{stimulus}_{A_wta,B_continuous}.{png,svg}`. Panel A: scatter of Friends recurrence (x) vs OOS WTA fractional occupancy (y) per component, one cell per subject (sub-04 cell blank for HP/PP), annotated with ρ, the null z (vs null mean), and the run count. Panel B: the continuous-arm scatter, annotated with ρ, the null residual (Δ), and the run count. The run-count annotation makes the per-stimulus precision asymmetry visible; the stimuli are not compared. These panels parallel the HMM R5 figure.

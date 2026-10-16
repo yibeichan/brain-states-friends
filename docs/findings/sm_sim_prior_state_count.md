@@ -1,10 +1,10 @@
-# Findings: Prior-predictive occupied-state count
+# Findings: Prior-predictive occupied-state count (`sm_sim_prior_state_count`)
 
-_Script: `script/sm_sim_prior_state_count.py`. Tier: SUPPLEMENT (Methods support)._
+Findings for the prior-predictive state-count simulation. Code: `script/sm_sim_prior_state_count.py`. Tier: SUPPLEMENT (Methods support).
 
-_Characterizes how many distinct states the finite (weak-limit) sticky-HDP-HMM
-prior favors at the production hyperparameters, before any data are observed.
-Fit-free Monte-Carlo; no fMRI data are read._
+## Question
+
+How many distinct states does the finite (weak-limit) sticky-HDP-HMM prior favor at the production hyperparameters, before any data are observed? If the prior already expected roughly the data-driven count, that count would be uninformative; if it expects far fewer, the discovered repertoire is data-driven rather than imposed by the prior. Fit-free Monte-Carlo; no fMRI data are read.
 
 ## Method (as run)
 
@@ -66,6 +66,14 @@ The favored repertoire grows with the global concentration `gamma`:
 | 1 (production) | 2 | [1, 6] |
 | 5 | 6 | [1, 12] |
 
+## Conclusion
+
+At the production setting (`gamma = 1`) the prior favors only ~2 occupied states (95% interval [1, 6]), an order of magnitude below the 37–42 states the fitted models use (K_used). The discovered repertoire is therefore data-driven, not imposed by the prior; the favored count grows with `gamma`, confirming the concentration prior controls it.
+
+## Outputs
+
+`$SCRATCH_DIR/prior_state_count/prior_state_count.json`.
+
 ## Reproduce
 
 ```bash
@@ -73,5 +81,3 @@ python script/sm_sim_prior_state_count.py                 # production setting
 python script/sm_sim_prior_state_count.py --gamma 5       # sensitivity
 python script/tests/test_sim_prior_state_count.py         # unit tests
 ```
-
-Output JSON: `$SCRATCH_DIR/prior_state_count/prior_state_count.json`.
