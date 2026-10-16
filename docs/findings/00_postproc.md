@@ -52,7 +52,7 @@ Note: sub-02 has one short run (s05e09a, 33 TRs); sub-04 has substantially fewer
 
 ## Known limitation: CSF and WM regressors from corrupted tissue maps
 
-The CNeuroMod anatomical derivatives (`anat.smriprep`) were built with fMRIPrep 20.2.1 `--anat-only`, whose sMRIPrep (< 0.7.2) resampled the FreeSurfer aseg with trilinear instead of nearest-neighbour interpolation (fixed upstream in sMRIPrep 0.7.2). The shipped GM/WM/CSF tissue maps therefore contain spurious intermediate labels, and the CSF class is inflated. Every CNeuroMod BOLD fMRIPrep run reused these maps (`--anat-derivatives`), so the `csf` and `white_matter` confound columns regressed here are mask means over affected masks. The BOLD data, motion parameters and cosine regressors are not affected. Because the masks are per participant, the same issue applies to every stimulus processed here.
+The CNeuroMod anatomical derivatives (`anat.smriprep`) were built with fMRIPrep 20.2.1 `--anat-only`, whose sMRIPrep (< 0.7.2) resampled the FreeSurfer aseg with trilinear instead of nearest-neighbour interpolation (fixed upstream in sMRIPrep 0.7.2). The shipped GM/WM/CSF tissue maps therefore contain spurious intermediate labels, and the CSF class is inflated. Every CNeuroMod BOLD fMRIPrep run reused these maps (`--anat-derivatives`), so the `csf` and `white_matter` confound columns regressed here are mask means over affected masks. The BOLD data, motion parameters and cosine regressors are not affected. Because the masks are per participant, the same issue applies to every stimulus processed here; the Movie10, Harry Potter, Petit Prince and hcptrt derivatives all pin the same `anat.smriprep` tissue maps, and their fMRIPrep versions (20.2.1–20.2.6) share the same confound code.
 
 **Measured effect.** One Friends run per participant (session 010) was cleaned exactly as above twice, once with the shipped `csf` / `white_matter` columns and once with columns recomputed from masks rebuilt from the clean FreeSurfer aseg using fMRIPrep 20.2.6's own mask code, and the cleaned data were averaged into the 4S156 parcels:
 
@@ -65,7 +65,16 @@ The CNeuroMod anatomical derivatives (`anat.smriprep`) were built with fMRIPrep 
 | 05 | 521 → 115 | 0.851 | 0.996 | 0.987 / 0.968 | 0.991 / 0.965 | 0.992 |
 | 06 | 473 → 397 | 0.929 | 0.983 | 0.996 / 0.991 | 0.998 / 0.979 | 0.995 |
 
-The `csf` regressor is substantially wrong in sub-03, sub-04 and sub-05, but because it is one of 13–18 regressors the cleaned parcel time series change little (median r 0.987–0.998; the lowest parcels, mostly cerebellar, 0.936–0.992). The PC subspace is computed here from a single run, a noisier proxy for the 03a PCA over all runs. The pipeline was not rerun; results are reported with this limitation.
+The same check on one run per participant of each other stimulus gives the same pattern:
+
+| stimulus | n | `csf` r | median parcel r, cortical / subcortical | lowest parcel r |
+|---|---|---|---|---|
+| Movie10 | 6 | 0.694–0.992 | 0.978–0.999 / 0.990–0.999 | 0.942 |
+| Harry Potter | 5 | 0.790–0.992 | 0.978–0.996 / 0.987–0.998 | 0.954 |
+| Petit Prince | 5 | 0.730–0.988 | 0.990–0.995 / 0.991–0.999 | 0.959 |
+| Rest (hcptrt) | 6 | 0.652–0.979 | 0.977–0.999 / 0.989–0.999 | 0.937 |
+
+Across stimuli, the `csf` regressor is substantially wrong in sub-03, sub-04 and sub-05, but because it is one of 13–18 regressors the cleaned parcel time series change little (Friends median r 0.987–0.998; the lowest parcels, mostly cerebellar, 0.936–0.992). The PC subspace is computed here from a single run, a noisier proxy for the 03a PCA over all runs. The pipeline was not rerun; results are reported with this limitation.
 
 ## Outputs
 
