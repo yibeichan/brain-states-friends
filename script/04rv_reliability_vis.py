@@ -21,6 +21,9 @@ Prerequisites:
 Outputs:
     Multi-subject: {SCRATCH_DIR}/output/04rv_reliability_vis/{parcellation}/
     Per-subject:   {SCRATCH_DIR}/output/04rv_reliability_vis/{parcellation}/{sub_id}/
+    fc_rv_summary.json (multi-subject dir): per-pair and per-subject RV between
+        matched states' FC, the numbers behind Fig 7b-7d. --fc_rv_only writes
+        just this file.
 """
 
 import argparse
@@ -1263,6 +1266,144 @@ def fig7d_fc_vs_mean(all_sh, parcellation, out_dir):
 
 
 # =============================================================================
+# FC similarity values (the numbers behind Fig 7b-7d)
+# =============================================================================
+
+def _summary(values):
+    v = np.asarray(values, dtype=float)
+    v = v[np.isfinite(v)]
+    if len(v) == 0:
+        return {"n": 0, "median": None, "mean": None, "min": None, "max": None}
+    return {"n": int(len(v)), "median": float(np.median(v)), "mean": float(np.mean(v)),
+            "min": float(v.min()), "max": float(v.max())}
+
+
+def offdiag_fc_r(fc_a, fc_b):
+    """Pearson r between the upper off-diagonal entries of two FC matrices.
+
+    Unlike the uncentred RV coefficient, this ignores the shared unit diagonal
+    and the common positive offset of correlation matrices, so it separates
+    matched from unmatched states more sharply.
+    """
+    iu = np.triu_indices(fc_a.shape[0], k=1)
+    return float(np.corrcoef(fc_a[iu], fc_b[iu])[0, 1])
+
+
+def _n_trs(meta_path):
+    """(n_trs_per_state, min_trs) from a 04rc fc_metadata.json or 05f metadata.json."""
+    with open(meta_path) as f:
+        meta = json.load(f)
+    return np.asarray(meta["n_trs_per_state"], dtype=int), int(meta["min_trs"])
+
+
+def _pair_record(fc_a, fc_b, sa, sb, n_a, n_b, min_trs, **extra):
+    from utils.state_fc import compute_fc_similarity_pairs
+    rv = compute_fc_similarity_pairs(fc_a, fc_b, [{"state_A": sa, "state_B": sb}])[0]
+    return {**extra, "n_trs_A": int(n_a[sa]), "n_trs_B": int(n_b[sb]),
+            "reliable": bool(n_a[sa] >= min_trs and n_b[sb] >= min_trs),
+            "rv": rv, "offdiag_r": offdiag_fc_r(fc_a[sa], fc_b[sb])}
+
+
+def _scheme_summary(pairs):
+    rel = [p for p in pairs if p["reliable"]]
+    return {"all": {"rv": _summary([p["rv"] for p in pairs]),
+                    "offdiag_r": _summary([p["offdiag_r"] for p in pairs])},
+            "reliable": {"rv": _summary([p["rv"] for p in rel]),
+                         "offdiag_r": _summary([p["offdiag_r"] for p in rel])}}
+
+
+def write_fc_rv_summary(all_loso, all_sh, parcellation, out_dir):
+    """Write per-pair and per-subject FC similarity of matched states to JSON.
+
+    Uses the same inputs and pair sets as Figs 7b-7d: LOSO compares the primary
+    model's FC (05f) with each fold's FC over that fold's well-matched pairs;
+    split-half compares half A with half B over all Hungarian pairs. Each pair
+    records both states' TR counts and whether both meet the 30-TR rule of
+    04rc/05f (FC is saved for every state with at least 2 TRs, so the flag is
+    the only filter). Two similarity measures: the RV coefficient used by the
+    figures, and the off-diagonal Pearson r. Split-half also gets an unmatched
+    baseline: the same reliable states paired with every non-partner, which
+    shows how high either measure is for two unrelated states.
+    """
+    from scipy.stats import spearmanr
+
+    base = os.path.join(SCRATCH_DIR, "output", "04_combined_hdphmm", parcellation)
+    out = {"parcellation": parcellation,
+           "measures": {"rv": "uncentred RV coefficient between Ledoit-Wolf correlation matrices (Figs 7a-7d)",
+                        "offdiag_r": "Pearson r between upper off-diagonal entries"},
+           "pair_sets": {"loso": "well_matched pairs per fold (04ra)",
+                         "split_half": "all Hungarian pairs (04rb)"},
+           "reliable": "both states have at least min_trs (30) TRs",
+           "subjects": {}}
+    for loso, sh in zip(all_loso, all_sh):
+        sub_id = loso["sub_id"]
+        rec = {"loso": {"pairs": []}, "split_half": {"pairs": []}}
+
+        primary_fc = _load_primary_fc(parcellation, sub_id)
+        prim_meta = os.path.join(SCRATCH_DIR, "output", "05f_state_fc", parcellation,
+                                 sub_id, "vt0.95", "metadata.json")
+        if primary_fc is not None and os.path.exists(prim_meta):
+            n_p, min_trs = _n_trs(prim_meta)
+            per_fold = loso["hungarian_matching"]["per_fold"]
+            for season_key in sorted(per_fold.keys(), key=int):
+                fold_dir = os.path.join(base, sub_id, "loso", f"season_{season_key}")
+                fold_fc_path = os.path.join(fold_dir, "state_empirical_corr.npy")
+                if not os.path.exists(fold_fc_path):
+                    continue
+                fold_fc = np.load(fold_fc_path)
+                n_f, _ = _n_trs(os.path.join(fold_dir, "fc_metadata.json"))
+                for pair in _remap_loso_pairs(per_fold[season_key]["matches"]):
+                    rec["loso"]["pairs"].append(_pair_record(
+                        primary_fc, fold_fc, pair["state_A"], pair["state_B"], n_p, n_f,
+                        min_trs, season=int(season_key)))
+        rec["loso"]["summary"] = _scheme_summary(rec["loso"]["pairs"])
+
+        dir_a = os.path.join(base, sub_id, "split_half", "A")
+        dir_b = os.path.join(base, sub_id, "split_half", "B")
+        fc_a_path = os.path.join(dir_a, "state_empirical_corr.npy")
+        fc_b_path = os.path.join(dir_b, "state_empirical_corr.npy")
+        if os.path.exists(fc_a_path) and os.path.exists(fc_b_path):
+            fc_a, fc_b = np.load(fc_a_path), np.load(fc_b_path)
+            n_a, min_trs = _n_trs(os.path.join(dir_a, "fc_metadata.json"))
+            n_b, _ = _n_trs(os.path.join(dir_b, "fc_metadata.json"))
+            for pair in sh["hungarian_matching"]["matching"]["pairs"]:
+                rec["split_half"]["pairs"].append(_pair_record(
+                    fc_a, fc_b, int(pair["state_A"]), int(pair["state_B"]), n_a, n_b,
+                    min_trs, mean_map_r=float(pair["correlation"])))
+            rel = [p for p in rec["split_half"]["pairs"] if p["reliable"]]
+            # Unmatched baseline over the reliable matched states: every A state
+            # against every B state except its own partner.
+            hp = sh["hungarian_matching"]["matching"]["pairs"]
+            sa_rel = [int(q["state_A"]) for q, p in zip(hp, rec["split_half"]["pairs"]) if p["reliable"]]
+            sb_rel = [int(q["state_B"]) for q, p in zip(hp, rec["split_half"]["pairs"]) if p["reliable"]]
+            base_rv, base_off = [], []
+            for i, a_state in enumerate(sa_rel):
+                for j, b_state in enumerate(sb_rel):
+                    if i == j:
+                        continue
+                    r = _pair_record(fc_a, fc_b, a_state, b_state, n_a, n_b, min_trs)
+                    base_rv.append(r["rv"])
+                    base_off.append(r["offdiag_r"])
+            rec["split_half"]["unmatched_baseline"] = {
+                "rv": _summary(base_rv), "offdiag_r": _summary(base_off)}
+            for key, pool in (("all", rec["split_half"]["pairs"]), ("reliable", rel)):
+                pool = [p for p in pool if np.isfinite(p["rv"])]
+                if len(pool) >= 3:
+                    rho, pval = spearmanr([p["mean_map_r"] for p in pool], [p["rv"] for p in pool])
+                    rec["split_half"].setdefault("mean_map_r_vs_rv_spearman", {})[key] = {
+                        "rho": float(rho), "p": float(pval), "n": len(pool)}
+        rec["split_half"]["summary"] = _scheme_summary(rec["split_half"]["pairs"])
+        out["subjects"][sub_id] = rec
+
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "fc_rv_summary.json")
+    with open(path, "w") as f:
+        json.dump(out, f, indent=2)
+    logger.info("Saved FC RV summary to %s", path)
+    return out
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1282,7 +1423,15 @@ def main():
         "--skip_fc", action="store_true",
         help="Skip Fig 7 (FC stability) if FC not computed yet.",
     )
+    parser.add_argument(
+        "--fc_rv_only", action="store_true",
+        help="Write fc_rv_summary.json only; render no figures.",
+    )
     args = parser.parse_args()
+    if args.fc_rv_only and args.skip_fc:
+        parser.error("--fc_rv_only and --skip_fc are mutually exclusive")
+    if args.fc_rv_only and args.sub_id:
+        parser.error("--fc_rv_only writes the all-subject summary; do not pass --sub_id")
 
     parcellation = normalize_parcellation_name(args.parcellation)
     apply_publication_style()
@@ -1314,6 +1463,8 @@ def main():
             all_loso.pop()
             continue
 
+        if args.fc_rv_only:
+            continue                         # the FC summary needs no fitted models
         try:
             primary = load_primary_data(parcellation, sub_id)
             all_primary.append(primary)
@@ -1336,6 +1487,10 @@ def main():
         SCRATCH_DIR, "output", "04rv_reliability_vis", parcellation,
     )
     per_sub_out = multi_out  # per-subject figs go into {multi_out}/{sub_id}/
+
+    if args.fc_rv_only:
+        write_fc_rv_summary(all_loso, all_sh, parcellation, multi_out)
+        return
 
     # ── Multi-subject figures ─────────────────────────────────────────────
     logger.info("--- Fig 1: State Spatial Reproducibility ---")
@@ -1377,6 +1532,12 @@ def main():
 
         logger.info("--- Fig 7d: FC vs Mean Correlation ---")
         fig7d_fc_vs_mean(all_sh, parcellation, multi_out)
+
+        if args.sub_id:
+            logger.info("--- FC RV summary: skipped for a single subject ---")
+        else:
+            logger.info("--- FC RV summary (JSON) ---")
+            write_fc_rv_summary(all_loso, all_sh, parcellation, multi_out)
 
     logger.info("All figures complete.")
 
