@@ -107,22 +107,71 @@ def test_fit_spatial_ica_full_rank_on_degenerate_spectrum():
         assert r > 0.999999, (data_seed, r)
 
 
+def _loadings(seed, n_pcs=12, P=156):
+    # Orthonormal loadings built from Laplace (non-Gaussian) maps, so FastICA
+    # converges as it does on real data. With Gaussian maps ICA has no unique
+    # optimum, runs to max_iter, and 1e-15 differences grow to O(1).
+    rng = np.random.default_rng(seed)
+    Q, _ = np.linalg.qr(rng.laplace(size=(P, n_pcs)))
+    return Q.T, rng                                   # orthonormal rows
+
+
 @pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
-def test_fit_spatial_ica_matches_sklearn_whitening_when_no_zero_sign():
-    # On a non-degenerate spectrum the explicit whitening must reproduce
-    # FastICA(whiten="arbitrary-variance") exactly.
-    from sklearn.decomposition import FastICA
+def test_fit_spatial_ica_uses_only_the_top_k_pcs():
+    # Changing the loadings beyond the first K must not change the result:
+    # the ICA subspace is the top-K PCs, not a basis FastICA picks from the
+    # degenerate spectrum of all n_pcs loadings.
     from utils.ica_states import fit_spatial_ica
-    rng = np.random.default_rng(3)
-    components = rng.normal(size=(10, 156)) * np.linspace(3, 0.5, 10)[:, None]
-    X_pc = rng.normal(size=(200, 10))
-    out = fit_spatial_ica(components, X_pc, n_components=6, random_state=1)
-    ref = FastICA(n_components=6, max_iter=1000, whiten="arbitrary-variance",
-                  random_state=1)
-    ref_maps = ref.fit_transform(components.T)
-    np.testing.assert_array_equal(out["maps"], ref_maps)
-    np.testing.assert_array_equal(out["mixing"], ref.mixing_)
-    np.testing.assert_array_equal(out["components_"], ref.components_)
+    C, rng = _loadings(0)
+    X_pc = rng.normal(size=(300, C.shape[0]))
+    K = 5
+    a = fit_spatial_ica(C, X_pc, n_components=K, random_state=0)
+    C2 = C.copy()
+    R, _ = np.linalg.qr(rng.normal(size=(C.shape[0] - K, C.shape[0] - K)))
+    C2[K:] = R @ C[K:]                                # rotate the trailing PCs
+    b = fit_spatial_ica(C2, X_pc, n_components=K, random_state=0)
+    assert a["n_iter"] < 1000
+    np.testing.assert_allclose(a["maps"], b["maps"], atol=1e-8)
+    np.testing.assert_allclose(a["timecourses"], b["timecourses"], atol=1e-8)
+
+
+@pytest.mark.filterwarnings("ignore::sklearn.exceptions.ConvergenceWarning")
+def test_fit_spatial_ica_maps_lie_in_top_k_span_and_are_layout_independent():
+    from utils.ica_states import fit_spatial_ica
+    C, rng = _loadings(1)
+    X_pc = rng.normal(size=(300, C.shape[0]))
+    K = 6
+    out = fit_spatial_ica(C, X_pc, n_components=K, random_state=0)
+    Xc = C[:K].T - C[:K].T.mean(axis=0)
+    coef, *_ = np.linalg.lstsq(Xc, out["maps"], rcond=None)
+    assert np.abs(Xc @ coef - out["maps"]).max() < 1e-10
+    # Symmetric whitening has no basis choice, so memory layout cannot matter.
+    f = fit_spatial_ica(np.asfortranarray(C), X_pc, n_components=K, random_state=0)
+    np.testing.assert_allclose(out["maps"], f["maps"], atol=1e-8)
+
+
+def test_subspace_rotation_null_topk_stays_in_top_k_span():
+    from utils.ica_states import subspace_rotation_null, match_maps_hungarian
+    import utils.ica_states as ica_mod
+    C, rng = _loadings(2)
+    K = 4
+    hmm_maps = rng.normal(size=(8, C.shape[1]))
+    seen = []
+    orig = ica_mod.match_maps_hungarian
+    def spy(maps, hmm):
+        seen.append(maps)
+        return orig(maps, hmm)
+    ica_mod.match_maps_hungarian = spy
+    try:
+        subspace_rotation_null(C, hmm_maps, n_components=K, n_perm=5, subspace="topk")
+    finally:
+        ica_mod.match_maps_hungarian = orig
+    B = C[:K].T
+    for maps in seen:
+        coef, *_ = np.linalg.lstsq(B, maps, rcond=None)
+        assert np.abs(B @ coef - maps).max() < 1e-10
+    with pytest.raises(ValueError):
+        subspace_rotation_null(C, hmm_maps, n_components=K, n_perm=1, subspace="other")
 
 
 def test_match_maps_hungarian_recovers_permutation_and_sign():

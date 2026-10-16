@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 """Supplementary: ICA as an alternative state-discovery method.
 
-Per subject: spatial ICA on the vt=0.95 PC subspace (sweep K in {15,25,35} plus
-K_used, the fitted model's occupied-state count, final_refit.n_active_states;
-stored under the key "K_active"), matched against HMM state maps (Tier 1), with temporal correspondence
-(Tier 2) and WTA label agreement (Tier 3). Both eligible-only and all-visited
-HMM state sets are computed ("all" = every state the Viterbi path visits at
-least once, a looser set than the active states, FO > 0.02 in at least one run).
+Per subject: spatial ICA in the subspace of the top K PCs of the vt=0.95 PCA
+(sweep K in {15,25,35} plus K_used, the fitted model's occupied-state count,
+final_refit.n_active_states, stored under the key "K_active"; a K=41-47 grid is
+added with --extra_k), matched against HMM state maps (Tier 1), with temporal
+correspondence (Tier 2) and WTA label agreement (Tier 3). Two HMM state sets:
+content-eligible states, and "all" = the active repertoire (fractional
+occupancy > 0.02 in at least one run, recurrence > 0 in 05a).
+
+Tier 1 significance uses random rotations of the same top-K subspace (primary)
+and random K-frames over the full PC subspace (secondary). See
+utils/ica_states.fit_spatial_ica and subspace_rotation_null for why.
 """
 import os
 import sys
@@ -39,6 +44,8 @@ K_SWEEP = [15, 25, 35]
 MIN_OCC = 0.01
 MIN_SHIFT = 1
 HMM_MAPS_KIND = "state_contrast_means_no_global_mean"
+ICA_SUBSPACE = "top_k_pcs_symmetric_whitening"
+ALL_SET_KIND = "active_fo_gt_0.02_any_run"
 
 
 def _np(x):  # json-safe
@@ -140,9 +147,17 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
 
     elig = load_content_eligibility(sub_id, parcellation, SCRATCH_DIR, vt=vt)
     eligible = sorted(int(s) for s in elig.get("content_eligible", []))
-    # 'all' = states the Viterbi path actually visits (posteriors are
-    # dense, so a mean>0 proxy would include every state).
-    all_active = sorted(int(s) for s in np.unique(viterbi))
+    # 'all' = the active repertoire used everywhere else in the analysis:
+    # states whose fractional occupancy exceeds 0.02 in at least one run
+    # (recurrence > 0 in 05a). States the Viterbi path only grazes are left out.
+    rec_path = os.path.join(SCRATCH_DIR, "output", "05a_recurrence_analysis",
+                            parcellation, sub_id, f"vt{vt}", "recurrence_scores.npy")
+    recurrence = np.load(rec_path)
+    all_active = sorted(int(s) for s in np.where(recurrence > 0)[0])
+    # Share of each HMM state's PC-space mean energy inside the top-K PCs: an
+    # upper bound on how well any map in the ICA subspace can match that state.
+    means_pc = np.asarray(model.means_)[:, :n_pcs]
+    mean_energy = np.cumsum(means_pc ** 2, axis=1)
 
     summary_path = os.path.join(out_dir, "ica_match_summary.json")
     if extra_k:
@@ -164,7 +179,8 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
         # mix incompatible metadata.
         for fld, cur in (("sub_id", sub_id), ("parcellation", parcellation),
                          ("vt", vt), ("n_pcs", n_pcs), ("K_active", K_active),
-                         ("hmm_maps", HMM_MAPS_KIND)):
+                         ("hmm_maps", HMM_MAPS_KIND),
+                         ("ica_subspace", ICA_SUBSPACE), ("all_set", ALL_SET_KIND)):
             prev = results.get(fld)
             if prev is not None and str(prev) != str(cur):
                 raise SystemExit(
@@ -182,6 +198,8 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
         results = {"sub_id": sub_id, "parcellation": parcellation, "vt": vt,
                    "n_pcs": n_pcs, "K_active": K_active,
                    "hmm_maps": HMM_MAPS_KIND,
+                   "ica_subspace": ICA_SUBSPACE,
+                   "all_set": ALL_SET_KIND,
                    "by_K": {}}
         K_values = list(dict.fromkeys(K_SWEEP + [K_active]))  # dedup, preserve order
     for K in K_values:
@@ -223,11 +241,17 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
             hmm_maps = state_means_parcel[state_list]   # (n_states, 156)
             m = match_maps_hungarian(ica_maps, hmm_maps)
             null = subspace_rotation_null(components, hmm_maps,
-                                          n_components=ica_maps.shape[1],
-                                          n_perm=n_perm_spatial, rng_seed=rng_seed)
+                                          n_components=K, n_perm=n_perm_spatial,
+                                          rng_seed=rng_seed, subspace="topk")
             pvals = spatial_match_pvalues(m["matched_r"], null)
             spatial_q = fdr_with_nan(np.asarray(pvals))
+            null_full = subspace_rotation_null(components, hmm_maps,
+                                               n_components=K, n_perm=n_perm_spatial,
+                                               rng_seed=rng_seed, subspace="full")
+            pvals_full = spatial_match_pvalues(m["matched_r"], null_full)
             hmm_state_ids = [int(state_list[h]) for h in m["hmm_idx"]]
+            capture = [float(mean_energy[s, K - 1] / mean_energy[s, -1])
+                       for s in hmm_state_ids]
             t2 = temporal_correspondence(
                 gamma, timecourses,
                 hmm_idx=np.array(hmm_state_ids), ica_idx=m["ica_idx"],
@@ -248,6 +272,10 @@ def run_subject(sub_id, parcellation, vt, out_dir, n_restarts, n_perm_spatial,
                 "spatial_q": _np(spatial_q),
                 "null_mean": float(null.mean()),
                 "null_p95": float(np.percentile(null, 95)),
+                "spatial_p_full": _np(pvals_full),
+                "spatial_q_full": _np(fdr_with_nan(np.asarray(pvals_full))),
+                "null_mean_full": float(null_full.mean()),
+                "hmm_topk_capture": capture,
                 "tier2_rho": _np(t2["rho"]),
                 "tier2_p": _np(t2["p"]),
                 "tier2_q": _np(t2["q"]),
@@ -292,6 +320,8 @@ def main():
     p.add_argument("--n_perm_temporal", type=int, default=1000)
     p.add_argument("--rng_seed", type=int, default=0)
     p.add_argument("--force", action="store_true")
+    p.add_argument("--out_name", default="sm_ica_states",
+                   help="Output directory under $SCRATCH_DIR/output.")
     p.add_argument("--extra_k", default="",
                    help="Comma-separated sensitivity K(s) to compute and MERGE "
                         "into an existing summary (e.g. '45' or '41,42,43'); "
@@ -302,7 +332,7 @@ def main():
     a = p.parse_args()
     if SCRATCH_DIR is None:
         raise SystemExit("SCRATCH_DIR must be set in .env")
-    out_dir = os.path.join(SCRATCH_DIR, "output", "sm_ica_states",
+    out_dir = os.path.join(SCRATCH_DIR, "output", a.out_name,
                            a.parcellation, a.sub_id)
     os.makedirs(out_dir, exist_ok=True)
     try:

@@ -49,6 +49,7 @@ uv run --project "${PROJECT_DIR}" python "${PROJECT_DIR}/script/sm_alt_ica_state
     --parcellation "$PARCELLATION" \
     --vt "$VT" \
     ${EXTRA_K:+--extra_k "$EXTRA_K_ARG"} \
+    ${OUT_NAME:+--out_name "$OUT_NAME"} \
     ${FORCE:+--force}
 
 echo "=============================================="
