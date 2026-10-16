@@ -72,12 +72,12 @@ At the production setting (`gamma = 1`) the prior favors only ~2 occupied states
 
 ## Outputs
 
-`$SCRATCH_DIR/prior_state_count/prior_state_count.json`.
+`$SCRATCH_DIR/prior_state_count/prior_state_count.json` when `SCRATCH_DIR` is exported in the shell (the script does not read `.env`), otherwise `./output/prior_state_count/prior_state_count.json` relative to the working directory.
 
 ## Reproduce
 
 ```bash
 python script/sm_sim_prior_state_count.py                 # production setting
-python script/sm_sim_prior_state_count.py --gamma 5       # sensitivity
+python script/sm_sim_prior_state_count.py --gamma 5 --out prior_state_count_gamma5.json   # sensitivity; own --out so it does not overwrite the production JSON
 python script/tests/test_sim_prior_state_count.py         # unit tests
 ```

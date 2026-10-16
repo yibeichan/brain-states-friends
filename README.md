@@ -29,7 +29,7 @@ reliability/robustness):
 - tests — `script/tests/test_<cat>_<topic>.py`
 - findings docs — `docs/findings/sm_<cat>_<topic>.md`
 
-Each findings doc opens with **Question → Method (as run) → Results**; the sections after that vary by analysis.
+Each findings doc starts with **Question** and **Method (as run)**, followed by **Results** (some docs put a short scope section, such as subject coverage, between Method and Results); the sections after Results vary by analysis.
 
 ## Contents
 

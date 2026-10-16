@@ -90,7 +90,7 @@ An earlier version of this analysis let FastICA reduce all n_pcs loadings to K i
 ## Reproduce
 
 ```bash
-# needs main-pipeline outputs (stages 03a, 04, 05a, 05e)
+# needs main-pipeline outputs (stages 03a, 04, 05a, 05e, 06b)
 uv run python -m pytest script/tests/test_alt_ica_states.py script/tests/test_alt_ica_diagnostics.py
 jid=$(sbatch --parsable script/sm_alt_ica_states.sh)                      # K = 15, 25, 35, K_used
 sbatch --dependency=aftercorr:$jid --export=ALL,EXTRA_K=41:42:43:44:45:46:47 script/sm_alt_ica_states.sh
