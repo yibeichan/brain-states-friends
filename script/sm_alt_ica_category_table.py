@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Supplement table: ICA-HMM correspondence by HMM-state taxonomy category.
 
-Pure post-hoc AGGREGATION of the saved sm_ica_states results -- no ICA re-run,
+Pure post-hoc AGGREGATION of the saved sm_alt_ica_states results -- no ICA re-run,
 no re-matching, no new statistics. For each subject, takes the K_used (key "K_active") "all"
 state-set matched pairs (ICA components Hungarian-matched to every HMM state the
 Viterbi path visits at least once), labels each matched HMM state by its summary_category (from the 05e
@@ -9,11 +9,11 @@ state_flags.csv), and tabulates spatial (Tier-1) and temporal (Tier-2)
 correspondence per category.
 
 FDR note: spatial_q / tier2_q are read straight from the JSON, where BH-FDR was
-applied within the all-visited-set family at that K. The per-category "surviving"
+applied within the active-set family at that K. The per-category "surviving"
 counts are therefore descriptive subsets of that single within-subject family
 (not separately re-corrected per category).
 
-Outputs (to sm_ica_states/{parcellation}/):
+Outputs (to {ICA_STATES_DIR}/{parcellation}/):
   category_correspondence_table.csv  -- long format, one row per (subject, category)
   category_correspondence_table.md   -- supplement-ready markdown
 """
@@ -25,6 +25,9 @@ import argparse
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from utils.ica_states import ICA_STATES_DIR
 
 load_dotenv()
 SCRATCH_DIR = os.getenv("SCRATCH_DIR")
@@ -48,7 +51,7 @@ def _arr(x):
 
 
 def build_table(parcellation, vt):
-    ica_base = os.path.join(SCRATCH_DIR, "output", "sm_ica_states", parcellation)
+    ica_base = os.path.join(SCRATCH_DIR, "output", ICA_STATES_DIR, parcellation)
     flag_base = os.path.join(SCRATCH_DIR, "output",
                              "05e_temporal_trend_a4", parcellation)
     rows = []
@@ -137,7 +140,7 @@ def build_table(parcellation, vt):
 
 def to_markdown(df):
     lines = [
-        "| Subject | K_active | Category | n states | Spatial mean r | "
+        "| Subject | K_used | Category | n states | Spatial mean r | "
         "Spatial sig (q<.05) | Temporal mean rho (signed) | "
         "Temporal sig (q<.05) |",
         "|---|---|---|---|---|---|---|---|",
@@ -160,7 +163,7 @@ def to_markdown(df):
         "",
         "Temporal mean rho is signed (one-sided test for positive sign-aligned "
         "correspondence); negative values indicate directional mismatch, not "
-        "magnitude. Spatial q is BH-FDR within each subject's all-visited-set "
+        "magnitude. Spatial q is BH-FDR within each subject's active-set "
         "family; per-category counts are descriptive subsets, not re-corrected. "
         "Tier-2 p-values are conditional on the Tier-1 spatial match; "
         "low-occupancy states are excluded from the temporal test (–).",
@@ -182,7 +185,7 @@ def main():
     if SCRATCH_DIR is None:
         raise SystemExit("SCRATCH_DIR must be set in .env")
     df = build_table(a.parcellation, a.vt)
-    out_dir = os.path.join(SCRATCH_DIR, "output", "sm_ica_states", a.parcellation)
+    out_dir = os.path.join(SCRATCH_DIR, "output", ICA_STATES_DIR, a.parcellation)
     csv_path = os.path.join(out_dir, "category_correspondence_table.csv")
     md_path = os.path.join(out_dir, "category_correspondence_table.md")
     # Outputs may already be read-only git-annex symlinks (after a datalad save);

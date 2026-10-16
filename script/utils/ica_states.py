@@ -19,63 +19,82 @@ from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score
 from .stats import fdr_with_nan
 from .transformer_analysis import circular_shift_states_by_run
 
+# Output directories under $SCRATCH_DIR/output. The top-K runs replace the
+# earlier sm_ica_states / sm_ica_oos_recurrence outputs, whose truncated
+# whitening kept an arbitrary subspace of the PC span (see fit_spatial_ica).
+ICA_STATES_DIR = "sm_ica_states_topk"
+ICA_OOS_DIR = "sm_ica_oos_recurrence_topk"
+
+
+def symmetric_whiten(Xs):
+    """Centre the columns of Xs (P, d) over parcels and whiten them symmetrically.
+
+    Returns (Xc, W_white, Z) with Xc = Xs - column means, W_white =
+    (Xc^T Xc / P)^(-1/2) and Z = Xc @ W_white, so Z^T Z / P = I. Used by
+    fit_spatial_ica and by the rotation null, so both rotate the same basis.
+    """
+    Xs = np.asarray(Xs, dtype=float)
+    Xc = Xs - Xs.mean(axis=0)
+    cov = (Xc.T @ Xc) / Xs.shape[0]
+    lam, V = linalg.eigh(cov, check_finite=False)
+    if lam.min() <= 1e-12 * lam.max():
+        raise ValueError("loadings are rank-deficient after centring")
+    W_white = (V * lam ** -0.5) @ V.T                     # symmetric inverse sqrt
+    return Xc, W_white, Xc @ W_white
+
 
 def fit_spatial_ica(components, X_pc, n_components, random_state=0,
                     fun="logcosh", max_iter=1000):
-    """Spatial ICA within the PC subspace.
+    """Spatial ICA in the subspace of the top ``n_components`` PCs.
 
-    Fit ICA with PARCELS as samples (X_spatial = components.T, shape
-    (n_parcels, n_pcs)) so the recovered sources are spatial maps. Derive
-    component time courses by projecting the PC scores through the mixing
-    (X_full = X_pc @ components ~= (X_pc @ mixing_) @ maps.T + offset).
+    Parcels are the samples: the input is the transpose of the first K rows of
+    the PCA loadings (rows are ordered by explained variance), so the K-dim
+    subspace is the K highest-variance PC directions. This is the standard
+    two-step spatial ICA (PCA reduction to the leading components, then an ICA
+    rotation within that subspace).
 
-    Uses whiten="arbitrary-variance" (classical whitening): the ICA solution
-    is then an orthogonal rotation of whitened data, which keeps the source
-    scaling well-defined. The subspace-rotation null does NOT use FastICA's
-    internal whitening (it uses the PCA basis directly), so the whitening mode
-    only affects the maps/timecourses, not the null.
+    Why not let FastICA choose the K dimensions: the loadings have orthonormal
+    rows, so after centring over parcels all but one of their singular values
+    equal 1. A K < n_pcs truncation inside FastICA's PCA whitening would then
+    keep whatever basis of that degenerate eigenspace LAPACK returns, which is
+    neither the top-K PCs nor stable across BLAS kernels. The HMM is fit on
+    variance-weighted PC scores and its state means sit mostly in the leading
+    PCs, so the top-K subspace is also where the two methods are comparable.
 
-    The whitening step is done here rather than inside FastICA. sklearn fixes
-    the sign of each whitening direction with ``np.sign(u[0])``, which is 0
-    when ``u[0, j]`` is exactly 0, and that silently drops direction j.
-    PCA loadings have orthonormal rows, so the SVD spectrum is (near-)
-    degenerate and LAPACK can return exact zeros in ``u[0]``; whether it does
-    depends on memory layout and the CPU's BLAS kernel. The code below matches
-    sklearn's classical whitening step for step (same centring, same SVD on
-    the same Fortran-ordered array, same sqrt(n_samples) scaling, same
-    w_init draw), except that a zero sign is taken as +1. When no zero
-    occurs and the input is float64 the result is bit-identical to
-    ``whiten="arbitrary-variance"``; float32 input is computed in float64.
+    Whitening is symmetric (ZCA): Z = Xc (Xc^T Xc / P)^(-1/2). The inverse square
+    root of a symmetric positive-definite matrix is unique, so Z does not depend
+    on which eigenbasis the solver returns, even when eigenvalues are tied.
+    FastICA then runs on Z with ``whiten=False``.
+
+    Returns maps (n_parcels, K) and time courses (T, K); ``mixing`` and
+    ``components_`` are expressed in full n_pcs coordinates, with zeros outside
+    the first K PCs, so ``X_pc @ mixing`` gives the time courses.
     """
-    X_spatial = np.asarray(components, dtype=float).T   # (n_parcels, n_pcs)
-    n_parcels, n_pcs = X_spatial.shape
+    C = np.asarray(components, dtype=float)
+    n_pcs, n_parcels = C.shape
     if n_components > n_pcs:
         raise ValueError(
             f"n_components ({n_components}) must be <= n_pcs ({n_pcs})")
-    XT = np.array(X_spatial, copy=True).T                # (n_pcs, n_parcels)
-    mean_ = XT.mean(axis=-1)
-    XT -= mean_[:, np.newaxis]
-    u, d = linalg.svd(XT, full_matrices=False, check_finite=False)[:2]
-    sign = np.sign(u[0])
-    sign[sign == 0] = 1.0
-    u *= sign
-    K = (u / d).T[:n_components]                         # whitening matrix
-    X1 = (K @ XT) * np.sqrt(n_parcels)
-    # n_components=None: with whiten=False sklearn takes the component count
-    # from the data (X1 already has n_components columns) and would otherwise
-    # warn that the argument is ignored.
+    k = int(n_components)
+    Xc, W_white, Z = symmetric_whiten(C[:k].T)            # Z: (P, K), identity covariance
+    # n_components=None: with whiten=False sklearn takes the count from the
+    # data and would otherwise warn that the argument is ignored.
     ica = FastICA(n_components=None, fun=fun, max_iter=max_iter,
                   whiten=False, random_state=random_state)
-    ica.fit(X1.T)
-    unmixing = ica.components_ @ K                       # (K, n_pcs)
-    mixing = linalg.pinv(unmixing, check_finite=False)   # (n_pcs, K)
-    maps = (unmixing @ XT).T                             # (n_parcels, K) = sources S
-    timecourses = np.asarray(X_pc) @ mixing              # (T, K)
+    ica.fit(Z)
+    unmix_k = ica.components_ @ W_white                   # (K, K), top-K PC coords
+    mix_k = linalg.inv(unmix_k)                           # (K, K)
+    maps = Xc @ unmix_k.T                                 # (P, K) = sources S
+    unmixing = np.zeros((k, n_pcs))
+    unmixing[:, :k] = unmix_k
+    mixing = np.zeros((n_pcs, k))
+    mixing[:k] = mix_k
+    timecourses = np.asarray(X_pc)[:, :k] @ mix_k         # (T, K)
     return {
         "maps": maps,
         "timecourses": timecourses,
         "mixing": mixing,
-        "mean_": mean_,
+        "mean_": C.T.mean(axis=0),                        # per-PC mean over parcels
         "components_": unmixing,
         "n_iter": int(getattr(ica, "n_iter_", -1)),
     }
@@ -140,30 +159,58 @@ def _random_orthonormal_frame(n, k, rng):
 
 
 def subspace_rotation_null(components, hmm_maps, n_components, n_perm=1000,
-                           rng_seed=0):
-    """Spec §6 Tier-1 primary null: random K-frame in the full PC subspace.
+                           rng_seed=0, subspace="topk"):
+    """Tier-1 null: matched |r| for random rotations of a PC subspace.
 
-    components : (n_pcs, P) PCA loadings (orthonormal rows). Their transpose,
-                 (P, n_pcs), is an orthonormal basis of the parcel-space PC
-                 subspace, so PCA components are already 'whitened' (isotropic).
-    A random orthonormal frame Q (n_pcs, K) drawn over the FULL n_pcs space
-    yields K random maps ``basis @ Q`` (P, K) in that subspace -- the proper
-    'is ICA's rotation special vs a random rotation of the same subspace?'
-    null. Re-runs Hungarian per draw (selection is part of the statistic).
+    components : (n_pcs, P) PCA loadings (orthonormal rows), so a block of
+                 rows transposed is an orthonormal basis of that subspace.
+    subspace="topk" (primary, matches fit_spatial_ica): random K x K rotations
+    of the centred, symmetrically whitened top-K loadings, the basis that
+    fit_spatial_ica rotates. Every draw spans the same subspace as the ICA maps,
+    so the test asks whether ICA's particular rotation recovers HMM maps better
+    than an arbitrary rotation of that subspace.
+    subspace="full" (secondary): random K-frames over all n_pcs (centred and
+    whitened the same way). Because HMM
+    state means sit mostly in the leading PCs, ICA in the top-K subspace beats
+    this null partly by being in the right subspace, so it does not test the
+    ICA rotation alone.
+    Re-runs Hungarian per draw (selection is part of the statistic).
 
     Returns : (n_perm, n_matched) array of matched |r| per draw.
     """
     rng = np.random.default_rng(rng_seed)
-    basis = np.asarray(components).T            # (P, n_pcs), orthonormal columns
-    n_pcs = basis.shape[1]
+    if subspace not in ("topk", "full"):
+        raise ValueError(f"subspace must be 'topk' or 'full', got {subspace!r}")
+    C = np.asarray(components)
+    n_pcs = C.shape[0]
     if n_components > n_pcs:
         raise ValueError(f"n_components ({n_components}) must be <= n_pcs ({n_pcs})")
+    # Rotate the basis ICA itself rotates: the centred, symmetrically whitened
+    # loadings (ICA maps are Z @ R.T for an orthogonal R). The raw loadings would
+    # not do: after the correlation centres them, their mean direction is
+    # shrunk, so that direction would be under-sampled.
+    Xs = (C[:n_components] if subspace == "topk" else C).T
+    _, _, Z = symmetric_whiten(Xs)
+    basis = Z / np.sqrt(Xs.shape[0])                       # (P, d), orthonormal columns
+    d = basis.shape[1]
     out = []
     for _ in range(n_perm):
-        Q = _random_orthonormal_frame(n_pcs, n_components, rng)  # (n_pcs, K)
+        Q = _random_orthonormal_frame(d, n_components, rng)  # (d, K)
         maps_rand = basis @ Q                   # (P, K) random maps in subspace
         out.append(match_maps_hungarian(maps_rand, hmm_maps)["matched_r"])
     return np.vstack(out)
+
+
+def median_match_test(matched_r, null_matched_r):
+    """Whole-set test: observed median matched |r| against per-draw null medians.
+
+    Returns (excess, p): excess = observed median minus the mean of the null
+    draws' medians; p = one-sided (greater) empirical p over draws.
+    """
+    obs = float(np.median(np.abs(np.asarray(matched_r, dtype=float))))
+    null_med = np.median(np.abs(np.asarray(null_matched_r, dtype=float)), axis=1)
+    p = (1 + np.sum(null_med >= obs)) / (1 + null_med.shape[0])
+    return obs - float(null_med.mean()), float(p)
 
 
 def spatial_match_pvalues(matched_r, null_matched_r):

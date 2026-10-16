@@ -1,18 +1,18 @@
 """Figure SM ICA matching: ICA/HMM spatial convergence diagnostics.
 
-Supplement figure for the ICA convergent-validity analysis (sm_ica_states
-pipeline).
+Supplement figure for the ICA convergent-validity analysis (sm_alt_ica_states,
+top-K PC subspace).
 
-- Panel A (headline): K-sweep convergence heatmap. Spatial agreement between
-  ICA components and HDP-HMM state-mean maps is granularity-dependent (null at
-  coarse, HMM-independent K; emerging only as ICA dimensionality approaches each
-  subject's K_used) and strongly subject-variable.
+- Panel A (headline): K-sweep heatmap. Colour is how far ICA's matched spatial
+  |r| exceeds random rotations of the same whitened top-K basis (observed
+  median matched |r| minus the mean of the null draws' medians,
+  content-eligible pairs); cell text is the number of FDR-surviving pairs, with
+  a dagger where the whole-set median test is not significant (p >= 0.05).
 - Panel B: per-state matched spatial correlation at K_used, one dot per HMM
-  state (subject on x, category by colour). Convergence is taxonomy-agnostic
-  (categories intermix across the |r| range within each subject) while the
-  per-subject median shifts (subject is a dominant axis).
+  state (subject on x, category by colour), with the per-subject median (solid
+  tick) and the rotation-null mean (dashed tick).
 
-Source of truth for numbers: docs/findings/sm_ica.md. Values are read live from
+Source of truth for numbers: docs/findings/sm_alt_ica_states.md. Values are read live from
 each subject's ica_match_summary.json (FDR-surviving matched pairs vs the
 subspace-rotation null, BH-FDR within the subject's eligible family) and the
 05e_a4 state_flags.csv (per-state taxonomy label).
@@ -22,8 +22,8 @@ assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
 | Panel | Content | Source files |
 |---|---|---|
-| A | Convergence heatmap: 6 subjects x ICA K; colour = FDR-surviving fraction of eligible pairs, cell text = surviving/total counts | sm_ica_states/*/ica_match_summary.json |
-| B | Per-state matched spatial |r| at K_used; x = subject, colour = taxonomy category, black tick = per-subject median | sm_ica_states/*/ica_match_summary.json + 05e_temporal_trend_a4/*/state_flags.csv |
+| A | Convergence heatmap: 6 subjects x ICA K; colour = median_excess (eligible pairs), cell text = FDR-surviving/total counts, dagger = median_p >= 0.05 | sm_ica_states_topk/*/ica_match_summary.json |
+| B | Per-state matched spatial |r| at K_used; x = subject, colour = taxonomy category, solid tick = per-subject median, dashed tick = rotation-null mean | sm_ica_states_topk/*/ica_match_summary.json + 05e_temporal_trend_a4/*/state_flags.csv |
 
 Run:
     marimo edit script/fig_sm_alt_ica_matching.py
@@ -46,15 +46,16 @@ def imports():
     from dotenv import load_dotenv
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from utils.ica_states import ICA_STATES_DIR
     from utils.plot_style import apply_publication_style
 
     load_dotenv()
     apply_publication_style()
-    return json, np, os, plt
+    return ICA_STATES_DIR, json, np, os, plt
 
 
 @app.cell
-def config(json, os):
+def config(ICA_STATES_DIR, json, os):
     SCRATCH = os.getenv("SCRATCH_DIR")
     PARC = "atlas-4S156Parcels"
     SUBS = [f"sub-0{i}" for i in range(1, 7)]
@@ -65,7 +66,7 @@ def config(json, os):
     os.makedirs(OUT, exist_ok=True)
 
     def _load(sub):
-        p = os.path.join(SCRATCH, "output", "sm_ica_states", PARC, sub,
+        p = os.path.join(SCRATCH, "output", ICA_STATES_DIR, PARC, sub,
                          "ica_match_summary.json")
         return json.load(open(p))
 
@@ -108,9 +109,11 @@ def config(json, os):
 
 @app.cell
 def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
-    # FDR-surviving content-eligible matched pairs vs subspace-rotation null,
-    # per subject (rows) x ICA dimensionality K (columns).
-    _frac = np.full((len(SUBS), len(KS)), np.nan)
+    # Excess of ICA's matched |r| over the same-subspace rotation null (colour)
+    # and FDR-surviving content-eligible pairs (text), per subject (rows) x ICA
+    # dimensionality K (columns).
+    _exc = np.full((len(SUBS), len(KS)), np.nan)
+    _ns_cell = np.zeros((len(SUBS), len(KS)), dtype=bool)
     _surv = np.zeros((len(SUBS), len(KS)), dtype=int)
     _tot = np.zeros((len(SUBS), len(KS)), dtype=int)
     _kact = {}
@@ -126,17 +129,19 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
             _ns = sum(1 for x in _q if x is not None and x < 0.05)
             _tot[_i, _j] = _n
             _surv[_i, _j] = _ns
-            _frac[_i, _j] = _ns / _n if _n else np.nan
+            _exc[_i, _j] = _e["median_excess"]
+            _ns_cell[_i, _j] = _e["median_p"] >= 0.05
 
     _fig, _ax = plt.subplots(figsize=(6.6, 3.0))
-    _im = _ax.imshow(_frac, cmap="Blues", vmin=0.0, vmax=1.0, aspect="auto")
+    _im = _ax.imshow(_exc, cmap="Blues", vmin=0.0, vmax=0.12, aspect="auto")
 
     # cell text: surviving/total, contrast-aware colour
     for _i in range(len(SUBS)):
         for _j in range(len(KS)):
-            _f = _frac[_i, _j]
-            _txt_c = "white" if (np.isfinite(_f) and _f >= 0.55) else "0.15"
-            _ax.text(_j, _i, f"{_surv[_i, _j]}/{_tot[_i, _j]}",
+            _f = _exc[_i, _j]
+            _txt_c = "white" if (np.isfinite(_f) and _f >= 0.07) else "0.15"
+            _dag = "\u2020" if _ns_cell[_i, _j] else ""
+            _ax.text(_j, _i, f"{_surv[_i, _j]}/{_tot[_i, _j]}{_dag}",
                      ha="center", va="center", fontsize=6, color=_txt_c)
 
     # divider between the primary low-dim set {15,25,35} and the near-K
@@ -147,13 +152,13 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
     _ax.set_xticklabels(KS)
     _ax.set_xlabel("ICA dimensionality $K$")
     _ax.set_yticks(range(len(SUBS)))
-    _ax.set_yticklabels([f"{s}\n$K_a$={_kact[s]}" for s in SUBS])
+    _ax.set_yticklabels([f"{s}\n$K_u$={_kact[s]}" for s in SUBS])
     _ax.tick_params(length=0)
     for _sp in ("top", "right", "left", "bottom"):
         _ax.spines[_sp].set_visible(False)
 
     _cb = _fig.colorbar(_im, ax=_ax, fraction=0.025, pad=0.02)
-    _cb.set_label("FDR-surviving fraction\n(eligible matched pairs)", fontsize=8)
+    _cb.set_label("Median |$r$| above\nrotation null", fontsize=8)
     _cb.outline.set_visible(False)
 
     _fig.savefig(f"{OUT}/fig_sm_ica_A_convergence_heatmap.pdf",
@@ -188,6 +193,9 @@ def panel_B_per_state(OUT, RAW2DISP, SUBS, TAX_COLORS, TAX_ORDER,
         _med = float(np.median(_rs))
         _ax.plot([_si - 0.3, _si + 0.3], [_med, _med], color="0.15", lw=1.3,
                  zorder=3)
+        _nm = float(_a["null_mean"])
+        _ax.plot([_si - 0.3, _si + 0.3], [_nm, _nm], color="0.45", lw=1.0,
+                 ls="--", zorder=3)
 
     _ax.set_xticks(range(len(SUBS)))
     _ax.set_xticklabels(SUBS)

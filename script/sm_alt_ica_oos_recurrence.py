@@ -8,11 +8,11 @@ group-level statistic.
 
 Inputs (frozen, from earlier pipeline):
     03a/04: PCA model, n_pcs lookup, projected Friends runs, decoded states.
-    sm_ica_states: K_used consensus maps (ica_maps_K{K_active}.npy; key "K_active").
+    {ICA_STATES_DIR}: K_used consensus maps (ica_maps_K{K_active}.npy; key "K_active").
     m10_03: Movie10 PC-score projections (movie_run_ids.json + {run_id}.npy).
 
 Output:
-    {SCRATCH_DIR}/output/sm_ica_oos_recurrence/{parc}/{sub}/oos_recurrence_summary.json
+    {SCRATCH_DIR}/output/{ICA_OOS_DIR}/{parc}/{sub}/oos_recurrence_summary.json
 """
 import os
 import sys
@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent))
 from utils import hmm_io
-from utils.ica_states import consensus_projection, wta_labels
+from utils.ica_states import ICA_OOS_DIR, ICA_STATES_DIR, consensus_projection, wta_labels
 from utils.ica_oos_recurrence import fo_per_run, recurrence_scores, continuous_occupancy, phase_randomize
 from utils.transformer_analysis import build_run_boundaries
 from sm_alt_ica_states import _ordered_runs
@@ -73,7 +73,7 @@ def load_friends_inputs(sub_id, parcellation, vt):
         SCRATCH_DIR, "output", "04_combined_hdphmm", parcellation, sub_id,
         "final", f"vt{vt}")
     ica_dir = os.path.join(
-        SCRATCH_DIR, "output", "sm_ica_states", parcellation, sub_id)
+        SCRATCH_DIR, "output", ICA_STATES_DIR, parcellation, sub_id)
 
     # --- PCA model + n_pcs (from 04's copy; n_pcs from 03a lookup) ---
     with open(os.path.join(final_dir, "pca_model.pkl"), "rb") as f:
@@ -384,7 +384,7 @@ def main():
     a = p.parse_args()
 
     out_dir = os.path.join(
-        SCRATCH_DIR, "output", "sm_ica_oos_recurrence",
+        SCRATCH_DIR, "output", ICA_OOS_DIR,
         a.parcellation, a.sub_id, a.stimulus)
     try:
         run_subject(a.sub_id, a.parcellation, a.vt, a.stimulus, a.fo_threshold,

@@ -45,15 +45,16 @@ def imports():
     from dotenv import load_dotenv
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from utils.ica_states import ICA_OOS_DIR
     from utils.plot_style import apply_publication_style
 
     load_dotenv()
     apply_publication_style()
-    return json, np, os, plt
+    return ICA_OOS_DIR, json, np, os, plt
 
 
 @app.cell
-def config(json, os):
+def config(ICA_OOS_DIR, json, os):
     SCRATCH = os.getenv("SCRATCH_DIR")
     PARC = "atlas-4S156Parcels"
     SUBS = [f"sub-0{i}" for i in range(1, 7)]
@@ -65,7 +66,7 @@ def config(json, os):
 
     def _load(sub, stimulus):
         p = os.path.join(
-            SCRATCH, "output", "sm_ica_oos_recurrence", PARC, sub,
+            SCRATCH, "output", ICA_OOS_DIR, PARC, sub,
             stimulus, "oos_recurrence_summary.json")
         if not os.path.exists(p):
             return None
