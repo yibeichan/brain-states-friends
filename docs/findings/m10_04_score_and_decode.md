@@ -13,14 +13,14 @@ _Applies the Friends-trained HMM to Movie10 data (via Viterbi decode + LL scorin
 - Scoring: `model.score(X) / n_trs` (LL per sample); Decoding: Viterbi MAP state sequence
 - Fractional occupancy (FO) computed per run over the full model state space (n_states=50)
 - LL gap = Friends test LL minus movie overall LL (positive = Friends better explained)
-- Baseline = log(1/K_active): a heuristic uniform-assignment reference not on the same scale as Gaussian-emission LL; `movie_above_baseline` is uninformative
+- Baseline = log(1/K_used): a heuristic uniform-assignment reference not on the same scale as Gaussian-emission LL; `movie_above_baseline` is uninformative
 - Per-subject analysis only; no cross-subject aggregation
 
 ## Results
 
 ### Model configuration and run counts
 
-| Subject | n_states | K_active | n_pcs | n_runs | total TRs |
+| Subject | n_states | K_used | n_pcs | n_runs | total TRs |
 |---------|----------|----------|-------|--------|-----------|
 | sub-01  | 50       | 42       | 75    | 61     | 24,836    |
 | sub-02  | 50       | 42       | 72    | 61     | 24,891    |
@@ -70,7 +70,7 @@ For sub-04, the Friends test LL (-11.05) falls near the median of movie run LLs 
 
 ### State coverage in movie runs
 
-| Subject | K_active (Friends) | States used across all movies | States/run (mean) | States/run (range) |
+| Subject | K_used (Friends) | States visited across all movies | States/run (mean) | States/run (range) |
 |---------|--------------------|-------------------------------|-------------------|--------------------|
 | sub-01  | 42                 | 46                            | 36.5              | 31-41              |
 | sub-02  | 42                 | 44                            | 37.1              | 30-42              |
@@ -79,7 +79,7 @@ For sub-04, the Friends test LL (-11.05) falls near the median of movie run LLs 
 | sub-05  | 41                 | 46                            | 37.0              | 30-41              |
 | sub-06  | 37                 | 43                            | 34.9              | 29-39              |
 
-States used across all movies exceeds K_active (Friends) for all 6 subjects, because Viterbi assigns TRs to model slots that were inactive in Friends.
+States visited across all movies exceeds K_used (Friends) for all 6 subjects, because Viterbi assigns TRs to model slots that were inactive in Friends.
 
 ## Outputs
 

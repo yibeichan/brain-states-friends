@@ -69,7 +69,7 @@ FOLD_COLORS = [cm.tab10(i) for i in range(6)]
 
 # Metric display names
 METRIC_DISPLAY = {
-    "k_active": r"$K_{\mathrm{active}}$",
+    "k_used": r"$K_{\mathrm{used}}$",
     "transition_entropy": "Transition entropy",
     "self_transition_prob": "Self-transition prob.",
     "dwell_median_tr": "Median dwell (TR)",
@@ -282,29 +282,29 @@ def fig1_spatial_reproducibility(all_loso, all_sh, out_dir):
 # =============================================================================
 
 def fig2_scalar_stability(all_loso, all_sh, out_dir):
-    """2x2 grid showing K_active, transition_entropy, self_transition_prob, median_dwell.
+    """2x2 grid showing K_used, transition_entropy, self_transition_prob, median_dwell.
 
     Per-subject x-axis. Each subject shows:
       - Grey vertical bar for seed min-max (noise floor)
       - Colored dots for LOSO fold values
       - Triangle markers for split-half A/B
     """
-    metrics = ["k_active", "transition_entropy", "self_transition_prob", "dwell_median_tr"]
+    metrics = ["k_used", "transition_entropy", "self_transition_prob", "dwell_median_tr"]
     # Keys in fold_invariants vs half_invariants
     loso_keys = {
-        "k_active": "k_active",
+        "k_used": "k_used",
         "transition_entropy": "transition_entropy",
         "self_transition_prob": "self_transition_prob",
         "dwell_median_tr": "dwell_median_tr",
     }
     sh_keys = {
-        "k_active": "K_active",
+        "k_used": "K_used",
         "transition_entropy": "transition_entropy",
         "self_transition_prob": "self_transition_prob",
         "dwell_median_tr": "median_dwell",
     }
     noise_keys = {
-        "k_active": "k_active",
+        "k_used": "k_used",
         "transition_entropy": "transition_entropy",
         "self_transition_prob": "self_transition_prob",
         "dwell_median_tr": None,  # not available

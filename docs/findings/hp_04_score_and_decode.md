@@ -11,14 +11,14 @@ _Applies the Friends-trained HMM to Harry Potter reading-task data (7 runs/subje
 - 7 HP runs per subject (3,363 total TRs per subject; run lengths 373-566 TRs)
 - Per-run: model.score() for LL/sample (total LL / n_TRs); model.decode() Viterbi for state sequence
 - Overall HP LL: TR-weighted average across runs
-- Baseline: log(1/K_active), heuristic only, not on the same scale as Gaussian-emission LL
+- Baseline: log(1/K_used), heuristic only, not on the same scale as Gaussian-emission LL
 - Outputs: decoded_states.pkl (short run-id keys, 08c-compatible), fractional_occupancy.pkl, hp_ll_summary.json
 
 ## Results
 
 ### Model Configuration and HP Data Volume
 
-| Subject | K_total | K_active | n_PCs | HP runs | HP TRs |
+| Subject | K_total | K_used | n_PCs | HP runs | HP TRs |
 |---------|---------|----------|-------|---------|--------|
 | sub-01  | 50      | 42       | 75    | 7       | 3363   |
 | sub-02  | 50      | 42       | 72    | 7       | 3363   |
@@ -56,7 +56,7 @@ Run lengths: run-3 = 373 TRs (shortest); run-5 = 566 TRs (longest); others 453-5
 
 K active across all HP runs and K active per run (mean and range) via Viterbi decoding.
 
-| Subject | K_active (Friends model) | K used across all HP | Mean states/run | Range states/run |
+| Subject | K_used (Friends model) | States visited across all HP | Mean states/run | Range states/run |
 |---------|--------------------------|----------------------|-----------------|------------------|
 | sub-01  | 42                       | 44                   | 32.7            | 25-40            |
 | sub-02  | 42                       | 41                   | 33.4            | 30-37            |
@@ -64,7 +64,7 @@ K active across all HP runs and K active per run (mean and range) via Viterbi de
 | sub-05  | 41                       | 45                   | 34.9            | 33-37            |
 | sub-06  | 37                       | 40                   | 33.1            | 31-37            |
 
-Sub-01, sub-05, and sub-06 activate more states across all HP runs than the Friends K_active count, meaning a small number of near-zero-probability states appear in Viterbi paths.
+Sub-01, sub-05, and sub-06 activate more states across all HP runs than the Friends K_used count, meaning a small number of near-zero-probability states appear in Viterbi paths.
 
 ## Outputs
 

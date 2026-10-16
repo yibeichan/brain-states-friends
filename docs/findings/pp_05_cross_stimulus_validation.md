@@ -6,7 +6,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 
 ## Method (as run)
 
-- Parcellation: atlas-4S156Parcels; vt=0.95; fo_threshold=0.01; exclude_sub_hrf=False
+- Parcellation: atlas-4S156Parcels; vt=0.95; fo_threshold=0.02 (`ACTIVE_FO_THRESHOLD`, the Friends rule); exclude_sub_hrf=False
 - Inputs: Friends recurrence scores from 05a; PP fractional occupancy and LL from pp_04; PCA diagnostic from pp_03
 - n=5 subjects (sub-01, sub-02, sub-03, sub-05, sub-06); sub-04 has no PP output
 - PP runs: 18 per subject except sub-06 (16 total; 7 lppFR + 9 lppEN)
@@ -17,7 +17,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 - A2: Per-language breakdown (lppFR, lppEN), FDR-corrected across 2 tests per subject
 - A1/A2 eligible: same analyses restricted to content-eligible states (05e_a4)
 - A3: LL per sample - Friends test, PP overall, heuristic baseline log(1/n_active)
-- A4: Recurrence vs PP coverage Spearman (coverage = fraction of PP runs where state FO > 0.01)
+- A4: Recurrence vs PP coverage Spearman (coverage = fraction of PP runs where state FO > 0.02)
 - A5: PCA transfer R2 - Friends training vs PP audio (network-stratified)
 - B1: Movie10 A1-equivalent on same subject (full 61 runs)
 - B2: Bootstrap reference - 1000 subsamples of n_pp_runs Movie10 runs; PP rho vs distribution
@@ -80,11 +80,11 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 
 | Subject | rho | p | n_active_states |
 |---------|-----|---|-----------------|
-| sub-01 | 0.097 | 0.522 | 46 |
-| sub-02 | 0.378 | 0.010 | 46 |
-| sub-03 | 0.167 | 0.277 | 44 |
-| sub-05 | -0.084 | 0.573 | 47 |
-| sub-06 | 0.165 | 0.297 | 42 |
+| sub-01 | 0.099 | 0.513 | 46 |
+| sub-02 | 0.322 | 0.029 | 46 |
+| sub-03 | 0.099 | 0.523 | 44 |
+| sub-05 | 0.009 | 0.952 | 47 |
+| sub-06 | 0.063 | 0.694 | 42 |
 
 ### A5: PCA Transfer R2 (Overall)
 

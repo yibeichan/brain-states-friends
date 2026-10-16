@@ -121,7 +121,7 @@ Only groups passing min-5-states and min-200-TRs gates are shown. sub-06: all gr
 
 ### D2: per-state layer selectivity (selective state counts)
 
-Selectivity criterion: max_minus_median >= threshold across per-state AUC layer profile. Primary threshold = 0.05. Sensitivity at 0.03 and 0.10 also shown. n_states = number of content_eligible states with FO >= 1%.
+Selectivity criterion: max_minus_median >= threshold across per-state AUC layer profile. Primary threshold = 0.05. Sensitivity at 0.03 and 0.10 also shown. n_states = number of content_eligible states, with no further FO floor. The recorded fractional_occupancy is the share of content-eligible TRs (minimum 1.45%); over all decoded Friends TRs, 3 of the 159 eligible states fall below 1% (minimum 0.78%, sub-06).
 
 | Subject | Model | n_states | n_sel @ 0.03 | n_sel @ 0.05 (primary) | n_sel @ 0.10 | Median peak layer (@ 0.05) |
 |---|---|---|---|---|---|---|

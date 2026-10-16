@@ -32,8 +32,9 @@ All panels save PNG + SVG only (no PDF).
 Key data facts (audited 2026-06-10):
   * Active states per subject (= state_summary_table.csv row count): sub-01 46,
     sub-02 46, sub-03 44, sub-04 44, sub-05 47, sub-06 42.
-  * Split-half matched recurrence Spearman rho per subject: sub-01 0.65, sub-02
-    0.68, sub-03 0.76, sub-04 0.82, sub-05 0.60, sub-06 0.76 (all p<1e-4) -> the
+  * Split-half matched recurrence Spearman rho per subject (FO > 0.02 per run,
+    audited 2026-10-15): sub-01 0.68, sub-02 0.60, sub-03 0.68, sub-04 0.60,
+    sub-05 0.48, sub-06 0.84 (all p < 0.002; sub-05 p = 0.0014) -> the
     recurrence ordering reproduces under independent re-fits on interleaved
     episode halves. Matching is within-subject only (no cross-subject alignment).
 

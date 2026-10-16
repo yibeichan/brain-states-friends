@@ -220,6 +220,7 @@ helpers; do not run them directly.
 
 - **[script/MANIFEST.md](script/MANIFEST.md)** - Per-script classification (main / supplementary / cross-stimulus)
 - **[docs/supplementary/](docs/supplementary/)** - Supplementary material accompanying the manuscript
+- **[docs/findings/definitions.md](docs/findings/definitions.md)** - State definitions (active state, K_used, presence, content-eligible) and the code constants that implement them
 - **[docs/findings/](docs/findings/)** - Per-script findings: one Results-only doc per analysis script, with every number verified against the pipeline outputs
 - **[AGENTS.md](AGENTS.md)** - Instructions for AI coding agents (e.g. Claude Code) working in this repo: conventions, methodology notes, and analysis-scope rules.
 - **Alternative analysis (ICA)** - An independent-component-analysis decomposition of the same data, provided as a convergence check on the HMM state repertoire, is maintained as a self-contained supplement on the [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements) branch (alongside other supplementary analyses).
@@ -243,12 +244,12 @@ Production config: `vt0.95_covdiag_nc50_g1`.
 |-----------|-------|-------------|
 | Parcellation | atlas-4S156Parcels | 156 parcels (100 cortical + 56 subcortical composite) |
 | PCA space | vt=0.95 (~67–77 PCs) | HMM fits in PC space, not parcel space |
-| Truncation `nc` | 50 | Capacity; K_active ≈ 37–42 per subject |
+| Truncation `nc` | 50 | Capacity; K_used (states with posterior usage > 0.01) ≈ 37–42 per subject |
 | Stickiness `kappa` | 10 | Encourages multi-TR (hemodynamic-scale) persistence |
 | HDP concentration `gamma` | 1 | Low; prior prefers fewer states |
 | Covariance | diagonal (PC space) | Back-projected to parcel space it is non-diagonal (PCA mixing), so states still carry within-state coupling structure |
 
-Model selection uses Pareto analysis of validation log-likelihood vs active-state count (not BIC).
+Model selection uses Pareto analysis of validation log-likelihood vs K_used, the fitted model's occupied-state count (not BIC).
 
 ## Environment
 

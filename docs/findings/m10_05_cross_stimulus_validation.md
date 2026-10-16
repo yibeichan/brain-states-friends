@@ -9,7 +9,7 @@ _Cross-stimulus test of whether Friends-derived brain state recurrence scores pr
 - Atlas: atlas-4S156Parcels; vt=0.95; 61 Movie10 runs per subject (Bourne x10, Wolf of Wall Street x17, Hidden Figures x24, Life x10)
 - Input: Friends recurrence scores from 05a; movie fractional occupancy and log-likelihood from m10_04; PCA transfer diagnostic from m10_03
 - Active states defined as recurrence > 0 (all-repertoire A1/A2/A4); content-eligible subset restricted to states flagged in 05e_a4 state_flags.csv (eligibility_source = 05e_a4) intersected with active states
-- FO threshold for state-active-in-run: 0.01 (A4 coverage counts)
+- FO threshold for state-active-in-run: 0.02 (`ACTIVE_FO_THRESHOLD`, the Friends rule; A4 coverage counts)
 - Sub-HRF exclusion: off (default); FO-based validation does not require per-block BOLD evidence
 - No group statistics; all results are per-subject
 
@@ -82,18 +82,18 @@ Per-genre movie LL (log-likelihood per sample):
 
 ### A4: State Coverage Across Movie Runs
 
-Fraction of the 61 movie runs each active state exceeds FO threshold 0.01; Spearman correlation between Friends recurrence score and movie coverage fraction across active states.
+Fraction of the 61 movie runs each active state exceeds FO threshold 0.02; Spearman correlation between Friends recurrence score and movie coverage fraction across active states.
 
 | Subject | n_active states | n active in >50% runs | Coverage-recurrence rho | p-value |
 |---------|----------------|----------------------|------------------------|---------|
-| sub-01 | 46 | 33 | 0.573 | 3.1e-05 |
-| sub-02 | 46 | 35 | 0.366 | 0.012 |
-| sub-03 | 44 | 35 | 0.667 | 7.8e-07 |
-| sub-04 | 44 | 29 | 0.850 | 3.1e-13 |
-| sub-05 | 47 | 32 | 0.607 | 6.1e-06 |
-| sub-06 | 42 | 31 | 0.792 | 4.3e-10 |
+| sub-01 | 46 | 19 | 0.566 | 4.1e-05 |
+| sub-02 | 46 | 19 | 0.324 | 0.028 |
+| sub-03 | 44 | 17 | 0.596 | 2.0e-05 |
+| sub-04 | 44 | 16 | 0.844 | 6.4e-13 |
+| sub-05 | 47 | 21 | 0.611 | 5.0e-06 |
+| sub-06 | 42 | 19 | 0.790 | 5.0e-10 |
 
-No Friends-inactive states (recurrence = 0) had mean movie FO above threshold for any subject.
+No Friends-inactive state (recurrence = 0) exceeded FO 0.02 in any movie run, for any subject.
 
 ### A5: PCA Transfer Diagnostic
 

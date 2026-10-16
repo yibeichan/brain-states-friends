@@ -66,6 +66,7 @@ from utils.state_blocks import (
     write_records_csv,
 )
 from utils.recurrence_utils import (
+    ACTIVE_FO_THRESHOLD,
     compute_fractional_occupancy,
     compute_recurrence_scores,
     compute_pooled_decoded_occupancy,
@@ -879,8 +880,9 @@ def parse_args():
     parser.add_argument('--sub_id', type=str, required=True, help="Subject ID (e.g., sub-01)")
     parser.add_argument('--parcellation', type=str, default='atlas-4S156Parcels')
     
-    parser.add_argument('--fo_threshold', type=float, default=0.02,
-                        help="Minimum FO to count a state as active in a run (default: 0.02)")
+    parser.add_argument('--fo_threshold', type=float, default=ACTIVE_FO_THRESHOLD,
+                        help="Minimum FO to count a state as active in a run "
+                             f"(default: {ACTIVE_FO_THRESHOLD})")
     parser.add_argument('--model_usage_threshold', type=float, default=0.01,
                         help="Threshold for model-history active states in the activity comparison (default: 0.01)")
     
