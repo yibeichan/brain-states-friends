@@ -4,11 +4,10 @@ Supplement figure for the ICA convergent-validity analysis (sm_alt_ica_states,
 top-K PC subspace).
 
 - Panel A (headline): K-sweep heatmap. Colour is how far ICA's matched spatial
-  |r| exceeds random rotations of the same top-K PC subspace (median matched
-  |r| minus the null mean, content-eligible pairs); cell text is the number of
-  FDR-surviving pairs. The excess is positive in every subject at every K,
-  including the HMM-independent K = 15, and does not grow toward the HMM's
-  state count.
+  |r| exceeds random rotations of the same whitened top-K basis (observed
+  median matched |r| minus the mean of the null draws' medians,
+  content-eligible pairs); cell text is the number of FDR-surviving pairs, with
+  a dagger where the whole-set median test is not significant (p >= 0.05).
 - Panel B: per-state matched spatial correlation at K_used, one dot per HMM
   state (subject on x, category by colour), with the per-subject median (solid
   tick) and the rotation-null mean (dashed tick).
@@ -23,7 +22,7 @@ assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
 
 | Panel | Content | Source files |
 |---|---|---|
-| A | Convergence heatmap: 6 subjects x ICA K; colour = median matched |r| minus rotation-null mean (eligible pairs), cell text = FDR-surviving/total counts | sm_ica_states_topk/*/ica_match_summary.json |
+| A | Convergence heatmap: 6 subjects x ICA K; colour = median_excess (eligible pairs), cell text = FDR-surviving/total counts, dagger = median_p >= 0.05 | sm_ica_states_topk/*/ica_match_summary.json |
 | B | Per-state matched spatial |r| at K_used; x = subject, colour = taxonomy category, solid tick = per-subject median, dashed tick = rotation-null mean | sm_ica_states_topk/*/ica_match_summary.json + 05e_temporal_trend_a4/*/state_flags.csv |
 
 Run:
@@ -114,6 +113,7 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
     # and FDR-surviving content-eligible pairs (text), per subject (rows) x ICA
     # dimensionality K (columns).
     _exc = np.full((len(SUBS), len(KS)), np.nan)
+    _ns_cell = np.zeros((len(SUBS), len(KS)), dtype=bool)
     _surv = np.zeros((len(SUBS), len(KS)), dtype=int)
     _tot = np.zeros((len(SUBS), len(KS)), dtype=int)
     _kact = {}
@@ -129,8 +129,8 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
             _ns = sum(1 for x in _q if x is not None and x < 0.05)
             _tot[_i, _j] = _n
             _surv[_i, _j] = _ns
-            _exc[_i, _j] = (float(np.median(np.abs(_e["matched_r"])))
-                            - _e["null_mean"])
+            _exc[_i, _j] = _e["median_excess"]
+            _ns_cell[_i, _j] = _e["median_p"] >= 0.05
 
     _fig, _ax = plt.subplots(figsize=(6.6, 3.0))
     _im = _ax.imshow(_exc, cmap="Blues", vmin=0.0, vmax=0.12, aspect="auto")
@@ -140,7 +140,8 @@ def panel_A_convergence(KS, OUT, SEP_AFTER, SUBS, ica_summaries, np, plt):
         for _j in range(len(KS)):
             _f = _exc[_i, _j]
             _txt_c = "white" if (np.isfinite(_f) and _f >= 0.07) else "0.15"
-            _ax.text(_j, _i, f"{_surv[_i, _j]}/{_tot[_i, _j]}",
+            _dag = "\u2020" if _ns_cell[_i, _j] else ""
+            _ax.text(_j, _i, f"{_surv[_i, _j]}/{_tot[_i, _j]}{_dag}",
                      ha="center", va="center", fontsize=6, color=_txt_c)
 
     # divider between the primary low-dim set {15,25,35} and the near-K
