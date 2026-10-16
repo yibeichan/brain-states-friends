@@ -50,6 +50,23 @@ Note: sub-02 has one short run (s05e09a, 33 TRs); sub-04 has substantially fewer
 | File size per run | ~413 MB |
 | Standardization | voxel-wise z-score (mean=0, std=1 per grayordinate across time within run) |
 
+## Known limitation: CSF and WM regressors from corrupted tissue maps
+
+The CNeuroMod anatomical derivatives (`anat.smriprep`) were built with fMRIPrep 20.2.1 `--anat-only`, whose sMRIPrep (< 0.7.2) resampled the FreeSurfer aseg with trilinear instead of nearest-neighbour interpolation (fixed upstream in sMRIPrep 0.7.2). The shipped GM/WM/CSF tissue maps therefore contain spurious intermediate labels, and the CSF class is inflated. Every CNeuroMod BOLD fMRIPrep run reused these maps (`--anat-derivatives`), so the `csf` and `white_matter` confound columns regressed here are mask means over affected masks. The BOLD data, motion parameters and cosine regressors are not affected. Because the masks are per participant, the same issue applies to every stimulus processed here.
+
+**Measured effect.** One Friends run per participant (session 010) was cleaned exactly as above twice, once with the shipped `csf` / `white_matter` columns and once with columns recomputed from masks rebuilt from the clean FreeSurfer aseg using fMRIPrep 20.2.6's own mask code, and the cleaned data were averaged into the 4S156 parcels:
+
+| sub | CSF mask voxels, shipped → clean | `csf` r | `white_matter` r | cortical parcel r, median / min | subcortical parcel r, median / min | top-15 PC subspace, min cosine |
+|---|---|---|---|---|---|---|
+| 01 | 500 → 274 | 0.954 | 0.962 | 0.990 / 0.977 | 0.995 / 0.962 | 0.991 |
+| 02 | 742 → 494 | 0.987 | 0.997 | 0.997 / 0.992 | 0.998 / 0.982 | 0.983 |
+| 03 | 507 → 52 | 0.714 | 0.988 | 0.991 / 0.968 | 0.987 / 0.958 | 0.969 |
+| 04 | 581 → 42 | 0.813 | 0.997 | 0.995 / 0.946 | 0.994 / 0.936 | 0.972 |
+| 05 | 521 → 115 | 0.851 | 0.996 | 0.987 / 0.968 | 0.991 / 0.965 | 0.992 |
+| 06 | 473 → 397 | 0.929 | 0.983 | 0.996 / 0.991 | 0.998 / 0.979 | 0.995 |
+
+The `csf` regressor is substantially wrong in sub-03, sub-04 and sub-05, but because it is one of 13–18 regressors the cleaned parcel time series change little (median r 0.987–0.998; the lowest parcels, mostly cerebellar, 0.936–0.992). The PC subspace is computed here from a single run, a noisier proxy for the 03a PCA over all runs. The pipeline was not rerun; results are reported with this limitation.
+
 ## Outputs
 
 - `output/00_postproc/{sub_id}/{sub_id}_{ses}_{task}_space-fsLR_den-91k_bold_cleaned.dtseries.nii` - one cleaned CIFTI per run per subject
