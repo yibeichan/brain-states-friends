@@ -50,6 +50,32 @@ Note: sub-02 has one short run (s05e09a, 33 TRs); sub-04 has substantially fewer
 | File size per run | ~413 MB |
 | Standardization | voxel-wise z-score (mean=0, std=1 per grayordinate across time within run) |
 
+## Known limitation: CSF and WM regressors from corrupted tissue maps
+
+The CNeuroMod anatomical derivatives (`anat.smriprep`) were built with fMRIPrep 20.2.1 `--anat-only`, whose sMRIPrep (< 0.7.2) resampled the FreeSurfer aseg with trilinear instead of nearest-neighbour interpolation (fixed upstream in sMRIPrep 0.7.2). The shipped GM/WM/CSF tissue maps therefore contain spurious intermediate labels, and the CSF class is inflated. Every CNeuroMod BOLD fMRIPrep run reused these maps (`--anat-derivatives`), so the `csf` and `white_matter` confound columns regressed here are mask means over affected masks. The BOLD data, motion parameters and cosine regressors are not affected. Because the masks are per participant, the same issue applies to every stimulus processed here; the Movie10, Harry Potter, Petit Prince and hcptrt derivatives all pin the same `anat.smriprep` tissue maps, and their fMRIPrep versions (20.2.1–20.2.6) share the same confound code.
+
+**Measured effect.** One Friends run per participant (session 010) was cleaned exactly as above twice, once with the shipped `csf` / `white_matter` columns and once with columns recomputed from masks rebuilt from the clean FreeSurfer aseg using fMRIPrep 20.2.6's own mask code, and the cleaned data were averaged into the 4S156 parcels:
+
+| sub | CSF mask voxels, shipped → clean | `csf` r | `white_matter` r | cortical parcel r, median / min | subcortical parcel r, median / min | top-15 PC subspace, min cosine |
+|---|---|---|---|---|---|---|
+| 01 | 500 → 274 | 0.954 | 0.962 | 0.990 / 0.977 | 0.995 / 0.962 | 0.991 |
+| 02 | 742 → 494 | 0.987 | 0.997 | 0.997 / 0.992 | 0.998 / 0.982 | 0.983 |
+| 03 | 507 → 52 | 0.714 | 0.988 | 0.991 / 0.968 | 0.987 / 0.958 | 0.969 |
+| 04 | 581 → 42 | 0.813 | 0.997 | 0.995 / 0.946 | 0.994 / 0.936 | 0.972 |
+| 05 | 521 → 115 | 0.851 | 0.996 | 0.987 / 0.968 | 0.991 / 0.965 | 0.992 |
+| 06 | 473 → 397 | 0.929 | 0.983 | 0.996 / 0.991 | 0.998 / 0.979 | 0.995 |
+
+The same check on one run per participant of each other stimulus gives the same pattern:
+
+| stimulus | n | `csf` r | median parcel r, cortical / subcortical | lowest parcel r |
+|---|---|---|---|---|
+| Movie10 | 6 | 0.694–0.992 | 0.978–0.999 / 0.990–0.999 | 0.942 |
+| Harry Potter | 5 | 0.790–0.992 | 0.978–0.996 / 0.987–0.998 | 0.954 |
+| Petit Prince | 5 | 0.730–0.988 | 0.990–0.995 / 0.991–0.999 | 0.959 |
+| Rest (hcptrt) | 6 | 0.652–0.979 | 0.977–0.999 / 0.989–0.999 | 0.937 |
+
+Across stimuli, the `csf` regressor is substantially wrong in sub-03, sub-04 and sub-05, but because it is one of 13–18 regressors the cleaned parcel time series change little (Friends median r 0.987–0.998; the lowest parcels, mostly cerebellar, 0.936–0.992). All r values compare the shipped columns with the clean-mask rebuild, so they include the rebuild's own departure from fMRIPrep, which runs on native-space rather than T1w-space BOLD. A rebuild from the corrupted masks reproduces the shipped `csf` at r ≥ 0.96 in 24 of the 28 runs checked and at 0.90–0.95 in the other four (all rest), and the shipped `white_matter` at r 0.63 in rest sub-06 and 0.92 in Harry Potter sub-01. The low `white_matter` values in those two runs therefore reflect the rebuild, not the corrupted masks (corrupted vs clean rebuild: r 0.98 and 0.99). The shipped-versus-clean comparison thus overstates rather than understates the effect on the cleaned data. The PC subspace is computed here from a single run, a noisier proxy for the 03a PCA over all runs. The pipeline was not rerun; results are reported with this limitation.
+
 ## Outputs
 
 - `output/00_postproc/{sub_id}/{sub_id}_{ses}_{task}_space-fsLR_den-91k_bold_cleaned.dtseries.nii` - one cleaned CIFTI per run per subject
