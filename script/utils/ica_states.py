@@ -34,22 +34,49 @@ def fit_spatial_ica(components, X_pc, n_components, random_state=0,
     scaling well-defined. The subspace-rotation null does NOT use FastICA's
     internal whitening (it uses the PCA basis directly), so the whitening mode
     only affects the maps/timecourses, not the null.
+
+    The whitening step is done here rather than inside FastICA. sklearn fixes
+    the sign of each whitening direction with ``np.sign(u[0])``, which is 0
+    when ``u[0, j]`` is exactly 0, and that silently drops direction j.
+    PCA loadings have orthonormal rows, so the SVD spectrum is (near-)
+    degenerate and LAPACK can return exact zeros in ``u[0]``; whether it does
+    depends on memory layout and the CPU's BLAS kernel. The code below matches
+    sklearn's classical whitening step for step (same centring, same SVD on
+    the same Fortran-ordered array, same sqrt(n_samples) scaling, same
+    w_init draw), except that a zero sign is taken as +1. When no zero
+    occurs and the input is float64 the result is bit-identical to
+    ``whiten="arbitrary-variance"``; float32 input is computed in float64.
     """
-    X_spatial = np.asarray(components).T            # (n_parcels, n_pcs)
-    n_pcs = X_spatial.shape[1]
+    X_spatial = np.asarray(components, dtype=float).T   # (n_parcels, n_pcs)
+    n_parcels, n_pcs = X_spatial.shape
     if n_components > n_pcs:
         raise ValueError(
             f"n_components ({n_components}) must be <= n_pcs ({n_pcs})")
-    ica = FastICA(n_components=n_components, fun=fun, max_iter=max_iter,
-                  whiten="arbitrary-variance", random_state=random_state)
-    maps = ica.fit_transform(X_spatial)             # (n_parcels, K) = sources S
-    timecourses = np.asarray(X_pc) @ ica.mixing_    # (T, K)
+    XT = np.array(X_spatial, copy=True).T                # (n_pcs, n_parcels)
+    mean_ = XT.mean(axis=-1)
+    XT -= mean_[:, np.newaxis]
+    u, d = linalg.svd(XT, full_matrices=False, check_finite=False)[:2]
+    sign = np.sign(u[0])
+    sign[sign == 0] = 1.0
+    u *= sign
+    K = (u / d).T[:n_components]                         # whitening matrix
+    X1 = (K @ XT) * np.sqrt(n_parcels)
+    # n_components=None: with whiten=False sklearn takes the component count
+    # from the data (X1 already has n_components columns) and would otherwise
+    # warn that the argument is ignored.
+    ica = FastICA(n_components=None, fun=fun, max_iter=max_iter,
+                  whiten=False, random_state=random_state)
+    ica.fit(X1.T)
+    unmixing = ica.components_ @ K                       # (K, n_pcs)
+    mixing = linalg.pinv(unmixing, check_finite=False)   # (n_pcs, K)
+    maps = (unmixing @ XT).T                             # (n_parcels, K) = sources S
+    timecourses = np.asarray(X_pc) @ mixing              # (T, K)
     return {
         "maps": maps,
         "timecourses": timecourses,
-        "mixing": ica.mixing_,
-        "mean_": ica.mean_,
-        "components_": ica.components_,
+        "mixing": mixing,
+        "mean_": mean_,
+        "components_": unmixing,
         "n_iter": int(getattr(ica, "n_iter_", -1)),
     }
 
