@@ -26,10 +26,12 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 #   sbatch --export=SUBJECT_ID=sub-01,STAGE=1 script/04_combined_hdphmm.sh
 #
 # STAGE 2 FIT: Select K/gamma/cov at the chosen vt
-#   Array size depends on selected vt (12-24 configs). Check stage1_result.json.
-#   For vt with full+diag cov (vt≤0.85): 3 gamma × 2 cov × 4 nc = 24 configs → --array=0-23
-#   For vt with diag only (vt≥0.90):     3 gamma × 1 cov × 4 nc = 12 configs → --array=0-11
-#   sbatch --array=0-11 --export=SUBJECT_ID=sub-01,STAGE=2 script/04_combined_hdphmm.sh
+#   Array size depends on the vt (18 or 36 configs; build_stage2_grid in
+#   script/config/combined_hmm_config.py). Check stage1_result.json, or FIXED_VT.
+#   An array smaller than the grid silently skips configs.
+#   For vt with full+diag cov (vt≤0.85): 3 gamma × 2 cov × 6 nc = 36 configs → --array=0-35
+#   For vt with diag only (vt≥0.90):     3 gamma × 1 cov × 6 nc = 18 configs → --array=0-17
+#   sbatch --array=0-17 --export=SUBJECT_ID=sub-01,STAGE=2 script/04_combined_hdphmm.sh
 #
 # SELECT MODE: Two-stage selection + final refit + decode (single task)
 #   sbatch --array=0 --export=SUBJECT_ID=sub-01,MODE=select \
@@ -40,7 +42,7 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 #          --time=10:00:00 script/04_combined_hdphmm.sh
 #
 # STAGE 2 FIT WITH FIXED VT: run Stage 2 without stage1_result.json on disk
-#   sbatch --array=0-11 --export=SUBJECT_ID=sub-01,STAGE=2,FIXED_VT=0.95 \
+#   sbatch --array=0-17 --export=SUBJECT_ID=sub-01,STAGE=2,FIXED_VT=0.95 \
 #          script/04_combined_hdphmm.sh
 #
 # SELECT SEED MODE: Parallelize final refit (one seed per task)
