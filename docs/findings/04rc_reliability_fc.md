@@ -67,7 +67,7 @@ _Computes state-conditioned Ledoit-Wolf empirical FC for every LOSO fold and spl
 
 ### Matched-pair FC reproduction
 
-For state pairs matched across fits, within-state FC is compared in two ways (`04rv_reliability_vis.py`, `fc_rv_summary.json`): the RV coefficient used by Fig 7a–7d, and the Pearson r between the matrices' off-diagonal entries. RV is uncentred and includes the unit diagonal, so it is close to 1 for almost any two correlation matrices; the off-diagonal r separates states more sharply. LOSO pairs are each fold's well-matched pairs against the primary model; split-half pairs are all Hungarian pairs between halves. Pairs are counted as reliable when both states have at least 30 TRs. The unmatched baseline pairs each reliable split-half state with every state in the other half except its own partner.
+For state pairs matched across fits, within-state FC is compared in two ways (`04rv_reliability_vis.py`, `fc_rv_summary.json`): the RV coefficient used by Fig 7a–7d, and the Pearson r between the matrices' off-diagonal entries. RV is uncentred and includes the unit diagonal, so it is close to 1 for almost any two correlation matrices; the off-diagonal r separates states more sharply. LOSO pairs are each fold's well-matched pairs against the primary model; split-half pairs are all Hungarian pairs between halves. Pairs are counted as reliable when both states have at least 30 TRs. The unmatched baseline pairs each state of a reliable split-half pair with every other reliable matched state in the other half, excluding its own partner.
 
 | Subject | LOSO, RV / off-diag r (pairs) | split-half, RV / off-diag r (pairs) | split-half unmatched baseline, RV / off-diag r | mean-map r vs RV, Spearman rho (split-half) |
 |---|---|---|---|---|
@@ -78,7 +78,7 @@ For state pairs matched across fits, within-state FC is compared in two ways (`0
 | sub-05 | 0.991 / 0.960 (244) | 0.993 / 0.972 (41) | 0.987 / 0.946 | 0.47 |
 | sub-06 | 0.986 / 0.951 (236) | 0.991 / 0.967 (38) | 0.982 / 0.936 | 0.47 |
 
-Values are per-subject medians over reliable pairs.
+RV and off-diagonal r values are per-subject medians over reliable pairs; the Spearman rho is computed over reliable pairs. Fig 7d prints rho over all split-half pairs instead (`mean_map_r_vs_rv_spearman.all` in the JSON; 0.23–0.63).
 
 - All states share most of their FC structure: unmatched states already reach a median off-diagonal r of 0.88–0.97.
 - Matched partners exceed that baseline in every subject, by +0.012 to +0.052 in median off-diagonal r. The state-specific part of FC therefore reproduces across fits, but it is a small share of the total similarity, and the high RV values mostly reflect the shared structure.
