@@ -87,6 +87,19 @@ An earlier version of this analysis let FastICA reduce all n_pcs loadings to K i
 
 `output/sm_ica_states_topk/atlas-4S156Parcels/{sub-*/ica_match_summary.json, ica_maps_K*.npy, ica_timecourses_K*.npy, category_correspondence_table.{csv,md}, focal_components.json, diagnostics/}` (directory name: `ICA_STATES_DIR` in `script/utils/ica_states.py`). The earlier `output/sm_ica_states/` outputs come from the superseded truncated whitening and are not read by any script.
 
+## Reproduce
+
+```bash
+# needs main-pipeline outputs (stages 03a, 04, 05a, 05e, 06b)
+uv run python -m pytest script/tests/test_alt_ica_states.py script/tests/test_alt_ica_diagnostics.py
+jid=$(sbatch --parsable script/sm_alt_ica_states.sh)                      # K = 15, 25, 35, K_used
+sbatch --dependency=aftercorr:$jid --export=ALL,EXTRA_K=41:42:43:44:45:46:47 script/sm_alt_ica_states.sh
+uv run python script/sm_alt_ica_category_table.py                          # per-category breakdown
+uv run python script/sm_alt_ica_focal_components.py                        # per-rank null, focal components
+uv run python script/sm_alt_ica_diagnostics.py                             # repertoire/convergence diagnostics
+uv run python script/fig_sm_alt_ica_matching.py                            # companion figure
+```
+
 ## Companion figure
 
 `script/fig_sm_alt_ica_matching.py`. Panel A: K-sweep heatmap, 6 subjects × K; colour = `median_excess` (median matched |r| above the rotation null, content-eligible pairs), cell text = FDR-surviving/total pairs, dagger = whole-set test p ≥ 0.05. Panel B: per-state matched |r| at K_used, x = subject, colour = taxonomy category, solid tick = per-subject median, dashed tick = rotation-null mean.
