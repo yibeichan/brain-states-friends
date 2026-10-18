@@ -145,3 +145,80 @@ def moved_verdict(cross, within):
     return {"moved": any(e["outside"] for e in by_metric.values()),
             "rule": "moved if any metric is worse than every within-variant seed pair",
             "by_metric": by_metric}
+
+
+def _split_statistics(values, iu, splits, worse):
+    """Within-minus-cross median (signed so larger = cross worse) per split."""
+    same = splits[:, iu[0]] == splits[:, iu[1]]            # (n_splits, n_pairs)
+    within = np.where(same, values, np.nan)
+    cross = np.where(~same, values, np.nan)
+    w_med, c_med = np.nanmedian(within, axis=1), np.nanmedian(cross, axis=1)
+    return (w_med - c_med) if worse == "lower" else (c_med - w_med), w_med, c_med
+
+
+def distribution_test(pair_metrics, labels, max_exact=200_000, n_random=20_000,
+                      seed=0, chunk=5_000):
+    """Seed-level permutation test: are cross-variant pairs worse than within?
+
+    `pair_metrics` maps every pair (i, j), i < j, of the pooled seed fits to its
+    metrics dict; `labels` gives each fit's variant (0/1). The statistic is the
+    median over within-variant pairs minus the median over cross-variant pairs,
+    signed so that larger means the cross-variant pairs look worse. The null
+    reassigns the variant labels over whole fits, keeping group sizes, which
+    respects pairs that share a seed. All splits are enumerated when there are at
+    most `max_exact`; otherwise `n_random` random splits plus the observed one.
+    p is the share of splits whose statistic is at least the observed one.
+    """
+    from itertools import combinations
+    from math import comb
+
+    labels = np.asarray(labels)
+    n = labels.size
+    n1 = int((labels == labels[0]).sum())
+    iu = np.triu_indices(n, k=1)
+    missing = [(int(i), int(j)) for i, j in zip(*iu) if (int(i), int(j)) not in pair_metrics]
+    if missing:
+        raise ValueError(f"pair_metrics lacks {len(missing)} pairs, e.g. {missing[0]}")
+
+    observed = (labels == labels[0]).astype(np.int8)
+    n_total = comb(n, n1)
+    if n_total <= max_exact:
+        def gen():
+            for idx in combinations(range(n), n1):
+                row = np.zeros(n, dtype=np.int8)
+                row[list(idx)] = 1
+                yield row
+        exact = True
+        n_splits = n_total
+    else:
+        rng = np.random.default_rng(seed)
+
+        def gen():
+            yield observed
+            for _ in range(n_random):
+                row = np.zeros(n, dtype=np.int8)
+                row[rng.choice(n, size=n1, replace=False)] = 1
+                yield row
+        exact = False
+        n_splits = n_random + 1
+
+    by_metric = {}
+    for name, worse in VERDICT_METRICS.items():
+        values = np.array([pair_metrics[(int(i), int(j))][name] for i, j in zip(*iu)],
+                          dtype=float)
+        obs, w_med, c_med = _split_statistics(values, iu, observed[None, :], worse)
+        n_ge = 0
+        rows = gen()
+        while True:
+            batch = [r for _, r in zip(range(chunk), rows)]
+            if not batch:
+                break
+            stats, _, _ = _split_statistics(values, iu, np.stack(batch), worse)
+            n_ge += int(np.sum(stats >= obs[0] - 1e-12))
+        by_metric[name] = {"statistic": float(obs[0]),
+                           "within_median": float(w_med[0]),
+                           "cross_median": float(c_med[0]),
+                           "p": n_ge / n_splits}
+    return {"n_splits": n_splits, "exact": exact,
+            "statistic": "median(within) - median(cross), signed so larger = cross worse",
+            "by_metric": by_metric}

@@ -7,8 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.state_compare import (  # noqa: E402
-    compare_fits, fo_distance, label_agreement, match_states, moved_verdict,
-    pooled_fo,
+    compare_fits, distribution_test, fo_distance, label_agreement, match_states,
+    moved_verdict, pooled_fo,
 )
 
 
@@ -120,3 +120,47 @@ def test_moved_verdict():
 def test_moved_verdict_needs_within_pairs():
     with pytest.raises(ValueError):
         moved_verdict({"median_r": 1, "ari": 1, "fo_distance": 0}, [])
+
+
+def _pair_metrics(n, value):
+    """All-pairs metrics for n fits, from value(i, j) -> (median_r, ari, fo)."""
+    out = {}
+    for i in range(n):
+        for j in range(i + 1, n):
+            r, ari, fo = value(i, j)
+            out[(i, j)] = {"median_r": r, "ari": ari, "fo_distance": fo}
+    return out
+
+
+def test_distribution_test_detects_shift():
+    labels = np.array([0] * 4 + [1] * 4)
+    same = lambda i, j: labels[i] == labels[j]  # noqa: E731
+    pairs = _pair_metrics(8, lambda i, j: (0.95, 0.5, 0.1) if same(i, j)
+                          else (0.80, 0.3, 0.3))
+    out = distribution_test(pairs, labels)
+    assert out["n_splits"] == 70 and out["exact"] is True
+    for name in ("median_r", "ari", "fo_distance"):
+        m = out["by_metric"][name]
+        assert m["statistic"] > 0
+        # Only the observed split and its mirror image reach the statistic.
+        assert m["p"] == pytest.approx(2 / 70)
+    assert out["by_metric"]["median_r"]["within_median"] == pytest.approx(0.95)
+    assert out["by_metric"]["median_r"]["cross_median"] == pytest.approx(0.80)
+
+
+def test_distribution_test_null_when_labels_carry_nothing():
+    labels = np.array([0] * 4 + [1] * 4)
+    rng = np.random.default_rng(4)
+    pairs = _pair_metrics(8, lambda i, j: tuple(rng.normal(size=3)))
+    out = distribution_test(pairs, labels)
+    for m in out["by_metric"].values():
+        assert 0 < m["p"] <= 1
+
+
+def test_distribution_test_samples_when_too_many_splits():
+    labels = np.array([0] * 4 + [1] * 4)
+    pairs = _pair_metrics(8, lambda i, j: (0.9, 0.5, 0.1))
+    out = distribution_test(pairs, labels, max_exact=10, n_random=50, seed=0)
+    assert out["exact"] is False and out["n_splits"] == 51  # 50 random + observed
+    # Ties everywhere: every split reaches the observed statistic.
+    assert out["by_metric"]["ari"]["p"] == pytest.approx(1.0)

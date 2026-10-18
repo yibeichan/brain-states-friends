@@ -6,7 +6,9 @@ clean-mask runs of `hazard10_e2e_submit.sh` (each a SCRATCH_DIR-style root with
 its own output/). The selected fits (best seed) are compared across variants, and
 the result is judged against the spread between seeds within each variant: the
 states moved if a cross-variant metric is worse than every within-variant seed
-pair (see utils/state_compare.py for the metrics).
+pair (see utils/state_compare.py for the metrics). A secondary seed-level
+permutation test asks whether cross-variant seed pairs as a whole are worse than
+within-variant ones.
 
 Every final seed model is back-projected with its variant's PCA and decoded over
 all runs, so the comparison sees exactly what the selected fit sees.
@@ -32,7 +34,9 @@ from utils.hmm_io import (  # noqa: E402
     back_project_states, decode_all_runs, get_projected_dir, load_split,
 )
 from utils.recurrence_utils import used_state_indices  # noqa: E402
-from utils.state_compare import compare_fits, moved_verdict  # noqa: E402
+from utils.state_compare import (  # noqa: E402
+    compare_fits, distribution_test, moved_verdict,
+)
 
 VARIANTS = ("corrupt", "clean")
 
@@ -105,14 +109,17 @@ def _summary(rows):
 def run(run_root, sub_id, parcellation):
     fits = {v: load_variant(Path(run_root) / v, sub_id, parcellation) for v in VARIANTS}
 
-    within = {}
-    for v, fit in fits.items():
-        s = fit["seeds"]
-        within[v] = [compare_fits(s[i], s[j]) for i, j in itertools.combinations(sorted(s), 2)]
+    # Pool every seed fit of both variants and compare each pair once.
+    pooled = [(v, s, f) for v in VARIANTS for s, f in sorted(fits[v]["seeds"].items())]
+    labels = np.array([VARIANTS.index(v) for v, _, _ in pooled])
+    pairs = {(i, j): compare_fits(pooled[i][2], pooled[j][2])
+             for i, j in itertools.combinations(range(len(pooled)), 2)}
+    within = {v: [m for (i, j), m in pairs.items()
+                  if pooled[i][0] == v and pooled[j][0] == v] for v in VARIANTS}
+    cross_all = [m for (i, j), m in pairs.items() if pooled[i][0] != pooled[j][0]]
+
     c, k = fits["corrupt"], fits["clean"]
     selected = compare_fits(c["seeds"][c["best_seed"]], k["seeds"][k["best_seed"]])
-    cross_all = [compare_fits(c["seeds"][i], k["seeds"][j])
-                 for i in sorted(c["seeds"]) for j in sorted(k["seeds"])]
 
     return {
         "sub_id": sub_id,
@@ -125,6 +132,7 @@ def run(run_root, sub_id, parcellation):
         "same_selected_config": c["selected_config"] == k["selected_config"],
         "selected_fits": selected,
         "verdict": moved_verdict(selected, within["corrupt"] + within["clean"]),
+        "distribution_test": distribution_test(pairs, labels),
         "within_variant": {v: _summary(rows) for v, rows in within.items()},
         "cross_variant_all_seed_pairs": _summary(cross_all),
     }
@@ -150,7 +158,13 @@ def main():
     for name, e in v["by_metric"].items():
         print(f"  {name:12s} cross={e['cross']:.3f}  within "
               f"[{e['within_min']:.3f}, {e['within_max']:.3f}]  outside={e['outside']}")
-    print(f"  moved={v['moved']}  -> {args.out}")
+    print(f"  moved={v['moved']}")
+    d = result["distribution_test"]
+    print(f"  distribution test ({d['n_splits']} splits, exact={d['exact']}):")
+    for name, e in d["by_metric"].items():
+        print(f"  {name:12s} within median={e['within_median']:.3f}  "
+              f"cross median={e['cross_median']:.3f}  p={e['p']:.4f}")
+    print(f"  -> {args.out}")
 
 
 if __name__ == "__main__":
