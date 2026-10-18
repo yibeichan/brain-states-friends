@@ -14,8 +14,8 @@ public venv lacks the yabplot atlas data needed for cortical surface rendering.
 
 Use the private repo's venv for the per-subject renders:
 
-    PRIVATE=/orcd/home/002/yibei/brain-states-friends
-    PUB_05B=/orcd/home/002/yibei/brain-states-friends-public/script/05b_visualize_recurring_states.py
+    PRIVATE=$BASE_DIR                     # private repo checkout
+    PUB_05B=$PUBLIC_REPO_DIR/script/05b_visualize_recurring_states.py
     cp $PUB_05B $PRIVATE/script/05b_visualize_recurring_states.py   # copy font-bumped version
 
     for SUB in sub-01 sub-02 sub-03 sub-04 sub-05 sub-06; do

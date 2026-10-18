@@ -28,8 +28,12 @@ _ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/
 [ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
 source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
+# Load environment for DATA_DIR
+set -a; source "${PROJECT_DIR}/.env"; set +a
+: "${DATA_DIR:?set DATA_DIR in .env}"
+
 # hcptrt fMRIPrep derivatives (read-only, datalad-retrieved)
-HCPTRT_FMRIPREP="/orcd/data/satra/002/datasets/all_about_cneuromod/cneuromod.processed/fmriprep/hcptrt"
+HCPTRT_FMRIPREP="${DATA_DIR}/cneuromod.processed/fmriprep/hcptrt"
 
 # All six subjects (rest has sub-04, unlike HP/PP)
 sub_ids=("sub-01" "sub-02" "sub-03" "sub-04" "sub-05" "sub-06")
