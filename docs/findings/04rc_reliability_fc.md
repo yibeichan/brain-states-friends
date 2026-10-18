@@ -88,7 +88,7 @@ RV and off-diagonal r values are per-subject medians over reliable pairs; the Sp
 
 ## Outputs
 
-- output/04rv\_reliability\_vis/atlas-4S156Parcels/fc\_rv\_summary.json - per-pair RV and off-diagonal r for matched states (LOSO and split-half) with TR counts and reliability flags, per-subject summaries, and the split-half unmatched baseline, written by `04rv_reliability_vis.py` (`--fc_rv_only` writes only this file)
+- output/04rv\_reliability\_vis/atlas-4S156Parcels/fc\_rv\_summary.json - per-pair RV and off-diagonal r for matched states (LOSO and split-half) with TR counts and reliability flags, per-subject summaries, and the split-half unmatched baseline, written by `04rv_reliability_vis.py` (`--fc_rv_only` writes only this file); undefined values (a state without finite FC, or a Spearman rho over constant input) are written as `null`
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/loso/season\_{N}/state\_empirical\_corr.npy - (50, 156, 156) Ledoit-Wolf Pearson correlation per state, per LOSO fold
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/loso/season\_{N}/fc\_metadata.json - K, n\_parcels, n\_runs, total\_trs, min\_trs, n\_reliable\_states, n\_trs\_per\_state, shrinkage\_alpha\_per\_state
 - output/04\_combined\_hdphmm/atlas-4S156Parcels/{sub\_id}/split\_half/{A,B}/state\_empirical\_corr.npy - (50, 156, 156) as above, per split-half
