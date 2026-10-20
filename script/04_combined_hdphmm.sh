@@ -74,12 +74,19 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 #   done
 #
 # NOTES ON RESOURCES (with parallel E-step, --cpus-per-task=8):
-#   Stage 1 fit (any vt, diag, nc=60):   --time=14:00:00, --mem=32G
+#   Stage 1 fit vt≤0.90 (diag, nc=60):   --time=14:00:00, --mem=32G
+#   Stage 1 fit vt=0.95/0.99:            --time=36:00:00, --mem=32G
 #   Stage 2 fit vt≤0.85, full:           --time=14:00:00, --mem=32G
 #   Stage 2 fit vt≤0.90, diag:           --time=14:00:00, --mem=32G
 #   Stage 2 fit vt=0.95/0.99, diag:      --time=20:00:00, --mem=32G
+#     except nc≥80:                      --time=48:00:00
 #   select:                               --time=10:00:00, --mem=32G
 #   loso_fit:                             --time=20:00:00, --mem=32G
+#
+#   Each task fits its seeds one after another, so its run time is about
+#   5 × the time for one seed. Measured times for one seed (Friends, 8 CPUs):
+#   0.2-2 h for nc≤60 at vt=0.95, up to 6 h for vt=0.95/0.99 nc=60 gamma=5,
+#   up to 10 h for nc=80, and up to 13 h for nc=100.
 #
 # Per-seed JSON checkpointing is built in for all fit modes:
 # if a task times out and is resubmitted, completed seeds are skipped.
