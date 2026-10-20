@@ -1269,6 +1269,22 @@ def fig7d_fc_vs_mean(all_sh, parcellation, out_dir):
 # FC similarity values (the numbers behind Fig 7b-7d)
 # =============================================================================
 
+def _json_safe(obj):
+    """Copy of obj with every NaN or infinite float replaced by None.
+
+    json.dump writes NaN and Infinity as bare tokens, which strict JSON readers
+    reject. Undefined values arise here from states without a finite FC and from
+    Spearman correlations of constant input.
+    """
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    if isinstance(obj, (float, np.floating)):
+        return float(obj) if np.isfinite(obj) else None
+    return obj
+
+
 def _summary(values):
     v = np.asarray(values, dtype=float)
     v = v[np.isfinite(v)]
@@ -1398,7 +1414,7 @@ def write_fc_rv_summary(all_loso, all_sh, parcellation, out_dir):
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, "fc_rv_summary.json")
     with open(path, "w") as f:
-        json.dump(out, f, indent=2)
+        json.dump(_json_safe(out), f, indent=2, allow_nan=False)
     logger.info("Saved FC RV summary to %s", path)
     return out
 
