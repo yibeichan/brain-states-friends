@@ -198,7 +198,12 @@ def panel_A_transition_matrices(
     # strongest cells saturate to black (colorbar marked "extend=both").
     _vmin = max(float(np.percentile(_all_w, 5)), 1e-3)
     _vmax = float(np.percentile(_all_w, 95))
-    _cmap = plt.get_cmap("Greys").copy()
+    # Greys starts at pure white, which made the weakest real edges look like
+    # absent ones; start the ramp at a light grey so every edge >= 0.01 shows
+    # against the white (absent) cells.
+    from matplotlib.colors import ListedColormap
+    _cmap = ListedColormap(plt.get_cmap("Greys")(np.linspace(0.2, 1.0, 256)),
+                           name="Greys_from_light")
     _cmap.set_bad("white")
     _norm = LogNorm(vmin=_vmin, vmax=_vmax)
 
@@ -272,13 +277,23 @@ def panel_A_transition_matrices(
                   pad_inches=0.02)
     plt.close(_figL)
 
-    # (2) Shared transition-probability colorbar.
+    # (2) Shared transition-probability colorbar. The 5/95 range spans less
+    # than one decade, where the default log locator labels every minor tick
+    # in scientific notation and the labels collide; use a few fixed ticks
+    # inside the range, written as plain decimals.
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator
     _sm = ScalarMappable(norm=_norm, cmap=_cmap)
     _sm.set_array([])
     _figC, _axC = plt.subplots(figsize=(2.0, 0.34))
     _cb = _figC.colorbar(_sm, cax=_axC, orientation="horizontal", extend="both")
+    _ticks = [_t for _t in (0.02, 0.03, 0.05, 0.07, 0.1, 0.2, 0.5)
+              if _vmin <= _t <= _vmax]
+    _cb.ax.xaxis.set_major_locator(FixedLocator(_ticks))
+    _cb.ax.xaxis.set_minor_locator(NullLocator())
+    _cb.ax.xaxis.set_major_formatter(FuncFormatter(lambda _x, _p: f"{_x:g}"))
     _cb.set_label("Transition probability", fontsize=7)
     _cb.ax.tick_params(labelsize=6)
+    print(f"  probability colorbar: range {_vmin:.4f}-{_vmax:.4f}, ticks {_ticks}")
     _figC.savefig(OUT_F3 / "fig3_A_legend_prob.png", bbox_inches="tight",
                   pad_inches=0.02, dpi=300)
     _figC.savefig(OUT_F3 / "fig3_A_legend_prob.svg", bbox_inches="tight",
