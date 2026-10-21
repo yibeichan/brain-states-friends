@@ -7,12 +7,13 @@ script is R2 (recurrence-screening categories and network summaries).
 Panel B and the surface exemplars are lifted from the former F1. Panel A is the
 former F1 stacked taxonomy bars WITH the recurrence dots and dwell marginal
 removed (recurrence now lives in F1); it shows pure category composition over
-all 50 latent states (including unused). Panel C adds content-eligible
+each subject's active repertoire (recurrence > 0; the unused states, never present
+above threshold in any run, are left out). Panel C adds content-eligible
 network-participation summaries.
 
 | Panel | Content | Chart family | Source | Output |
 |---|---|---|---|---|
-| A | Per-subject category-count stacked bars (5 categories, all 50 states) in one combined figure + standalone category legend | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{png,svg} + fig2_A_legend_categories.{png,svg} |
+| A | Per-subject category-count stacked bars (5 categories, active repertoire) in one combined figure + standalone category legend | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{png,svg} + fig2_A_legend_categories.{png,svg} |
 | B | Sankey: 5 categories -> 13 networks, top-3 composition (category + cortical labels enlarged; subcortical at base size) | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{png,svg} |
 | C | Per-state network-participation pie mosaic (content-eligible); sub-01 main, sub-02..06 in supp/; per-state complement to B | pie | state_flags.csv + 04 state_means_parcel.npy | fig2_C_sub-01_network_pies.{png,svg} + fig2_C_legend_networks.{png,svg} + supp/<sub>/fig2_C_<sub>_network_pies.{png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
 | D | Surface exemplars per category (sub-01): cortical + subcortical mean-activity maps with shared per-region colorbars. No temporal inset - the temporal screens do not share a single legible axis (only run-onset separates on within-run position; drift and content-eligible have no simple within-figure signature). | brain map | 04 state_means_parcel.npy + yabplot | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
@@ -89,42 +90,53 @@ def config(Path, os):
 def taxonomy_constants():
     """Display labels + colors for the 5 R2 taxonomy categories.
 
-    Fig 2 shows ALL 50 latent states (including unused), so the catch-all is the
-    full "Unused + rare" (Fig 1's active beeswarm uses "Rare" alone).
+    Fig 2 shows the active repertoire (recurrence > 0), as Fig 1 does, so the
+    catch-all is "Rare" alone. Unused states map to None and are left out.
     """
     TAXONOMY_ORDER = [
         "Content-eligible",
         "Run-onset-anchored",
         "Low-confidence",
         "Drift-anchored",
-        "Unused + rare",
+        "Rare",
     ]
     TAXONOMY_COLORS = {
         "Content-eligible":   "#0C7BDC",
         "Run-onset-anchored": "#FFC20A",
         "Low-confidence":     "#5A5A5A",
         "Drift-anchored":     "#D35FB7",
-        "Unused + rare":      "#CCCCCC",
+        "Rare":               "#CCCCCC",
     }
     TAXONOMY_MAP = {
         "eligible_for_content_analysis": "Content-eligible",
         "run_onset_anchored":            "Run-onset-anchored",
         "low_confidence":                "Low-confidence",
         "season_temporal":               "Drift-anchored",
-        "unused":                        "Unused + rare",
-        "rare":                          "Unused + rare",
+        "unused":                        None,
+        "rare":                          "Rare",
     }
     return TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP
 
 
 @app.cell
-def load_state_flags(SUBJECTS, FLAGS_DIR, VT, pd):
+def load_state_flags(SUBJECTS, FLAGS_DIR, VT, TAXONOMY_MAP, pd):
     """Load 05e_a4 state_flags.csv per subject (50 rows: recurrence_score,
-    summary_category, dominant_network)."""
+    summary_category, dominant_network) and label each state's display category.
+
+    `_cat` is None for unused states, which Panels A and B leave out (Panels C
+    and D select states by `summary_category` and never include unused ones). A
+    category missing from TAXONOMY_MAP is an error rather than a silent catch-all.
+    """
     state_flags = {}
     for _sub in SUBJECTS:
-        state_flags[_sub] = pd.read_csv(FLAGS_DIR / _sub / VT / "state_flags.csv")
-    print({_s: _d.shape for _s, _d in state_flags.items()})
+        _df = pd.read_csv(FLAGS_DIR / _sub / VT / "state_flags.csv")
+        _unknown = set(_df["summary_category"]) - set(TAXONOMY_MAP)
+        if _unknown:
+            raise ValueError(f"{_sub}: unmapped summary_category {sorted(_unknown)}")
+        _df["_cat"] = _df["summary_category"].map(TAXONOMY_MAP)
+        state_flags[_sub] = _df
+    print({_s: (len(_d), int(_d["_cat"].notna().sum())) for _s, _d in state_flags.items()},
+          "(states, active)")
     return (state_flags,)
 
 
@@ -142,14 +154,14 @@ def load_state_means(SUBJECTS, MODEL_DIR, VT, np):
 @app.cell
 def panel_A_category_bars(
     state_flags, SUBJECTS, OUT_F2,
-    TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP,
+    TAXONOMY_ORDER, TAXONOMY_COLORS,
     FS_TICK, FS_LABEL, FS_ANNOT, FIG_W, plt, np,
 ):
     """Panel A - per-subject category-count stacked bars (one combined figure)
     plus a standalone category legend.
 
-    Horizontal stacked bars, one per subject (sub-01 bottom), counting all 50
-    latent states across the 5 source categories. Pure composition by source;
+    Horizontal stacked bars, one per subject (sub-01 bottom), counting the
+    subject's active states (recurrence > 0) across the 5 source categories. Pure composition by source;
     recurrence is shown in Figure 1. Channels: x = count, y(row) = subject,
     segment color = category. The legend is decomposed into a separate file.
     """
@@ -159,14 +171,15 @@ def panel_A_category_bars(
         "Run-onset-anchored": "#3A2D00",   # amber is bright -> dark text
         "Low-confidence":     "white",
         "Drift-anchored":     "white",
-        "Unused + rare":      "#5A5A5A",    # pale gray -> dark text
+        "Rare":               "#5A5A5A",    # pale gray -> dark text
     }
     _row_h = 0.64
     _fig, _ax = plt.subplots(figsize=(FIG_W, 3.3))
 
+    _n_max = 0
     for _j, _sub in enumerate(SUBJECTS):
-        _df = state_flags[_sub].copy()
-        _df["_cat"] = _df["summary_category"].map(TAXONOMY_MAP).fillna("Unused + rare")
+        _df = state_flags[_sub]
+        _n_max = max(_n_max, int(_df["_cat"].notna().sum()))
         _x_cursor = 0
         for _cat in TAXONOMY_ORDER:
             _n = int((_df["_cat"] == _cat).sum())
@@ -185,9 +198,9 @@ def panel_A_category_bars(
     _ax.set_yticklabels(SUBJECTS, fontsize=FS_LABEL)
     _ax.tick_params(axis="y", length=0)
     _ax.set_ylim(-0.6, len(SUBJECTS) - 0.4)
-    _ax.set_xlim(0, 50)
-    _ax.set_xticks([0, 10, 20, 30, 40, 50])
-    _ax.set_xlabel("Number of latent states", fontsize=FS_LABEL)
+    _ax.set_xlim(0, _n_max + 1)
+    _ax.set_xticks(np.arange(0, _n_max + 1, 10))
+    _ax.set_xlabel("Number of active states", fontsize=FS_LABEL)
     _ax.tick_params(axis="x", labelsize=FS_TICK)
     _ax.xaxis.grid(True, linestyle=":", linewidth=0.5, color="#E2E2E2", zorder=0)
     _ax.set_axisbelow(True)
@@ -202,7 +215,7 @@ def panel_A_category_bars(
     print(f"saved: {_stem.name}.png (+ .svg)")
 
     # Standalone category legend (the shared key), one horizontal row.
-    _LABEL_DARKEN = {"Unused + rare": "#888888"}
+    _LABEL_DARKEN = {"Rare": "#888888"}
     _handles = [
         plt.Rectangle((0, 0), 1, 1, facecolor=TAXONOMY_COLORS[_c],
                       edgecolor=_LABEL_DARKEN.get(_c, TAXONOMY_COLORS[_c]),
@@ -225,13 +238,14 @@ def panel_A_category_bars(
 @app.cell
 def panel_B_category_network_sankey(
     state_flags, state_means, SUBJECTS, PARCELLATION, OUT_F2,
-    TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP,
+    TAXONOMY_ORDER, TAXONOMY_COLORS,
     NETWORK_ORDER, NETWORK_COLORS, display_network,
     FS_ANNOT, FIG_W, plt, np,
 ):
     """Panel B - Sankey: 5 taxonomy categories -> 13 networks (top-3 composition).
 
-    Lifted verbatim from the former F1 Panel B. Per-state composition: for each
+    Adapted from the former F1 Panel B; unused states are left out, and each
+    category gets a minimum label slot. Per-state composition: for each
     network, mean(|z-activation|) over its parcels; keep top-3 networks per
     state, renormalize to 1 unit of mass; sum across states in each category.
     """
@@ -248,22 +262,21 @@ def panel_B_category_network_sankey(
     _CORTICAL = {"Vis", "SomMot", "DorsAttn", "SalVentAttn", "Limbic", "Cont", "Default"}
 
     for _sub in SUBJECTS:
-        _df = state_flags[_sub].copy()
-        _df["_cat"] = _df["summary_category"].map(TAXONOMY_MAP).fillna("Unused + rare")
+        _df = state_flags[_sub]
         _flag_id = "state" if "state" in _df.columns else "state_id"
         _means = state_means[_sub]
         for _state_id, _cat in zip(_df[_flag_id].values, _df["_cat"].values):
             if _cat not in TAXONOMY_ORDER:
                 continue
             _cat_idx = TAXONOMY_ORDER.index(_cat)
-            _cat_counts[_cat_idx] += 1
             # Same mean(|z|)-per-network composition as the shared utility (and
             # Panel C); kept identical to avoid a second metric implementation.
             _full_comp = network_composition_for_state(
                 _means[int(_state_id)], _parcel_nets, NETWORK_ORDER
             )
             if not _full_comp.any():
-                continue
+                raise ValueError(f"{_sub} state {_state_id}: all-zero network composition")
+            _cat_counts[_cat_idx] += 1
             _top_idx = np.argpartition(_full_comp, -_K_TOP)[-_K_TOP:]
             _topk = np.zeros_like(_full_comp)
             _topk[_top_idx] = _full_comp[_top_idx]
@@ -272,6 +285,11 @@ def panel_B_category_network_sankey(
             _flow[_cat_idx] += _topk
 
     _total_mass = _flow.sum()
+    # Flows below _ribbon_eps are not drawn but still count in node heights and
+    # percentages; keep that undrawn share negligible.
+    _undrawn = _flow[(_flow > 0) & (_flow < 0.05)].sum()
+    if _undrawn > 0.005 * _total_mass:
+        raise ValueError(f"undrawn flow is {_undrawn / _total_mass:.1%} of the total")
 
     _cat_totals = _flow.sum(axis=1)
     _net_totals = _flow.sum(axis=0)
@@ -281,11 +299,16 @@ def panel_B_category_network_sankey(
     _cat_pad = _pad_frac * _cat_totals.sum()
     _net_pad = _pad_frac * _net_totals.sum()
 
+    # Each category gets a slot tall enough for its two-line label; its node and
+    # ribbons sit centred in the slot (small categories, e.g. drift-anchored and
+    # rare, would otherwise have overlapping labels).
+    _cat_slot = np.maximum(_cat_totals, 0.10 * _cat_totals.sum())
+    _cat_inner_offset = (_cat_slot - _cat_totals) / 2
     _cat_top = np.zeros(len(TAXONOMY_ORDER))
     _y = 0.0
     for _i in range(len(TAXONOMY_ORDER)):
         _cat_top[_i] = _y
-        _y += _cat_totals[_i] + _cat_pad
+        _y += _cat_slot[_i] + _cat_pad
     _cat_height = _y - _cat_pad
 
     _net_top = np.zeros(len(NETWORK_ORDER))
@@ -314,7 +337,7 @@ def panel_B_category_network_sankey(
             _w = _flow[_i, _j]
             if _w < _ribbon_eps:
                 continue
-            _y_src_top = _cat_top[_i] + _cat_y_off + _src_used[_i]
+            _y_src_top = _cat_top[_i] + _cat_y_off + _cat_inner_offset[_i] + _src_used[_i]
             _y_src_bot = _y_src_top + _w
             _y_dst_top = _net_top[_j] + _net_y_off + _net_inner_offset[_j] + _dst_used[_j]
             _y_dst_bot = _y_dst_top + _w
@@ -341,7 +364,7 @@ def panel_B_category_network_sankey(
             ))
 
     _LABEL_DARKEN = {
-        "Unused + rare": "#888888",
+        "Rare": "#888888",
         "Limbic":        "#8F7700",
         "Cerebellum":    "#7A6A55",
     }
@@ -352,11 +375,11 @@ def panel_B_category_network_sankey(
 
     for _i in range(len(TAXONOMY_ORDER)):
         _ax.add_patch(plt.Rectangle(
-            (0, _cat_top[_i] + _cat_y_off), _node_w, _cat_totals[_i],
+            (0, _cat_top[_i] + _cat_y_off + _cat_inner_offset[_i]), _node_w, _cat_totals[_i],
             color=TAXONOMY_COLORS[TAXONOMY_ORDER[_i]], zorder=4, lw=0,
         ))
         _ax.text(
-            -0.015, _cat_top[_i] + _cat_y_off + _cat_totals[_i] / 2,
+            -0.015, _cat_top[_i] + _cat_y_off + _cat_slot[_i] / 2,
             f"{TAXONOMY_ORDER[_i]}\n(n={int(_cat_counts[_i])} states)",
             ha="right", va="center", fontsize=_fs_emph,
             color=_LABEL_DARKEN.get(TAXONOMY_ORDER[_i], TAXONOMY_COLORS[TAXONOMY_ORDER[_i]]),
