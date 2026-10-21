@@ -70,13 +70,17 @@ for sub in "$@"; do
             --output="${logs}/03a_%A_%a.out" --error="${logs}/03a_%A_%a.err" \
             --export="${env_vars}" script/03a_pca4combined_hmm.sh)
 
+        # Whole-array limits sized for the slowest configs (see the resource notes
+        # in 04_combined_hdphmm.sh): stage 1 at vt=0.95/0.99 needs 36 h and stage 2
+        # at nc>=80 needs 48 h. One task that times out cancels every afterok
+        # dependant, so the faster configs share the longer limit.
         fit=(--dependency="afterok:${j03}" --cpus-per-task=8 --mem=32G)
         j41=$(sbatch "${COMMON[@]}" --job-name="${tag}-s1" "${fit[@]}" --array=0-4 \
-            --time=14:00:00 \
+            --time=36:00:00 \
             --output="${logs}/04s1_%A_%a.out" --error="${logs}/04s1_%A_%a.err" \
             --export="${env_vars},MODE=fit,STAGE=1" script/04_combined_hdphmm.sh)
         j42=$(sbatch "${COMMON[@]}" --job-name="${tag}-s2" "${fit[@]}" \
-            --array=0-$((N_STAGE2 - 1)) --time=20:00:00 \
+            --array=0-$((N_STAGE2 - 1)) --time=48:00:00 \
             --output="${logs}/04s2_%A_%a.out" --error="${logs}/04s2_%A_%a.err" \
             --export="${env_vars},MODE=fit,STAGE=2,FIXED_VT=${FIXED_VT}" script/04_combined_hdphmm.sh)
 
