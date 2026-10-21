@@ -98,14 +98,14 @@ def config(Path, os):
     PRESENCE_FO = 0.02
 
     TAXONOMY_ORDER = ["Content-eligible", "Run-onset-anchored", "Low-confidence",
-                      "Drift-anchored", "Unused + rare"]
+                      "Drift-anchored", "Rare"]
     TAXONOMY_COLORS = {"Content-eligible": "#0C7BDC", "Run-onset-anchored": "#FFC20A",
                        "Low-confidence": "#5A5A5A", "Drift-anchored": "#D35FB7",
-                       "Unused + rare": "#CCCCCC"}
+                       "Rare": "#CCCCCC"}
     TAXONOMY_MAP = {"eligible_for_content_analysis": "Content-eligible",
                     "run_onset_anchored": "Run-onset-anchored",
                     "low_confidence": "Low-confidence", "season_temporal": "Drift-anchored",
-                    "unused": "Unused + rare", "rare": "Unused + rare"}
+                    "unused": "Rare", "rare": "Rare"}
     FILMS = ["wolf", "figures", "bourne", "life"]
     return (SCRATCH_DIR, PARCELLATION, VT, SUBJECTS, OUT, REC_DIR, FLAGS_DIR,
             DEC, PROJ, XVAL, LL_FILE, PRESENCE_FO,
@@ -120,7 +120,7 @@ def load_data(SUBJECTS, REC_DIR, FLAGS_DIR, DEC, VT, PRESENCE_FO,
     for _sub in SUBJECTS:
         _rec = np.load(REC_DIR / _sub / VT / "recurrence_scores.npy")
         _flags = pd.read_csv(FLAGS_DIR / _sub / VT / "state_flags.csv")
-        _tax = _flags["summary_category"].map(TAXONOMY_MAP).fillna("Unused + rare").values
+        _tax = _flags["summary_category"].map(TAXONOMY_MAP).fillna("Rare").values
         _e = {"rec": _rec, "tax": _tax, "active": _rec > 0}
         for _stim, _d in DEC.items():
             _p = _d / _sub / VT / "fractional_occupancy.pkl"

@@ -173,22 +173,22 @@ def taxonomy_constants():
         "Run-onset-anchored",
         "Low-confidence",
         "Drift-anchored",
-        "Unused + rare",
+        "Rare",
     ]
     TAXONOMY_COLORS = {
         "Content-eligible":    "#0C7BDC",
         "Run-onset-anchored":  "#FFC20A",
         "Low-confidence":      "#5A5A5A",
         "Drift-anchored":      "#D35FB7",
-        "Unused + rare":       "#CCCCCC",
+        "Rare":       "#CCCCCC",
     }
     TAXONOMY_MAP = {
         "eligible_for_content_analysis": "Content-eligible",
         "run_onset_anchored":            "Run-onset-anchored",
         "low_confidence":                "Low-confidence",
         "season_temporal":               "Drift-anchored",
-        "unused":                        "Unused + rare",
-        "rare":                          "Unused + rare",
+        "unused":                        "Rare",
+        "rare":                          "Rare",
     }
     return TAXONOMY_ORDER, TAXONOMY_COLORS, TAXONOMY_MAP
 
@@ -220,7 +220,7 @@ def load_presence(
     for _sub in SUBJECTS:
         _rec = np.load(RECUR_DIR / _sub / VT / "recurrence_scores.npy")
         _flags = pd.read_csv(FLAGS_DIR / _sub / VT / "state_flags.csv")
-        _tax = _flags["summary_category"].map(TAXONOMY_MAP).fillna("Unused + rare").values
+        _tax = _flags["summary_category"].map(TAXONOMY_MAP).fillna("Rare").values
         _entry = {"rec": _rec, "tax": _tax, "active": _rec > 0}
         for _stim, _d in _dec_dirs.items():
             _mask, _mean_fo = _present_mask(_d, _sub)
