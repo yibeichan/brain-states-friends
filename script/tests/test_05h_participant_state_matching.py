@@ -1,14 +1,16 @@
 """Unit tests for 05h_participant_state_matching.
 
-Claims tested: (a) the configuration rotation keeps the Gram matrix and the
-span of the centred maps and changes which direction is which state; (b) the
-PC-block rotation keeps each state's norm within every block; (c) matching
-recovers a planted correspondence between two subjects with different
-subspaces, and the configuration null does not; (d) the configuration null is
-calibrated when the two repertoires share nothing beyond a common gradient;
-(e) joint-count occupancy r equals the direct Pearson r of binary occupancy;
-(f) network collapse and component removal behave as defined. Synthetic data
-only.
+Claims tested: (a) state mixing keeps the mean map and the parcel-space
+scatter and changes the states; the configuration rotation keeps the Gram
+matrix and the span; (b) the PC-block rotation rotates, and keeps each state's
+norm within every block; (c) a planted correspondence beats the state-mixing
+null; (d) with no correspondence but a shared dominant subspace the
+state-mixing null stays calibrated and the configuration rotation does not;
+(e) joint-count occupancy r equals the direct Pearson r of binary occupancy,
+family-wise locking flags are stricter than pointwise ones, and trimming
+keeps the runs aligned; (f) network collapse and component removal behave as
+defined; (g) Haar draws are sign-corrected; (h) the provenance record refuses
+uncommitted code. Synthetic data only.
 """
 import sys
 from pathlib import Path
@@ -44,39 +46,59 @@ def test_configuration_rotation_keeps_gram_and_span():
     assert not np.allclose(Cr, C)
 
 
+def test_state_mixing_keeps_mean_and_scatter():
+    rng = np.random.default_rng(10)
+    M, _, _ = _subject_maps(rng, k=15)
+    M = M + 3.0                                                   # non-zero mean map
+    X = m.mix_states(M, rng)
+    C, Cx = M - M.mean(0), X - X.mean(0)
+    assert np.allclose(X.mean(0), M.mean(0), atol=1e-10)
+    assert np.allclose(C.T @ C, Cx.T @ Cx, atol=1e-8)
+    assert not np.allclose(X, M)
+
+
 def test_pc_block_rotation_keeps_block_norms():
     rng = np.random.default_rng(1)
     M, mu, basis = _subject_maps(rng)
     R = m.rotate_pc_blocks(mu, basis, rng, block=5)
+    assert not np.allclose(R, mu @ basis)
     mu_r = R @ basis.T                                            # back to PC coords
     for s in range(0, mu.shape[1], 5):
         assert np.allclose(np.linalg.norm(mu[:, s:s + 5], axis=1),
                            np.linalg.norm(mu_r[:, s:s + 5], axis=1))
 
 
-def test_planted_correspondence_beats_configuration_null():
+def test_planted_correspondence_beats_state_mixing_null():
     rng = np.random.default_rng(2)
     shared = rng.normal(size=(12, 156))
     A, _, _ = _subject_maps(rng, shared=shared)
     B, _, _ = _subject_maps(rng, shared=shared)
     r = m.match(m.corr_matrix(A, B))[2]
-    null = m.pair_null(A, B, 200, rng, "configuration")[0]
+    null = m.pair_null(A, B, 200, rng, m.NULL)[0]
     assert m.p_greater(np.median(r), null) < 0.05
 
 
-def test_configuration_null_calibrated_with_common_gradient():
-    rng = np.random.default_rng(3)
-    grad = np.linspace(-1, 1, 156)
-    ps = []
-    for _ in range(150):
-        A, _, _ = _subject_maps(rng, k=12)
-        B, _, _ = _subject_maps(rng, k=12)
-        A += 2 * grad                                             # shared, but not state-specific
-        B += 2 * grad
+def _shared_subspace_rejection_rate(kind, n_pairs=60, seed=3):
+    """No state correspondence; both repertoires live mostly in one shared
+    8-dim subspace (sd 3) plus 25 private dimensions (sd 1)."""
+    rng = np.random.default_rng(seed)
+    hits = 0
+    for _ in range(n_pairs):
+        W = np.linalg.qr(rng.normal(size=(156, 8)))[0].T
+        A, B = (m._sim_subject(W, k, 3.0, 25, 1.0, rng) for k in (20, 18))
         r = m.match(m.corr_matrix(A, B))[2]
-        null = m.pair_null(A, B, 99, rng, "configuration")[0]
-        ps.append(m.p_greater(np.median(r), null))
-    assert np.mean(np.array(ps) < 0.05) <= 0.10
+        null = m.pair_null(A, B, 99, rng, kind)[0]
+        hits += m.p_greater(np.median(r), null) < 0.05
+    return hits / n_pairs
+
+
+def test_state_mixing_null_calibrated_with_shared_subspace():
+    assert _shared_subspace_rejection_rate(m.NULL) <= 0.12
+
+
+def test_configuration_rotation_rejects_shared_subspace():
+    # why it is no longer the primary null
+    assert _shared_subspace_rejection_rate("configuration", n_pairs=20) >= 0.5
 
 
 def test_occupancy_r_matches_direct_pearson():
@@ -152,8 +174,50 @@ def test_locking_trim_drops_run_edges():
     rng = np.random.default_rng(4)
     da, db = _toy_participants(rng, locked=True, n_runs=2, L=100)
     runs = sorted(da["decoded"])
-    _, _, _, T = m.locking_matrices(da, db, [0, 1, 2], [0, 1, 2], runs, 5, rng, trim=10)
+    obs, _, _, T = m.locking_matrices(da, db, [0, 1, 2], [0, 1, 2], runs, 5, rng, trim=10)
     assert T == 2 * (100 - 20)
+    assert np.diag(obs).min() > 0.9                               # both sides trimmed alike
+
+
+def test_family_wise_lock_flag_is_stricter_than_pointwise():
+    rng = np.random.default_rng(6)
+    null = rng.normal(size=(20000, 3, 3))
+    obs = np.zeros((3, 3))
+    obs[0, 0] = 1.9          # above its own 95th pct (~1.64), below the max-of-3 one (~2.12)
+    idx = np.arange(3)
+    _, thr, fwer, pointwise = m.lock_flags(obs, null, idx, idx)
+    assert pointwise[0] and not fwer[0] and thr > 2.0
+
+
+def test_haar_is_sign_corrected():
+    rng = np.random.default_rng(7)
+    q00 = np.array([m.haar(3, rng)[0, 0] for _ in range(4000)])
+    assert abs(q00.mean()) < 0.05                                 # unfixed QR gives q00 < 0 always
+
+
+def test_provenance_refuses_uncommitted_or_unknown_code(tmp_path, monkeypatch):
+    f = tmp_path / "x.npy"
+    f.write_bytes(b"abc")
+    dseg = tmp_path / "dseg.tsv"
+    dseg.write_text("index\tlabel\n")
+    data = {"sub-01": {"input_files": [str(f)]}}
+
+    class Args:
+        parcellation, vt, n_perm, n_lock, seed = "p", "0.95", 10, 10, 0
+    monkeypatch.setattr(m, "dseg_path", lambda parc: str(dseg))
+    monkeypatch.setattr(m, "git_head", lambda: "abc123")
+    monkeypatch.setattr(m, "git_dirty_scripts", lambda: " M script/05h_x.py")
+    with pytest.raises(SystemExit):
+        m.provenance_record(Args, data)
+    monkeypatch.setattr(m, "git_dirty_scripts", lambda: None)
+    with pytest.raises(SystemExit):
+        m.provenance_record(Args, data)
+    monkeypatch.setattr(m, "git_dirty_scripts", lambda: "")
+    rec = m.provenance_record(Args, data)
+    assert rec["code_commit"] == "abc123" and set(rec["inputs_sha256"]) == {"sub-01", "dseg"}
+    before = rec["inputs_sha256"]["sub-01"]
+    f.write_bytes(b"abd")
+    assert m.provenance_record(Args, data)["inputs_sha256"]["sub-01"] != before
 
 
 def test_cosine_keeps_amplitude_sign():
