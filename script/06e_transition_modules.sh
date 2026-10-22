@@ -37,4 +37,4 @@ MODE="${MODE:-run}"
 echo "== $(date -Is) job ${SLURM_JOB_ID:-local} task ${SLURM_ARRAY_TASK_ID:-none} restart ${SLURM_RESTART_COUNT:-0} mode ${MODE}"
 
 uv run --project "${PROJECT_DIR}" --no-sync python "${PROJECT_DIR}/script/06e_transition_modules.py" \
-    --mode "${MODE}" --seed "${SEED:-0}"
+    --mode "${MODE}" --seed "${SEED:-0}" ${CAL_NULL:+--cal_null "${CAL_NULL}"}

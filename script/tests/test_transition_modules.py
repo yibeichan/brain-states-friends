@@ -163,3 +163,27 @@ def test_bhattacharyya_zero_on_identical():
     var = np.ones((3, 2))
     D = tm.bhattacharyya_diag(mu, var)
     assert D[0, 1] == pytest.approx(0.0) and D[0, 2] > 1.0
+
+
+def test_permuted_weight_null_keeps_degrees_and_weights():
+    W = _random_graph(seed=8)
+    Wn, _ = tm.rewire_null_permuted_weights(W, np.random.default_rng(0))
+    A, An = W > 0, Wn > 0
+    assert np.array_equal(An.sum(0), A.sum(0)) and np.array_equal(An.sum(1), A.sum(1))
+    assert (An & An.T).sum() == (A & A.T).sum()
+    assert sorted(Wn[An]) == pytest.approx(sorted(W[A]))
+
+
+def test_simulated_sequences_and_modular_chain():
+    rng = np.random.default_rng(0)
+    P = rng.random((8, 8)) + np.eye(8) * 5
+    P /= P.sum(1, keepdims=True)
+    Q, _, _ = tm.nonmodular_chain(P, list(range(8)))
+    lab = np.repeat([0, 1], 4)
+    Qm = tm.modular_chain(Q, lab, 3.0)
+    assert np.allclose(Qm.sum(1), 1) and np.allclose(np.diag(Qm), np.diag(Q))
+    same = lab[:, None] == lab[None, :]
+    off = ~np.eye(8, dtype=bool)
+    assert Qm[same & off].mean() > Q[same & off].mean()
+    seqs = tm.simulate_chain_sequences(Qm, [100, 50], [0, 5], rng)
+    assert [s.size for s in seqs.values()] == [100, 50] and seqs["run000"][0] == 0

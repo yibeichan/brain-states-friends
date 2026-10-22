@@ -207,6 +207,15 @@ def rewire_null(W_obs, rng, swaps_per_edge=10):
     return W, {"accepted": acc, "tried": tried}
 
 
+def rewire_null_permuted_weights(W_obs, rng, swaps_per_edge=10):
+    """Degree- and reciprocity-preserving swaps, then the observed weights
+    permuted at random over the new edges (strengths are not preserved)."""
+    A_new, acc, tried = rewire_topology(W_obs > 0, rng, swaps_per_edge)
+    W = np.zeros_like(W_obs, dtype=float)
+    W[A_new] = rng.permutation(W_obs[W_obs > 0])
+    return W, {"accepted": acc, "tried": tried}
+
+
 def strength_error(W_null, W_obs):
     """Mean absolute relative error of out- and in-strengths."""
     errs = []
@@ -290,6 +299,34 @@ def nonmodular_chain(P_model, nodes):
         Q[i] = (1 - p_stay[i]) * q / (1 - q[i])
         Q[i, i] = p_stay[i]
     return Q, p_stay, q
+
+
+def simulate_chain_sequences(Q, run_lengths, start_states, rng):
+    """State sequences (one per run, labels 0..n-1) simulated from Q."""
+    n = Q.shape[0]
+    cum = np.cumsum(Q, axis=1)
+    out = {}
+    for k, (L, s0) in enumerate(zip(run_lengths, start_states)):
+        u = rng.random(L - 1)
+        seq = np.empty(L, dtype=int)
+        seq[0] = s = int(s0)
+        for t in range(L - 1):
+            s = min(int(np.searchsorted(cum[s], u[t] * cum[s, -1], side="right")), n - 1)
+            seq[t + 1] = s
+        out[f"run{k:03d}"] = seq
+    return out
+
+
+def modular_chain(Q_base, labels, ratio):
+    """Off-diagonal mass reweighted by `ratio` within modules, rows renormalised
+    so each state's stay probability is unchanged."""
+    Q = Q_base.copy()
+    stay = np.diag(Q).copy()
+    off = Q - np.diag(stay)
+    same = labels[:, None] == labels[None, :]
+    off = off * np.where(same, ratio, 1.0)
+    off = off / off.sum(axis=1, keepdims=True) * (1 - stay)[:, None]
+    return off + np.diag(stay)
 
 
 def simulate_chain_counts(Q, run_lengths, start_states, rng):
