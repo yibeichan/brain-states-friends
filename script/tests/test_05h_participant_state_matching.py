@@ -225,3 +225,55 @@ def test_cosine_keeps_amplitude_sign():
     B = np.array([[-2.0, -2.0, -2.0]])
     C = m.cos_matrix(A, B)
     assert C[0, 0] == pytest.approx(-1.0) and C[1, 0] == pytest.approx(0.0)
+
+
+def test_scope_maps_slices_then_centres():
+    M = np.arange(12.0).reshape(3, 4)
+    X = m.scope_maps(M, np.array([True, False, True, True]), True)
+    assert X.shape == (3, 3) and np.allclose(X.mean(0), 0)
+    assert np.allclose(m.scope_maps(M, slice(None), False), M)
+
+
+def test_cortex_mask_comes_from_the_dseg(tmp_path, monkeypatch):
+    # cortical parcels need not come first
+    rows = ["index\tlabel\tnetwork_label", "1\tLH-Pu\tn/a", "2\tLH_Vis_1\tVis",
+            "3\tCerebellar_Region1\tn/a", "4\tRH_Default_pCunPCC_1\tDefault"]
+    (tmp_path / "p").mkdir()
+    (tmp_path / "p" / "p_dseg.tsv").write_text("\n".join(rows) + "\n")
+    monkeypatch.setenv("ATLAS_DIR", str(tmp_path))
+    groups, cortex = m.parcel_groups("p")
+    assert cortex.tolist() == [False, True, False, True]
+    assert groups[1] == "Vis" and groups[3] == "Default"
+
+
+def _toy_subject(rng, sub, k=8, P=12, n_pcs=6, runs=4, L=120):
+    comps = np.linalg.qr(rng.normal(size=(P, P)))[0].T
+    mu_pc = rng.normal(size=(k, n_pcs)) * np.linspace(2, 0.5, n_pcs)
+    decoded = {f"r{r}": np.repeat(rng.integers(0, k, L // 6), 6) for r in range(runs)}
+    states = list(range(k))
+    return {"sub": sub, "maps": mu_pc @ comps[:n_pcs], "mu_pc": mu_pc, "comps": comps,
+            "decoded": decoded, "K": k, "active": states, "eligible": states[:6],
+            "onset": [], "classes": {6: "D", 7: "B"},
+            "flags": __import__("pandas").DataFrame(
+                {"summary_category": ["eligible_for_content_analysis"] * 6 + ["rare"] * 2}),
+            "rec": rng.random(k), "fo": rng.dirichlet(np.ones(k)), "dwell": rng.random(k) + 1}
+
+
+def test_analyse_pair_runs_every_variant_with_both_nulls():
+    rng = np.random.default_rng(8)
+    subs = [_toy_subject(rng, f"sub-0{i}") for i in range(1, 7)]
+    groups = np.array(list("aabbccddeeff"))
+    cortex = np.array([True] * 8 + [False] * 4)
+
+    class Args:
+        n_perm, n_lock, seed = 20, 20, 0
+    res = m.analyse_pair(subs[0], subs[1], subs[2:], groups, cortex, Args)
+    keys = {f"{s}|{sc}|{c}" for s in ("eligible", "active") for sc in ("full", "cortex")
+            for c in ("raw", "centred")}
+    assert keys <= set(res["variants"])
+    for k in keys:
+        v = res["variants"][k]
+        assert np.isfinite(v[m.NULL]["p"]) and np.isfinite(v["pc_blocks"]["p"])
+        assert v["n_matched"] == (6 if k.startswith("eligible") else 8)
+        assert all("beyond_max_null95" not in x for x in v["matches_full"])
+    assert "validation" in res["variants"]["eligible|full|raw"]

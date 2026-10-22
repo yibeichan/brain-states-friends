@@ -344,6 +344,12 @@ def _criterion(x, y, op):
     return bool(op(x, y))
 
 
+def parent_sensitivity(df):
+    """Noise-corrected r_parent, or the raw r_parent (a lower bound) where the
+    correction is undefined."""
+    return df["r_parent_corrected"].fillna(df["r_parent"])
+
+
 def arm_status(criteria):
     """'fail' if any evaluable criterion fails, 'untested' if none fails but
     one could not be evaluated (None), 'pass' otherwise."""
@@ -573,7 +579,7 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
     df["blend_status"] = [b for _, b in arms]
     # sensitivity: r_parent corrected for the short map's noise, or the raw
     # r_parent (a lower bound) where the correction is undefined
-    df["r_parent_sensitivity"] = df["r_parent_corrected"].fillna(df["r_parent"])
+    df["r_parent_sensitivity"] = parent_sensitivity(df)
     # HRF blend: a B state whose map is as close to the plain-switch average
     # as to its blend fit; untested (None) when fewer than MIN_SWITCHES direct
     # switches exist between its partners

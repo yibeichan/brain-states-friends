@@ -197,6 +197,17 @@ def load_matches(PARC, SCRATCH, SUBJECTS, VT, json, pd):
         raise RuntimeError(f"{_cross_path} is missing: 05h writes it last, so the pair "
                            "summaries may come from an unfinished run")
     _ref = _provenance(json.loads(_cross_path.read_text()))
+    if "code_sha256" not in _ref or "inputs_sha256" not in _ref:
+        raise RuntimeError("05h output has no code or input hashes (written by an older "
+                           "05h); rerun 05h")
+    # the 04 maps and 05e flags this figure reads must be the ones 05h matched
+    import importlib
+    _m05h = importlib.import_module("05h_participant_state_matching")
+    _now = {s: _m05h.sha256_files(_m05h.subject_input_files(s, PARC, VT)) for s in SUBJECTS}
+    _now["dseg"] = _m05h.sha256_files([_m05h.dseg_path(PARC)])
+    _changed = sorted(k for k, v in _now.items() if _ref["inputs_sha256"].get(k) != v)
+    if _changed:
+        raise RuntimeError(f"inputs changed since 05h ran for {_changed}; rerun 05h")
     _params = _ref["params"] or {}
     if _params.get("parcellation") != PARC or str(_params.get("vt")) != VT:
         raise RuntimeError(f"05h was run with parcellation {_params.get('parcellation')}, "
@@ -212,6 +223,8 @@ def load_matches(PARC, SCRATCH, SUBJECTS, VT, json, pd):
     for _k, _d in _summaries.items():
         _sa, _sb = _k.split("_")
         _v = _d["variants"]["eligible|full|raw"]
+        if _m05h.NULL not in _v:
+            raise RuntimeError(f"pairs/{_k}: no {_m05h.NULL} result; rerun 05h")
         _val = _v["validation"]
         # time-locked = family-wise flag (max over matched pairs of the shift null);
         # 05h stores the flags in the order of the matches

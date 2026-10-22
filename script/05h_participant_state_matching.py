@@ -25,8 +25,8 @@ in every draw; 1000 draws; A rotated in even draws, B in odd draws):
                  orthogonal matrix that fixes the mean (primary). Keeps the
                  mean map and the parcel-space scatter exactly, so principal
                  axes shared across participants survive; destroys which
-                 state is which. Used for the pair test, the per-match
-                 thresholds and every specificity test below.
+                 state is which. Used for the pair test and every
+                 specificity test below.
   pc_blocks      Haar rotation of state means within blocks of 5 adjacent
                  PCs of that subject's PCA, back-projected, then given the
                  variant's scope and centring (secondary; pair test only)
@@ -38,7 +38,8 @@ generators and its power on planted counterparts.
 No spin-test null: it needs sphere coordinates for the Schaefer parcels and a
 dependency this environment does not have, and it is coarse and liberal for
 subcortex.
-Specificity (eligible states, all parcels):
+Specificity (eligible and active states, raw maps; network level and
+amplitude on all parcels, shared components on all parcels and cortex):
   network level     maps replaced by their 13 network/structure means, and the
                     complement (maps minus those means), each with its own
                     state-mixing null
@@ -74,8 +75,9 @@ Random streams are per (pair, variant). Every pair file records its parameters,
 code commit, a hash of the code and a hash of every input file; on rerun a pair
 is recomputed when any of them differs, and the run refuses to start with
 uncommitted changes under script/. BH runs across pairs within each family:
-one per (null, variant) for the pair test, and one per (test, state set) for
-the specificity and validation tests; a pair without a test is left out.
+one per (null, variant) for the pair test, and one per (test, state set,
+scope) for the specificity and validation tests; a pair without a test is left
+out.
 
 Inputs (frozen, under $SCRATCH_DIR/output):
     04_combined_hdphmm/{parc}/{sub}/final/vt0.95/{state_means_parcel.npy,
@@ -122,7 +124,7 @@ ONSET_FLAGS = ("run_onset", "a_anchored", "b_anchored")
 K_SHARED = (1, 3, 5)
 K_SHARED_PRIMARY = 3
 BLOCK = 5
-NULL = "state_mixing"            # primary null (pair test, per-match thresholds, specificity)
+NULL = "state_mixing"            # primary null (pair test and specificity tests)
 
 
 # ---------------------------------------------------------------- maps
@@ -202,6 +204,13 @@ def rotate_pc_blocks(mu_pc, components, rng, block=BLOCK):
         if e - s > 1:
             out[:, s:e] = mu_pc[:, s:e] @ haar(e - s, rng)
     return out @ components[:n_pcs]
+
+
+def scope_maps(M, scope, centred):
+    """A variant's maps: parcels in scope, optionally centred across states.
+    Applied the same way to observed maps and to back-projected null draws."""
+    X = M[:, scope]
+    return X - X.mean(0, keepdims=True) if centred else X
 
 
 def collapse_networks(M, parcel_groups):
@@ -293,6 +302,23 @@ def active_from_decoded(decoded, K):
     return active_state_indices(decoded, K)
 
 
+def subject_input_files(sub, parc, vt):
+    """Every file load_subject reads for one participant (hashed for provenance;
+    fig_F2E checks its inputs against the same list)."""
+    S = scratch_dir()
+    base = os.path.join(S, "output", "04_combined_hdphmm", parc, sub)
+    hmm = os.path.join(base, "final", f"vt{vt}")
+    files = [os.path.join(hmm, f) for f in ("pca_model.pkl", "state_means_parcel.npy",
+                                             "state_means_pca.npy", "decoded_states.pkl")]
+    files += [os.path.join(S, "output", "05e_temporal_trend_a4", parc, sub, f"vt{vt}", "state_flags.csv"),
+              os.path.join(S, "output", "05g_excluded_state_check", parc, sub, f"vt{vt}",
+                           "state_classes.csv")]
+    for h in ("A", "B"):
+        files += [os.path.join(base, "split_half", h, f)
+                  for f in ("state_means_parcel.npy", "decoded_states.pkl")]
+    return files
+
+
 def load_subject(sub, parc, vt):
     S = scratch_dir()
     base = os.path.join(S, "output", "04_combined_hdphmm", parc, sub)
@@ -306,8 +332,6 @@ def load_subject(sub, parc, vt):
     comps = pca.components_
     if np.abs(maps - mu_pc @ comps[:mu_pc.shape[1]]).max() > 1e-8:
         raise RuntimeError(f"{sub}: contrast map != means_pca @ W")
-    input_files = [os.path.join(hmm, f) for f in ("pca_model.pkl", "state_means_parcel.npy",
-                                                   "state_means_pca.npy", "decoded_states.pkl")]
     with open(os.path.join(hmm, "decoded_states.pkl"), "rb") as f:
         decoded = {k: np.asarray(v, dtype=int) for k, v in pickle.load(f).items()}
     K = maps.shape[0]
@@ -319,8 +343,6 @@ def load_subject(sub, parc, vt):
                                 f"vt{vt}", "state_classes.csv")
     if not os.path.exists(classes_path):
         raise FileNotFoundError(f"{sub}: run 05g first (missing {classes_path})")
-    input_files += [os.path.join(S, "output", "05e_temporal_trend_a4", parc, sub, f"vt{vt}",
-                                 "state_flags.csv"), classes_path]
     classes = pd.read_csv(classes_path).set_index("state")["class"].to_dict()
     active = sorted(int(s) for s in active_from_decoded(decoded, K))
     eligible = sorted(int(s) for s in flags.index[flags["summary_category"] == ELIGIBLE])
@@ -334,7 +356,6 @@ def load_subject(sub, parc, vt):
     for h in ("A", "B"):
         hd = os.path.join(base, "split_half", h)
         hm = np.load(os.path.join(hd, "state_means_parcel.npy"))
-        input_files += [os.path.join(hd, "state_means_parcel.npy"), os.path.join(hd, "decoded_states.pkl")]
         with open(os.path.join(hd, "decoded_states.pkl"), "rb") as f:
             hdec = {k: np.asarray(v, dtype=int) for k, v in pickle.load(f).items()}
         halves[h] = {"maps": hm, "active": sorted(int(s) for s in
@@ -353,7 +374,8 @@ def load_subject(sub, parc, vt):
             "eligible": eligible, "onset": onset, "halves": halves,
             "rec": flags["recurrence_score"].to_numpy(dtype=float),
             "fo": trs / trs.sum(), "dwell": dwell,
-            "max_abs_pca_mean": float(np.abs(pca.mean_).max()), "input_files": input_files}
+            "max_abs_pca_mean": float(np.abs(pca.mean_).max()),
+            "input_files": subject_input_files(sub, parc, vt)}
 
 
 # ---------------------------------------------------------------- pair analysis
@@ -448,9 +470,8 @@ def analyse_pair(da, db, others, groups, cortex, args):
                     continue
                 key = f"{set_name}|{scope_name}|{'centred' if centred else 'raw'}"
                 rng = variant_rng(args, a, b, key)
-                Ma, Mb = da["maps"][sa][:, sl], db["maps"][sb][:, sl]
-                if centred:
-                    Ma, Mb = Ma - Ma.mean(0, keepdims=True), Mb - Mb.mean(0, keepdims=True)
+                Ma = scope_maps(da["maps"][sa], sl, centred)
+                Mb = scope_maps(db["maps"][sb], sl, centred)
                 v, (R, ia, ib, r, null_matchings) = match_block(Ma, Mb, args.n_perm, rng, sa, sb)
                 v["matches_full"] = v.pop("matches")
                 # many-to-one collisions, both directions, against the same draws
@@ -468,8 +489,7 @@ def analyse_pair(da, db, others, groups, cortex, args):
                     # secondary null: rotate in PC space, back-project, then apply
                     # the same scope and centring as the observed maps
                     def post(X, sl=sl, centred=centred):
-                        X = X[:, sl]
-                        return X - X.mean(0, keepdims=True) if centred else X
+                        return scope_maps(X, sl, centred)
                     pcs = (da["mu_pc"][sa], da["comps"], db["mu_pc"][sb], db["comps"], post)
                     nb, _, _, _, _ = pair_null(Ma, Mb, args.n_perm,
                                                variant_rng(args, a, b, key + "|pcb"),
@@ -758,8 +778,12 @@ def calibration_pair(gen, i, rng, real, kind):
 
 def calibrate(args):
     from scipy.stats import binomtest
+    commit, dirty = git_head(), git_dirty_scripts()
+    if commit is None or dirty:
+        raise SystemExit("calibrate from a clean git checkout of script/")
     real = {s: load_eligible_maps(s, args.parcellation, args.vt) for s in SUBJECTS}
-    out = {"null": args.cal_null, "n_pairs": CAL_PAIRS, "n_draws": CAL_DRAWS,
+    out = {"null": args.cal_null, "code_commit": commit, "seed": args.seed,
+           "n_pairs": CAL_PAIRS, "n_draws": CAL_DRAWS,
            "max_fpr": CAL_MAX_FPR, "min_power": CAL_MIN_POWER, "generators": {}}
     for gen in CAL_GENERATORS:
         ps, fw = [], []
@@ -783,7 +807,11 @@ def calibrate(args):
         logger.info("%s %s: pair %.3f, per-match %.3f, pass %s", args.cal_null, gen,
                     entry["pair_test"]["rate"], entry["per_match_fwer"]["rate"], entry["pass"])
     out["pass"] = all(e["pass"] for e in out["generators"].values())
-    out["code_commit"] = git_head()
+    # the pair test alone (05h reports no per-match flag)
+    out["pass_pair_test"] = all(
+        (e["pair_test"]["rate"] <= CAL_MAX_FPR and e["pair_test"]["ci95"][0] <= ALPHA)
+        if g.startswith("G") else e["pair_test"]["rate"] >= CAL_MIN_POWER
+        for g, e in out["generators"].items())
     write_json(os.path.join(scratch_dir(), "output", "05h_participant_state_matching",
                             args.parcellation, "calibration", f"{args.cal_null}.json"), out)
 
@@ -825,7 +853,7 @@ def sha256_files(paths):
 def code_sha256():
     here = os.path.dirname(os.path.abspath(__file__))
     return sha256_files([os.path.abspath(__file__)] + [
-        os.path.join(here, "utils", f) for f in ("stats.py", "plot_style.py", "recurrence_utils.py")])
+        os.path.join(here, "utils", f) for f in ("stats.py", "plot_style.py", "recurrence_utils.py", "common.py")])
 
 
 def provenance_record(args, data):
@@ -922,15 +950,16 @@ def main():
             raise RuntimeError(f"{key}: pair summary does not match this run's params, code or inputs")
     variants = sorted({v for k in all_pairs for v in results[k]["variants"]})
     # one BH family per (null, variant) for the pair test, and per (test, state
-    # set) for the specificity and validation tests; pairs lacking a test (fewer
-    # than 3 states in a set) are left out of its family
+    # set, scope) for the specificity and validation tests; pairs lacking a test
+    # (fewer than 3 states in a set) are left out of its family, and a family no
+    # pair has (e.g. network level on cortex) is empty
     tables = {NULL: {}, "pc_blocks": {}, "families": {}}
     for var in variants:
         for null_name in (NULL, "pc_blocks"):
             tables[null_name][var] = bh_table(
                 results, all_pairs, lambda r, var=var, n=null_name: r["variants"][var][n]["p"])
-    for set_name in ("eligible", "active"):
-        var = f"{set_name}|full|raw"
+    for set_name, scope in [(x, y) for x in ("eligible", "active") for y in ("full", "cortex")]:
+        var = f"{set_name}|{scope}|raw"
         families = {
             "network_collapse": lambda r: r["variants"][var]["network_collapse"][NULL]["p"],
             "within_network_residual": lambda r: r["variants"][var]["within_network_residual"][NULL]["p"],
@@ -940,7 +969,7 @@ def main():
             "collisions_more_a_to_b": lambda r: r["variants"][var]["collisions"]["p_more_a_to_b"],
             "collisions_more_b_to_a": lambda r: r["variants"][var]["collisions"]["p_more_b_to_a"],
         }
-        if set_name == "eligible":
+        if set_name == "eligible" and scope == "full":
             families.update({
                 "locking": lambda r: r["variants"][var]["validation"]["locking_p"],
                 "locking_trimmed_10": lambda r: r["variants"][var]["validation"]["trimmed_10"]["locking_p"],
@@ -950,7 +979,7 @@ def main():
                 "rank_dwell": lambda r: r["variants"][var]["validation"]["rank_agreement"]["dwell"]["p"],
             })
         for name, getter in families.items():
-            tables["families"][f"{set_name}|{name}"] = bh_table(results, all_pairs, getter)
+            tables["families"][f"{set_name}|{scope}|{name}"] = bh_table(results, all_pairs, getter)
     summary = {"bh_across_pairs": tables, "ceiling": ceiling(list(data.values()), args),
                "n_states": {s: {"active": len(d["active"]), "eligible": len(d["eligible"]),
                                 "onset": len(d["onset"])} for s, d in data.items()},

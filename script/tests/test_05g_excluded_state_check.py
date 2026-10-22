@@ -390,3 +390,10 @@ def test_driver_uninformative_state_is_untested_not_d(driver_result):
     assert row["class"] == "untested"
     assert summary["class_counts"].get("untested", 0) >= 1
     assert summary["n_p_excess_return_untested"] >= 2         # Z and B
+
+
+def test_parent_sensitivity_falls_back_to_raw_r_parent():
+    import pandas as pd
+    df = pd.DataFrame({"r_parent": [0.5, 0.6, np.nan], "r_parent_corrected": [0.7, np.nan, np.nan]})
+    out = m.parent_sensitivity(df).tolist()
+    assert out[:2] == [0.7, 0.6] and np.isnan(out[2])

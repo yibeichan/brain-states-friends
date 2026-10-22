@@ -149,7 +149,7 @@ sbatch --dependency=afterok:$JOB --export=STAGE=04,SUBJECT_ID=sub-01 script/util
 bash script/utils/datalad_save.sh --stage 05a --subject all
 ```
 
-Valid stages: `00`, `02`, `03a`, `03b`, `04`, `05a`, `05b`, `05c`, `05d`, `05e`, `06`, `m10_03`, `m10_04`, `diag`
+Valid stages: the keys of the stage-to-directory map at the top of `script/utils/datalad_save.sh` (for example `00`, `04`, `05a`, `05e_a4`, `05g`, `05h`, `06`, `diag`)
 
 **Note:** Stage `00` outputs have no parcellation level; the path is `00_postproc/{sub_id}/`. Stage `05h` outputs have no per-subject level (`05h_participant_state_matching/{parcellation}/`, one set for all participant pairs), so it takes `--subject all` only. All other stages use `{stage_dir}/{parcellation}/{sub_id}/`.
 
