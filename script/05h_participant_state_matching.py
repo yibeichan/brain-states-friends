@@ -109,6 +109,7 @@ N_CORTEX = 100
 K_SHARED = (1, 3, 5)
 K_SHARED_PRIMARY = 3
 BLOCK = 5
+NULL = "state_mixing"            # primary null (pair test, per-match thresholds, specificity)
 
 
 # ---------------------------------------------------------------- maps
@@ -154,6 +155,23 @@ def rotate_configuration(M, rng):
     U, S, Vt = U[:, :r], S[:r], Vt[:r]
     Q = haar(r, rng)
     return mean + (U * S) @ Q @ Vt
+
+
+def mix_states(M, rng):
+    """Random orthogonal mixing of the centred maps across states.
+
+    M (k x P). C = M - mean. Returns mean + Q C with Q Haar on O(k) restricted
+    to the complement of the all-ones vector, so the mixed maps stay centred.
+    Keeps the mean map and the parcel-space scatter C^T C exactly (principal
+    axes, their variances, any subspace shared with other participants) and
+    destroys which state is which: each surrogate state is a mixture of the
+    participant's states.
+    """
+    k = M.shape[0]
+    mean = M.mean(axis=0, keepdims=True)
+    C = M - mean
+    H = np.linalg.qr(np.eye(k)[:, 1:] - 1.0 / k)[0]   # orthonormal basis of 1-perp
+    return mean + H @ (haar(k - 1, rng) @ (H.T @ C))
 
 
 def haar(n, rng):
@@ -336,7 +354,10 @@ def pair_null(Ma, Mb, n_perm, rng, kind, extra=None, sim=corr_matrix):
     matchings = []
     for i in range(n_perm):
         rot_a = i % 2 == 0
-        if kind == "configuration":
+        if kind == "state_mixing":
+            A = mix_states(Ma, rng) if rot_a else Ma
+            B = Mb if rot_a else mix_states(Mb, rng)
+        elif kind == "configuration":
             A = rotate_configuration(Ma, rng) if rot_a else Ma
             B = Mb if rot_a else rotate_configuration(Mb, rng)
         else:  # pc_blocks
@@ -376,15 +397,15 @@ def variant_rng(args, a, b, key):
 
 
 def match_block(Ma, Mb, n_perm, rng, sa, sb, sim=corr_matrix):
-    """Matching, configuration null, max-statistic flags and collisions."""
+    """Matching, primary null, max-statistic flags and collisions."""
     R = sim(Ma, Mb)
     ia, ib, r = match(R)
-    null, max_r, cab, cba, null_matchings = pair_null(Ma, Mb, n_perm, rng, "configuration",
+    null, max_r, cab, cba, null_matchings = pair_null(Ma, Mb, n_perm, rng, NULL,
                                                       sim=sim)
     thr = float(np.percentile(max_r, 95))
     out = {"n_a": len(sa), "n_b": len(sb), "n_matched": int(r.size),
            "median_r": float(np.median(r)), "mean_r": float(r.mean()),
-           "configuration": {"null_mean": float(null.mean()), "p": p_greater(np.median(r), null)},
+           NULL: {"null_mean": float(null.mean()), "p": p_greater(np.median(r), null)},
            "max_null95": thr, "n_pairs_beyond_max_null95": int(np.sum(r > thr)),
            "matches": [{"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j]),
                         "beyond_max_null95": bool(R[i, j] > thr)} for i, j in zip(ia, ib)]}
@@ -413,7 +434,7 @@ def analyse_pair(da, db, others, groups, args):
                 v["matches_full"] = v.pop("matches")
                 # many-to-one collisions, both directions, against the same draws
                 _, _, cab, cba, _ = pair_null(Ma, Mb, args.n_perm, variant_rng(args, a, b, key + "|coll"),
-                                              "configuration")
+                                              NULL)
                 obs_ab, obs_ba = many_to_one(R)[1], many_to_one(R.T)[1]
                 v["collisions"] = {"a_to_b": obs_ab, "b_to_a": obs_ba,
                                    "null_mean_a_to_b": float(cab.mean()),
@@ -437,17 +458,17 @@ def analyse_pair(da, db, others, groups, args):
                         vw, _ = match_block(Ma - Ca, Mb - Cb, args.n_perm,
                                             variant_rng(args, a, b, key + "|within"), sa, sb)
                         v["network_collapse"] = {k_: vc[k_] for k_ in
-                                                 ("median_r", "configuration",
+                                                 ("median_r", NULL,
                                                   "n_pairs_beyond_max_null95")}
                         v["within_network_residual"] = {k_: vw[k_] for k_ in
-                                                        ("median_r", "configuration",
+                                                        ("median_r", NULL,
                                                          "n_pairs_beyond_max_null95")}
                         # amplitude kept: uncentred cosine on the raw contrast maps
                         vcos, _ = match_block(Ma, Mb, args.n_perm,
                                               variant_rng(args, a, b, key + "|cosine"), sa, sb,
                                               sim=cos_matrix)
                         v["raw_cosine"] = {k_: vcos[k_] for k_ in
-                                           ("median_r", "configuration",
+                                           ("median_r", NULL,
                                             "n_pairs_beyond_max_null95")}
                         gm_a, gm_b = Ma.mean(1), Mb.mean(1)
                         v["global_mean"] = {
@@ -485,7 +506,7 @@ def analyse_pair(da, db, others, groups, args):
                     em, _ = match_block(Pa, Pb, args.n_perm,
                                         variant_rng(args, a, b, key + "|k3mean"), sa, sb)
                     shared["3_plus_mean"] = {k_: em[k_] for k_ in
-                                             ("median_r", "configuration",
+                                             ("median_r", NULL,
                                               "n_pairs_beyond_max_null95")}
                     v["shared_removed"] = shared
                 if set_name == "active" and scope_name == "full" and not centred:
@@ -613,7 +634,7 @@ def ceiling(subjects, args):
         rng = np.random.default_rng(np.random.SeedSequence([args.seed, 77, int(d["sub"][-1])]))
         Ma, Mb = hA["maps"][hA["active"]], hB["maps"][hB["active"]]
         r = match(corr_matrix(Ma, Mb))[2]
-        null = pair_null(Ma, Mb, args.n_perm_ceiling, rng, "configuration")[0]
+        null = pair_null(Ma, Mb, args.n_perm_ceiling, rng, NULL)[0]
         out["active"][f"{d['sub']}_A_vs_{d['sub']}_B"] = {"median_r": float(np.median(r)),
                                                            "null_mean": float(null.mean())}
         E = d["maps"][d["eligible"]]
@@ -632,6 +653,116 @@ def ceiling(subjects, args):
         r = match(corr_matrix(sub_sets[da["sub"]]["A"], sub_sets[db["sub"]]["B"]))[2]
         out["eligible_matched"][f"{da['sub']}_A_vs_{db['sub']}_B"] = {"median_r": float(np.median(r))}
     return out
+
+
+# ---------------------------------------------------------------- calibration
+# Run before any result under a null is read. Generators without state
+# correspondence (G*) must give rate(p < .05) <= 0.075 with the binomial 95% CI
+# covering or below 0.05, for the pair test and for the family-wise per-match
+# flag; generators with planted counterparts (P*) need pair-test power >= 0.80.
+
+CAL_GENERATORS = ("G1", "G2", "G3", "G4", "G5", "G6", "P1", "P2")
+CAL_PAIRS, CAL_DRAWS = 200, 199
+CAL_K = (30, 28)
+CAL_MAX_FPR, CAL_MIN_POWER, ALPHA = 0.075, 0.80, 0.05
+
+
+def _sim_subject(W, k, sd_shared, d_id, sd_id, rng, heavy=False):
+    """k state maps: coordinates on the shared basis W (d x P) with sd
+    `sd_shared` (scalar or per dimension) plus d_id private dimensions."""
+    P = W.shape[1]
+    G = rng.normal(size=(P, d_id))
+    G -= W.T @ (W @ G)
+    Bi = np.linalg.qr(G)[0].T
+
+    def coords(n, m):
+        if heavy:
+            return rng.standard_t(3, size=(n, m)) / np.sqrt(3.0)   # unit sd
+        return rng.normal(size=(n, m))
+    return (coords(k, W.shape[0]) * sd_shared) @ W + (coords(k, d_id) * sd_id) @ Bi
+
+
+def _gauss_surrogate(Y, rng):
+    """Gaussian states with Y's mean map and sample covariance (Y's state count)."""
+    mean = Y.mean(axis=0, keepdims=True)
+    _, S, Vt = np.linalg.svd(Y - mean, full_matrices=False)
+    g = rng.normal(size=(Y.shape[0], S.size))
+    return mean + (g * S) @ Vt / np.sqrt(Y.shape[0] - 1)
+
+
+def _plant_copies(A, B, rng, frac=0.5, r_target=0.6):
+    """Replace frac of B's states by noisy copies of distinct A states
+    (expected r with the source = r_target)."""
+    B = B.copy()
+    n = int(round(frac * B.shape[0]))
+    c = np.sqrt(1.0 / r_target ** 2 - 1.0)
+    for s, t in zip(rng.choice(A.shape[0], n, replace=False),
+                    rng.choice(B.shape[0], n, replace=False)):
+        B[t] = A[s] + c * A[s].std() * rng.normal(size=A.shape[1])
+    return B
+
+
+def load_eligible_maps(sub, parc, vt):
+    """Contrast maps of the content-eligible states only (no 05g dependency)."""
+    hmm = os.path.join(scratch_dir(), "output", "04_combined_hdphmm", parc, sub, "final", f"vt{vt}")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with open(os.path.join(hmm, "pca_model.pkl"), "rb") as f:
+            pca = pickle.load(f)
+    maps = np.load(os.path.join(hmm, "state_means_parcel.npy")) - pca.mean_
+    flags = pd.read_csv(os.path.join(scratch_dir(), "output", "05e_temporal_trend_a4", parc, sub,
+                                     f"vt{vt}", "state_flags.csv")).set_index("state")
+    return maps[flags.index[flags["summary_category"] == ELIGIBLE].to_numpy(dtype=int)]
+
+
+def calibration_pair(gen, i, rng, real, kind):
+    """One simulated pair: (pair-test p, any match beyond the max-null 95th pct)."""
+    if gen in ("G6", "P2"):
+        ordered = [(x, y) for x in SUBJECTS for y in SUBJECTS if x != y]
+        x, y = ordered[i % len(ordered)]
+        A, B = real[x], _gauss_surrogate(real[y], rng)
+    else:
+        d = 5 if gen == "G2" else 8
+        sd = {"G3": 1.0, "G4": 3.0 / np.sqrt(np.arange(1, d + 1))}.get(gen, 3.0)
+        W = np.linalg.qr(rng.normal(size=(156, d)))[0].T
+        A, B = (_sim_subject(W, k, sd, 25, 1.0, rng, heavy=(gen == "G5")) for k in CAL_K)
+    if gen.startswith("P"):
+        B = _plant_copies(A, B, rng)
+    r = match(corr_matrix(A, B))[2]
+    null, max_r, _, _, _ = pair_null(A, B, CAL_DRAWS, rng, kind)
+    return p_greater(np.median(r), null), bool(np.any(r > np.percentile(max_r, 95)))
+
+
+def calibrate(args):
+    from scipy.stats import binomtest
+    real = {s: load_eligible_maps(s, args.parcellation, args.vt) for s in SUBJECTS}
+    out = {"null": args.cal_null, "n_pairs": CAL_PAIRS, "n_draws": CAL_DRAWS,
+           "max_fpr": CAL_MAX_FPR, "min_power": CAL_MIN_POWER, "generators": {}}
+    for gen in CAL_GENERATORS:
+        ps, fw = [], []
+        for i in range(CAL_PAIRS):
+            rng = np.random.default_rng(np.random.SeedSequence(
+                [args.seed, 55, zlib.crc32(gen.encode()) & 0x7FFFFFFF, i]))
+            p_, f_ = calibration_pair(gen, i, rng, real, args.cal_null)
+            ps.append(p_)
+            fw.append(f_)
+        entry = {}
+        for name, hits in (("pair_test", np.array(ps) < ALPHA), ("per_match_fwer", np.array(fw))):
+            k = int(hits.sum())
+            ci = binomtest(k, hits.size).proportion_ci(0.95)
+            entry[name] = {"rate": k / hits.size, "ci95": [float(ci.low), float(ci.high)]}
+        if gen.startswith("G"):
+            entry["pass"] = all(v["rate"] <= CAL_MAX_FPR and v["ci95"][0] <= ALPHA
+                                for v in (entry["pair_test"], entry["per_match_fwer"]))
+        else:
+            entry["pass"] = entry["pair_test"]["rate"] >= CAL_MIN_POWER
+        out["generators"][gen] = entry
+        logger.info("%s %s: pair %.3f, per-match %.3f, pass %s", args.cal_null, gen,
+                    entry["pair_test"]["rate"], entry["per_match_fwer"]["rate"], entry["pass"])
+    out["pass"] = all(e["pass"] for e in out["generators"].values())
+    out["code_commit"] = git_head()
+    write_json(os.path.join(scratch_dir(), "output", "05h_participant_state_matching",
+                            args.parcellation, "calibration", f"{args.cal_null}.json"), out)
 
 
 def run_params(args):
@@ -684,10 +815,16 @@ def main():
                    help="recompute pairs whose summary already exists")
     p.add_argument("--pairs", nargs="*", default=None,
                    help="subset of pairs as subA_subB (default: all 15)")
+    p.add_argument("--mode", choices=["run", "calibrate"], default="run")
+    p.add_argument("--cal_null", choices=["state_mixing", "configuration"], default=NULL,
+                   help="null to calibrate (--mode calibrate)")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"))
+    if args.mode == "calibrate":
+        calibrate(args)
+        return
     S = scratch_dir()
     groups = parcel_groups(args.parcellation)
     data = {s: load_subject(s, args.parcellation, args.vt) for s in SUBJECTS}
@@ -721,17 +858,17 @@ def main():
             raise RuntimeError(f"{key}: pair summary does not match this run's params/code")
     variants = sorted({v for k in all_pairs for v in results[k]["variants"]})
     elig = "eligible|full|raw"
-    tables = {"configuration": {}, "families": {}}
+    tables = {NULL: {}, "families": {}}
     for var in variants:
-        tables["configuration"][var] = bh_table(
-            results, all_pairs, lambda r: r["variants"][var]["configuration"]["p"])
+        tables[NULL][var] = bh_table(
+            results, all_pairs, lambda r: r["variants"][var][NULL]["p"])
     families = {
         "pc_blocks": lambda r: r["variants"][elig]["pc_blocks"]["p"],
-        "network_collapse": lambda r: r["variants"][elig]["network_collapse"]["configuration"]["p"],
-        "within_network_residual": lambda r: r["variants"][elig]["within_network_residual"]["configuration"]["p"],
-        "raw_cosine": lambda r: r["variants"][elig]["raw_cosine"]["configuration"]["p"],
-        "shared_removed_3": lambda r: r["variants"][elig]["shared_removed"]["3"]["configuration"]["p"],
-        "shared_removed_3_plus_mean": lambda r: r["variants"][elig]["shared_removed"]["3_plus_mean"]["configuration"]["p"],
+        "network_collapse": lambda r: r["variants"][elig]["network_collapse"][NULL]["p"],
+        "within_network_residual": lambda r: r["variants"][elig]["within_network_residual"][NULL]["p"],
+        "raw_cosine": lambda r: r["variants"][elig]["raw_cosine"][NULL]["p"],
+        "shared_removed_3": lambda r: r["variants"][elig]["shared_removed"]["3"][NULL]["p"],
+        "shared_removed_3_plus_mean": lambda r: r["variants"][elig]["shared_removed"]["3_plus_mean"][NULL]["p"],
         "locking": lambda r: r["variants"][elig]["validation"]["locking_p"],
         "locking_trimmed_10": lambda r: r["variants"][elig]["validation"]["trimmed_10"]["locking_p"],
         "locking_matched_vs_relabelled": lambda r: r["variants"][elig]["validation"]["matched_vs_relabelled"]["p"],
