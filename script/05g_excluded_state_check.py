@@ -211,27 +211,26 @@ def bootstrap_parent_reference(parent_windows, X_by_run, visit_lengths, comps,
     s's visit lengths L a random L-TR window is taken from that joined
     sequence (windows can cross segment joins, so a state whose visits are
     longer than any single parent segment is still matched in length). The
-    draw's short map is the mean over the picked TRs; it is compared with the
-    mean over the parent's remaining TRs, so the two maps share no TRs, as s
-    and its parent do not.
+    draw's short map is the mean over the union of the picked TRs; it is
+    compared with the mean over the parent's other TRs, so the two maps share
+    no TRs, as s and its parent do not. Returns (nan, empty) when s's visits
+    add up to half the parent's TRs or more, where no such split exists.
     """
     seg_rows = [X_by_run[run][start:start + length] for run, start, length in parent_windows]
     Xp = np.vstack(seg_rows)
     N = Xp.shape[0]
-    csum = np.vstack([np.zeros((1, Xp.shape[1])), np.cumsum(Xp, axis=0)])
-    total_all = csum[-1]
-    total = np.zeros((n_boot, Xp.shape[1]))
-    n_rows = 0
-    for L, count in Counter(int(v) for v in visit_lengths).items():
-        L = min(L, N - 1)
-        lo = rng.integers(0, N - L + 1, size=(n_boot, count))
-        total += (csum[lo + L] - csum[lo]).sum(axis=1)
-        n_rows += L * count
-    if n_rows >= N:
-        raise ValueError("short-state windows cover the whole parent")
-    short_maps = (total / n_rows) @ comps
-    rest_maps = ((total_all[None, :] - total) / (N - n_rows)) @ comps
-    r = np.einsum("ij,ij->i", zrows(short_maps), zrows(rest_maps)) / comps.shape[1]
+    lengths = np.minimum(np.asarray(visit_lengths, dtype=int), N)
+    if lengths.sum() * 2 >= N:
+        return float("nan"), np.array([])
+    r = np.empty(n_boot)
+    for i in range(n_boot):
+        mask = np.zeros(N, dtype=bool)
+        starts = rng.integers(0, N - lengths + 1)
+        for st, L in zip(starts, lengths):
+            mask[st:st + L] = True
+        short_map = Xp[mask].mean(axis=0) @ comps
+        rest_map = Xp[~mask].mean(axis=0) @ comps
+        r[i] = corr(short_map, rest_map)
     return float(np.percentile(r, q)), r
 
 
@@ -444,10 +443,10 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
                     pw, X_by_run, vlen, comps, args.n_boot, rng, q=5)
                 # sensitivity: r_parent corrected for the short map's noise
                 # (boot r ~ sqrt of the short map's reliability)
-                med = float(np.median(boot_r))
+                med = float(np.median(boot_r)) if boot_r.size else np.nan
                 row["boot_r_median"] = med
                 row["r_parent_corrected"] = (float(min(1.0, row["r_parent"] / med))
-                                             if med > 0 else np.nan)
+                                             if np.isfinite(med) and med > 0 else np.nan)
                 lv_s, lv_p = np.log(d["covars"][s]), np.log(d["covars"][parent])
                 row["var_logratio"] = float(np.mean(lv_s - lv_p))
                 row["var_spearman"] = float(spearmanr(lv_s, lv_p)[0])
@@ -485,6 +484,7 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         "class_counts": df["class"].value_counts().to_dict(),
         "class_by_category": {c: g["class"].value_counts().to_dict()
                               for c, g in df.groupby("summary_category")},
+        "n_ref_boot_untested": int((df["parent"].notna() & df["ref_boot"].isna()).sum()),
         "n_hrf_blend": int(sum(v is True for v in df["hrf_blend"])),
         "n_hrf_blend_untested": int(sum(v is None for v in df["hrf_blend"])),
         "n_interruption_if_noise_corrected": int(

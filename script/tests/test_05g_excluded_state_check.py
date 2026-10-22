@@ -158,3 +158,13 @@ def test_excess_return_expectation_equals_permutation_mean():
             idx = np.flatnonzero(runs == g); bp[idx] = b[idx][rng.permutation(idx.size)]
         sims.append(np.mean(a == bp))
     assert exp == pytest.approx(np.mean(sims), abs=0.005)
+
+def test_bootstrap_untested_when_short_state_is_as_large_as_parent():
+    rng = np.random.default_rng(13)
+    comps = np.linalg.qr(rng.normal(size=(156, 10)))[0].T
+    X = {"r": rng.normal(size=(40, 10))}
+    ref, r = m.bootstrap_parent_reference([("r", 0, 40)], X, [10, 10], comps, 50, rng)
+    assert np.isnan(ref) and r.size == 0
+    row = dict(run_onset_anchored=False, n_uncensored=50, min_visits=10, q_excess_return=0.001,
+               r_parent=0.9, ref_nn=0.6, ref_boot=ref, p_through=0.2, dR2=0.0, dR2_null_p95=0.1)
+    assert m.classify(row, 0.05) == "D"        # untested reference cannot pass the rule
