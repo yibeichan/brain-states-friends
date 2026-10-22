@@ -282,7 +282,6 @@ dependencies = [
     { name = "statsmodels" },
     { name = "surfplot" },
     { name = "tqdm" },
-    { name = "umap-learn" },
     { name = "yabplot" },
 ]
 
@@ -303,6 +302,9 @@ torch = [
     { name = "torchcodec" },
     { name = "torchvision" },
     { name = "transformers" },
+]
+umap = [
+    { name = "umap-learn" },
 ]
 
 [package.metadata]
@@ -339,10 +341,10 @@ requires-dist = [
     { name = "torchvision", marker = "extra == 'torch'", specifier = ">=0.20" },
     { name = "tqdm" },
     { name = "transformers", marker = "extra == 'torch'", specifier = ">=4.45" },
-    { name = "umap-learn", specifier = ">=0.5.7" },
+    { name = "umap-learn", marker = "extra == 'umap'", specifier = ">=0.5.7" },
     { name = "yabplot", git = "https://github.com/yibeichan/yabplot.git" },
 ]
-provides-extras = ["gpu", "torch", "datalad"]
+provides-extras = ["gpu", "torch", "umap", "datalad"]
 
 [[package]]
 name = "brainspace"

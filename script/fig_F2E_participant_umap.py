@@ -17,10 +17,10 @@ decision 2026-10-22).
 
 | Panel | Content | Chart family | Output |
 |---|---|---|---|
-| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every matched pair whose full-map correlation exceeds the 95th percentile of the max-statistic configuration null; dark lines are also time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
+| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every matched pair whose full-map correlation exceeds the 95th percentile of the max-statistic state-mixing null; dark lines are also time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but lines for matched pairs that survive removal of the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
-| S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, unused/rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), area = fractional occupancy | scatter | .../figS_participant_umap_B_active_categories |
+| S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
 | legends | participant colours; category markers; recurrence colorbar | legend | fig2_E_legend_participants, .../figS_participant_umap_legend_* |
@@ -34,10 +34,14 @@ not the UMAP) that belong to other participants, against the share expected
 from the participants' state counts if participant identity did not matter.
 Descriptive, no test.
 
+umap-learn is an optional extra (it pins numba, which has no wheels for every
+platform). Install it with:
+    uv sync --extra umap
+
 Run:
-    marimo edit script/fig_F2E_participant_umap.py
+    uv run --extra umap marimo edit script/fig_F2E_participant_umap.py
 or headless:
-    uv run python script/fig_F2E_participant_umap.py
+    uv run --extra umap python script/fig_F2E_participant_umap.py
 """
 
 import marimo
@@ -63,9 +67,11 @@ def imports():
     load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from utils.plot_style import RECURRENCE_CMAP, apply_publication_style
+    from utils.recurrence_utils import active_state_indices
 
     apply_publication_style()
-    return (Path, RECURRENCE_CMAP, json, np, os, pd, pickle, plt, umap, warnings)
+    return (Path, RECURRENCE_CMAP, active_state_indices, json, np, os, pd, pickle, plt,
+            umap, warnings)
 
 
 @app.cell
@@ -81,10 +87,10 @@ def config(Path, os):
                       "low_confidence": "low-confidence",
                       "run_onset_anchored": "run-onset-anchored",
                       "season_temporal": "drift-anchored",
-                      "rare": "unused/rare", "unused": "unused/rare"}
+                      "rare": "rare"}  # active states are never "unused"
     CATEGORY_MARKERS = {"content-eligible": "o", "low-confidence": "^",
                         "run-onset-anchored": "X", "drift-anchored": "s",
-                        "unused/rare": "v"}
+                        "rare": "v"}
     UMAP_KW = dict(n_neighbors=15, min_dist=0.3, metric="correlation", random_state=0)
     OUT = SCRATCH / "output" / "manuscript_figures" / "fig2"
     SUPP = OUT / "supp_participant_umap"
@@ -94,7 +100,8 @@ def config(Path, os):
 
 
 @app.cell
-def load_data(CATEGORY_NAMES, PARC, SCRATCH, SUBJECTS, VT, np, pd, pickle, warnings):
+def load_data(CATEGORY_NAMES, PARC, SCRATCH, SUBJECTS, VT, active_state_indices, np, pd,
+              pickle, warnings):
     _rows, _maps = [], []
     for _sub in SUBJECTS:
         _hmm = SCRATCH / "output" / "04_combined_hdphmm" / PARC / _sub / "final" / f"vt{VT}"
@@ -106,8 +113,7 @@ def load_data(CATEGORY_NAMES, PARC, SCRATCH, SUBJECTS, VT, np, pd, pickle, warni
         with open(_hmm / "decoded_states.pkl", "rb") as _f:
             _dec = {k: np.asarray(v, dtype=int) for k, v in pickle.load(_f).items()}
         _K = _m.shape[0]
-        _fo_run = np.vstack([np.bincount(v, minlength=_K) / v.size for v in _dec.values()])
-        _active = np.flatnonzero((_fo_run > 0.02).any(axis=0))
+        _active = active_state_indices(_dec, _K)
         _trs = np.bincount(np.concatenate(list(_dec.values())), minlength=_K)
         _flags = pd.read_csv(SCRATCH / "output" / "05e_temporal_trend_a4" / PARC / _sub
                              / f"vt{VT}" / "state_flags.csv").set_index("state")
@@ -164,23 +170,57 @@ def mixing(SUBJECTS, SUPP, json, np, state_maps, state_table):
 
 
 @app.cell
-def load_matches(PARC, SCRATCH, json, pd):
-    _root = SCRATCH / "output" / "05h_participant_state_matching" / PARC / "pairs"
-    _files = sorted(_root.glob("*/summary.json"))
-    if len(_files) != 15:
-        raise RuntimeError(f"expected 15 participant-pair summaries, found {len(_files)}")
+def load_matches(PARC, SCRATCH, SUBJECTS, VT, json, pd):
+    from itertools import combinations
+
+    _base = SCRATCH / "output" / "05h_participant_state_matching" / PARC
+    _expected = {f"{a}_{b}" for a, b in combinations(SUBJECTS, 2)}
+    _found = {f.parent.name for f in (_base / "pairs").glob("*/summary.json")}
+    if _found != _expected:
+        raise RuntimeError(f"05h pair summaries under {_base / 'pairs'}: missing "
+                           f"{sorted(_expected - _found)}, unexpected {sorted(_found - _expected)}")
+
+    def _provenance(d):
+        # run parameters, code commit, and any content hashes 05h records
+        # (top level or under "provenance"); run-specific fields such as the
+        # time stamp are left out
+        prov = {k: d.get(k) for k in ("params", "code_commit")}
+        prov.update({k: v for k, v in d.items() if "sha256" in k})
+        prov.update({f"provenance.{k}": v for k, v in (d.get("provenance") or {}).items()
+                     if "sha256" in k})
+        return prov
+
+    _summaries = {k: json.loads((_base / "pairs" / k / "summary.json").read_text())
+                  for k in sorted(_expected)}
+    _cross_path = _base / "cross_subject_summary.json"
+    if not _cross_path.exists():
+        raise RuntimeError(f"{_cross_path} is missing: 05h writes it last, so the pair "
+                           "summaries may come from an unfinished run")
+    _ref = _provenance(json.loads(_cross_path.read_text()))
+    _params = _ref["params"] or {}
+    if _params.get("parcellation") != PARC or str(_params.get("vt")) != VT:
+        raise RuntimeError(f"05h was run with parcellation {_params.get('parcellation')}, "
+                           f"vt {_params.get('vt')}; this figure uses {PARC}, vt {VT}")
+    for _k, _d in _summaries.items():
+        if _d.get("pair") != _k:
+            raise RuntimeError(f"pairs/{_k}/summary.json records pair {_d.get('pair')}")
+        if _provenance(_d) != _ref:
+            raise RuntimeError(f"pairs/{_k}/summary.json provenance {_provenance(_d)} differs "
+                               f"from cross_subject_summary.json {_ref}; rerun 05h")
+
     _rows, _full_rows = [], []
-    for _f in _files:
-        _sa, _sb = _f.parent.name.split("_")
-        _v = json.loads(_f.read_text())["variants"]["eligible|full|raw"]
+    for _k, _d in _summaries.items():
+        _sa, _sb = _k.split("_")
+        _v = _d["variants"]["eligible|full|raw"]
         _val = _v["validation"]
-        # time-locked = family-wise flag (max over matched pairs of the shift null)
-        for _m, _t in zip(_v["matches_full"], _val["per_pair_time_locked"]):
+        # time-locked = family-wise flag (max over matched pairs of the shift null);
+        # 05h stores the flags in the order of the matches
+        for _m, _t in zip(_v["matches_full"], _val["per_pair_time_locked"], strict=True):
             if _m["beyond_max_null95"]:
                 _full_rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
                                    "r": _m["r"], "time_locked": bool(_t)})
         for _m, _t in zip(_v["shared_removed"]["3"]["matches"],
-                          _val["residual_matches_time_locked"]):
+                          _val["residual_matches_time_locked"], strict=True):
             if _m["beyond_max_null95"]:
                 _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
                               "r_residual": _m["r"], "time_locked": bool(_t)})

@@ -17,8 +17,9 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # =============================================================================
 # 05g - Excluded-state check
 # =============================================================================
-# Are the states excluded from content analyses (other than run-onset-anchored)
-# interruptions of, or blends between, content-eligible states? All six
+# Is each state excluded from content analyses (other than run-onset-anchored)
+# an interruption of a neighbouring state, or a blend of the two states it sits
+# between? Neighbours and blend partners are chosen among all active states. All six
 # participants in one job (~2 min). Per-participant outputs are written
 # atomically and the run is deterministic, so a preempted job reruns cleanly.
 #

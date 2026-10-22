@@ -17,12 +17,15 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # =============================================================================
 # 05h - Matching states between participants
 # =============================================================================
-# All 15 participant pairs in one job (~4 min). Each pair's summary is written
-# atomically and finished pairs are skipped when their params and code commit
+# All 15 participant pairs in one job (~8 min). Each pair's summary is written
+# atomically and finished pairs are skipped when their params, code and inputs
 # match (FORCE=1 recomputes them anyway), so a
 # preempted job resumes; the cross-pair summary is written at the end.
 #
 # Prerequisites: 04 (select + split_half fits), 05e_a4, 05g; ATLAS_DIR in .env.
+#
+# Outputs have no per-participant directory, so archive them with
+#   bash script/utils/datalad_save.sh --stage 05h --subject all
 # =============================================================================
 set -euo pipefail
 export OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 OMP_NUM_THREADS=1

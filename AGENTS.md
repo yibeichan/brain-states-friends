@@ -151,7 +151,7 @@ bash script/utils/datalad_save.sh --stage 05a --subject all
 
 Valid stages: `00`, `02`, `03a`, `03b`, `04`, `05a`, `05b`, `05c`, `05d`, `05e`, `06`, `m10_03`, `m10_04`, `diag`
 
-**Note:** Stage `00` outputs have no parcellation level; the path is `00_postproc/{sub_id}/`. All other stages use `{stage_dir}/{parcellation}/{sub_id}/`.
+**Note:** Stage `00` outputs have no parcellation level; the path is `00_postproc/{sub_id}/`. Stage `05h` outputs have no per-subject level (`05h_participant_state_matching/{parcellation}/`, one set for all participant pairs), so it takes `--subject all` only. All other stages use `{stage_dir}/{parcellation}/{sub_id}/`.
 
 **Recovery after scratch purge:**
 ```bash
@@ -280,8 +280,8 @@ The analysis pipeline is organized around a combined cross-season HMM:
    - `04_combined_hdphmm.py` / `.sh`: Fit combined Gaussian HMM with sticky HDP-HMM transition priors (fit / select / loso_fit modes)
    - `05a_recurrence_analysis.py` / `.sh`: Score state recurrence across episodes (continuous gradient)
    - `05b_visualize_recurring_states.py` / `.sh`: Cortical + subcortical surface plots (yabplot)
-   - `05g_excluded_state_check.py` / `.sh`: Checks whether the states excluded from content analyses (other than run-onset-anchored) are interruptions of, or blends between, content-eligible states (within participant).
-   - `05h_participant_state_matching.py` / `.sh`: Matches content-eligible states between participant pairs (Hungarian on parcel-space mean maps) against within-span rotation and PC-block nulls, with network-collapse and shared-component baselines, time-locked co-occurrence, and a split-half ceiling. Per-pair inference only.
+   - `05g_excluded_state_check.py` / `.sh`: Checks whether each state excluded from content analyses (other than run-onset-anchored) is an interruption of a neighbouring state, or a blend of the two states it sits between (within participant; neighbours and blend partners are chosen among all active states).
+   - `05h_participant_state_matching.py` / `.sh`: Matches content-eligible states between participant pairs (Hungarian on parcel-space mean maps) against state-mixing and PC-block nulls, with network-collapse and shared-component baselines, time-locked co-occurrence, and a split-half ceiling. Per-pair inference only.
    - `fig_F2E_participant_umap.py`: Fig 2E pooled UMAP of all participants' state maps with matched-pair lines (display only), plus supplementary panels.
    - `06a_state_temp_dynamics.py` / `.sh`: Dwell time distributions, transition matrices, recurrence assortativity. Supports `--mode cross_subject_summary` for multi-panel aggregate figure.
    - `06b_transition_structure.py` / `.sh`: Graph topology, transition asymmetry, FC-transition correlation, MFPT landscape.

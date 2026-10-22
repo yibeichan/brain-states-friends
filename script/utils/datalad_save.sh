@@ -47,8 +47,8 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG]"
             echo ""
-            echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 06, m10_03, m10_04, hp_04, pp_04, diag"
-            echo "Subject: sub-01 through sub-06, or 'all'"
+            echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 05g, 05h, 06, m10_03, m10_04, hp_04, pp_04, diag"
+            echo "Subject: sub-01 through sub-06, or 'all' (stage 05h takes 'all' only)"
             exit 0
             ;;
         *) echo "ERROR: Unknown option: $1"; exit 1 ;;
@@ -131,6 +131,14 @@ if [ -z "$STAGE_DIR" ]; then
 fi
 
 # --- Build save path(s) ---
+# Stages without per-subject directories (output is {stage}/{parc}/ for all
+# subjects together): only --subject all is meaningful.
+if [ "$STAGE" = "05h" ] && [ "$SUBJECT_ID" != "all" ]; then
+    echo "ERROR: stage 05h writes one output set for all participant pairs" \
+         "(no per-subject directory); use --subject all"
+    exit 1
+fi
+
 # Stages without parcellation level (output is {stage}/{sub}/)
 if [ "$STAGE" = "00" ]; then
     if [ "$SUBJECT_ID" = "all" ]; then

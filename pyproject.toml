@@ -26,7 +26,6 @@ dependencies = [
   "pyzmq>=27.1.0",
   "statsmodels>=0.13.5",
   "networkx",
-  "umap-learn>=0.5.7",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +41,12 @@ torch = [
   "transformers>=4.45",
   "accelerate>=0.30",
   "ffmpeg-python>=0.2",
+]
+umap = [
+  # Figure 2E embedding only. umap-learn pulls in numba, which caps numpy and
+  # has no wheels for some platforms (e.g. macOS x86_64), so it stays out of
+  # the core set.
+  "umap-learn>=0.5.7",
 ]
 datalad = [
   "datalad>=1.0",
