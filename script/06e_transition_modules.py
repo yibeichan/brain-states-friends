@@ -97,6 +97,7 @@ EFFECT_FLOOR = 0.05              # Q - mean(Q_null) under N1 on M
 BOOT_ARI_FLOOR = 0.5
 MIN_TRS, MIN_EXITS = 30, 20      # reliable-state rule
 PLAN_NOTES = [
+    "decisions/2026-10-22-brain-states-friends-r3-transition-modules-replace-the-miscalibrated-n1-null-with-n1perm-if-it-calibrates-2026-10-22-before-any-06e-result.md",
     "projects/2026-10-21-brain-states-friends-plan-v2-transition-modules-in-r3-fig-3a-reviewed-r3-mapping-pending-user-approval.md",
     "decisions/2026-10-21-brain-states-friends-r3-transition-modules-pre-registered-r3-mapping-approved-2026-10-21-before-any-run.md",
     "decisions/2026-10-21-brain-states-friends-r3-transition-modules-test-a-replaced-by-a-similarity-predicted-null-2026-10-21-before-any-run.md",
@@ -110,6 +111,14 @@ VARIANTS = {
     "N1_Edrop10": 200,
 }
 LOSO_DRAWS = 1000
+# The first N1 null (strength-matched weights) failed calibration; per the
+# 2026-10-22 amendment it is replaced by N1p (same swaps, permuted weights).
+# The N1p variants are appended after the original tasks so the original
+# array indices stay valid; the original N1 chunks are kept and reported.
+N1P_VARIANTS = {"N1p_M": 1000, "N1p_M02": 1000, "N1p_M005": 1000, "N1p_Mrenorm": 1000,
+                "N1p_Mreliable": 200, "N1p_Eaba": 200, "N1p_Emerge90": 200,
+                "N1p_Edrop10": 200}
+N1_FAMILY = "N1p"     # family used by the decision rule ("N1" = first, miscalibrated run)
 
 
 # --------------------------------------------------------------------------
@@ -311,10 +320,15 @@ def fc_nodes(d, nodes):
 def build_variant(d, variant):
     """Observed graph and a draw function for one null variant."""
     P, K, decoded, nodes = d["P"], d["K"], d["decoded"], d["nodes"]
+    rewire = tm.rewire_null
+    if variant.startswith("N1p_"):
+        variant, rewire = "N1_" + variant[4:], tm.rewire_null_permuted_weights
+    elif variant.startswith("LOSOp_"):
+        variant, rewire = "LOSO_" + variant[6:], tm.rewire_null_permuted_weights
     if variant in ("N1_M", "N1_M02", "N1_M005", "N1_Mrenorm"):
         thr = {"N1_M": THR, "N1_M02": 0.02, "N1_M005": 0.005, "N1_Mrenorm": THR}[variant]
         W = tm.weight_matrix(P, nodes, thr, renorm_rows=(variant == "N1_Mrenorm"))
-        return W, nodes, lambda rng: tm.rewire_null(W, rng)
+        return W, nodes, lambda rng: rewire(W, rng)
     if variant == "N1row_Mfull":
         W = tm.weight_matrix(P, nodes, None)
         return W, nodes, lambda rng: (tm.row_shuffle_null(W, rng), {})
@@ -354,7 +368,7 @@ def build_variant(d, variant):
     if variant == "N1_Mreliable":
         keep, _, _ = reliable_nodes(d)
         W = tm.weight_matrix(P, keep, THR)
-        return W, keep, lambda rng: tm.rewire_null(W, rng)
+        return W, keep, lambda rng: rewire(W, rng)
     if variant in ("N1_Eaba", "N1_Emerge90", "N1_Edrop10"):
         if variant == "N1_Eaba":
             seqs, nd = collapse_aba(decoded), nodes
@@ -363,7 +377,7 @@ def build_variant(d, variant):
         else:
             seqs, nd = drop_onsets(decoded), nodes
         W = tm.weight_matrix(empirical_P(seqs, K), nd, THR)
-        return W, nd, lambda rng: tm.rewire_null(W, rng)
+        return W, nd, lambda rng: rewire(W, rng)
     if variant.startswith("LOSO_"):
         fold = os.path.join(os.path.dirname(os.path.dirname(d["hmm_dir"])), "loso",
                             variant.split("_", 1)[1])
@@ -372,7 +386,7 @@ def build_variant(d, variant):
             dec_f = {k: np.asarray(v, dtype=int) for k, v in pickle.load(f).items()}
         nf = [int(s) for s in active_state_indices(dec_f, Pf.shape[0])]
         W = tm.weight_matrix(Pf, nf, THR)
-        return W, nf, lambda rng: tm.rewire_null(W, rng)
+        return W, nf, lambda rng: rewire(W, rng)
     raise ValueError(variant)
 
 
@@ -392,6 +406,11 @@ def task_table():
             rows.append((sub, v, n))
         for f in loso_folds(sub):
             rows.append((sub, f"LOSO_{f}", LOSO_DRAWS))
+    for sub in SUBJECTS:
+        for v, n in N1P_VARIANTS.items():
+            rows.append((sub, v, n))
+        for f in loso_folds(sub):
+            rows.append((sub, f"LOSOp_{f}", LOSO_DRAWS))
     return rows
 
 
@@ -426,7 +445,7 @@ def run_task(task_id, base_seed):
             Wn, info = draw(rng)
             q[i], lab, _ = tm.best_modularity(Wn, SEEDS, RESOLUTION)
             recip[i] = tm.reciprocity(Wn)
-            if variant.startswith("N1_") or variant.startswith("LOSO_"):
+            if variant.startswith(("N1_", "N1p_", "LOSO_", "LOSOp_")):
                 serr[i] = tm.strength_error(Wn, W_obs)
                 acc[i] = info.get("accepted", np.nan)
             if variant == "BOOT_E":
@@ -554,7 +573,7 @@ def aggregate(base_seed, n_perm_char, n_dwell, n_lock):
         data[sub] = d
         res = {"sub": sub, "n_nodes": len(d["nodes"]),
                "max_abs_pca_mean": d["max_abs_pca_mean"], "tests": {}}
-        for v, n in VARIANTS.items():
+        for v, n in {**VARIANTS, **N1P_VARIANTS}.items():
             obs, null = load_null(sub, v, n)
             entry = null_test(obs["q"], null["q"]) if v != "BOOT_E" else {"q_obs": obs["q"]}
             entry.update({"n_nodes": len(obs["nodes"]), "n_edges": obs["n_edges"],
@@ -581,23 +600,28 @@ def aggregate(base_seed, n_perm_char, n_dwell, n_lock):
             "ari_E_vs_M": float(adjusted_rand_score(obsE["labels"], obsM["labels"]))})
         np.save(os.path.join(out_dir(sub), "bootstrap_coassignment.npy"), D)
         # LOSO folds
-        folds = {}
-        for f in loso_folds(sub):
-            o, nl = load_null(sub, f"LOSO_{f}", LOSO_DRAWS)
-            folds[f] = null_test(o["q"], nl["q"])
-        res["loso"] = folds
-        res["loso_n_pass"] = int(sum(v["p"] < ALPHA for v in folds.values()))
+        loso_prefix = {"N1": "LOSO", "N1p": "LOSOp"}
+        for fam, pre in loso_prefix.items():
+            folds = {}
+            for f in loso_folds(sub):
+                o, nl = load_null(sub, f"{pre}_{f}", LOSO_DRAWS)
+                folds[f] = null_test(o["q"], nl["q"])
+            res[f"loso_{fam}"] = folds
+        res["loso"] = res[f"loso_{N1_FAMILY}"]
+        res["loso_n_pass"] = int(sum(v["p"] < ALPHA for v in res["loso"].values()))
         # sensitivity ARIs against M on shared nodes
-        for v in ("N1_Mreliable", "N1_Eaba", "N1_Emerge90", "N1_Edrop10"):
-            o, _ = load_null(sub, v, VARIANTS[v])
+        for v in [f"{fam}_{x}" for fam in ("N1", "N1p")
+                  for x in ("Mreliable", "Eaba", "Emerge90", "Edrop10")]:
+            o, _ = load_null(sub, v, {**VARIANTS, **N1P_VARIANTS}[v])
             shared = [s for s in o["nodes"] if s in obsM["nodes"]]
             a = [o["labels"][o["nodes"].index(s)] for s in shared]
             b = [obsM["labels"][obsM["nodes"].index(s)] for s in shared]
             res["tests"][v]["ari_vs_M_partition"] = float(adjusted_rand_score(a, b))
         t = res["tests"]
         res["modular"] = bool(
-            t["N1_M"]["p"] < ALPHA and t["N1_M02"]["p"] < ALPHA and t["N2_E"]["p"] < ALPHA
-            and t["N1_M"]["effect"] >= EFFECT_FLOOR
+            t[f"{N1_FAMILY}_M"]["p"] < ALPHA and t[f"{N1_FAMILY}_M02"]["p"] < ALPHA
+            and t["N2_E"]["p"] < ALPHA
+            and t[f"{N1_FAMILY}_M"]["effect"] >= EFFECT_FLOOR
             and res["stability"]["boot_ari_median"] >= BOOT_ARI_FLOOR)
         res["test_a_pred_p"] = t["PRED_M"]["p"]
         # (b) module dwell vs segment shuffle
@@ -688,7 +712,9 @@ def aggregate(base_seed, n_perm_char, n_dwell, n_lock):
                                      "threshold": THR, "alpha": ALPHA,
                                      "effect_floor": EFFECT_FLOOR,
                                      "boot_ari_floor": BOOT_ARI_FLOOR,
-                                     "variants": VARIANTS, "loso_draws": LOSO_DRAWS},
+                                     "variants": VARIANTS, "n1p_variants": N1P_VARIANTS,
+                                     "n1_family_in_rule": N1_FAMILY,
+                                     "loso_draws": LOSO_DRAWS},
                "locking": lock,
                "provenance": {"python": platform.python_version(),
                               "networkx": nx.__version__, "numpy": np.__version__,
