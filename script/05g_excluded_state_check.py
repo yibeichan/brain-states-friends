@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""05g_excluded_state_check.py - are the excluded states copies of content-eligible states?
+"""05g_excluded_state_check.py - are the excluded states interruptions or blends of their neighbours?
 
 05e_a4 sets aside some active states from content analyses. Its
 `low_confidence` flag is a timing flag (median dwell < 3 TRs, under the
@@ -10,11 +10,17 @@ asks, per subject, what each active non-eligible state is:
       Read from the raw booleans, because 05e_a4's summary category gives
       sub-HRF priority over run onset and so files some run-onset-anchored
       states under low_confidence. Not classified further.
-  I   interruption: brief visits to an eligible-like pattern that interrupt
-      one parent state (... P P s P P ...), i.e. a copy split off that state.
-  B   blend: visits that sit between two different states (... A A s B B ...)
-      with a map explained by both better than by either.
-  I/B both; D neither; insufficient: fewer than --min_visits uncensored visits.
+  I   interruption of a neighbouring state: brief visits that interrupt one
+      parent state (... P P s P P ...), i.e. a copy split off that state.
+  B   blend of the two states it sits between (... A A s B B ...): a map
+      explained by both better than by either.
+  I/B both; D both arms tested and neither passes; untested: no arm passes
+      and at least one could not be tested; insufficient: fewer than
+      --min_visits uncensored visits.
+
+The parent and the blend partners are chosen among all states, not only
+content-eligible ones; their 05e_a4 summary categories are written alongside
+(parent_category, partner_a_category, partner_b_category).
 
 Visits. Within each run the decoded Viterbi path is collapsed into segments.
 A visit's neighbours a and b are the labels of the adjacent segments. Visits
@@ -33,16 +39,24 @@ Measures per state s:
                  a and b were independent given s within each run, tested by
                  permuting b across s's visits within each run (so neighbours
                  that change across runs or seasons do not create excess).
+                 Only informative runs enter: at least 2 visits and at least
+                 2 distinct b labels (other runs are unchanged by every
+                 permutation). p is NaN, and the state is left out of BH,
+                 when fewer than --min_visits informative visits remain or
+                 the null has no spread.
   r_parent       r(s, parent), parent = most frequent a == b neighbour.
   ref_nn         95th percentile, over eligible states, of each eligible
                  state's largest r with another eligible state: how similar
                  two distinct states can be in this fit.
-  ref_boot       5th percentile of r(mean of random parent TR windows with
-                 the same lengths as s's visits, mean of the parent's other
-                 TRs): how low r(s, parent) can fall from estimation noise
-                 alone when s is short. r_parent_corrected divides r_parent by
-                 the median of that bootstrap r (a noise-corrected sensitivity
-                 value, reported but not used by the rules).
+  ref_boot       5th percentile of r(mean of random non-overlapping parent TR
+                 windows with the same lengths as s's visits, mean of the
+                 parent's other TRs): how low r(s, parent) can fall from
+                 estimation noise alone when s is short. NaN when s has at
+                 least as many TRs as the parent.
+  r_parent_corrected  r_parent divided by the median of that bootstrap r (a
+                 noise-corrected sensitivity value, reported but not used by
+                 the rules). r_parent_sensitivity is this value, or the raw
+                 r_parent (a lower bound) where the correction is undefined.
   dR2            OLS of s's map on its two most frequent through-partners
                  (a != b), no intercept, weights unconstrained: R2 of both
                  minus the larger single-partner R2. Null: the same rule
@@ -51,14 +65,21 @@ Measures per state s:
                  direct a<->b switches with nothing in between): how close s
                  is to plain hemodynamic blurring of a switch.
 
-Rules (fixed before results):
-  I if excess-return q < alpha (BH within subject, over the classified
-      states) AND r_parent >= ref_nn AND r_parent >= ref_boot.
-  B if p_through >= 0.5 AND dR2 > 95th percentile of the eligible-state null.
-      The null holds one value per eligible state (~15-30), so B is a
+Rules. These were revised after a first run of this script and a review of
+its results; they are not pre-registered.
+  Interruption arm: excess-return q < alpha (BH within subject, over the
+      states with a finite p, run-onset-anchored states excluded) AND
+      r_parent >= ref_nn AND r_parent >= ref_boot.
+  Blend arm: p_through >= 0.5 AND dR2 > 95th percentile of the eligible-state
+      null. The null holds one value per eligible state (~15-30), so B is a
       descriptive cut with no multiplicity correction.
-  B is labelled "HRF blend" when r_switch >= sqrt(R2 of the blend), and
-      left untested when fewer than 10 direct partner switches exist.
+  Each arm is "fail" if any of its criteria can be evaluated and fails,
+      "untested" if none fails but at least one is NaN, and "pass"
+      otherwise. Class: I/B both arms pass; I or B one arm passes; D both
+      arms fail; untested otherwise.
+  A B state is labelled "HRF blend" when r_switch >= sqrt(R2 of the blend),
+      and left untested (None) when fewer than 10 direct partner switches
+      exist.
 
 Inputs (frozen, under $SCRATCH_DIR/output):
     04_combined_hdphmm/{parc}/{sub}/final/vt{vt}/{decoded_states.pkl,
@@ -89,6 +110,7 @@ from scipy.stats import spearmanr
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.hmm_io import load_split, get_projected_dir, load_projected_runs  # noqa: E402
+from utils.recurrence_utils import ACTIVE_FO_THRESHOLD, active_state_indices  # noqa: E402
 from utils.state_flags_io import load_state_flags  # noqa: E402
 from utils.stats import benjamini_hochberg  # noqa: E402
 
@@ -96,7 +118,6 @@ logger = logging.getLogger("05g_excluded_state_check")
 
 ELIGIBLE = "eligible_for_content_analysis"
 ONSET_FLAGS = ("run_onset", "a_anchored", "b_anchored")
-ACTIVE_FO = 0.02  # active = FO > 0.02 in at least one run (05a / recurrence_utils)
 MIN_SWITCHES = 10  # direct partner switches needed to test the HRF-blend label
 
 
@@ -128,8 +149,8 @@ def visit_table(decoded_by_run):
     return pd.DataFrame(rows, columns=["run", "state", "start", "length", "prev", "next"])
 
 
-def excess_return_test(a, b, n_perm, rng, strata=None):
-    """Return share (a == b), its independence expectation, and a one-sided p.
+def excess_return_test(a, b, n_perm, rng, strata=None, min_visits=1):
+    """Return share (a == b), its independence expectation, a one-sided p.
 
     a, b: neighbour labels of the uncensored visits. The null permutes b
     across the visits of the same stratum (run), which keeps each run's
@@ -138,28 +159,51 @@ def excess_return_test(a, b, n_perm, rng, strata=None):
     would make a == b look in excess without any interruption. The
     expectation is the permutation mean, sum over strata of
     sum_j n_a(j) n_b(j) / n_stratum, divided by the number of visits.
+
+    Only informative strata enter the share, the expectation and the null.
+    The permuted side is b, so a stratum with one visit, or whose b labels
+    are all the same, is left as it is by every permutation: it adds the same
+    count to the observed share and to every null draw and says nothing about
+    the pairing (with every stratum like that, p would be 1 by construction).
+    A stratum whose a labels are all the same also adds a constant count; it
+    is kept, as it moves the observed share and every draw equally and so
+    leaves p unchanged, and the zero-spread check below covers the case where
+    no stratum varies. p is NaN when fewer than min_visits informative visits
+    remain or the null has no spread.
+
+    Returns (share, expected, p, n_informative).
     """
     a = np.asarray(a)
     b = np.asarray(b)
-    n = a.size
-    strata = np.zeros(n, dtype=int) if strata is None else np.asarray(strata)
-    groups = [np.flatnonzero(strata == g) for g in np.unique(strata)]
-    obs = float(np.mean(a == b))
+    strata = np.zeros(a.size, dtype=int) if strata is None else np.asarray(strata)
+    groups = []
+    for g in np.unique(strata):
+        idx = np.flatnonzero(strata == g)
+        if idx.size >= 2 and np.unique(b[idx]).size >= 2:
+            groups.append(idx)
+    n = int(sum(idx.size for idx in groups))
+    if n == 0:
+        return np.nan, np.nan, np.nan, 0
+    keep = np.concatenate(groups)
+    obs = float(np.mean(a[keep] == b[keep]))
     expected = 0.0
     for idx in groups:
         pa = Counter(a[idx].tolist())
         pb = Counter(b[idx].tolist())
         expected += sum(pa[j] * pb.get(j, 0) for j in pa) / idx.size
     expected = float(expected / n)
+    if n < min_visits:
+        return obs, expected, np.nan, n
     null = np.empty(n_perm)
     bp = b.copy()
     for i in range(n_perm):
         for idx in groups:
-            if idx.size > 1:
-                bp[idx] = b[idx][rng.permutation(idx.size)]
-        null[i] = np.mean(a == bp)
+            bp[idx] = b[idx][rng.permutation(idx.size)]
+        null[i] = np.mean(a[keep] == bp[keep])
+    if np.ptp(null) == 0:
+        return obs, expected, np.nan, n
     p = float((1 + np.sum(null >= obs)) / (1 + n_perm))
-    return obs, expected, p
+    return obs, expected, p, n
 
 
 # ---------------------------------------------------------------- maps
@@ -202,32 +246,52 @@ def nn_reference(maps_eligible, q=95):
     return float(np.percentile(C.max(axis=1), q)), C.max(axis=1)
 
 
+def place_windows(N, lengths, rng):
+    """Random non-overlapping placement of windows with these lengths in N TRs.
+
+    The windows are taken in random order and the N - sum(lengths) free TRs
+    are spread over the len(lengths) + 1 gaps uniformly over all ways of
+    doing so (k of the free + k slots are drawn as window positions).
+    Returns (starts, lengths) in placement order.
+    """
+    lengths = np.asarray(lengths, dtype=int)
+    k = lengths.size
+    free = int(N - lengths.sum())
+    L = lengths[rng.permutation(k)]
+    slots = np.sort(rng.choice(free + k, size=k, replace=False))
+    free_before = slots - np.arange(k)
+    starts = free_before + np.concatenate([[0], np.cumsum(L)[:-1]])
+    return starts, L
+
+
 def bootstrap_parent_reference(parent_windows, X_by_run, visit_lengths, comps,
                                n_boot, rng, q=5):
     """q-th percentile of r(parent map from s-shaped windows, rest of parent).
 
     parent_windows: list of (run, start, length) parent segments. The
-    parent's TRs are joined in segment order, and for each draw and each of
-    s's visit lengths L a random L-TR window is taken from that joined
-    sequence (windows can cross segment joins, so a state whose visits are
-    longer than any single parent segment is still matched in length). The
-    draw's short map is the mean over the union of the picked TRs; it is
-    compared with the mean over the parent's other TRs, so the two maps share
-    no TRs, as s and its parent do not. Returns (nan, empty) when s's visits
-    add up to half the parent's TRs or more, where no such split exists.
+    parent's TRs are joined in segment order, and for each draw one window
+    per visit of s, with that visit's length, is placed at random in the
+    joined sequence, without overlap (windows can cross segment joins, so a
+    state whose visits are longer than any single parent segment is still
+    matched in length). The draw's short map is the mean over the windows'
+    TRs, exactly as many as s has; it is compared with the mean over the
+    parent's other TRs, so the two maps share no TRs, as s and its parent do
+    not. Returns (nan, empty) when s has at least as many TRs as the parent,
+    where no such split exists. Close to that limit the rest map rests on
+    few TRs and the reference is low, so the rule is easy to pass.
     """
     seg_rows = [X_by_run[run][start:start + length] for run, start, length in parent_windows]
     Xp = np.vstack(seg_rows)
     N = Xp.shape[0]
-    lengths = np.minimum(np.asarray(visit_lengths, dtype=int), N)
-    if lengths.sum() * 2 >= N:
+    lengths = np.asarray(visit_lengths, dtype=int)
+    if lengths.sum() >= N:
         return float("nan"), np.array([])
     r = np.empty(n_boot)
     for i in range(n_boot):
         mask = np.zeros(N, dtype=bool)
-        starts = rng.integers(0, N - lengths + 1)
-        for st, L in zip(starts, lengths):
-            mask[st:st + L] = True
+        starts, L = place_windows(N, lengths, rng)
+        for st, ln in zip(starts, L):
+            mask[st:st + ln] = True
         short_map = Xp[mask].mean(axis=0) @ comps
         rest_map = Xp[~mask].mean(axis=0) @ comps
         r[i] = corr(short_map, rest_map)
@@ -273,24 +337,52 @@ def switch_window_map(visits, X_by_run, pair, L, comps):
 
 # ---------------------------------------------------------------- classify
 
+def _criterion(x, y, op):
+    """True / False when both values are finite, None when either is NaN."""
+    if x is None or y is None or not (np.isfinite(x) and np.isfinite(y)):
+        return None
+    return bool(op(x, y))
+
+
+def arm_status(criteria):
+    """'fail' if any evaluable criterion fails, 'untested' if none fails but
+    one could not be evaluated (None), 'pass' otherwise."""
+    if any(c is False for c in criteria):
+        return "fail"
+    if any(c is None for c in criteria):
+        return "untested"
+    return "pass"
+
+
+def arm_statuses(row, alpha):
+    """(interruption status, blend status) of a classified state."""
+    lt, ge, gt = (lambda x, y: x < y), (lambda x, y: x >= y), (lambda x, y: x > y)
+    interruption = arm_status([
+        _criterion(row["q_excess_return"], alpha, lt),
+        _criterion(row["r_parent"], row["ref_nn"], ge),
+        _criterion(row["r_parent"], row["ref_boot"], ge)])
+    blend = arm_status([
+        _criterion(row["p_through"], 0.5, ge),
+        _criterion(row["dR2"], row["dR2_null_p95"], gt)])
+    return interruption, blend
+
+
 def classify(row, alpha):
+    """Class label: O, insufficient, I/B, I, B, D or untested."""
     if row["run_onset_anchored"]:
         return "O"
     if row["n_uncensored"] < row["min_visits"]:
         return "insufficient"
-    is_i = (row["q_excess_return"] < alpha
-            and row["r_parent"] >= row["ref_nn"]
-            and row["r_parent"] >= row["ref_boot"])
-    is_b = (row["p_through"] >= 0.5
-            and np.isfinite(row["dR2"])
-            and row["dR2"] > row["dR2_null_p95"])
-    if is_i and is_b:
+    interruption, blend = arm_statuses(row, alpha)
+    if interruption == "pass" and blend == "pass":
         return "I/B"
-    if is_i:
+    if interruption == "pass":
         return "I"
-    if is_b:
+    if blend == "pass":
         return "B"
-    return "D"
+    if interruption == "fail" and blend == "fail":
+        return "D"
+    return "untested"
 
 
 # ---------------------------------------------------------------- driver
@@ -338,11 +430,6 @@ def load_inputs(sub_id, parc, vt, scratch_dir):
             "max_abs_pca_mean": float(np.abs(pca.mean_).max())}
 
 
-def active_states(decoded, K):
-    fo = np.vstack([np.bincount(l, minlength=K) / l.size for l in decoded.values()])
-    return np.flatnonzero((fo > ACTIVE_FO).any(axis=0))
-
-
 def analyse_subject(sub_id, parc, vt, scratch_dir, args):
     sub_idx = int(sub_id.split("-")[1])
     d = load_inputs(sub_id, parc, vt, scratch_dir)
@@ -351,7 +438,7 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
     if len(flags) != K or list(flags.index) != list(range(K)):
         raise RuntimeError(f"{sub_id}: state_flags rows do not match K = {K}")
 
-    active = active_states(decoded, K)
+    active = active_state_indices(decoded, K)
     eligible = [int(s) for s in flags.index[flags["summary_category"] == ELIGIBLE]]
     if not set(eligible) <= set(active):
         raise RuntimeError(f"{sub_id}: eligible states outside the active set")
@@ -420,21 +507,29 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         row["r_max_model"] = float(elig_r_mod.max())
         row["closest_eligible_model"] = int(eligible[int(np.argmax(elig_r_mod))])
 
-        nan_keys = ("return_share", "return_expected", "p_excess_return", "p_through",
+        nan_keys = ("return_share", "n_informative", "return_share_informative",
+                    "return_expected", "p_excess_return", "p_through",
                     "parent", "r_parent", "ref_boot", "boot_r_median", "r_parent_corrected",
                     "var_logratio", "var_spearman",
                     "partner_a", "partner_b", "r2_blend", "w_a", "w_b", "r_a", "r_b",
                     "dR2", "r_switch", "n_switches")
         row.update({k: np.nan for k in nan_keys})
+        row.update(parent_category=None, partner_a_category=None, partner_b_category=None)
 
         if a.size >= args.min_visits:
-            obs, exp, p = excess_return_test(a, b, args.n_perm, rng, strata=seq_runs(s))
-            row.update(return_share=obs, return_expected=exp, p_excess_return=p,
-                       p_through=1.0 - obs)
+            # the share over all uncensored visits sets p_through; the test
+            # uses the informative runs only (see excess_return_test)
+            share = float(np.mean(a == b))
+            obs, exp, p, n_inf = excess_return_test(a, b, args.n_perm, rng, strata=seq_runs(s),
+                                                    min_visits=args.min_visits)
+            row.update(return_share=share, n_informative=n_inf,
+                       return_share_informative=obs, return_expected=exp,
+                       p_excess_return=p, p_through=1.0 - share)
             ret = Counter(int(x) for x, y in zip(a, b) if x == y)
             if ret:
                 parent = ret.most_common(1)[0][0]
                 row["parent"] = parent
+                row["parent_category"] = flags.loc[parent, "summary_category"]
                 row["r_parent"] = corr(emp_maps[s], emp_maps[parent])
                 pw = visits[visits["state"] == parent][["run", "start", "length"]]
                 pw = list(pw.itertuples(index=False, name=None))
@@ -453,6 +548,8 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
             pair = through_partners(a, b)
             if pair is not None:
                 row["partner_a"], row["partner_b"] = pair
+                row["partner_a_category"] = flags.loc[pair[0], "summary_category"]
+                row["partner_b_category"] = flags.loc[pair[1], "summary_category"]
                 row.update(blend_fit(emp_maps[s], emp_maps[pair[0]], emp_maps[pair[1]]))
                 L = max(1, int(round(row["median_dwell"])))
                 wmap, n_sw = switch_window_map(visits, X_by_run, pair, L, comps)
@@ -467,11 +564,20 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
     if testable.any():
         df.loc[testable, "q_excess_return"] = benjamini_hochberg(
             df.loc[testable, "p_excess_return"].to_numpy())
-    df["class"] = [classify(r, args.alpha) for r in df.to_dict("records")]
+    records = df.to_dict("records")
+    df["class"] = [classify(r, args.alpha) for r in records]
+    classified = ~df["class"].isin(["O", "insufficient"])
+    arms = [arm_statuses(r, args.alpha) if c else (None, None)
+            for r, c in zip(records, classified)]
+    df["interruption_status"] = [i for i, _ in arms]
+    df["blend_status"] = [b for _, b in arms]
+    # sensitivity: r_parent corrected for the short map's noise, or the raw
+    # r_parent (a lower bound) where the correction is undefined
+    df["r_parent_sensitivity"] = df["r_parent_corrected"].fillna(df["r_parent"])
     # HRF blend: a B state whose map is as close to the plain-switch average
     # as to its blend fit; untested (None) when fewer than MIN_SWITCHES direct
     # switches exist between its partners
-    is_b = df["class"].isin(["B", "I/B"])
+    is_b = df["blend_status"] == "pass"
     enough = df["n_switches"].fillna(0) >= MIN_SWITCHES
     blend = df["r_switch"] >= np.sqrt(df["r2_blend"].clip(lower=0))
     df["hrf_blend"] = [(bool(bl) if en else None) if ib else False
@@ -484,18 +590,27 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         "class_counts": df["class"].value_counts().to_dict(),
         "class_by_category": {c: g["class"].value_counts().to_dict()
                               for c, g in df.groupby("summary_category")},
-        "n_ref_boot_untested": int((df["parent"].notna() & df["ref_boot"].isna()).sum()),
+        "n_tested": int(classified.sum()),
+        "interruption_status_counts": df.loc[classified, "interruption_status"]
+        .value_counts().to_dict(),
+        "blend_status_counts": df.loc[classified, "blend_status"].value_counts().to_dict(),
+        "n_p_excess_return_untested": int((classified & df["p_excess_return"].isna()).sum()),
+        "n_ref_boot_untested": int((classified & df["parent"].notna()
+                                    & df["ref_boot"].isna()).sum()),
         "n_hrf_blend": int(sum(v is True for v in df["hrf_blend"])),
         "n_hrf_blend_untested": int(sum(v is None for v in df["hrf_blend"])),
+        # over tested states; raw r_parent where the correction is undefined
         "n_interruption_if_noise_corrected": int(
-            ((df["q_excess_return"] < args.alpha)
-             & (df["r_parent_corrected"] >= ref_nn)).sum()),
+            (classified & (df["q_excess_return"] < args.alpha)
+             & (df["r_parent_sensitivity"] >= ref_nn)).sum()),
+        "n_noise_correction_undefined": int((classified & df["r_parent"].notna()
+                                             & df["r_parent_corrected"].isna()).sum()),
         "ref_nn": ref_nn, "dR2_null_p95": dR2_p95,
         "dR2_null": null_dR2.tolist(),
         "n_pcs": d["n_pcs"], "max_abs_pca_mean": d["max_abs_pca_mean"],
         "params": {"n_perm": args.n_perm, "n_boot": args.n_boot,
                    "min_visits": args.min_visits, "alpha": args.alpha,
-                   "seed": args.seed, "active_fo": ACTIVE_FO,
+                   "seed": args.seed, "active_fo": ACTIVE_FO_THRESHOLD,
                    "seed_scheme": "SeedSequence([seed, subject number, state])"},
         "provenance": {"python": platform.python_version(),
                        "numpy": np.__version__, "pandas": pd.__version__,
