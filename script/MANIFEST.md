@@ -40,6 +40,7 @@ main/supplementary boundary.
 | `05a_recurrence_analysis.py` | Recurrence + season-specificity classification | MAIN | R1, Fig 1 |
 | `05b_visualize_recurring_states.py` | Cortical + subcortical surface plots | MAIN | Fig 2C / Fig S1 |
 | `05e_temporal_trend_a4.py` | State-flag synthesis (drift-anchored taxonomy / eligibility) | MAIN | Methods §4 (state classification) |
+| `05h_participant_state_matching.py` | Matching states between participant pairs: nulls, network and shared-component baselines, time-locking, split-half ceiling | MAIN | Results R2 / Fig 2E; Methods (matching states between participants) |
 | `06a_state_temp_dynamics.py` | Dwell-time distributions, transition matrices | MAIN | R3, Fig 3 |
 | `06b_transition_structure.py` | Graph topology, FC-Mantel, MFPT landscape | MAIN | R3, Fig 3 |
 | `08c_transformer_features.py` | Layer-wise transformer features (GPU) | MAIN | R4b, Methods §5 |
@@ -84,6 +85,7 @@ same MAIN tier.)
 | `05e_temporal_trend_a2.py` | Within-run position anchoring | SUPP | Supp |
 | `05e_temporal_trend_a3.py` | Within-session FO habituation (LME) | SUPP | Supp |
 | `05f_state_fc.py` | Per-state functional connectivity | SUPP | Supp |
+| `05g_excluded_state_check.py` | Whether excluded states are interruptions of, or blends between, content-eligible states | SUPP | Supp (Table S#) |
 | `06c_higher_order_transitions.py` | Higher-order transition adequacy (entropy, BIC) | SUPP | Supp |
 | `06d_preserved_chains.py` | Preserved transition chains | SUPP | Supp |
 
@@ -97,6 +99,7 @@ outputs and renders the panels.
 | `fig_F1_recurrence_gradient.py` | Figure 1 | R1 |
 | `fig_F2_recurrence_sources.py` | Figure 2 | R2 |
 | `fig_F2_network_participation.py` | Figure 2 (Panel C batch renderer) | R2 |
+| `fig_F2E_participant_umap.py` | Figure 2 (Panel E) and its supplementary panels | R2 |
 | `fig_F3_transition_structure.py` | Figure 3 | R3 |
 | `fig_F4_within_friends.py` | Figure 5 (lead) [code ID F4] | R4b |
 | `fig_F4_per_film_video.py` | Figure 5 (Movie10 per-film panel) [code ID F4] | R4b |

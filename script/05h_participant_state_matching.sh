@@ -18,7 +18,8 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # 05h - Matching states between participants
 # =============================================================================
 # All 15 participant pairs in one job (~4 min). Each pair's summary is written
-# atomically and finished pairs are skipped (FORCE=1 recomputes them), so a
+# atomically and finished pairs are skipped when their params and code commit
+# match (FORCE=1 recomputes them anyway), so a
 # preempted job resumes; the cross-pair summary is written at the end.
 #
 # Prerequisites: 04 (select + split_half fits), 05e_a4, 05g; ATLAS_DIR in .env.
@@ -29,4 +30,5 @@ echo "== $(date -Is) job ${SLURM_JOB_ID:-local} restart ${SLURM_RESTART_COUNT:-0
 
 uv run --project "${PROJECT_DIR}" --no-sync python "${PROJECT_DIR}/script/05h_participant_state_matching.py" \
     --parcellation "${PARCELLATION:-atlas-4S156Parcels}" --vt "${VT:-0.95}" \
-    --n_perm "${N_PERM:-1000}" --n_lock "${N_LOCK:-1000}" --seed "${SEED:-0}" ${FORCE:+--force}
+    --n_perm "${N_PERM:-1000}" --n_lock "${N_LOCK:-1000}" --seed "${SEED:-0}" \
+    $( [ "${FORCE:-0}" = 1 ] && echo --force )

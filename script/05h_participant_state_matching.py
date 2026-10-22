@@ -20,7 +20,7 @@ Matching: rectangular Hungarian on 1 - r (both directions' denominators are
 reported), plus each A state's unconstrained best match (collisions counted).
 
 Pair statistic: median matched r. Nulls (Hungarian re-run, maps re-z-scored
-in every draw; 1000 draws; A rotated in half the draws, B in the other half):
+in every draw; 1000 draws; A rotated in even draws, B in odd draws):
   configuration  Haar rotation of a subject's centred state maps within their
                  own span; keeps the Gram matrix and the repertoire's subspace
                  and destroys only which direction is which state (primary)
@@ -31,16 +31,39 @@ No spin-test null: it needs sphere coordinates for the Schaefer parcels and a
 dependency this environment does not have, and the plan rated it coarse and
 liberal for subcortex; the PC-block and shared-component baselines cover the
 subspace and network-level confounds.
-Specificity baselines: (a) network collapse, maps replaced by their
-network/structure means; (b) projecting out the top k (1, 3, 5) components
-of a PCA over the other four subjects' state maps, with the configuration
-null re-run at the pre-stated k = 3 ("specific correspondence").
-Ceiling: the same pipeline on the split-half fits, within subject (A_half vs
-A_otherhalf) and across subjects (half vs half), active states.
-Validation independent of the maps: time-locked co-occurrence of matched
-states over the runs both subjects watched, against a within-run circular
-shift; recurrence / dwell / FO rank agreement of matched pairs, computed in
-every configuration-null draw as well.
+Specificity (eligible states, all parcels):
+  network level     maps replaced by their 13 network/structure means, and the
+                    complement (maps minus those means), each with its own
+                    configuration null
+  shared components the top k (1, 3, 5) components of a PCA over the other four
+                    participants' state maps projected out of both maps (the
+                    configuration null re-run at the pre-stated k = 3), with the
+                    variance those components explain in the pair's maps; also
+                    k = 3 plus the others' mean state map
+  amplitude         uncentred cosine on the raw contrast maps (row z-scoring
+                    removes each map's global mean and scale), and each matched
+                    pair's global mean and SD
+Per-state claims use a max-statistic threshold (95th percentile of the largest
+matched r per null draw). Many-to-one collisions are counted in both
+directions against the same null.
+Checks with a different input (occupancy instead of maps), eligible states:
+  time locking      Pearson r of matched states' binary occupancy over the runs
+                    both participants watched (same run id = same episode half;
+                    truncated to the shorter run), against within-run circular
+                    shifts of one participant (offsets 1..L-1, conservative).
+                    Matched pairs are flagged with a family-wise threshold (max
+                    over matched pairs); pointwise flags are kept separately.
+                    Matched-pair locking is also compared with the locking of
+                    the pairs that the rotation-null matchings choose, and
+                    recomputed with 10 TRs dropped from both ends of each run.
+  timing properties Spearman of recurrence, mean FO and median dwell across
+                    matched pairs, against the same statistic for the
+                    rotation-null matchings
+Ceiling: the same matching on the split-half fits, within participant and
+across participants, for all active states and for the half-fit states matched
+to the final fit's content-eligible states.
+Random streams are per (pair, variant). Every pair file records its parameters
+and code commit; on rerun a pair is recomputed when either differs.
 
 Inputs (frozen, under $SCRATCH_DIR/output):
     04_combined_hdphmm/{parc}/{sub}/final/vt0.95/{state_means_parcel.npy,
@@ -62,7 +85,9 @@ import pickle
 import logging
 import argparse
 import platform
+import subprocess
 import warnings
+import zlib
 from itertools import combinations
 
 import numpy as np
@@ -249,20 +274,29 @@ def load_subject(sub, parc, vt):
     K = maps.shape[0]
     flags = pd.read_csv(os.path.join(S, "output", "05e_temporal_trend_a4", parc, sub,
                                      f"vt{vt}", "state_flags.csv")).set_index("state")
+    if list(flags.index) != list(range(K)):
+        raise RuntimeError(f"{sub}: state_flags rows are not states 0..{K - 1} in order")
     classes_path = os.path.join(S, "output", "05g_excluded_state_check", parc, sub,
                                 f"vt{vt}", "state_classes.csv")
-    classes = (pd.read_csv(classes_path).set_index("state")["class"].to_dict()
-               if os.path.exists(classes_path) else {})
-    active = active_from_decoded(decoded, K)
-    eligible = [int(s) for s in flags.index[flags["summary_category"] == ELIGIBLE]]
-    onset = [int(s) for s in active if any(bool(flags.loc[s, c]) for c in ONSET_FLAGS)]
+    if not os.path.exists(classes_path):
+        raise FileNotFoundError(f"{sub}: run 05g first (missing {classes_path})")
+    classes = pd.read_csv(classes_path).set_index("state")["class"].to_dict()
+    active = sorted(int(s) for s in active_from_decoded(decoded, K))
+    eligible = sorted(int(s) for s in flags.index[flags["summary_category"] == ELIGIBLE])
+    if not set(eligible) <= set(active):
+        raise RuntimeError(f"{sub}: content-eligible states outside the active set")
+    missing = sorted(set(active) - set(eligible) - set(classes))
+    if missing:
+        raise RuntimeError(f"{sub}: 05g did not classify active states {missing}")
+    onset = sorted(s for s in active if any(bool(flags.loc[s, c]) for c in ONSET_FLAGS))
     halves = {}
     for h in ("A", "B"):
         hd = os.path.join(base, "split_half", h)
         hm = np.load(os.path.join(hd, "state_means_parcel.npy"))
         with open(os.path.join(hd, "decoded_states.pkl"), "rb") as f:
             hdec = {k: np.asarray(v, dtype=int) for k, v in pickle.load(f).items()}
-        halves[h] = {"maps": hm, "active": active_from_decoded(hdec, hm.shape[0])}
+        halves[h] = {"maps": hm, "active": sorted(int(s) for s in
+                                                  active_from_decoded(hdec, hm.shape[0]))}
     trs = np.bincount(np.concatenate(list(decoded.values())), minlength=K)
     seg_len = {s: [] for s in range(K)}
     for seq in decoded.values():
@@ -273,7 +307,7 @@ def load_subject(sub, parc, vt):
             seg_len[int(s0)].append(int(ln))
     dwell = np.array([np.median(seg_len[s]) if seg_len[s] else np.nan for s in range(K)])
     return {"sub": sub, "maps": maps, "mu_pc": mu_pc, "comps": comps, "decoded": decoded,
-            "K": K, "flags": flags, "classes": classes, "active": [int(s) for s in active],
+            "K": K, "flags": flags, "classes": classes, "active": active,
             "eligible": eligible, "onset": onset, "halves": halves,
             "rec": flags["recurrence_score"].to_numpy(dtype=float),
             "fo": trs / trs.sum(), "dwell": dwell,
@@ -282,11 +316,24 @@ def load_subject(sub, parc, vt):
 
 # ---------------------------------------------------------------- pair analysis
 
-def pair_null(Ma, Mb, n_perm, rng, kind, extra=None):
-    """Median matched r under a null; A rotated in half the draws, B in the other."""
+def cos_matrix(A, B):
+    """Uncentred cosine between rows (raw contrast maps, amplitude kept)."""
+    An = A / np.linalg.norm(A, axis=1, keepdims=True)
+    Bn = B / np.linalg.norm(B, axis=1, keepdims=True)
+    return An @ Bn.T
+
+
+def pair_null(Ma, Mb, n_perm, rng, kind, extra=None, sim=corr_matrix):
+    """Median matched similarity under a null; A rotated in even draws, B in odd.
+
+    Returns (median per draw, max matched per draw, A->B collisions per draw,
+    B->A collisions per draw, the null matchings as (ia, ib) per draw).
+    """
     out = np.empty(n_perm)
     max_r = np.empty(n_perm)
-    collisions = np.empty(n_perm)
+    coll_ab = np.empty(n_perm)
+    coll_ba = np.empty(n_perm)
+    matchings = []
     for i in range(n_perm):
         rot_a = i % 2 == 0
         if kind == "configuration":
@@ -296,155 +343,333 @@ def pair_null(Ma, Mb, n_perm, rng, kind, extra=None):
             muA, cA, muB, cB = extra
             A = rotate_pc_blocks(muA, cA, rng) if rot_a else Ma
             B = Mb if rot_a else rotate_pc_blocks(muB, cB, rng)
-        Rn = corr_matrix(A, B)
-        _, _, r = match(Rn)
+        Rn = sim(A, B)
+        ja, jb, r = match(Rn)
         out[i] = np.median(r)
         max_r[i] = r.max()
-        collisions[i] = many_to_one(Rn)[1]
-    return out, max_r, collisions
+        coll_ab[i] = many_to_one(Rn)[1]
+        coll_ba[i] = many_to_one(Rn.T)[1]
+        matchings.append((ja, jb))
+    return out, max_r, coll_ab, coll_ba, matchings
 
 
 def p_greater(obs, null):
+    null = np.asarray(null, dtype=float)
+    null = null[np.isfinite(null)]
+    if not np.isfinite(obs) or null.size == 0:
+        return float("nan")
     return float((1 + np.sum(null >= obs)) / (1 + null.size))
 
 
-def analyse_pair(da, db, others, groups, args, rng):
-    res = {"pair": f"{da['sub']}_{db['sub']}", "variants": {}}
+def p_less(obs, null):
+    null = np.asarray(null, dtype=float)
+    null = null[np.isfinite(null)]
+    if not np.isfinite(obs) or null.size == 0:
+        return float("nan")
+    return float((1 + np.sum(null <= obs)) / (1 + null.size))
+
+
+def variant_rng(args, a, b, key):
+    """One stream per (pair, variant), so a variant reruns identically alone."""
+    return np.random.default_rng(np.random.SeedSequence(
+        [args.seed, int(a[-1]), int(b[-1]), zlib.crc32(key.encode()) & 0x7FFFFFFF]))
+
+
+def match_block(Ma, Mb, n_perm, rng, sa, sb, sim=corr_matrix):
+    """Matching, configuration null, max-statistic flags and collisions."""
+    R = sim(Ma, Mb)
+    ia, ib, r = match(R)
+    null, max_r, cab, cba, null_matchings = pair_null(Ma, Mb, n_perm, rng, "configuration",
+                                                      sim=sim)
+    thr = float(np.percentile(max_r, 95))
+    out = {"n_a": len(sa), "n_b": len(sb), "n_matched": int(r.size),
+           "median_r": float(np.median(r)), "mean_r": float(r.mean()),
+           "configuration": {"null_mean": float(null.mean()), "p": p_greater(np.median(r), null)},
+           "max_null95": thr, "n_pairs_beyond_max_null95": int(np.sum(r > thr)),
+           "matches": [{"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j]),
+                        "beyond_max_null95": bool(R[i, j] > thr)} for i, j in zip(ia, ib)]}
+    return out, (R, ia, ib, r, null_matchings)
+
+
+def analyse_pair(da, db, others, groups, args):
+    a, b = da["sub"], db["sub"]
+    res = {"pair": f"{a}_{b}", "variants": {}}
     scopes = {"full": slice(None), "cortex": slice(0, N_CORTEX)}
-    sets = {"eligible": ("eligible", "eligible"), "active": ("active", "active"),
-            "onset_control": ("onset", "onset")}
-    for set_name, (ka, kb) in sets.items():
-        sa, sb = da[ka], db[kb]
+    sets = {"eligible": "eligible", "active": "active", "onset_control": "onset"}
+    for set_name, key_set in sets.items():
+        sa, sb = da[key_set], db[key_set]
         if len(sa) < 3 or len(sb) < 3:
             continue
         for scope_name, sl in scopes.items():
             for centred in (False, True):
                 if set_name == "onset_control" and (scope_name != "full" or centred):
                     continue
+                key = f"{set_name}|{scope_name}|{'centred' if centred else 'raw'}"
+                rng = variant_rng(args, a, b, key)
                 Ma, Mb = da["maps"][sa][:, sl], db["maps"][sb][:, sl]
                 if centred:
                     Ma, Mb = Ma - Ma.mean(0, keepdims=True), Mb - Mb.mean(0, keepdims=True)
-                R = corr_matrix(Ma, Mb)
-                ia, ib, r = match(R)
-                best_r, collisions = many_to_one(R)
-                key = f"{set_name}|{scope_name}|{'centred' if centred else 'raw'}"
-                null_c, max_c, coll_c = pair_null(Ma, Mb, args.n_perm, rng, "configuration")
-                v = {"n_a": len(sa), "n_b": len(sb), "n_matched": int(r.size),
-                     "median_r": float(np.median(r)), "mean_r": float(r.mean()),
-                     "configuration": {"null_mean": float(null_c.mean()),
-                                       "p": p_greater(np.median(r), null_c)},
-                     "n_pairs_beyond_max_null95": int(np.sum(r > np.percentile(max_c, 95))),
-                     "many_to_one_collisions": collisions,
-                     "many_to_one_collisions_null_mean":
-                         float(coll_c.mean()),
-                     "many_to_one_collisions_p": p_greater(
-                         collisions, coll_c),
-                     "best_r_median": float(np.median(best_r)),
-                     "max_null95": float(np.percentile(max_c, 95)),
-                     "matches_full": [{"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j]),
-                                       "beyond_max_null95": bool(R[i, j] > np.percentile(max_c, 95))}
-                                      for i, j in zip(ia, ib)]}
+                v, (R, ia, ib, r, null_matchings) = match_block(Ma, Mb, args.n_perm, rng, sa, sb)
+                v["matches_full"] = v.pop("matches")
+                # many-to-one collisions, both directions, against the same draws
+                _, _, cab, cba, _ = pair_null(Ma, Mb, args.n_perm, variant_rng(args, a, b, key + "|coll"),
+                                              "configuration")
+                obs_ab, obs_ba = many_to_one(R)[1], many_to_one(R.T)[1]
+                v["collisions"] = {"a_to_b": obs_ab, "b_to_a": obs_ba,
+                                   "null_mean_a_to_b": float(cab.mean()),
+                                   "null_mean_b_to_a": float(cba.mean()),
+                                   "p_more_a_to_b": p_greater(obs_ab, cab),
+                                   "p_more_b_to_a": p_greater(obs_ba, cba),
+                                   "p_fewer_a_to_b": p_less(obs_ab, cab),
+                                   "p_fewer_b_to_a": p_less(obs_ba, cba)}
                 if not centred and set_name != "onset_control":
-                    pcs = (da["mu_pc"][sa], da["comps"], db["mu_pc"][sb], db["comps"])
                     if scope_name == "full":
-                        null_b, _, _ = pair_null(Ma, Mb, args.n_perm, rng, "pc_blocks", pcs)
-                        v["pc_blocks"] = {"null_mean": float(null_b.mean()),
-                                          "p": p_greater(np.median(r), null_b)}
-                    # specificity (a): network collapse
-                    if scope_name == "full":
-                        Rn = corr_matrix(collapse_networks(Ma, groups), collapse_networks(Mb, groups))
-                        v["network_collapse_median_r"] = float(np.median(match(Rn)[2]))
-                    # specificity (b): shared components from the other four subjects
+                        pcs = (da["mu_pc"][sa], da["comps"], db["mu_pc"][sb], db["comps"])
+                        nb, _, _, _, _ = pair_null(Ma, Mb, args.n_perm,
+                                                   variant_rng(args, a, b, key + "|pcb"),
+                                                   "pc_blocks", pcs)
+                        v["pc_blocks"] = {"null_mean": float(nb.mean()),
+                                          "p": p_greater(np.median(r), nb)}
+                        # network-level structure: collapsed maps and their complement
+                        Ca, Cb = collapse_networks(Ma, groups), collapse_networks(Mb, groups)
+                        vc, _ = match_block(Ca, Cb, args.n_perm,
+                                            variant_rng(args, a, b, key + "|collapse"), sa, sb)
+                        vw, _ = match_block(Ma - Ca, Mb - Cb, args.n_perm,
+                                            variant_rng(args, a, b, key + "|within"), sa, sb)
+                        v["network_collapse"] = {k_: vc[k_] for k_ in
+                                                 ("median_r", "configuration",
+                                                  "n_pairs_beyond_max_null95")}
+                        v["within_network_residual"] = {k_: vw[k_] for k_ in
+                                                        ("median_r", "configuration",
+                                                         "n_pairs_beyond_max_null95")}
+                        # amplitude kept: uncentred cosine on the raw contrast maps
+                        vcos, _ = match_block(Ma, Mb, args.n_perm,
+                                              variant_rng(args, a, b, key + "|cosine"), sa, sb,
+                                              sim=cos_matrix)
+                        v["raw_cosine"] = {k_: vcos[k_] for k_ in
+                                           ("median_r", "configuration",
+                                            "n_pairs_beyond_max_null95")}
+                        gm_a, gm_b = Ma.mean(1), Mb.mean(1)
+                        v["global_mean"] = {
+                            "matched_sign_disagreements": int(np.sum(
+                                np.sign(gm_a[ia]) != np.sign(gm_b[ib]))),
+                            "per_match": [{"a": int(sa[i]), "b": int(sb[j]),
+                                           "mean_a": float(gm_a[i]), "mean_b": float(gm_b[j]),
+                                           "sd_a": float(Ma[i].std()), "sd_b": float(Mb[j].std())}
+                                          for i, j in zip(ia, ib)]}
+                    # shared components of the other four participants
                     shared = {}
+                    stack = [o["maps"][o[key_set]][:, sl] for o in others]
+                    Za, Zb = zrows(Ma), zrows(Mb)
                     for k in K_SHARED:
-                        V = shared_components([o["maps"][o[ka]][:, sl] for o in others], k)
-                        Pa, Pb = project_out(zrows(Ma), V), project_out(zrows(Mb), V)
-                        ka_i, kb_i, rk = match(corr_matrix(Pa, Pb))
-                        entry = {"median_r": float(np.median(rk))}
+                        V = shared_components(stack, k)
+                        Pa, Pb = project_out(Za, V), project_out(Zb, V)
+                        explained = 1.0 - (np.sum(Pa ** 2) + np.sum(Pb ** 2)) / \
+                            (np.sum(Za ** 2) + np.sum(Zb ** 2))
                         if k == K_SHARED_PRIMARY:
-                            nk, mk, _ = pair_null(Pa, Pb, args.n_perm, rng, "configuration")
-                            thr_k = float(np.percentile(mk, 95))
-                            entry.update({"configuration_p": p_greater(np.median(rk), nk),
-                                          "null_mean": float(nk.mean()),
-                                          "n_pairs_beyond_max_null95": int(np.sum(rk > thr_k)),
-                                          "max_null95": thr_k,
-                                          "matches": [{"a": int(sa[i]), "b": int(sb[j]),
-                                                       "r": float(r_), "beyond_max_null95": bool(r_ > thr_k)}
-                                                      for i, j, r_ in zip(ka_i, kb_i, rk)]})
-                        shared[str(k)] = entry
+                            ek, (_, ka_i, kb_i, rk, _) = match_block(
+                                Pa, Pb, args.n_perm, variant_rng(args, a, b, key + "|k3"), sa, sb)
+                            ek["variance_explained_in_pair"] = float(explained)
+                            shared[str(k)] = ek
+                        else:
+                            rk = match(corr_matrix(Pa, Pb))[2]
+                            shared[str(k)] = {"median_r": float(np.median(rk)),
+                                              "variance_explained_in_pair": float(explained)}
+                    # sensitivity: also remove the others' mean state map
+                    Xs = zrows(np.vstack(stack))
+                    mvec = Xs.mean(axis=0)
+                    V3 = shared_components(stack, K_SHARED_PRIMARY)
+                    Vm = np.vstack([V3, mvec / np.linalg.norm(mvec)])
+                    Q, _ = np.linalg.qr(Vm.T)
+                    Pa, Pb = project_out(Za, Q.T), project_out(Zb, Q.T)
+                    em, _ = match_block(Pa, Pb, args.n_perm,
+                                        variant_rng(args, a, b, key + "|k3mean"), sa, sb)
+                    shared["3_plus_mean"] = {k_: em[k_] for k_ in
+                                             ("median_r", "configuration",
+                                              "n_pairs_beyond_max_null95")}
                     v["shared_removed"] = shared
                 if set_name == "active" and scope_name == "full" and not centred:
-                    v["matches"] = [
+                    v["match_labels"] = [
                         {"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j]),
                          "cat_a": da["flags"].loc[sa[i], "summary_category"],
                          "cat_b": db["flags"].loc[sb[j], "summary_category"],
-                         "class_a": da["classes"].get(sa[i], "eligible"),
-                         "class_b": db["classes"].get(sb[j], "eligible")}
+                         "class_a": da["classes"].get(sa[i], "content-eligible")
+                         if sa[i] in da["eligible"] else da["classes"].get(sa[i], "unknown"),
+                         "class_b": db["classes"].get(sb[j], "content-eligible")
+                         if sb[j] in db["eligible"] else db["classes"].get(sb[j], "unknown")}
                         for i, j in zip(ia, ib)]
                 if set_name == "eligible" and scope_name == "full" and not centred:
-                    v["validation"] = validate(da, db, sa, sb, ia, ib, Ma, Mb, args, rng)
+                    residual = v["shared_removed"][str(K_SHARED_PRIMARY)]["matches"]
+                    v["validation"] = validate(da, db, sa, sb, ia, ib, null_matchings, residual,
+                                               Ma, Mb, args)
                 res["variants"][key] = v
     return res
 
 
-def validate(da, db, sa, sb, ia, ib, Ma, Mb, args, rng):
-    """Map-independent checks on the eligible full-scope matches."""
-    # time-locked co-occurrence over common runs
+def label_map(seq, states, K):
+    """Position of each TR's state in `states`, or -1 for states outside it."""
+    lut = np.full(K, -1, dtype=int)
+    lut[np.asarray(states, dtype=int)] = np.arange(len(states))
+    return lut[seq]
+
+
+def locking_matrices(da, db, sa, sb, runs, n_lock, rng, trim=0):
+    """Occupancy r for every (A state, B state) pair, observed and per shift draw.
+
+    trim drops that many TRs from both ends of every run (run-edge
+    sensitivity). Each draw circularly shifts every run of B by a random
+    offset in 1..L-1 (offsets near 0 keep the null close to the data, which
+    makes the test conservative).
+    """
+    la = {r: label_map(da["decoded"][r], sa, da["K"]) for r in runs}
+    lb = {r: label_map(db["decoded"][r], sb, db["K"]) for r in runs}
+    if trim:
+        la = {r: x[trim:-trim] if x.size > 2 * trim + 1 else x[:0] for r, x in la.items()}
+        lb = {r: x[trim:-trim] if x.size > 2 * trim + 1 else x[:0] for r, x in lb.items()}
+    runs = [r for r in runs if la[r].size and lb[r].size]
+    T = sum(min(la[r].size, lb[r].size) for r in runs)
+    allpairs = [(i, j) for i in range(len(sa)) for j in range(len(sb))]
+    obs = occupancy_r(joint_counts(la, lb, runs, len(sa), len(sb)), T,
+                      allpairs).reshape(len(sa), len(sb))
+    null = np.empty((n_lock, len(sa), len(sb)))
+    for k in range(n_lock):
+        shifts = {r: int(rng.integers(1, max(2, min(la[r].size, lb[r].size)))) for r in runs}
+        null[k] = occupancy_r(joint_counts(la, lb, runs, len(sa), len(sb), shifts), T,
+                              allpairs).reshape(len(sa), len(sb))
+    return obs, null, len(runs), T
+
+
+def lock_flags(obs, null, ia, ib):
+    """Family-wise (max over the matched pairs) and pointwise time-locking flags."""
+    r = obs[ia, ib]
+    max_null = np.nanmax(null[:, ia, ib], axis=1)
+    thr = float(np.nanpercentile(max_null, 95))
+    pointwise = np.nanpercentile(null[:, ia, ib], 95, axis=0)
+    return r, thr, [bool(x > thr) for x in r], [bool(x > t) for x, t in zip(r, pointwise)]
+
+
+def validate(da, db, sa, sb, ia, ib, null_matchings, residual_matches, Ma, Mb, args):
+    """Checks that use occupancy rather than maps, on the eligible full-scope matches."""
+    a, b = da["sub"], db["sub"]
     runs = sorted(set(da["decoded"]) & set(db["decoded"]))
-    la = {r: np.where(np.isin(da["decoded"][r], sa),
-                      np.searchsorted(sa, da["decoded"][r]), -1) for r in runs}
-    lb = {r: np.where(np.isin(db["decoded"][r], sb),
-                      np.searchsorted(sb, db["decoded"][r]), -1) for r in runs}
-    T = sum(min(da["decoded"][r].size, db["decoded"][r].size) for r in runs)
-    pairs = list(zip(ia.tolist(), ib.tolist()))
-    N = joint_counts(la, lb, runs, len(sa), len(sb))
-    obs = occupancy_r(N, T, pairs)
-    null = np.empty((args.n_lock, len(pairs)))
-    for k in range(args.n_lock):
-        shifts = {r: int(rng.integers(1, max(2, min(da["decoded"][r].size,
-                                                    db["decoded"][r].size)))) for r in runs}
-        null[k] = occupancy_r(joint_counts(la, lb, runs, len(sa), len(sb), shifts), T, pairs)
-    stat = float(np.nanmean(obs))
-    per_pair_p95 = np.nanpercentile(null, 95, axis=0)
-    # recurrence / dwell / FO rank agreement of matched pairs, observed and null
+    obs, null, n_runs, T = locking_matrices(da, db, sa, sb, runs, args.n_lock,
+                                            variant_rng(args, a, b, "lock"))
+    r, thr, fwer, pointwise = lock_flags(obs, null, ia, ib)
+    stat = float(np.nanmean(r))
+    null_stat = np.nanmean(null[:, ia, ib], axis=1)
+    # does map matching pick out time-locked pairs better than geometry-relabelled
+    # matchings (same observed locking matrix, pairs from the rotation-null draws)?
+    relabel = np.array([np.nanmean(obs[ja, jb]) for ja, jb in null_matchings])
+    rank_in_row_col = [float((np.sum(obs[i, :] < obs[i, j]) + np.sum(obs[:, j] < obs[i, j]))
+                             / (obs.shape[1] + obs.shape[0] - 2)) for i, j in zip(ia, ib)]
+    # residual-map matches: their own flags from the same matrices
+    pos_a = {s: k for k, s in enumerate(sa)}
+    pos_b = {s: k for k, s in enumerate(sb)}
+    ra = np.array([pos_a[m["a"]] for m in residual_matches])
+    rb = np.array([pos_b[m["b"]] for m in residual_matches])
+    _, thr_res, fwer_res, _ = lock_flags(obs, null, ra, rb)
+    # run-edge sensitivity: drop 10 TRs from both ends of every run
+    obs_t, null_t, _, _ = locking_matrices(da, db, sa, sb, runs, args.n_lock,
+                                           variant_rng(args, a, b, "lock_trim"), trim=10)
+    stat_t = float(np.nanmean(obs_t[ia, ib]))
+    null_t_stat = np.nanmean(null_t[:, ia, ib], axis=1)
+    # timing properties of matched pairs, observed and in rotation-null matchings
     props = {"recurrence": (da["rec"][sa], db["rec"][sb]),
              "dwell": (da["dwell"][sa], db["dwell"][sb]),
              "fo": (da["fo"][sa], db["fo"][sb])}
     agree = {}
     for name, (xa, xb) in props.items():
         o = spearmanr(xa[ia], xb[ib]).correlation
-        nl = np.empty(args.n_perm)
-        for i in range(args.n_perm):
-            A = rotate_configuration(Ma, rng) if i % 2 == 0 else Ma
-            B = Mb if i % 2 == 0 else rotate_configuration(Mb, rng)
-            ja, jb, _ = match(corr_matrix(A, B))
-            nl[i] = spearmanr(xa[ja], xb[jb]).correlation
+        nl = np.array([spearmanr(xa[ja], xb[jb]).correlation for ja, jb in null_matchings])
         agree[name] = {"rho": float(o), "null_mean": float(np.nanmean(nl)),
-                       "p": float((1 + np.sum(nl >= o)) / (1 + nl.size))}
-    return {"n_common_runs": len(runs), "n_trs": int(T),
-            "locking_mean_r": stat, "locking_null_mean": float(np.nanmean(null)),
-            "locking_p": float((1 + np.sum(np.nanmean(null, axis=1) >= stat)) / (1 + args.n_lock)),
-            "n_matched_time_locked": int(np.sum(obs > per_pair_p95)),
-            "per_pair_locking_r": obs.tolist(),
-            "per_pair_time_locked": [bool(o > t) for o, t in zip(obs, per_pair_p95)],
+                       "n_null_finite": int(np.isfinite(nl).sum()), "p": p_greater(o, nl)}
+    return {"n_common_runs": n_runs, "n_trs": int(T),
+            "locking_mean_r": stat, "locking_null_mean": float(np.nanmean(null_stat)),
+            "locking_p": p_greater(stat, null_stat),
+            "locking_fwer_threshold": thr,
+            "n_matched_time_locked": int(np.sum(fwer)),
+            "n_matched_time_locked_pointwise": int(np.sum(pointwise)),
+            "per_pair_locking_r": r.tolist(),
+            "per_pair_time_locked": fwer,
+            "per_pair_time_locked_pointwise": pointwise,
+            "matched_vs_relabelled": {"relabelled_mean": float(np.nanmean(relabel)),
+                                      "p": p_greater(stat, relabel)},
+            "matched_rank_in_row_and_column_median": float(np.median(rank_in_row_col)),
+            "residual_matches_time_locked": fwer_res,
+            "residual_locking_fwer_threshold": thr_res,
+            "trimmed_10": {"locking_mean_r": stat_t,
+                           "locking_null_mean": float(np.nanmean(null_t_stat)),
+                           "locking_p": p_greater(stat_t, null_t_stat)},
             "rank_agreement": agree}
 
 
-def ceiling(subjects, args, rng):
-    """Same pipeline on split-half fits (active states, full scope)."""
-    out = {}
+def ceiling(subjects, args):
+    """Split-half fits: all active states, and the half-fit states matched to the
+    final fit's content-eligible states (same Hungarian, full scope)."""
+    out = {"active": {}, "eligible_matched": {}}
+    sub_sets = {}
     for d in subjects:
         hA, hB = d["halves"]["A"], d["halves"]["B"]
+        rng = np.random.default_rng(np.random.SeedSequence([args.seed, 77, int(d["sub"][-1])]))
         Ma, Mb = hA["maps"][hA["active"]], hB["maps"][hB["active"]]
         r = match(corr_matrix(Ma, Mb))[2]
-        null, _, _ = pair_null(Ma, Mb, args.n_perm_ceiling, rng, "configuration")
-        out[f"{d['sub']}_A_vs_{d['sub']}_B"] = {"median_r": float(np.median(r)),
-                                                 "null_mean": float(null.mean())}
+        null = pair_null(Ma, Mb, args.n_perm_ceiling, rng, "configuration")[0]
+        out["active"][f"{d['sub']}_A_vs_{d['sub']}_B"] = {"median_r": float(np.median(r)),
+                                                           "null_mean": float(null.mean())}
+        E = d["maps"][d["eligible"]]
+        sel = {}
+        for h, hh in (("A", hA), ("B", hB)):
+            hm = hh["maps"][hh["active"]]
+            ie, ih, _ = match(corr_matrix(E, hm))
+            sel[h] = hm[ih[np.argsort(ie)]]
+        sub_sets[d["sub"]] = sel
+        r = match(corr_matrix(sel["A"], sel["B"]))[2]
+        out["eligible_matched"][f"{d['sub']}_A_vs_{d['sub']}_B"] = {"median_r": float(np.median(r))}
     for da, db in combinations(subjects, 2):
         hA, hB = da["halves"]["A"], db["halves"]["B"]
         r = match(corr_matrix(hA["maps"][hA["active"]], hB["maps"][hB["active"]]))[2]
-        out[f"{da['sub']}_A_vs_{db['sub']}_B"] = {"median_r": float(np.median(r))}
+        out["active"][f"{da['sub']}_A_vs_{db['sub']}_B"] = {"median_r": float(np.median(r))}
+        r = match(corr_matrix(sub_sets[da["sub"]]["A"], sub_sets[db["sub"]]["B"]))[2]
+        out["eligible_matched"][f"{da['sub']}_A_vs_{db['sub']}_B"] = {"median_r": float(np.median(r))}
     return out
+
+
+def run_params(args):
+    keep = ("parcellation", "vt", "n_perm", "n_lock", "seed")
+    return {k: getattr(args, k) for k in keep}
+
+
+def git_head():
+    try:
+        return subprocess.check_output(
+            ["git", "-C", os.path.dirname(os.path.abspath(__file__)), "rev-parse", "HEAD"],
+            text=True).strip()
+    except Exception:
+        return None
+
+
+def write_json(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path + ".part", "w") as f:
+        json.dump(obj, f, indent=1, default=float)
+    os.replace(path + ".part", path)
+
+
+def bh_table(results, all_pairs, getter):
+    """BH across pairs for one p-family; pairs where the family is absent are skipped."""
+    keys, ps = [], []
+    for k in all_pairs:
+        try:
+            p_ = getter(results[k])
+        except KeyError:
+            continue
+        if p_ is not None and np.isfinite(p_):
+            keys.append(k)
+            ps.append(p_)
+    if not ps:
+        return {}
+    q = benjamini_hochberg(np.array(ps))
+    return {k: {"p": float(p_), "q": float(qq)} for k, p_, qq in zip(keys, ps, q)}
 
 
 def main():
@@ -468,48 +693,64 @@ def main():
     data = {s: load_subject(s, args.parcellation, args.vt) for s in SUBJECTS}
     out_root = os.path.join(S, "output", "05h_participant_state_matching", args.parcellation)
     all_pairs = [f"{a}_{b}" for a, b in combinations(SUBJECTS, 2)]
-    todo = args.pairs or all_pairs
-    for key in todo:
+    params = run_params(args)
+    commit = git_head()
+    for key in args.pairs or all_pairs:
         a, b = key.split("_")
         path = os.path.join(out_root, "pairs", key, "summary.json")
         if os.path.exists(path) and not args.force:
-            continue
+            with open(path) as f:
+                old = json.load(f)
+            if old.get("params") == params and old.get("code_commit") == commit:
+                continue
+            logger.info("%s: existing summary has other params or code; recomputing", key)
         t0 = time.time()
-        rng = np.random.default_rng(np.random.SeedSequence(
-            [args.seed, int(a[-1]), int(b[-1])]))
         others = [data[s] for s in SUBJECTS if s not in (a, b)]
-        res = analyse_pair(data[a], data[b], others, groups, args, rng)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path + ".part", "w") as f:
-            json.dump(res, f, indent=1, default=float)
-        os.replace(path + ".part", path)
+        res = analyse_pair(data[a], data[b], others, groups, args)
+        res["params"] = params
+        res["code_commit"] = commit
+        write_json(path, res)
         logger.info("%s done in %.0f s", key, time.time() - t0)
     if args.pairs:
         return
-    # cross-pair tables (BH across the 15 pairs within each variant)
     results = {}
     for key in all_pairs:
         with open(os.path.join(out_root, "pairs", key, "summary.json")) as f:
             results[key] = json.load(f)
-    table = {}
-    for var in results[all_pairs[0]]["variants"]:
-        ps = [results[k]["variants"][var]["configuration"]["p"] for k in all_pairs
-              if var in results[k]["variants"]]
-        q = benjamini_hochberg(np.array(ps))
-        table[var] = {k: {"median_r": results[k]["variants"][var]["median_r"],
-                          "p_configuration": results[k]["variants"][var]["configuration"]["p"],
-                          "q_configuration": float(qq)}
-                      for k, qq in zip([k for k in all_pairs if var in results[k]["variants"]], q)}
-    rng = np.random.default_rng(np.random.SeedSequence([args.seed, 77]))
-    summary = {"pairs": table, "ceiling": ceiling(list(data.values()), args, rng),
+        if results[key].get("params") != params or results[key].get("code_commit") != commit:
+            raise RuntimeError(f"{key}: pair summary does not match this run's params/code")
+    variants = sorted({v for k in all_pairs for v in results[k]["variants"]})
+    elig = "eligible|full|raw"
+    tables = {"configuration": {}, "families": {}}
+    for var in variants:
+        tables["configuration"][var] = bh_table(
+            results, all_pairs, lambda r: r["variants"][var]["configuration"]["p"])
+    families = {
+        "pc_blocks": lambda r: r["variants"][elig]["pc_blocks"]["p"],
+        "network_collapse": lambda r: r["variants"][elig]["network_collapse"]["configuration"]["p"],
+        "within_network_residual": lambda r: r["variants"][elig]["within_network_residual"]["configuration"]["p"],
+        "raw_cosine": lambda r: r["variants"][elig]["raw_cosine"]["configuration"]["p"],
+        "shared_removed_3": lambda r: r["variants"][elig]["shared_removed"]["3"]["configuration"]["p"],
+        "shared_removed_3_plus_mean": lambda r: r["variants"][elig]["shared_removed"]["3_plus_mean"]["configuration"]["p"],
+        "locking": lambda r: r["variants"][elig]["validation"]["locking_p"],
+        "locking_trimmed_10": lambda r: r["variants"][elig]["validation"]["trimmed_10"]["locking_p"],
+        "locking_matched_vs_relabelled": lambda r: r["variants"][elig]["validation"]["matched_vs_relabelled"]["p"],
+        "rank_recurrence": lambda r: r["variants"][elig]["validation"]["rank_agreement"]["recurrence"]["p"],
+        "rank_fo": lambda r: r["variants"][elig]["validation"]["rank_agreement"]["fo"]["p"],
+        "rank_dwell": lambda r: r["variants"][elig]["validation"]["rank_agreement"]["dwell"]["p"],
+        "collisions_more_a_to_b": lambda r: r["variants"][elig]["collisions"]["p_more_a_to_b"],
+        "collisions_more_b_to_a": lambda r: r["variants"][elig]["collisions"]["p_more_b_to_a"],
+    }
+    for name, getter in families.items():
+        tables["families"][name] = bh_table(results, all_pairs, getter)
+    summary = {"bh_across_pairs": tables, "ceiling": ceiling(list(data.values()), args),
                "n_states": {s: {"active": len(d["active"]), "eligible": len(d["eligible"]),
                                 "onset": len(d["onset"])} for s, d in data.items()},
                "max_abs_pca_mean": {s: d["max_abs_pca_mean"] for s, d in data.items()},
-               "params": vars(args),
+               "params": params, "n_perm_ceiling": args.n_perm_ceiling, "code_commit": commit,
                "provenance": {"python": platform.python_version(), "numpy": np.__version__,
                               "time": time.strftime("%Y-%m-%dT%H:%M:%S")}}
-    with open(os.path.join(out_root, "cross_subject_summary.json"), "w") as f:
-        json.dump(summary, f, indent=1, default=float)
+    write_json(os.path.join(out_root, "cross_subject_summary.json"), summary)
 
 
 if __name__ == "__main__":

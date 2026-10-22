@@ -77,12 +77,19 @@ def test_bootstrap_reference_drops_for_short_visits():
     mu = rng.normal(size=10)
     X = {"r": mu + rng.normal(scale=2.0, size=(4000, 10))}
     windows = [("r", i * 40, 40) for i in range(100)]
-    parent_map = X["r"].mean(axis=0) @ comps
-    long_ref, _ = m.bootstrap_parent_reference(windows, X, [30] * 20, comps,
-                                               parent_map, 300, rng)
-    short_ref, _ = m.bootstrap_parent_reference(windows, X, [2] * 5, comps,
-                                                parent_map, 300, rng)
+    long_ref, _ = m.bootstrap_parent_reference(windows, X, [30] * 20, comps, 300, rng)
+    short_ref, _ = m.bootstrap_parent_reference(windows, X, [2] * 5, comps, 300, rng)
     assert short_ref < long_ref <= 1.0
+
+
+def test_bootstrap_handles_visits_longer_than_any_parent_segment():
+    """No zero-variance fallback: windows can span parent segment joins."""
+    rng = np.random.default_rng(9)
+    comps = np.linalg.qr(rng.normal(size=(156, 10)))[0].T
+    X = {"r": rng.normal(size=(400, 10))}
+    windows = [("r", i * 4, 3) for i in range(100)]           # 3-TR parent segments
+    ref, r = m.bootstrap_parent_reference(windows, X, [8, 8, 8], comps, 200, rng)
+    assert np.std(r) > 0 and ref < 1.0
 
 
 def test_nn_reference_is_percentile_of_nearest_neighbour_r():
@@ -121,3 +128,33 @@ def test_empirical_pc_means_and_active_states():
     assert means[1, 0] == pytest.approx((5 + 5 + 4) / 6)
     assert np.isnan(means[2, 0])
     assert m.active_states(decoded, 3).tolist() == [0, 1]
+
+
+def test_excess_return_stratified_by_run_is_calibrated():
+    """Neighbours that differ between runs must not look like interruptions."""
+    rng = np.random.default_rng(11)
+    ps_strat, ps_pooled = [], []
+    for _ in range(150):
+        a, b, runs = [], [], []
+        for r in range(6):
+            pool = rng.choice(20, size=2, replace=False)       # run-specific neighbours
+            k = 6
+            a += list(rng.choice(pool, size=k)); b += list(rng.choice(pool, size=k))
+            runs += [r] * k
+        ps_strat.append(m.excess_return_test(a, b, 199, rng, strata=runs)[2])
+        ps_pooled.append(m.excess_return_test(a, b, 199, rng)[2])
+    assert np.mean(np.array(ps_strat) < 0.05) <= 0.09
+    assert np.mean(np.array(ps_pooled) < 0.05) > 0.3           # pooling is anti-conservative
+
+
+def test_excess_return_expectation_equals_permutation_mean():
+    rng = np.random.default_rng(12)
+    a = rng.integers(0, 4, 60); b = rng.integers(0, 4, 60); runs = np.repeat(np.arange(6), 10)
+    obs, exp, _ = m.excess_return_test(a, b, 1, rng, strata=runs)
+    sims = []
+    for _ in range(4000):
+        bp = b.copy()
+        for g in range(6):
+            idx = np.flatnonzero(runs == g); bp[idx] = b[idx][rng.permutation(idx.size)]
+        sims.append(np.mean(a == bp))
+    assert exp == pytest.approx(np.mean(sims), abs=0.005)

@@ -30,16 +30,19 @@ and their references on one footing. The model's own back-projected means
 
 Measures per state s:
   excess return  share of uncensored visits with a == b, against its value if
-                 a and b were independent given s (sum_j P(a=j) P(b=j)),
-                 tested by permuting b across s's visits.
+                 a and b were independent given s within each run, tested by
+                 permuting b across s's visits within each run (so neighbours
+                 that change across runs or seasons do not create excess).
   r_parent       r(s, parent), parent = most frequent a == b neighbour.
   ref_nn         95th percentile, over eligible states, of each eligible
                  state's largest r with another eligible state: how similar
                  two distinct states can be in this fit.
-  ref_boot       5th percentile of r(parent map, parent map rebuilt from
-                 random parent TR windows with the same lengths as s's
-                 visits): how low r(s, parent) can fall from estimation noise
-                 alone when s is short.
+  ref_boot       5th percentile of r(mean of random parent TR windows with
+                 the same lengths as s's visits, mean of the parent's other
+                 TRs): how low r(s, parent) can fall from estimation noise
+                 alone when s is short. r_parent_corrected divides r_parent by
+                 the median of that bootstrap r (a noise-corrected sensitivity
+                 value, reported but not used by the rules).
   dR2            OLS of s's map on its two most frequent through-partners
                  (a != b), no intercept, weights unconstrained: R2 of both
                  minus the larger single-partner R2. Null: the same rule
@@ -54,7 +57,8 @@ Rules (fixed before results):
   B if p_through >= 0.5 AND dR2 > 95th percentile of the eligible-state null.
       The null holds one value per eligible state (~15-30), so B is a
       descriptive cut with no multiplicity correction.
-  B is labelled "HRF blend" when r_switch >= sqrt(R2 of the blend).
+  B is labelled "HRF blend" when r_switch >= sqrt(R2 of the blend), and
+      left untested when fewer than 10 direct partner switches exist.
 
 Inputs (frozen, under $SCRATCH_DIR/output):
     04_combined_hdphmm/{parc}/{sub}/final/vt{vt}/{decoded_states.pkl,
@@ -93,6 +97,7 @@ logger = logging.getLogger("05g_excluded_state_check")
 ELIGIBLE = "eligible_for_content_analysis"
 ONSET_FLAGS = ("run_onset", "a_anchored", "b_anchored")
 ACTIVE_FO = 0.02  # active = FO > 0.02 in at least one run (05a / recurrence_utils)
+MIN_SWITCHES = 10  # direct partner switches needed to test the HRF-blend label
 
 
 # ---------------------------------------------------------------- sequences
@@ -123,22 +128,36 @@ def visit_table(decoded_by_run):
     return pd.DataFrame(rows, columns=["run", "state", "start", "length", "prev", "next"])
 
 
-def excess_return_test(a, b, n_perm, rng):
+def excess_return_test(a, b, n_perm, rng, strata=None):
     """Return share (a == b), its independence expectation, and a one-sided p.
 
     a, b: neighbour labels of the uncensored visits. The null permutes b
-    across visits, which keeps both marginals and breaks only the pairing.
+    across the visits of the same stratum (run), which keeps each run's
+    neighbour marginals and breaks only the pairing. Stratifying matters for
+    states whose neighbours change across runs or seasons: pooling all runs
+    would make a == b look in excess without any interruption. The
+    expectation is the permutation mean, sum over strata of
+    sum_j n_a(j) n_b(j) / n_stratum, divided by the number of visits.
     """
     a = np.asarray(a)
     b = np.asarray(b)
     n = a.size
+    strata = np.zeros(n, dtype=int) if strata is None else np.asarray(strata)
+    groups = [np.flatnonzero(strata == g) for g in np.unique(strata)]
     obs = float(np.mean(a == b))
-    pa = Counter(a.tolist())
-    pb = Counter(b.tolist())
-    expected = float(sum(pa[j] * pb.get(j, 0) for j in pa) / (n * n))
+    expected = 0.0
+    for idx in groups:
+        pa = Counter(a[idx].tolist())
+        pb = Counter(b[idx].tolist())
+        expected += sum(pa[j] * pb.get(j, 0) for j in pa) / idx.size
+    expected = float(expected / n)
     null = np.empty(n_perm)
+    bp = b.copy()
     for i in range(n_perm):
-        null[i] = np.mean(a == rng.permutation(b))
+        for idx in groups:
+            if idx.size > 1:
+                bp[idx] = b[idx][rng.permutation(idx.size)]
+        null[i] = np.mean(a == bp)
     p = float((1 + np.sum(null >= obs)) / (1 + n_perm))
     return obs, expected, p
 
@@ -184,37 +203,35 @@ def nn_reference(maps_eligible, q=95):
 
 
 def bootstrap_parent_reference(parent_windows, X_by_run, visit_lengths, comps,
-                               parent_map, n_boot, rng, q=5):
-    """q-th percentile of r(parent map, parent map from s-shaped windows).
+                               n_boot, rng, q=5):
+    """q-th percentile of r(parent map from s-shaped windows, rest of parent).
 
-    parent_windows: list of (run, start, length) parent segments. For each
-    draw and each of s's visit lengths L, pick a parent segment uniformly
-    among those at least L long (or the longest one if none is) and a random
-    L-window inside it; the draw's map is the mean over all picked TRs.
+    parent_windows: list of (run, start, length) parent segments. The
+    parent's TRs are joined in segment order, and for each draw and each of
+    s's visit lengths L a random L-TR window is taken from that joined
+    sequence (windows can cross segment joins, so a state whose visits are
+    longer than any single parent segment is still matched in length). The
+    draw's short map is the mean over the picked TRs; it is compared with the
+    mean over the parent's remaining TRs, so the two maps share no TRs, as s
+    and its parent do not.
     """
-    # Window sums from one prefix-sum array over the parent's own TRs.
-    lens = np.array([w[2] for w in parent_windows])
     seg_rows = [X_by_run[run][start:start + length] for run, start, length in parent_windows]
-    starts = np.concatenate([[0], np.cumsum(lens)[:-1]])
-    csum = np.vstack([np.zeros((1, seg_rows[0].shape[1])),
-                      np.cumsum(np.vstack(seg_rows), axis=0)])
-    longest = int(np.argmax(lens))
-    total = np.zeros((n_boot, csum.shape[1]))
+    Xp = np.vstack(seg_rows)
+    N = Xp.shape[0]
+    csum = np.vstack([np.zeros((1, Xp.shape[1])), np.cumsum(Xp, axis=0)])
+    total_all = csum[-1]
+    total = np.zeros((n_boot, Xp.shape[1]))
     n_rows = 0
     for L, count in Counter(int(v) for v in visit_lengths).items():
-        ok = np.flatnonzero(lens >= L)
-        if ok.size:
-            j = rng.choice(ok, size=(n_boot, count))
-            L_eff = np.full(j.shape, L)
-        else:
-            j = np.full((n_boot, count), longest)
-            L_eff = np.full(j.shape, int(lens[longest]))
-        off = (rng.random(j.shape) * (lens[j] - L_eff + 1)).astype(int)
-        lo = starts[j] + off
-        total += (csum[lo + L_eff] - csum[lo]).sum(axis=1)
-        n_rows += int(L_eff[0, 0]) * count
-    boot_maps = (total / n_rows) @ comps
-    r = corr_matrix(boot_maps, parent_map[None, :]).ravel()
+        L = min(L, N - 1)
+        lo = rng.integers(0, N - L + 1, size=(n_boot, count))
+        total += (csum[lo + L] - csum[lo]).sum(axis=1)
+        n_rows += L * count
+    if n_rows >= N:
+        raise ValueError("short-state windows cover the whole parent")
+    short_maps = (total / n_rows) @ comps
+    rest_maps = ((total_all[None, :] - total) / (N - n_rows)) @ comps
+    r = np.einsum("ij,ij->i", zrows(short_maps), zrows(rest_maps)) / comps.shape[1]
     return float(np.percentile(r, q)), r
 
 
@@ -359,7 +376,10 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         g = unc[unc["state"] == s]
         return g["prev"].to_numpy(), g["next"].to_numpy()
 
-    # selection-matched dR2 null: the T rule applied to eligible states
+    def seq_runs(s):
+        return unc.loc[unc["state"] == s, "run"].to_numpy()
+
+    # selection-matched dR2 null: the B rule applied to eligible states
     null_dR2 = []
     for e in eligible:
         a, b = seq(e)
@@ -402,13 +422,14 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         row["closest_eligible_model"] = int(eligible[int(np.argmax(elig_r_mod))])
 
         nan_keys = ("return_share", "return_expected", "p_excess_return", "p_through",
-                    "parent", "r_parent", "ref_boot", "var_logratio", "var_spearman",
+                    "parent", "r_parent", "ref_boot", "boot_r_median", "r_parent_corrected",
+                    "var_logratio", "var_spearman",
                     "partner_a", "partner_b", "r2_blend", "w_a", "w_b", "r_a", "r_b",
                     "dR2", "r_switch", "n_switches")
         row.update({k: np.nan for k in nan_keys})
 
         if a.size >= args.min_visits:
-            obs, exp, p = excess_return_test(a, b, args.n_perm, rng)
+            obs, exp, p = excess_return_test(a, b, args.n_perm, rng, strata=seq_runs(s))
             row.update(return_share=obs, return_expected=exp, p_excess_return=p,
                        p_through=1.0 - obs)
             ret = Counter(int(x) for x, y in zip(a, b) if x == y)
@@ -419,8 +440,14 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
                 pw = visits[visits["state"] == parent][["run", "start", "length"]]
                 pw = list(pw.itertuples(index=False, name=None))
                 vlen = all_v["length"].to_numpy()
-                row["ref_boot"], _ = bootstrap_parent_reference(
-                    pw, X_by_run, vlen, comps, emp_maps[parent], args.n_boot, rng, q=5)
+                row["ref_boot"], boot_r = bootstrap_parent_reference(
+                    pw, X_by_run, vlen, comps, args.n_boot, rng, q=5)
+                # sensitivity: r_parent corrected for the short map's noise
+                # (boot r ~ sqrt of the short map's reliability)
+                med = float(np.median(boot_r))
+                row["boot_r_median"] = med
+                row["r_parent_corrected"] = (float(min(1.0, row["r_parent"] / med))
+                                             if med > 0 else np.nan)
                 lv_s, lv_p = np.log(d["covars"][s]), np.log(d["covars"][parent])
                 row["var_logratio"] = float(np.mean(lv_s - lv_p))
                 row["var_spearman"] = float(spearmanr(lv_s, lv_p)[0])
@@ -442,8 +469,14 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         df.loc[testable, "q_excess_return"] = benjamini_hochberg(
             df.loc[testable, "p_excess_return"].to_numpy())
     df["class"] = [classify(r, args.alpha) for r in df.to_dict("records")]
-    df["hrf_blend"] = (df["class"].isin(["B", "I/B"])
-                       & (df["r_switch"] >= np.sqrt(df["r2_blend"].clip(lower=0))))
+    # HRF blend: a B state whose map is as close to the plain-switch average
+    # as to its blend fit; untested (None) when fewer than MIN_SWITCHES direct
+    # switches exist between its partners
+    is_b = df["class"].isin(["B", "I/B"])
+    enough = df["n_switches"].fillna(0) >= MIN_SWITCHES
+    blend = df["r_switch"] >= np.sqrt(df["r2_blend"].clip(lower=0))
+    df["hrf_blend"] = [(bool(bl) if en else None) if ib else False
+                       for ib, en, bl in zip(is_b, enough, blend)]
 
     summary = {
         "sub_id": sub_id, "parcellation": parc, "vt": vt,
@@ -452,7 +485,11 @@ def analyse_subject(sub_id, parc, vt, scratch_dir, args):
         "class_counts": df["class"].value_counts().to_dict(),
         "class_by_category": {c: g["class"].value_counts().to_dict()
                               for c, g in df.groupby("summary_category")},
-        "n_hrf_blend": int(df["hrf_blend"].sum()),
+        "n_hrf_blend": int(sum(v is True for v in df["hrf_blend"])),
+        "n_hrf_blend_untested": int(sum(v is None for v in df["hrf_blend"])),
+        "n_interruption_if_noise_corrected": int(
+            ((df["q_excess_return"] < args.alpha)
+             & (df["r_parent_corrected"] >= ref_nn)).sum()),
         "ref_nn": ref_nn, "dR2_null_p95": dR2_p95,
         "dR2_null": null_dR2.tolist(),
         "n_pcs": d["n_pcs"], "max_abs_pca_mean": d["max_abs_pca_mean"],

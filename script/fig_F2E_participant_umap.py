@@ -17,10 +17,10 @@ decision 2026-10-22).
 
 | Panel | Content | Chart family | Output |
 |---|---|---|---|
-| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every matched pair whose full-map correlation exceeds the 95th percentile of the max-statistic configuration null; dark lines also co-occur in time (within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
+| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every matched pair whose full-map correlation exceeds the 95th percentile of the max-statistic configuration null; dark lines are also time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but lines for matched pairs that survive removal of the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
-| S B | All active states, colour = participant, marker = 05e category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, unused/rare), area = fractional occupancy | scatter | .../figS_participant_umap_B_active_categories |
+| S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, unused/rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), area = fractional occupancy | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
 | legends | participant colours; category markers; recurrence colorbar | legend | fig2_E_legend_participants, .../figS_participant_umap_legend_* |
@@ -166,21 +166,24 @@ def mixing(SUBJECTS, SUPP, json, np, state_maps, state_table):
 @app.cell
 def load_matches(PARC, SCRATCH, json, pd):
     _root = SCRATCH / "output" / "05h_participant_state_matching" / PARC / "pairs"
+    _files = sorted(_root.glob("*/summary.json"))
+    if len(_files) != 15:
+        raise RuntimeError(f"expected 15 participant-pair summaries, found {len(_files)}")
     _rows, _full_rows = [], []
-    for _d in sorted(_root.iterdir()):
-        _sa, _sb = _d.name.split("_")
-        _v = json.loads((_d / "summary.json").read_text())["variants"]["eligible|full|raw"]
-        _locked = {(m["a"], m["b"]): t for m, t in
-                   zip(_v["matches_full"], _v["validation"]["per_pair_time_locked"])}
-        for _m in _v["shared_removed"]["3"]["matches"]:
-            if _m["beyond_max_null95"]:
-                _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
-                              "r_residual": _m["r"],
-                              "time_locked": bool(_locked.get((_m["a"], _m["b"]), False))})
-        for _m in _v["matches_full"]:
+    for _f in _files:
+        _sa, _sb = _f.parent.name.split("_")
+        _v = json.loads(_f.read_text())["variants"]["eligible|full|raw"]
+        _val = _v["validation"]
+        # time-locked = family-wise flag (max over matched pairs of the shift null)
+        for _m, _t in zip(_v["matches_full"], _val["per_pair_time_locked"]):
             if _m["beyond_max_null95"]:
                 _full_rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
-                                   "r": _m["r"], "time_locked": bool(_locked[(_m["a"], _m["b"])])})
+                                   "r": _m["r"], "time_locked": bool(_t)})
+        for _m, _t in zip(_v["shared_removed"]["3"]["matches"],
+                          _val["residual_matches_time_locked"]):
+            if _m["beyond_max_null95"]:
+                _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
+                              "r_residual": _m["r"], "time_locked": bool(_t)})
     residual_match_table = pd.DataFrame(_rows)
     full_match_table = pd.DataFrame(_full_rows)
     print(f"{len(full_match_table)} full-map matches pass; "
