@@ -280,6 +280,9 @@ The analysis pipeline is organized around a combined cross-season HMM:
    - `04_combined_hdphmm.py` / `.sh`: Fit combined Gaussian HMM with sticky HDP-HMM transition priors (fit / select / loso_fit modes)
    - `05a_recurrence_analysis.py` / `.sh`: Score state recurrence across episodes (continuous gradient)
    - `05b_visualize_recurring_states.py` / `.sh`: Cortical + subcortical surface plots (yabplot)
+   - `05g_excluded_state_check.py` / `.sh`: Checks whether the states excluded from content analyses (other than run-onset-anchored) are interruptions of, or blends between, content-eligible states (within participant).
+   - `05h_participant_state_matching.py` / `.sh`: Matches content-eligible states between participant pairs (Hungarian on parcel-space mean maps) against within-span rotation and PC-block nulls, with network-collapse and shared-component baselines, time-locked co-occurrence, and a split-half ceiling. Per-pair inference only.
+   - `fig_F2E_participant_umap.py`: Fig 2E pooled UMAP of all participants' state maps with matched-pair lines (display only), plus supplementary panels.
    - `06a_state_temp_dynamics.py` / `.sh`: Dwell time distributions, transition matrices, recurrence assortativity. Supports `--mode cross_subject_summary` for multi-panel aggregate figure.
    - `06b_transition_structure.py` / `.sh`: Graph topology, transition asymmetry, FC-transition correlation, MFPT landscape.
    - `06c_higher_order_transitions.py` / `.sh`: Model adequacy diagnostic (conditional entropy, BIC comparison)

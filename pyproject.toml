@@ -26,6 +26,7 @@ dependencies = [
   "pyzmq>=27.1.0",
   "statsmodels>=0.13.5",
   "networkx",
+  "umap-learn>=0.5.7",
 ]
 
 [project.optional-dependencies]
