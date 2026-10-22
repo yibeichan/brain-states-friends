@@ -99,6 +99,7 @@ declare -A STAGE_MAP=(
     ["06b"]="06b_transition_structure"
     ["06c"]="06c_higher_order_transitions"
     ["06d"]="06d_preserved_chains"
+    ["06e"]="06e_transition_modules"
     ["08c"]="08c_transformer_features"
     ["08c_w1"]="08c_transformer_features_sweep_w1"
     ["08c_w3"]="08c_transformer_features_sweep_w3"

@@ -283,6 +283,7 @@ The analysis pipeline is organized around a combined cross-season HMM:
    - `06a_state_temp_dynamics.py` / `.sh`: Dwell time distributions, transition matrices, recurrence assortativity. Supports `--mode cross_subject_summary` for multi-panel aggregate figure.
    - `06b_transition_structure.py` / `.sh`: Graph topology, transition asymmetry, FC-transition correlation, MFPT landscape.
    - `06c_higher_order_transitions.py` / `.sh`: Model adequacy diagnostic (conditional entropy, BIC comparison)
+   - `06e_transition_modules.py` / `.sh`: Transition modules (R3): directed modularity of the transition graph against rewiring, segment-shuffle, non-modular-chain and similarity-predicted nulls; LOSO replication; module characterisation; pre-registered R3 mapping. `--mode run` (SLURM array, resumable chunks) then `--mode aggregate`.
    - `08c_transformer_features.py` / `.sh`: Layer-wise transformer feature extraction (TRIBEv2-validated: Wav2VecBert, DINOv2-large, LLaMA 3.2 3B). GPU required, `uv sync --extra torch`. Supports Friends, M10, HP, PP.
    - `08d_transformer_state_correspondence.py` / `.sh`: Transformer-state correspondence (D1 depth, D2 selectivity, D3a transfer)
 
