@@ -42,6 +42,7 @@ main/supplementary boundary.
 | `05e_temporal_trend_a4.py` | State-flag synthesis (drift-anchored taxonomy / eligibility) | MAIN | Methods §4 (state classification) |
 | `06a_state_temp_dynamics.py` | Dwell-time distributions, transition matrices | MAIN | R3, Fig 3 |
 | `06b_transition_structure.py` | Graph topology, FC-Mantel, MFPT landscape | MAIN | R3, Fig 3 |
+| `06e_transition_modules.py` | Transition-graph modularity against calibrated nulls; module tests | MAIN | R3, Fig 3 |
 | `08c_transformer_features.py` | Layer-wise transformer features (GPU) | MAIN | R4b, Methods §5 |
 | `08d_transformer_depth.py` | D1 representational depth per layer | MAIN | R4b, Fig 5 |
 | `08e_transformer_cross_stim_aggregate.py` | Cross-stimulus aggregate depth profile | MAIN | R4b cross-stim, Fig 5 |
