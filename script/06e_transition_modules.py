@@ -703,9 +703,93 @@ def aggregate(base_seed, n_perm_char, n_dwell, n_lock):
     logger.info("R3 mapping outcome: %s (modular: %s)", outcome, modular)
 
 
+# --------------------------------------------------------------------------
+# Calibration of the N1 test (separate job, run before reading any p-value)
+# --------------------------------------------------------------------------
+
+CAL_GENERATORS = ("N1_exchangeable", "chain_nonmodular", "sbm_ratio1.5", "sbm_ratio2.0")
+CAL_GRAPHS, CAL_CHUNK, CAL_DRAWS, CAL_SEEDS = 200, 20, 200, list(range(10))
+
+
+def calibration_tasks():
+    return [(g, c) for g in CAL_GENERATORS for c in range(CAL_GRAPHS // CAL_CHUNK)]
+
+
+def _sbm_graph(W_ref, ratio, rng, k=4):
+    """Planted modules matched to W_ref's size, density and weight spread:
+    within-module edge probability `ratio` times the between-module one."""
+    n = W_ref.shape[0]
+    density = (W_ref > 0).sum() / (n * (n - 1))
+    lab = rng.permutation(np.arange(n) % k)
+    same = lab[:, None] == lab[None, :]
+    frac_same = (same.sum() - n) / (n * (n - 1))
+    p_out = density / (frac_same * ratio + (1 - frac_same))
+    A = rng.random((n, n)) < np.where(same, ratio * p_out, p_out)
+    np.fill_diagonal(A, False)
+    w = W_ref[W_ref > 0]
+    return np.where(A, rng.choice(w, size=(n, n)), 0.0)
+
+
+def run_calibration(task_id, base_seed, ref_sub="sub-01"):
+    gen, chunk = calibration_tasks()[task_id]
+    out = os.path.join(scratch_dir(), "output", "06e_transition_modules", PARC,
+                       "calibration", gen)
+    os.makedirs(out, exist_ok=True)
+    path = os.path.join(out, f"chunk_{chunk:03d}.npz")
+    if os.path.exists(path):
+        return
+    d = load_subject(ref_sub)
+    W_ref = tm.weight_matrix(d["P"], d["nodes"], THR)
+    rng = np.random.default_rng(np.random.SeedSequence(
+        [base_seed, 99, variant_seed(gen), chunk]))
+    if gen == "chain_nonmodular":
+        Q, _, _ = tm.nonmodular_chain(d["P"], d["nodes"])
+        loc = {s: k for k, s in enumerate(d["nodes"])}
+        runs = [r for r in sorted(d["decoded"]) if d["decoded"][r][0] in loc]
+        lengths = [d["decoded"][r].size for r in runs]
+        starts = [loc[int(d["decoded"][r][0])] for r in runs]
+    p_vals, effects = [], []
+    for _ in range(CAL_CHUNK):
+        if gen == "N1_exchangeable":
+            W = tm.rewire_null(W_ref, rng)[0]
+        elif gen == "chain_nonmodular":
+            C = tm.simulate_chain_counts(Q, lengths, starts, rng)
+            W = tm.weight_matrix(tm.counts_to_P(C), list(range(Q.shape[0])), THR)
+        else:
+            W = _sbm_graph(W_ref, float(gen.split("ratio")[1]), rng)
+        q_obs = tm.best_modularity(W, CAL_SEEDS)[0]
+        qn = np.array([tm.best_modularity(tm.rewire_null(W, rng)[0], CAL_SEEDS)[0]
+                       for _ in range(CAL_DRAWS)])
+        p_vals.append((1 + np.sum(qn >= q_obs)) / (1 + CAL_DRAWS))
+        effects.append(q_obs - qn.mean())
+    tmp = path + ".part.npz"
+    np.savez(tmp, p=np.array(p_vals), effect=np.array(effects))
+    os.replace(tmp, path)
+
+
+def calibration_summary():
+    from scipy.stats import binomtest
+    root = os.path.join(scratch_dir(), "output", "06e_transition_modules", PARC, "calibration")
+    out = {}
+    for gen in CAL_GENERATORS:
+        files = sorted(os.listdir(os.path.join(root, gen)))
+        parts = [np.load(os.path.join(root, gen, f)) for f in files if f.endswith(".npz")]
+        p = np.concatenate([x["p"] for x in parts])
+        e = np.concatenate([x["effect"] for x in parts])
+        k = int(np.sum(p < ALPHA))
+        ci = binomtest(k, p.size).proportion_ci(0.95)
+        out[gen] = {"n_graphs": int(p.size), "rate_p_lt_alpha": k / p.size,
+                    "rate_ci95": [float(ci.low), float(ci.high)],
+                    "effect_mean": float(e.mean()), "effect_p95": float(np.percentile(e, 95))}
+    with open(os.path.join(root, "calibration_summary.json"), "w") as f:
+        json.dump(out, f, indent=1)
+    logger.info("calibration: %s", {g: v["rate_p_lt_alpha"] for g, v in out.items()})
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--mode", choices=["tasks", "run", "aggregate"], required=True)
+    p.add_argument("--mode", choices=["tasks", "run", "aggregate", "calibrate",
+                                      "calibrate_tasks", "calibrate_summary"], required=True)
     p.add_argument("--task_id", type=int,
                    default=int(os.environ.get("SLURM_ARRAY_TASK_ID", "-1")))
     p.add_argument("--seed", type=int, default=0)
@@ -721,6 +805,15 @@ def main():
         if a.task_id < 0:
             raise SystemExit("--task_id or SLURM_ARRAY_TASK_ID required")
         run_task(a.task_id, a.seed)
+    elif a.mode == "calibrate_tasks":
+        for i, (g, c) in enumerate(calibration_tasks()):
+            print(i, g, c)
+    elif a.mode == "calibrate":
+        if a.task_id < 0:
+            raise SystemExit("--task_id or SLURM_ARRAY_TASK_ID required")
+        run_calibration(a.task_id, a.seed)
+    elif a.mode == "calibrate_summary":
+        calibration_summary()
     else:
         aggregate(a.seed, a.n_perm_char, a.n_dwell, a.n_lock)
 
