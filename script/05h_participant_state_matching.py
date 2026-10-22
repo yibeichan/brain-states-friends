@@ -50,9 +50,10 @@ Specificity (eligible states, all parcels):
   amplitude         uncentred cosine on the raw contrast maps (row z-scoring
                     removes each map's global mean and scale), and each matched
                     pair's global mean and SD
-Per-state claims use a max-statistic threshold (95th percentile of the largest
-matched r per null draw). Many-to-one collisions are counted in both
-directions against the same null.
+Inference is per pair (the median matched r). Individual matches are
+descriptive: in calibration a max-statistic threshold on the state-mixing null
+was liberal for heavy-tailed state maps, so no per-match flag is reported.
+Many-to-one collisions are counted in both directions against the same null.
 Checks with a different input (occupancy instead of maps), eligible states:
   time locking      Pearson r of matched states' binary occupancy over the runs
                     both participants watched (same run id = same episode half;
@@ -420,18 +421,15 @@ def variant_rng(args, a, b, key):
 
 
 def match_block(Ma, Mb, n_perm, rng, sa, sb, sim=corr_matrix):
-    """Matching, primary null, max-statistic flags and collisions."""
+    """Matching and the pair test under the primary null."""
     R = sim(Ma, Mb)
     ia, ib, r = match(R)
-    null, max_r, cab, cba, null_matchings = pair_null(Ma, Mb, n_perm, rng, NULL,
-                                                      sim=sim)
-    thr = float(np.percentile(max_r, 95))
+    null, _, _, _, null_matchings = pair_null(Ma, Mb, n_perm, rng, NULL, sim=sim)
     out = {"n_a": len(sa), "n_b": len(sb), "n_matched": int(r.size),
            "median_r": float(np.median(r)), "mean_r": float(r.mean()),
            NULL: {"null_mean": float(null.mean()), "p": p_greater(np.median(r), null)},
-           "max_null95": thr, "n_pairs_beyond_max_null95": int(np.sum(r > thr)),
-           "matches": [{"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j]),
-                        "beyond_max_null95": bool(R[i, j] > thr)} for i, j in zip(ia, ib)]}
+           "matches": [{"a": int(sa[i]), "b": int(sb[j]), "r": float(R[i, j])}
+                       for i, j in zip(ia, ib)]}
     return out, (R, ia, ib, r, null_matchings)
 
 
@@ -487,18 +485,15 @@ def analyse_pair(da, db, others, groups, cortex, args):
                         vw, _ = match_block(Ma - Ca, Mb - Cb, args.n_perm,
                                             variant_rng(args, a, b, key + "|within"), sa, sb)
                         v["network_collapse"] = {k_: vc[k_] for k_ in
-                                                 ("median_r", NULL,
-                                                  "n_pairs_beyond_max_null95")}
+                                                 ("median_r", NULL)}
                         v["within_network_residual"] = {k_: vw[k_] for k_ in
-                                                        ("median_r", NULL,
-                                                         "n_pairs_beyond_max_null95")}
+                                                        ("median_r", NULL)}
                         # amplitude kept: uncentred cosine on the raw contrast maps
                         vcos, _ = match_block(Ma, Mb, args.n_perm,
                                               variant_rng(args, a, b, key + "|cosine"), sa, sb,
                                               sim=cos_matrix)
                         v["raw_cosine"] = {k_: vcos[k_] for k_ in
-                                           ("median_r", NULL,
-                                            "n_pairs_beyond_max_null95")}
+                                           ("median_r", NULL)}
                         gm_a, gm_b = Ma.mean(1), Mb.mean(1)
                         v["global_mean"] = {
                             "matched_sign_disagreements": int(np.sum(
@@ -535,8 +530,7 @@ def analyse_pair(da, db, others, groups, cortex, args):
                     em, _ = match_block(Pa, Pb, args.n_perm,
                                         variant_rng(args, a, b, key + "|k3mean"), sa, sb)
                     shared["3_plus_mean"] = {k_: em[k_] for k_ in
-                                             ("median_r", NULL,
-                                              "n_pairs_beyond_max_null95")}
+                                             ("median_r", NULL)}
                     v["shared_removed"] = shared
                 if set_name == "active" and scope_name == "full" and not centred:
                     v["match_labels"] = [

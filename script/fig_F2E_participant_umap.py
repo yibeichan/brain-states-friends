@@ -17,9 +17,9 @@ decision 2026-10-22).
 
 | Panel | Content | Chart family | Output |
 |---|---|---|---|
-| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every matched pair whose full-map correlation exceeds the 95th percentile of the max-statistic state-mixing null; dark lines are also time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
+| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
-| S A | As 2E, but lines for matched pairs that survive removal of the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
+| S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
 | S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
@@ -215,21 +215,20 @@ def load_matches(PARC, SCRATCH, SUBJECTS, VT, json, pd):
         _val = _v["validation"]
         # time-locked = family-wise flag (max over matched pairs of the shift null);
         # 05h stores the flags in the order of the matches
+        # every Hungarian match is drawn: 05h tests pairs, not single matches
         for _m, _t in zip(_v["matches_full"], _val["per_pair_time_locked"], strict=True):
-            if _m["beyond_max_null95"]:
-                _full_rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
-                                   "r": _m["r"], "time_locked": bool(_t)})
+            _full_rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
+                               "r": _m["r"], "time_locked": bool(_t)})
         for _m, _t in zip(_v["shared_removed"]["3"]["matches"],
                           _val["residual_matches_time_locked"], strict=True):
-            if _m["beyond_max_null95"]:
-                _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
-                              "r_residual": _m["r"], "time_locked": bool(_t)})
+            _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
+                          "r": _m["r"], "time_locked": bool(_t)})
     residual_match_table = pd.DataFrame(_rows)
     full_match_table = pd.DataFrame(_full_rows)
-    print(f"{len(full_match_table)} full-map matches pass; "
-          f"{int(full_match_table['time_locked'].sum())} of them also time-locked")
-    print(f"{len(residual_match_table)} residual-map matches pass; "
-          f"{int(residual_match_table['time_locked'].sum())} of them also time-locked")
+    print(f"{len(full_match_table)} full-map matches; "
+          f"{int(full_match_table['time_locked'].sum())} of them time-locked")
+    print(f"{len(residual_match_table)} residual-map matches; "
+          f"{int(residual_match_table['time_locked'].sum())} of them time-locked")
     return (full_match_table, residual_match_table)
 
 
@@ -247,17 +246,20 @@ def style_helpers(plt):
 
 
 @app.cell
-def line_panel(SUBJECTS, SUBJ_COLORS, emb_elig, finish, plt, state_table):
+def line_panel(SUBJECTS, SUBJ_COLORS, emb_elig, finish, np, plt, state_table):
     def draw_match_lines(table, stem):
+        # line width and opacity grow with the matched r (clipped at 0)
         _t = state_table[state_table["eligible"]].reset_index(drop=True)
         _pos = {(r.sub, r.state): i for i, r in enumerate(_t.itertuples())}
         _fig, _ax = plt.subplots(figsize=(3.4, 3.4))
         if table is not None:
-            for _locked, _col, _lw, _z in ((False, "#BBBBBB", 0.4, 1), (True, "#4A4A4A", 0.6, 2)):
+            for _locked, _col, _z in ((False, "#BBBBBB", 1), (True, "#4A4A4A", 2)):
                 for _r in table[table["time_locked"] == _locked].itertuples():
                     _i, _j = _pos[(_r.sub_a, _r.a)], _pos[(_r.sub_b, _r.b)]
+                    _w = float(np.clip(_r.r, 0.0, 1.0))
                     _ax.plot([emb_elig[_i, 0], emb_elig[_j, 0]],
-                             [emb_elig[_i, 1], emb_elig[_j, 1]], color=_col, lw=_lw, zorder=_z)
+                             [emb_elig[_i, 1], emb_elig[_j, 1]], color=_col,
+                             lw=0.15 + 0.6 * _w, alpha=0.25 + 0.7 * _w, zorder=_z)
         for _s in SUBJECTS:
             _m = (_t["sub"] == _s).to_numpy()
             _ax.scatter(emb_elig[_m, 0], emb_elig[_m, 1], s=22, c=SUBJ_COLORS[_s],
