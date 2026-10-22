@@ -17,7 +17,7 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # =============================================================================
 # 05h - Matching states between participants
 # =============================================================================
-# All 15 participant pairs in one job (~8 min). Each pair's summary is written
+# All 15 participant pairs in one job (~12 min). Each pair's summary is written
 # atomically and finished pairs are skipped when their params, code and inputs
 # match (FORCE=1 recomputes them anyway), so a
 # preempted job resumes; the cross-pair summary is written at the end.
