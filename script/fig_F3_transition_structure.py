@@ -25,7 +25,7 @@ separate files.
 
 | Panel | Content | Chart family | Source files | Output |
 |---|---|---|---|---|
-| A | Per-subject directed state transition matrices M (model transmat_, self-transitions removed), 2×3 small-multiples (full square; states ordered by the 06e best-Q partition of M: module rank, then recurrence descending; thin white module separators; single-hue Greys cells, shared log 5-95 scale; per-state network ribbon with flagged states dotted; non-modular subjects named in the title). Separate legend files. Caption numbers (from 06e summary): per subject Q, Q - mean Q_null and p under N2 and N3 on graph E. | heatmap | 06b transition_graph.graphml + 06e partitions.json + 06e transition_modules_summary.json + 05e state_flags.csv (×6 subj) | fig3_A_transition_matrices.{png,svg} + fig3_A_legend_networks.{png,svg} + fig3_A_legend_prob.{png,svg} + fig3_A_module_stats.json |
+| A | Per-subject directed state transition matrices M (model transmat_, self-transitions removed), 2×3 small-multiples (full square; states ordered by the 06e best-Q partition of M: module rank, then recurrence descending; thin mid-grey module separators; single-hue Greys cells, shared log 5-95 scale; per-state network ribbon with flagged states dotted; non-modular subjects named in the title). Separate legend files. Caption numbers (from 06e summary): per subject Q, Q - mean Q_null and p under N2 and N3 on graph E. | heatmap | 06b transition_graph.graphml + 06e partitions.json + 06e transition_modules_summary.json + 05e state_flags.csv (×6 subj) | fig3_A_transition_matrices.{png,svg} + fig3_A_legend_networks.{png,svg} + fig3_A_legend_prob.{png,svg} + fig3_A_module_stats.json |
 | B | Cross-subject consistency forest (4 metrics × 6 subjects; 7in wide to match Panel A; per-subject marker shapes, neutral color; assortativity CI; per-row null line) + standalone subject-marker legend | point-based 1D | 06b transition_structure_summary.json (all subjects) | fig3_B_cross_subject_consistency.{png,svg} + fig3_B_legend_markers.{png,svg} |
 
 Design notes (2026-05-26 revision):
@@ -252,7 +252,7 @@ def panel_A_transition_matrices(
     modules by the recurrence of their most recurrent member, highest first,
     so the module holding the most recurrent state is first; within a module,
     states run from most to least recurrent. A missing or mismatched partition
-    file is an error. Thin white lines separate modules.
+    file is an error. Thin mid-grey lines separate modules.
 
     Colour scale as before: one shared log scale over all subjects' edges,
     5th-95th percentile, single-hue Greys ramp starting at 20% grey so every
@@ -359,6 +359,8 @@ def panel_A_transition_matrices(
                            name="Greys_from_light")
     _cmap.set_bad("white")
     _norm = LogNorm(vmin=_vmin, vmax=_vmax)
+    # Mid-grey module separators: white ones vanished over the empty cells.
+    _sep_color = "#8C8C8C"
 
     # Pass 2: render 2×3, full directed matrix, per-state network ribbon on
     # the top + left margins, white separators at module boundaries.
@@ -383,9 +385,9 @@ def panel_A_transition_matrices(
             _ax.scatter([-_rib / 2] * len(_fi), _fi, s=1.2, color="black",
                         lw=0, zorder=4, clip_on=False)
         for _b in module_boundaries(_mods):
-            _ax.plot([_b, _b], [-_rib, _N], color="white", lw=0.6, zorder=3.5,
+            _ax.plot([_b, _b], [-_rib, _N], color=_sep_color, lw=0.6, zorder=3.5,
                      clip_on=False)
-            _ax.plot([-_rib, _N], [_b, _b], color="white", lw=0.6, zorder=3.5,
+            _ax.plot([-_rib, _N], [_b, _b], color=_sep_color, lw=0.6, zorder=3.5,
                      clip_on=False)
         _ax.set_xlim(-_rib, _N)
         _ax.set_ylim(_N, -_rib)
