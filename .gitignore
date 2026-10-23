@@ -10,7 +10,7 @@ __pycache__/
 !.env.example
 
 CLAUDE.md
-# AGENTS.md
+AGENTS.md
 # All docs are local-only (internal findings, design docs, manuscript drafts).
 # Only docs/supplementary/ is tracked and published with the repo.
 docs/*

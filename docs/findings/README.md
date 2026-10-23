@@ -35,6 +35,7 @@ in the preprint; **SUPP** = supplementary / robustness / diagnostic;
 | `05h_participant_state_matching` | MAIN | [05h_participant_state_matching.md](05h_participant_state_matching.md) | Results R2 / Fig 2E |
 | `06a_state_temp_dynamics` | MAIN | [06a_state_temp_dynamics.md](06a_state_temp_dynamics.md) | R3 |
 | `06b_transition_structure` | MAIN | [06b_transition_structure.md](06b_transition_structure.md) | R3, Fig 3 |
+| `06e_transition_modules` | MAIN | [06e_transition_modules.md](06e_transition_modules.md) | R3, Fig 3 |
 | `06c_higher_order_transitions` | SUPP | [06c_higher_order_transitions.md](06c_higher_order_transitions.md) | Supp |
 | `06d_preserved_chains` | SUPP | [06d_preserved_chains.md](06d_preserved_chains.md) | Supp |
 | `08c_transformer_features` | MAIN | [08c_transformer_features.md](08c_transformer_features.md) | R4b, Methods |

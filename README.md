@@ -79,6 +79,7 @@ corresponding `.env` variable (see [Configuration](#configuration)) at your loca
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │  06a_state_temp_dynamics.py   Dwell-time distributions, transition matrices  │
 │  06b_transition_structure.py  Graph topology, FC-Mantel, MFPT landscape      │
+│  06e_transition_modules.py    Transition modules against calibrated nulls    │
 └──────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -110,7 +111,7 @@ ranges; see [MANIFEST.md](script/MANIFEST.md) for the per-script detail.
 
 | Tier | Scripts | What it covers |
 |---|---|---|
-| **Main** | `00`, `01`, `02`, `03a`, `04`, `05a`, `05b`, `05e_a4`, `05h`, `06a`, `06b`, `08c`, `08d`, `08e` | Repertoire, taxonomy, transitions, transformer depth |
+| **Main** | `00`, `01`, `02`, `03a`, `04`, `05a`, `05b`, `05e_a4`, `05h`, `06a`, `06b`, `06e`, `08c`, `08d`, `08e` | Repertoire, taxonomy, transitions, transformer depth |
 | **Cross-stimulus (main)** | `m10_*`, `hp_*`, `pp_*` (03/04/05) | Recurrence transfer to Movie10 / Harry Potter / Petit Prince |
 | **Supplementary** | `03b`, `04r*`, `05c`, `05d`, `05e_a1`–`a3`, `05f`, `05g`, `06c`, `06d` | Reliability, robustness, diagnostics |
 
@@ -222,7 +223,7 @@ helpers; do not run them directly.
 - **[docs/supplementary/](docs/supplementary/)** - Supplementary material accompanying the manuscript
 - **[docs/findings/definitions.md](docs/findings/definitions.md)** - State definitions (active state, K_used, presence, content-eligible) and the code constants that implement them
 - **[docs/findings/](docs/findings/)** - Per-script findings: one Results-only doc per analysis script, with every number verified against the pipeline outputs
-- **[AGENTS.md](AGENTS.md)** - Instructions for AI coding agents (e.g. Claude Code) working in this repo: conventions, methodology notes, and analysis-scope rules.
+- **[script/PIPELINE_NOTES.md](script/PIPELINE_NOTES.md)** - Design decisions behind preprocessing, parcel extraction, state discovery and recurrence scoring
 - **Alternative analysis (ICA)** - An independent-component-analysis decomposition of the same data, provided as a convergence check on the HMM state repertoire, is maintained as a self-contained supplement on the [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements) branch (alongside other supplementary analyses).
 
 ## Citation

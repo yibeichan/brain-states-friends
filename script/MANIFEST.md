@@ -3,7 +3,7 @@
 Authoritative classification of every analysis script by role and manuscript
 tier. Filenames are **not** renamed by tier because each numeric prefix is also
 the output-directory name on scratch/RIA and the DataLad `--stage` key (see
-[AGENTS.md](../AGENTS.md)). This table is the source of truth for the
+[Output Management](../README.md#output-management) in the README). This table is the source of truth for the
 main/supplementary boundary.
 
 **Tiers**
@@ -43,6 +43,7 @@ main/supplementary boundary.
 | `05h_participant_state_matching.py` | Matching states between participant pairs: nulls, network and shared-component baselines, time-locking, split-half ceiling. Requires `05g` outputs (SUPP tier) | MAIN | Results R2 / Fig 2E; Methods (matching states between participants) |
 | `06a_state_temp_dynamics.py` | Dwell-time distributions, transition matrices | MAIN | R3, Fig 3 |
 | `06b_transition_structure.py` | Graph topology, FC-Mantel, MFPT landscape | MAIN | R3, Fig 3 |
+| `06e_transition_modules.py` | Transition-graph modularity against calibrated nulls; module tests | MAIN | R3, Fig 3 |
 | `08c_transformer_features.py` | Layer-wise transformer features (GPU) | MAIN | R4b, Methods §5 |
 | `08d_transformer_depth.py` | D1 representational depth per layer | MAIN | R4b, Fig 5 |
 | `08e_transformer_cross_stim_aggregate.py` | Cross-stimulus aggregate depth profile | MAIN | R4b cross-stim, Fig 5 |
