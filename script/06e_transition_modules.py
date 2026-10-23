@@ -104,13 +104,7 @@ ALPHA = 0.05
 EFFECT_FLOOR = 0.05              # Q - mean(Q_null) under N2 on E
 BOOT_ARI_FLOOR = 0.5
 MIN_TRS, MIN_EXITS = 30, 20      # reliable-state rule
-PLAN_NOTES = [
-    "decisions/2026-10-22-brain-states-friends-r3-transition-modules-n1perm-failed-calibration-fallback-b-applied-with-the-effect-floor-on-n2-and-loso-rerun-under-n2-2026-10-22-before-any-06e-result.md",
-    "decisions/2026-10-22-brain-states-friends-r3-transition-modules-replace-the-miscalibrated-n1-null-with-n1perm-if-it-calibrates-2026-10-22-before-any-06e-result.md",
-    "projects/2026-10-21-brain-states-friends-plan-v2-transition-modules-in-r3-fig-3a-reviewed-r3-mapping-pending-user-approval.md",
-    "decisions/2026-10-21-brain-states-friends-r3-transition-modules-pre-registered-r3-mapping-approved-2026-10-21-before-any-run.md",
-    "decisions/2026-10-21-brain-states-friends-r3-transition-modules-test-a-replaced-by-a-similarity-predicted-null-2026-10-21-before-any-run.md",
-]
+METHOD_DOC = "docs/findings/06e_transition_modules.md"
 
 # variant -> number of draws
 VARIANTS = {
@@ -724,7 +718,7 @@ def aggregate(base_seed, n_perm_char, n_dwell, n_lock):
         outcome = "not_modular_fc_ordering"
     mapping = {"outcome": outcome, "modular_subjects": modular,
                "loso_ok_subjects": loso_ok, "new_criterion_subjects": new,
-               "plan_and_decision_notes": PLAN_NOTES, "code_commit": git_head(),
+               "method_doc": METHOD_DOC, "code_commit": git_head(),
                "frozen_parameters": {"seeds": len(SEEDS), "resolution": RESOLUTION,
                                      "threshold": THR, "alpha": ALPHA,
                                      "effect_floor": EFFECT_FLOOR,
