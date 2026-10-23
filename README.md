@@ -111,9 +111,9 @@ ranges; see [MANIFEST.md](script/MANIFEST.md) for the per-script detail.
 
 | Tier | Scripts | What it covers |
 |---|---|---|
-| **Main** | `00`, `01`, `02`, `03a`, `04`, `05a`, `05b`, `05e_a4`, `06a`, `06b`, `06e`, `08c`, `08d`, `08e` | Repertoire, taxonomy, transitions, transformer depth |
+| **Main** | `00`, `01`, `02`, `03a`, `04`, `05a`, `05b`, `05e_a4`, `05h`, `06a`, `06b`, `06e`, `08c`, `08d`, `08e` | Repertoire, taxonomy, transitions, transformer depth |
 | **Cross-stimulus (main)** | `m10_*`, `hp_*`, `pp_*` (03/04/05) | Recurrence transfer to Movie10 / Harry Potter / Petit Prince |
-| **Supplementary** | `03b`, `04r*`, `05c`, `05d`, `05e_a1`–`a3`, `05f`, `06c`, `06d` | Reliability, robustness, diagnostics |
+| **Supplementary** | `03b`, `04r*`, `05c`, `05d`, `05e_a1`–`a3`, `05f`, `05g`, `06c`, `06d` | Reliability, robustness, diagnostics |
 
 ## Quick Start
 
@@ -171,7 +171,7 @@ noted) before invoking a figure script.
 | Figure | Script | Shows | Reads from |
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
-| **2** | `fig_F2_recurrence_sources.py` (all panels); `fig_F2_network_participation.py` (batch Panel C) | Recurrence-screening categories + network participation (R2) | `04`, `05a`, `05e` |
+| **2** | `fig_F2_recurrence_sources.py` (Panels A–D); `fig_F2_network_participation.py` (batch Panel C); `fig_F2E_participant_umap.py` (Panel E and its supplementary panels; needs `uv sync --extra umap`) | Recurrence-screening categories + network participation; all participants' states in one embedding, with matched pairs between participants (R2) | `04`, `05a`, `05e`, `05h` |
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
 | **4** | `fig_F5_cross_stimulus_transfer.py` (code ID F5) | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **5** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) (code ID F4) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
@@ -263,6 +263,7 @@ uv sync                     # core dependencies
 # Optional extras (add only what you need):
 uv sync --extra gpu         # JAX/dynamax for GPU model fitting (script 04, GPU nodes)
 uv sync --extra torch       # transformer stack (script 08c)
+uv sync --extra umap        # umap-learn for the Figure 2E embedding (fig_F2E_participant_umap.py)
 uv sync --extra datalad     # DataLad for output archival (script/utils/datalad_save.sh)
 ```
 

@@ -42,6 +42,12 @@ torch = [
   "accelerate>=0.30",
   "ffmpeg-python>=0.2",
 ]
+umap = [
+  # Figure 2E embedding only. umap-learn pulls in numba, which caps numpy and
+  # has no wheels for some platforms (e.g. macOS x86_64), so it stays out of
+  # the core set.
+  "umap-learn>=0.5.7",
+]
 datalad = [
   "datalad>=1.0",
   # git-annex is a Haskell binary, not a PyPI package: uv cannot provide it.
