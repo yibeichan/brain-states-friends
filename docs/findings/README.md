@@ -31,6 +31,8 @@ in the preprint; **SUPP** = supplementary / robustness / diagnostic;
 | `05e_temporal_trend_a3` | SUPP | [05e_temporal_trend_a3.md](05e_temporal_trend_a3.md) | Supp |
 | `05e_temporal_trend_a4` | MAIN | [05e_temporal_trend_a4.md](05e_temporal_trend_a4.md) | Methods (state classification) |
 | `05f_state_fc` | SUPP | [05f_state_fc.md](05f_state_fc.md) | Supp |
+| `05g_excluded_state_check` | SUPP | [05g_excluded_state_check.md](05g_excluded_state_check.md) | Supp (Table S#) |
+| `05h_participant_state_matching` | MAIN | [05h_participant_state_matching.md](05h_participant_state_matching.md) | Results R2 / Fig 2E |
 | `06a_state_temp_dynamics` | MAIN | [06a_state_temp_dynamics.md](06a_state_temp_dynamics.md) | R3 |
 | `06b_transition_structure` | MAIN | [06b_transition_structure.md](06b_transition_structure.md) | R3, Fig 3 |
 | `06c_higher_order_transitions` | SUPP | [06c_higher_order_transitions.md](06c_higher_order_transitions.md) | Supp |
