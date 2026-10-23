@@ -3,7 +3,7 @@
 Authoritative classification of every analysis script by role and manuscript
 tier. Filenames are **not** renamed by tier because each numeric prefix is also
 the output-directory name on scratch/RIA and the DataLad `--stage` key (see
-[AGENTS.md](../AGENTS.md)). This table is the source of truth for the
+[Output Management](../README.md#output-management) in the README). This table is the source of truth for the
 main/supplementary boundary.
 
 **Tiers**
