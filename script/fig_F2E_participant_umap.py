@@ -17,7 +17,7 @@ decision 2026-10-22).
 
 | Panel | Content | Chart family | Output |
 |---|---|---|---|
-| 2E | Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
+| 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (16-31 per participant), pooled UMAP, colour = participant; a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
 | S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
@@ -260,11 +260,25 @@ def style_helpers(plt):
 
 @app.cell
 def line_panel(SUBJECTS, SUBJ_COLORS, emb_elig, finish, np, plt, state_table):
-    def draw_match_lines(table, stem):
-        # line width and opacity grow with the matched r (clipped at 0)
+    def draw_match_lines(table, stem, width=None, dot_size=22):
+        # line width and opacity grow with the matched r (clipped at 0).
+        # width (inches, saved panel) draws both UMAP axes on one scale, so the
+        # height follows the embedding's extent; None keeps the 3.4 in square.
         _t = state_table[state_table["eligible"]].reset_index(drop=True)
         _pos = {(r.sub, r.state): i for i, r in enumerate(_t.itertuples())}
-        _fig, _ax = plt.subplots(figsize=(3.4, 3.4))
+        if width is None:
+            _fig, _ax = plt.subplots(figsize=(3.4, 3.4))
+        else:
+            _lo, _hi = emb_elig.min(axis=0), emb_elig.max(axis=0)
+            _pad = 0.03 * float((_hi - _lo).max())
+            _lo, _hi = _lo - _pad, _hi + _pad
+            _aw = width - 0.2  # the y-axis label takes about 0.2 in
+            _ah = _aw * float(_hi[1] - _lo[1]) / float(_hi[0] - _lo[0])
+            _m = 0.4  # margin for the axis labels; bbox_inches="tight" trims it
+            _fig = plt.figure(figsize=(_aw + _m, _ah + _m))
+            _ax = _fig.add_axes([_m / (_aw + _m), _m / (_ah + _m),
+                                 _aw / (_aw + _m), _ah / (_ah + _m)])
+            _ax.set_xlim(_lo[0], _hi[0]); _ax.set_ylim(_lo[1], _hi[1])
         if table is not None:
             for _locked, _col, _z in ((False, "#BBBBBB", 1), (True, "#4A4A4A", 2)):
                 for _r in table[table["time_locked"] == _locked].itertuples():
@@ -275,7 +289,7 @@ def line_panel(SUBJECTS, SUBJ_COLORS, emb_elig, finish, np, plt, state_table):
                              lw=0.15 + 0.6 * _w, alpha=0.25 + 0.7 * _w, zorder=_z)
         for _s in SUBJECTS:
             _m = (_t["sub"] == _s).to_numpy()
-            _ax.scatter(emb_elig[_m, 0], emb_elig[_m, 1], s=22, c=SUBJ_COLORS[_s],
+            _ax.scatter(emb_elig[_m, 0], emb_elig[_m, 1], s=dot_size, c=SUBJ_COLORS[_s],
                         edgecolors="white", linewidths=0.4, alpha=0.95, zorder=3)
         finish(_ax, stem, _fig)
     return (draw_match_lines,)
@@ -283,8 +297,9 @@ def line_panel(SUBJECTS, SUBJ_COLORS, emb_elig, finish, np, plt, state_table):
 
 @app.cell
 def panel_2E(OUT, SUPP, draw_match_lines, full_match_table, residual_match_table):
-    draw_match_lines(full_match_table, OUT / "fig2_E_participant_umap")
-    draw_match_lines(None, OUT / "fig2_E_participant_umap_nolines")
+    # the main panel fills the bottom row of Fig 2 next to its legend
+    draw_match_lines(full_match_table, OUT / "fig2_E_participant_umap", width=5.0, dot_size=30)
+    draw_match_lines(None, OUT / "fig2_E_participant_umap_nolines", width=5.0, dot_size=30)
     draw_match_lines(residual_match_table, SUPP / "figS_participant_umap_A_residual_matches")
     return
 
