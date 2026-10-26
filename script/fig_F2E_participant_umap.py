@@ -9,9 +9,8 @@ are not evidence; the matching statistics from 05h are.
 In 2E (and S A) colour encodes each state's dominant network, with the
 network colours of Fig 2C, and marker shape encodes participant, with the
 markers of Fig 1C. A line between two states of the same colour is a match
-between states with the same dominant network. The remaining supplementary
-panels keep colour = participant, since they spend shape or colour on another
-variable.
+between states with the same dominant network. S B also colours by dominant
+network (its markers carry the state category); S D keeps colour = participant.
 
 Chart-family note: Fig 1D and Fig 5A already use scatter. Panel E is kept as a
 documented exception to the at-most-two-main-figures rule, because its axes are
@@ -23,10 +22,10 @@ decision 2026-10-22).
 | 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (16-31 per participant), pooled UMAP, colour = dominant network (05e state_flags, Fig 2C colours), marker = participant (Fig 1C markers); a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
-| S B | All active states, colour = participant, marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
+| S B | All active states, colour = dominant network (Fig 2C colours), marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
-| legends | 2E participant markers and dominant-network colours; supplementary participant colours, category markers, recurrence colorbar | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
+| legends | 2E participant markers and dominant-network colours; supplementary network colours (active states), participant colours (S D), category markers, recurrence colorbar | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
 
 The supplementary panels share one chart family because they show one
 embedding with different encodings; the parallel layout is the point.
@@ -313,16 +312,16 @@ def panel_2E(OUT, SUPP, draw_match_lines, full_match_table, residual_match_table
 
 
 @app.cell
-def panel_S_B(CATEGORY_MARKERS, SUBJECTS, SUBJ_COLORS, SUPP, emb_active, finish, np, plt,
+def panel_S_B(CATEGORY_MARKERS, NETWORK_COLORS, SUPP, emb_active, finish, np, plt,
               state_table):
     _fig, _ax = plt.subplots(figsize=(3.4, 3.4))
     _size = 4 + 120 * np.sqrt(state_table["fo"].to_numpy())
     for _cat, _mk in CATEGORY_MARKERS.items():
-        for _s in SUBJECTS:
-            _m = ((state_table["category"] == _cat) & (state_table["sub"] == _s)).to_numpy()
-            if _m.any():
-                _ax.scatter(emb_active[_m, 0], emb_active[_m, 1], s=_size[_m], marker=_mk,
-                            c=SUBJ_COLORS[_s], edgecolors="white", linewidths=0.4, alpha=0.85)
+        _m = (state_table["category"] == _cat).to_numpy()
+        if _m.any():
+            _ax.scatter(emb_active[_m, 0], emb_active[_m, 1], s=_size[_m], marker=_mk,
+                        c=[NETWORK_COLORS[n] for n in state_table.loc[_m, "network"]],
+                        edgecolors="white", linewidths=0.4, alpha=0.85)
     finish(_ax, SUPP / "figS_participant_umap_B_active_categories", _fig)
     return
 
@@ -404,6 +403,12 @@ def legends(CATEGORY_MARKERS, NETWORK_COLORS, OUT, RECURRENCE_CMAP, SUBJECTS,
     _fig, _ax = plt.subplots(figsize=(1.2, 1.6)); _ax.set_axis_off()
     _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
     _save(_fig, SUPP / "figS_participant_umap_legend_participants")
+    _nets = set(state_table["network"])
+    _h = [Line2D([], [], marker="o", ls="", color=c, label=n)
+          for n, c in NETWORK_COLORS.items() if n in _nets]
+    _fig, _ax = plt.subplots(figsize=(1.2, 1.8)); _ax.set_axis_off()
+    _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
+    _save(_fig, SUPP / "figS_participant_umap_legend_networks")
     _h = [Line2D([], [], marker=_mk, ls="", color="#4A4A4A", label=_cat)
           for _cat, _mk in CATEGORY_MARKERS.items()]
     _fig, _ax = plt.subplots(figsize=(1.6, 1.4)); _ax.set_axis_off()
