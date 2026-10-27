@@ -16,15 +16,6 @@ main/supplementary boundary.
 - **CROSS-STIM (MAIN)**: Movie10 / Harry Potter / Petit Prince decode + transfer;
   these are **main** (R5, Figure 4), not supplementary.
 
-> **Figure-order note (2026-07 revision):** manuscript Figures 4 and 5 were
-> swapped for narrative coherence. Script and output-directory IDs are unchanged
-> (filenames encode the scratch/RIA dir + DataLad stage key, per the policy
-> above): code `F4`/`fig4` (transformer depth, R4b) now maps to **manuscript
-> Figure 5**, and code `F5`/`fig5` (cross-stimulus transfer, R5) now maps to
-> **manuscript Figure 4**. The Manuscript column below shows current manuscript
-> numbers; R-labels (R4b = decoding, R5 = cross-stimulus) are finding IDs and
-> did not change.
-
 ---
 
 ## Main pipeline
@@ -102,9 +93,9 @@ outputs and renders the panels.
 | `fig_F2_network_participation.py` | Figure 2 (Panel C batch renderer) | R2 |
 | `fig_F2E_participant_umap.py` | Figure 2 (Panel E) and its supplementary panels | R2 |
 | `fig_F3_transition_structure.py` | Figure 3 | R3 |
-| `fig_F4_within_friends.py` | Figure 5 (lead) [code ID F4] | R4b |
-| `fig_F4_per_film_video.py` | Figure 5 (Movie10 per-film panel) [code ID F4] | R4b |
-| `fig_F5_cross_stimulus_transfer.py` | Figure 4 [code ID F5]; rest is supplementary-only (Fig S8) | R5 |
+| `fig_F4_cross_stimulus_transfer.py` | Figure 4; rest is supplementary-only (Fig S8) | R5 |
+| `fig_F5_within_friends.py` | Figure 5 (lead) | R4b |
+| `fig_F5_per_film_video.py` | Figure 5 (Movie10 per-film panel) | R4b |
 | `fig_S01_recurring_state_surface_maps.py` | Figure S1 | Supp |
 | `fig_S02_pca_loadings.py` | Figure S2 | Supp |
 | `fig_S03_model_selection.py` | Figure S3 (K_max selection sweep) | Supp |
@@ -119,7 +110,7 @@ SI figures with no dedicated `fig_S*` entry point (provenance verified
 
 | SI figure | Emitted by | Emitted filename |
 |---|---|---|
-| S6 | `fig_F4_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/figS_R4b_negcontrol/figS_R4b_negcontrol_triple.{png,svg}` |
+| S6 | `fig_F5_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/figS_R4b_negcontrol/figS_R4b_negcontrol_triple.{png,svg}` |
 | S7 | `08e_plots.py` → `render_panel()`, one call per modality panel | `manuscript_figures/fig3/fig3_<panel>_depth.{pdf,png,svg}` |
 
 **S10** and **S12** are rendered on the orphan `supplements` branch by

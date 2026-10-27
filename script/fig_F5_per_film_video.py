@@ -1,8 +1,4 @@
-"""Figure F4 Panel C - DINOv2 × Movie10 per-film depth profile (code ID F4).
-
-NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
-Code ID "F4"/"fig4" now maps to manuscript Figure 5 (R4b decoding). See
-MANIFEST.md "Figure-order note".
+"""Figure F5 Panel C - DINOv2 × Movie10 per-film depth profile.
 
 For each of the 6 subjects, this script reproduces 08e's Friends-fit /
 Movie10-project pipeline for DINOv2-large only, then **breaks the Movie10
@@ -13,8 +9,8 @@ by the existing 08e D3a output for movie10 × dinov2; here we only need per-
 film effect sizes for the poster's Video panel.
 
 Outputs:
-  $SCRATCH_DIR/output/manuscript_figures/fig4/perfilm/{sub_id}_dinov2_movie10_perfilm.json
-  $SCRATCH_DIR/output/manuscript_figures/fig4/fig4_C_video_perfilm_depth.{pdf,png,svg}
+  $SCRATCH_DIR/output/manuscript_figures/fig5/perfilm/{sub_id}_dinov2-large_movie10_perfilm.json
+  $SCRATCH_DIR/output/manuscript_figures/fig5/fig5_C_video_perfilm_depth.{pdf,png,svg}
 """
 from __future__ import annotations
 
@@ -58,7 +54,7 @@ FILMS = [
 ]
 PCA_VARIANCE_THRESHOLD = 0.95
 
-OUT_DIR = Path(SCRATCH_DIR) / "output" / "manuscript_figures" / "fig4"
+OUT_DIR = Path(SCRATCH_DIR) / "output" / "manuscript_figures" / "fig5"
 PERFILM_DIR = OUT_DIR / "perfilm"
 PERFILM_DIR.mkdir(parents=True, exist_ok=True)
 apply_publication_style()
@@ -259,9 +255,9 @@ def render_panel():
     ax.legend(frameon=False, loc="upper left", fontsize=7)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    out_pdf = OUT_DIR / "fig4_C_video_perfilm_depth.pdf"
-    out_png = OUT_DIR / "fig4_C_video_perfilm_depth.png"
-    out_svg = OUT_DIR / "fig4_C_video_perfilm_depth.svg"
+    out_pdf = OUT_DIR / "fig5_C_video_perfilm_depth.pdf"
+    out_png = OUT_DIR / "fig5_C_video_perfilm_depth.png"
+    out_svg = OUT_DIR / "fig5_C_video_perfilm_depth.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
@@ -270,7 +266,7 @@ def render_panel():
 
 
 def main():
-    print(f"=== Fig F4 Panel C - per-film video depth profile ===")
+    print(f"=== Fig F5 Panel C - per-film video depth profile ===")
     print(f"  OUT_DIR = {OUT_DIR}")
     for sub_id in SUBJECTS:
         try:

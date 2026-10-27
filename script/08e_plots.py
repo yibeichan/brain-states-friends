@@ -1,8 +1,5 @@
 """08e_plots.py - R4b cross-stimulus depth correspondence plots (R4b slim, decoding).
 
-NB (2026-07 figure swap): the decoding result is now manuscript Figure 5; the
-earlier "Figure F3" label on this line was stale. See MANIFEST.md.
-
 Companion figure script for ``08e_transformer_cross_stim_aggregate.py``,
 analogous to ``08d_plots.py`` for stage 08d.
 
@@ -34,10 +31,11 @@ Standalone legend files are still emitted for caption / sidebar use:
 Source data:
   A, B: 08e .../D3a_transfer_{stim}_{model}.json (pooled, with permutation)
   C:    08e .../D3a_per_subset_movie10_dinov2-large.json (production, with
-        permutation). Falls back to .../manuscript_figures/fig3/perfilm/
-        sub-*_dinov2-large_movie10_perfilm.json (provisional, point estimates
-        only, no permutation) when production JSONs are absent - used for
-        the poster build while the production --per_subset run is in flight.
+        permutation). Falls back to .../manuscript_figures/fig5/perfilm/
+        sub-*_dinov2-large_movie10_perfilm.json (written by
+        fig_F5_per_film_video.py; provisional, point estimates only, no
+        permutation) when production JSONs are absent - used for the poster
+        build while the production --per_subset run was in flight.
 """
 import json
 import os
@@ -59,7 +57,7 @@ PARCELLATION = "atlas-4S156Parcels"
 OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "fig3"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D3A_ROOT = SCRATCH_DIR / "output" / "08e_transformer_cross_stim_aggregate" / PARCELLATION
-PROVISIONAL_PERFILM_ROOT = OUT_DIR / "perfilm"
+PROVISIONAL_PERFILM_ROOT = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5" / "perfilm"
 
 # Paul Tol Vibrant 4-class (https://personal.sron.nl/~pault/), CB-safe.
 # Distinct from project palettes: Okabe–Ito (networks), ColorBrewer Set1

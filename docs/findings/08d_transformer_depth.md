@@ -181,4 +181,4 @@ Max AUC = best AUC across layers for each state. 10-fold StratifiedGroupKFold, n
 - output/08d_transformer_depth/atlas-4S156Parcels/sub-*/friends_llama-3.2-3b/ (D1_depth_profile.json + D2_state_layer_auc.json + D1_confound_baseline.json; no D1_net)
 - output/08d_transformer_depth/atlas-4S156Parcels/sub-*/friends_*/pca_info.json
 - output/08d_transformer_depth/_plots/ (cross-subject summary plots)
-- Figure: script/fig_F4_within_friends.py
+- Figure: script/fig_F5_within_friends.py

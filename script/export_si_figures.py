@@ -75,7 +75,7 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
 
     # Emitted by the Figure 5 script's companion supplementary renderer.
     ("S06_run_onset_negative_control.png", "EXPORT",
-     "script/fig_F4_within_friends.py (render_supp_negcontrol)",
+     "script/fig_F5_within_friends.py (render_supp_negcontrol)",
      "figS_R4b_negcontrol/figS_R4b_negcontrol_triple.png"),
 
     # 08e_plots.py shares the fig3/ output directory with

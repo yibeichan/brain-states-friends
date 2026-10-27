@@ -92,4 +92,4 @@ Films: Wolf of Wall Street (wolf), Figures in a Landscape (figures), Bourne Supr
 - output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/movie10_{model}/D3a_per_subset_movie10_{model}.json
 - output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/{stimulus}_{model}/pca_info.json
 - output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/{stimulus}_{model}/D3a_transfer_{stimulus}_{model}.png
-- Figure: fig_F4_within_friends.py (Panels F/G: Movie10 per-film lines from D3a_per_subset)
+- Figure: fig_F5_within_friends.py (Panels F/G: Movie10 per-film lines from D3a_per_subset)

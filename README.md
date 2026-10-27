@@ -163,24 +163,19 @@ read the analysis outputs produced by the pipeline stages listed below, so run
 the relevant stages (for all six subjects, plus the cross-stimulus stages where
 noted) before invoking a figure script.
 
-> Manuscript Figures 4 and 5 were swapped in the 2026-07 revision. Script and
-> output-directory names keep their original code IDs, so `fig_F5*`/`fig5` build
-> manuscript Figure 4 and `fig_F4*`/`fig4` build manuscript Figure 5. See
-> [`script/MANIFEST.md`](script/MANIFEST.md) for the full mapping.
-
 | Figure | Script | Shows | Reads from |
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
 | **2** | `fig_F2_recurrence_sources.py` (Panels A–D); `fig_F2_network_participation.py` (batch Panel C); `fig_F2E_participant_umap.py` (Panel E and its supplementary panels; needs `uv sync --extra umap`) | Recurrence-screening categories + network participation; all participants' states in one embedding, with matched pairs between participants (R2) | `04`, `05a`, `05e`, `05h` |
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
-| **4** | `fig_F5_cross_stimulus_transfer.py` (code ID F5) | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
-| **5** | `fig_F4_within_friends.py` (lead) + `fig_F4_per_film_video.py` (Movie10 per-film panel) (code ID F4) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
+| **4** | `fig_F4_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
+| **5** | `fig_F5_within_friends.py` (lead) + `fig_F5_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
 | **S2** | `fig_S02_pca_loadings.py` | PCA loadings diagnostics (one representative subject) | `03b` |
 | **S3** | `fig_S03_model_selection.py` | HMM model selection: validation likelihood vs occupied states, occupancy vs capacity, train-to-validation gap | `04` |
 | **S4** | `fig_S04_reliability.py` | Within-Friends reliability: matched-pair spatial correlation, structural invariants, within-state FC arm vs a mismatched-pair null | `04ra`, `04rb`, `04rc`, `05f` |
 | **S5** | `fig_S05_video_peak_depth.py` | Network-stratified video (DINOv2) decoding depth | `08d` |
-| **S6** | `fig_F4_within_friends.py` (`render_supp_negcontrol`) | Run-onset negative control and timing floor at the main decoding peak (disclosure panel; the control is invalidated by a class-count asymmetry) | `08d` |
+| **S6** | `fig_F5_within_friends.py` (`render_supp_negcontrol`) | Run-onset negative control and timing floor at the main decoding peak (disclosure panel; the control is invalidated by a class-count asymmetry) | `08d` |
 | **S7** | `script/08e_plots.py` | Per-layer decoding depth strips by modality, cross-stimulus | `08e` |
 | **S8** | `fig_S08_cross_stimulus_validity.py` | Cross-stimulus validity & repertoire presence, including resting state | `03` proj, `04` decode, `05a`, `m10_`/`hp_`/`pp_`/`rest_05` |
 | **S9** | `fig_S09_individual_differences.py` | Per-subject individual differences | `05a`, `05e`, `06b`, `08d` (cross-subject) |
