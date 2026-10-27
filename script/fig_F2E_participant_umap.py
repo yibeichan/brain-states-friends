@@ -25,10 +25,14 @@ decision 2026-10-22).
 | S B | All active states, colour = dominant network (Fig 2C colours), marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
+| S E | One time-locked match (the one with the median locking r of all time-locked matches) as on/off occupancy of the two states in the first 4 runs both participants watched in which both states occur; colour = each state's dominant network | event raster | .../figS_participant_umap_E_time_locking_example |
+| S F | Occupancy correlation of every map match (all 353, not only time-locked) at lags of -20..20 TRs of the second participant within each run; thin lines = mean per participant pair, thick line = mean over matches; lag 0 equals 05h's locking r | line | .../figS_participant_umap_F_lagged_locking |
 | legends | 2E participant markers and dominant-network colours; supplementary network colours (active states), participant colours (S D), category markers, recurrence colorbar | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
 
-The supplementary panels share one chart family because they show one
-embedding with different encodings; the parallel layout is the point.
+Supplementary panels A-D share one chart family because they show one
+embedding with different encodings; the parallel layout is the point. E and F
+show the timing behind the time-locked flag, which the embedding cannot show.
+F's value at lag 0 is checked against 05h's per-match locking r.
 
 Also written: fig2/supp_participant_umap/participant_mixing.json, the share of
 each state's 5 nearest neighbours (correlation distance, full 156-parcel space,
@@ -233,9 +237,10 @@ def load_matches(PARC, SCRATCH, SUBJECTS, VT, json, pd):
         # time-locked = family-wise flag (max over matched pairs of the shift null);
         # 05h stores the flags in the order of the matches
         # every Hungarian match is drawn: 05h tests pairs, not single matches
-        for _m, _t in zip(_v["matches_full"], _val["per_pair_time_locked"], strict=True):
+        for _m, _t, _lr in zip(_v["matches_full"], _val["per_pair_time_locked"],
+                               _val["per_pair_locking_r"], strict=True):
             _full_rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
-                               "r": _m["r"], "time_locked": bool(_t)})
+                               "r": _m["r"], "time_locked": bool(_t), "lock_r": _lr})
         for _m, _t in zip(_v["shared_removed"]["3"]["matches"],
                           _val["residual_matches_time_locked"], strict=True):
             _rows.append({"sub_a": _sa, "a": _m["a"], "sub_b": _sb, "b": _m["b"],
@@ -372,6 +377,145 @@ def panel_S_D(SUBJECTS, SUBJ_COLORS, SUPP, UMAP_KW, np, plt, state_maps, state_t
         _fig.savefig(SUPP / f"figS_participant_umap_D_robustness.{_ext}",
                      bbox_inches="tight", pad_inches=0.02, dpi=300)
     plt.close(_fig)
+    return
+
+
+@app.cell
+def panel_S_E(NETWORK_COLORS, PARC, SCRATCH, SUPP, VT, full_match_table, np, pickle, plt,
+              state_table):
+    # one time-locked match drawn as on/off occupancy in runs both participants
+    # watched. Pre-stated choices, so the example is not the strongest one: the
+    # time-locked match with the median locking r, and the first 4 shared runs
+    # (in run order) in which both states occur. Runs are aligned from their
+    # start and truncated to the shorter one, as in 05h.
+    TR = 1.49
+    _locked = full_match_table[full_match_table["time_locked"]].sort_values(
+        "lock_r", kind="stable").reset_index(drop=True)
+    _ex = _locked.iloc[(len(_locked) - 1) // 2]
+
+    def _decoded(sub):
+        _p = (SCRATCH / "output" / "04_combined_hdphmm" / PARC / sub / "final"
+              / f"vt{VT}" / "decoded_states.pkl")
+        with open(_p, "rb") as _f:
+            return {k: np.asarray(v, dtype=int) for k, v in pickle.load(_f).items()}
+
+    _da, _db = _decoded(_ex.sub_a), _decoded(_ex.sub_b)
+    _runs = []
+    for _r in sorted(set(_da) & set(_db)):
+        _L = min(_da[_r].size, _db[_r].size)
+        _oa, _ob = _da[_r][:_L] == _ex.a, _db[_r][:_L] == _ex.b
+        if _oa.any() and _ob.any():
+            _runs.append((_r, _oa, _ob))
+        if len(_runs) == 4:
+            break
+    _net = state_table.set_index(["sub", "state"])["network"]
+    _ca = NETWORK_COLORS[_net[(_ex.sub_a, _ex.a)]]
+    _cb = NETWORK_COLORS[_net[(_ex.sub_b, _ex.b)]]
+
+    _fig, _axes = plt.subplots(len(_runs), 1, figsize=(6.0, 0.62 * len(_runs) + 0.35),
+                               sharex=True)
+    for _ax, (_r, _oa, _ob) in zip(np.atleast_1d(_axes), _runs):
+        _t = np.arange(_oa.size) * TR / 60.0
+        _ax.fill_between(_t, 1.05, 1.95, where=_oa, step="post", color=_ca, lw=0)
+        _ax.fill_between(_t, 0.05, 0.95, where=_ob, step="post", color=_cb, lw=0)
+        _ax.set_ylim(0, 2); _ax.set_yticks([0.5, 1.5])
+        _ax.set_yticklabels([f"{_ex.sub_b} state {_ex.b}", f"{_ex.sub_a} state {_ex.a}"],
+                            fontsize=6)
+        _ax.text(1.0, 0.5, str(_r), transform=_ax.transAxes, fontsize=6,
+                 ha="left", va="center")
+        _ax.tick_params(axis="y", length=0)
+        for _sp in ("top", "right", "left"):
+            _ax.spines[_sp].set_visible(False)
+    _ax.set_xlabel("Time in run (min)", fontsize=7)
+    _ax.tick_params(axis="x", labelsize=6)
+    for _ext in ("png", "svg", "pdf"):
+        _fig.savefig(SUPP / f"figS_participant_umap_E_time_locking_example.{_ext}",
+                     bbox_inches="tight", pad_inches=0.02, dpi=300)
+    plt.close(_fig)
+    print(f"S E example: {_ex.sub_a} state {_ex.a} - {_ex.sub_b} state {_ex.b}, "
+          f"map r = {_ex.r:.3f}, locking r = {_ex.lock_r:.3f} (median of "
+          f"{len(_locked)} time-locked matches); runs {[r for r, _, _ in _runs]}")
+    return
+
+
+@app.cell
+def panel_S_F(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pickle, plt):
+    # lagged occupancy correlation for every map match: Pearson r between one
+    # state's on/off sequence and its match's, with the second participant
+    # shifted by -20..20 TRs within each run (no wrap), pooled over the runs both
+    # watched (truncated to the shorter run, as in 05h). All 353 matches, not only
+    # the time-locked ones, so a peak at lag 0 is not built in by the selection.
+    TR_S = 1.49
+    LAGS = np.arange(-20, 21)
+
+    def _dec(sub):
+        _p = (SCRATCH / "output" / "04_combined_hdphmm" / PARC / sub / "final"
+              / f"vt{VT}" / "decoded_states.pkl")
+        with open(_p, "rb") as _f:
+            return {k: np.asarray(v, dtype=int) for k, v in pickle.load(_f).items()}
+
+    _decs = {s: _dec(s) for s in SUBJECTS}
+    _curves, _pair_of, _locked = [], [], []
+    for (_sa, _sb), _g in full_match_table.groupby(["sub_a", "sub_b"], sort=True):
+        _A, _B = _decs[_sa], _decs[_sb]
+        _ia, _ib = _g["a"].to_numpy(), _g["b"].to_numpy()
+        _N = np.zeros((LAGS.size, _ia.size)); _na = np.zeros_like(_N)
+        _nb = np.zeros_like(_N); _T = np.zeros(LAGS.size)
+        for _r in sorted(set(_A) & set(_B)):
+            _L = min(_A[_r].size, _B[_r].size)
+            _xa = (_A[_r][:_L, None] == _ia[None, :]).astype(float)
+            _xb = (_B[_r][:_L, None] == _ib[None, :]).astype(float)
+            for _k, _lag in enumerate(LAGS):
+                # b at t + lag against a at t
+                _a = _xa[max(0, -_lag):_L - max(0, _lag)]
+                _b = _xb[max(0, _lag):_L - max(0, -_lag)]
+                if not len(_a):
+                    continue
+                _N[_k] += (_a * _b).sum(0); _na[_k] += _a.sum(0); _nb[_k] += _b.sum(0)
+                _T[_k] += len(_a)
+        _T = _T[:, None]
+        _den = np.sqrt(_na * (_T - _na) * _nb * (_T - _nb))
+        _rr = np.where(_den > 0, (_N * _T - _na * _nb) / np.where(_den > 0, _den, 1), np.nan)
+        _curves.append(_rr.T); _pair_of += [f"{_sa}_{_sb}"] * _ia.size
+        _locked += list(_g["time_locked"])
+    _C = np.vstack(_curves)
+    _pairs = sorted(set(_pair_of)); _po = np.array(_pair_of)
+    _pair_mean = np.array([np.nanmean(_C[_po == p], axis=0) for p in _pairs])
+    _lag0 = int(np.where(LAGS == 0)[0][0])
+    # check against 05h: lag-0 r per match equals 05h's per-match locking r
+    _diff = float(np.nanmax(np.abs(_C[:, _lag0] - np.concatenate(
+        [g["lock_r"].to_numpy() for _, g in full_match_table.groupby(["sub_a", "sub_b"], sort=True)]))))
+    if _diff > 1e-9:
+        raise RuntimeError(f"lag-0 occupancy r differs from 05h locking r by {_diff}")
+
+    _fig, _ax = plt.subplots(figsize=(3.4, 2.4))
+    _x = LAGS * TR_S
+    for _pm in _pair_mean:
+        _ax.plot(_x, _pm, color="#BBBBBB", lw=0.6, zorder=1)
+    _ax.plot(_x, np.nanmean(_C, axis=0), color="#4A4A4A", lw=1.6, zorder=2)
+    _ax.axhline(0, color="black", lw=0.5, ls=":")
+    _ax.axvline(0, color="black", lw=0.5, ls=":")
+    _ax.set_xlabel("Lag of second participant (s)", fontsize=7)
+    _ax.set_ylabel("Occupancy correlation", fontsize=7)
+    _ax.tick_params(labelsize=6)
+    for _sp in ("top", "right"):
+        _ax.spines[_sp].set_visible(False)
+    for _ext in ("png", "svg", "pdf"):
+        _fig.savefig(SUPP / f"figS_participant_umap_F_lagged_locking.{_ext}",
+                     bbox_inches="tight", pad_inches=0.02, dpi=300)
+    plt.close(_fig)
+    _summary = {"lags_tr": LAGS.tolist(), "tr_s": TR_S, "n_matches": int(_C.shape[0]),
+                "mean_all": np.nanmean(_C, axis=0).tolist(),
+                "mean_time_locked": np.nanmean(_C[np.array(_locked)], axis=0).tolist(),
+                "mean_not_time_locked": np.nanmean(_C[~np.array(_locked)], axis=0).tolist(),
+                "pair_means": dict(zip(_pairs, _pair_mean.tolist())),
+                "note": "descriptive; lag 0 equals 05h's locking r per match"}
+    with open(SUPP / "lagged_locking.json", "w") as _f:
+        json.dump(_summary, _f, indent=1)
+    _m = np.nanmean(_C, axis=0)
+    print(f"S F: mean r at lag 0 = {_m[_lag0]:.4f}, at +-20 TR = {_m[0]:.4f} / {_m[-1]:.4f}; "
+          f"peak lag {LAGS[np.nanargmax(_m)]} TR; pairs peaking at 0: "
+          f"{int(sum(LAGS[np.nanargmax(p)] == 0 for p in _pair_mean))}/{len(_pairs)}")
     return
 
 
