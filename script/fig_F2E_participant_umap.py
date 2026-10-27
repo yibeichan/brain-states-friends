@@ -305,8 +305,8 @@ def line_panel(NETWORK_COLORS, SUBJECTS, SUBJECT_MARKERS, emb_elig, finish, np, 
 @app.cell
 def panel_2E(OUT, SUPP, draw_match_lines, full_match_table, residual_match_table):
     # the main panel fills the bottom row of Fig 2 next to its legend
-    draw_match_lines(full_match_table, OUT / "fig2_E_participant_umap", width=5.0, dot_size=30)
-    draw_match_lines(None, OUT / "fig2_E_participant_umap_nolines", width=5.0, dot_size=30)
+    draw_match_lines(full_match_table, OUT / "fig2_E_participant_umap", width=5.0, dot_size=50)
+    draw_match_lines(None, OUT / "fig2_E_participant_umap_nolines", width=5.0, dot_size=50)
     draw_match_lines(residual_match_table, SUPP / "figS_participant_umap_A_residual_matches")
     return
 
