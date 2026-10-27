@@ -15,7 +15,7 @@ network-participation summaries.
 |---|---|---|---|---|
 | A | Per-subject category-count stacked bars (5 categories, active repertoire) in one combined figure + standalone category legend | bar | 05e_a4 state_flags.csv | fig2_A_category_bars.{png,svg} + fig2_A_legend_categories.{png,svg} |
 | B | Sankey: 5 categories -> 13 networks, top-3 composition (category + cortical labels enlarged; subcortical at base size) | flow/network | state_flags.csv + 04 state_means_parcel.npy | fig2_B_category_network_sankey.{png,svg} |
-| C | Per-state network-participation pie mosaic (content-eligible); sub-01 main, sub-02..06 in ../si_network_pies_by_participant/ (not in a figure); per-state complement to B | pie | state_flags.csv + 04 state_means_parcel.npy | fig2_C_sub-01_network_pies.{png,svg} + fig2_C_legend_networks.{png,svg} + ../si_network_pies_by_participant/network_pies_<sub>.{png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
+| C | Per-state network-participation pie mosaic (content-eligible); sub-01 main, all six also in ../si_network_pies_by_participant/ (not in a figure); per-state complement to B | pie | state_flags.csv + 04 state_means_parcel.npy | fig2_C_sub-01_network_pies.{png,svg} + fig2_C_legend_networks.{png,svg} + ../si_network_pies_by_participant/network_pies_<sub>.{png,svg} + fig2_C_network_participation_{metrics,summary}.{csv,json} |
 | D | Surface exemplars per category (sub-01): cortical + subcortical mean-activity maps with shared per-region colorbars, and for each exemplar a filled-line occupancy trace (600 bins over the concatenated runs, moving average of 7 bins, one shared y-scale across the four traces) | brain map + line | 04 state_means_parcel.npy + yabplot + decoded_states.pkl | fig2_D_*.{pdf,png,svg} (multi-file; SVG brain-map files embed raster renders) |
 
 Run full app:
@@ -435,8 +435,9 @@ def panel_C_network_participation(
     by dominant network. This is the per-state complement to B's aggregate
     flow: a Sankey cannot tell "every state is multi-network" from "each state
     is single-network but different states pick different networks". The mosaic
-    shows the former - no pie is a single solid wedge. The other participants'
-    mosaics go to si_network_pies_by_participant/ (not in a figure). Metrics CSV/JSON (all 6 subjects) provide the caption
+    shows the former - no pie is a single solid wedge. All six participants'
+    mosaics also go to si_network_pies_by_participant/ (not in a figure).
+    Metrics CSV/JSON (all 6 subjects) provide the caption
     statistics. Descriptive composition, not a claim that canonical networks are
     the discovered state units.
     """
@@ -446,6 +447,7 @@ def panel_C_network_participation(
         plot_network_legend,
         plot_network_pie_mosaic,
         save_network_participation_outputs,
+        save_pie_mosaics_by_participant,
     )
 
     _parcel_nets = np.array(_load_parcel_networks(PARCELLATION))
@@ -466,13 +468,11 @@ def panel_C_network_participation(
     plot_network_legend(NETWORK_ORDER, NETWORK_COLORS,
                         OUT_F2 / "fig2_C_legend_networks",
                         display_fn=display_network, ncol=2, fig_w=2.6)
-    for _sub in [_s for _s in SUBJECTS if _s != _main]:
-        _pies = OUT_F2.parent / "si_network_pies_by_participant"
-        _pies.mkdir(parents=True, exist_ok=True)
-        plot_network_pie_mosaic(_metrics, _sub, NETWORK_ORDER, NETWORK_COLORS,
-                                _pies / f"network_pies_{_sub}")
+    save_pie_mosaics_by_participant(_metrics, SUBJECTS, NETWORK_ORDER,
+                                    NETWORK_COLORS, OUT_F2.parent)
 
-    print(f"saved: fig2_C_{_main}_network_pies + legend; other participants' mosaics in si_network_pies_by_participant/")
+    print(f"saved: fig2_C_{_main}_network_pies + legend; "
+          "all participants' mosaics in si_network_pies_by_participant/")
     print(f"saved: {_metrics_path.name}, {_summary_path.name}")
     return _metrics, _summary
 

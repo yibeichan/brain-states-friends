@@ -522,6 +522,34 @@ def plot_network_pie_mosaic(
     return n
 
 
+PIES_BY_PARTICIPANT_DIR = "si_network_pies_by_participant"
+
+
+def save_pie_mosaics_by_participant(
+    metrics: pd.DataFrame,
+    subjects: Sequence[str],
+    network_order: Sequence[str],
+    network_colors: Mapping[str, str],
+    figures_dir: str | Path,
+) -> dict[str, int]:
+    """Write every participant's pie mosaic to one folder.
+
+    Saves ``<figures_dir>/si_network_pies_by_participant/network_pies_<sub>``
+    (PNG + SVG) for each subject. Only sub-01's mosaic is in a figure (Fig 2C,
+    written separately under fig2/); the folder holds all six so the set is
+    complete. Returns the number of states drawn per subject.
+    """
+    out_dir = Path(figures_dir) / PIES_BY_PARTICIPANT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return {
+        subject: plot_network_pie_mosaic(
+            metrics, subject, network_order, network_colors,
+            out_dir / f"network_pies_{subject}",
+        )
+        for subject in subjects
+    }
+
+
 def plot_network_legend(
     network_order: Sequence[str],
     network_colors: Mapping[str, str],

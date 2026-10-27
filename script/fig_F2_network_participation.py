@@ -23,10 +23,12 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from utils.network_participation import (  # noqa: E402
     ELIGIBLE_CATEGORY,
+    PIES_BY_PARTICIPANT_DIR,
     compute_network_participation_metrics,
     plot_network_legend,
     plot_network_pie_mosaic,
     save_network_participation_outputs,
+    save_pie_mosaics_by_participant,
 )
 from utils.plot_style import (  # noqa: E402
     NETWORK_COLORS,
@@ -101,8 +103,8 @@ def main() -> None:
     )
 
     # Main Panel C: sub-01 per-state pie mosaic + shared network legend.
-    # The other participants' mosaics are not in a figure; they go to
-    # si_network_pies_by_participant/.
+    # All six participants' mosaics also go to si_network_pies_by_participant/
+    # (not in a figure).
     main_subject = "sub-01"
     n_main = plot_network_pie_mosaic(
         metrics, main_subject, NETWORK_ORDER, NETWORK_COLORS,
@@ -114,15 +116,12 @@ def main() -> None:
     )
     print(f"saved: fig2_C_{main_subject}_network_pies.{{png,svg}} ({n_main} states)")
     print("saved: fig2_C_legend_networks.{png,svg}")
-    for subject in [s for s in args.subjects if s != main_subject]:
-        pies_dir = out_dir.parent / "si_network_pies_by_participant"
-        pies_dir.mkdir(parents=True, exist_ok=True)
-        n_supp = plot_network_pie_mosaic(
-            metrics, subject, NETWORK_ORDER, NETWORK_COLORS,
-            pies_dir / f"network_pies_{subject}",
-        )
-        print(f"saved: si_network_pies_by_participant/network_pies_{subject}.{{png,svg}} "
-              f"({n_supp} states)")
+    n_by_subject = save_pie_mosaics_by_participant(
+        metrics, args.subjects, NETWORK_ORDER, NETWORK_COLORS, out_dir.parent,
+    )
+    for subject, n_supp in n_by_subject.items():
+        print(f"saved: {PIES_BY_PARTICIPANT_DIR}/network_pies_{subject}"
+              f".{{png,svg}} ({n_supp} states)")
 
     medians = summary["metric_medians"]
     print(f"saved: {metrics_path}")
