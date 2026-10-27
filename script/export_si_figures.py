@@ -147,6 +147,22 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
     ("S14_participant_umap_legend_recurrence.png", "EXPORT",
      "script/fig_F2E_participant_umap.py",
      "si_participant_umap/figS_participant_umap_legend_recurrence.png"),
+
+    ("S15_transition_module_similarity_A_fc.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_A_fc_similarity.png"),
+    ("S15_transition_module_similarity_B_maps.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_B_map_similarity.png"),
+    ("S15_transition_module_similarity_legend_fc.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_legend_fc.png"),
+    ("S15_transition_module_similarity_legend_maps.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_legend_map.png"),
+    ("S15_transition_module_similarity_legend_networks.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "fig3/fig3_A_legend_networks.png"),
 ]
 
 # Legacy emitted paths, kept only so a stale tree can be diagnosed. These are

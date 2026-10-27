@@ -11,12 +11,12 @@ This project maps the repertoire of brain states that recur during longitudinal 
 ## Supplementary material
 
 The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
-indexes Figures S1–S14 and Tables S1–S3, and for each one gives the caption, the
+indexes Figures S1–S15 and Tables S1–S3, and for each one gives the caption, the
 generating script, and the source outputs the reported values were read from.
 
 | | |
 |---|---|
-| [Figures S1–S14](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
+| [Figures S1–S15](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
 | [Tables S1–S3](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation; cross-stimulus correlation on the full repertoire versus content-eligible states |
 | [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
 
@@ -203,7 +203,7 @@ uv run python script/export_si_figures.py          # status only
 uv run python script/export_si_figures.py --copy   # place the files
 ```
 
-See [docs/supplementary/](docs/supplementary/) for the complete S1–S14 index
+See [docs/supplementary/](docs/supplementary/) for the complete S1–S15 index
 with per-figure captions, provenance, and branch.
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,

@@ -1,6 +1,6 @@
 # Supplementary Figures and Tables — Brain States Friends
 
-This directory catalogues all supplementary figures (S1–S14) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Three analyses reside on the orphan `supplements` branch of this repository (ICA convergence diagnostics, S10; ICA out-of-stimulus recurrence, S12; and the phase-randomized null distributions, S13); their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
+This directory catalogues all supplementary figures (S1–S15) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Three analyses reside on the orphan `supplements` branch of this repository (ICA convergence diagnostics, S10; ICA out-of-stimulus recurrence, S12; and the phase-randomized null distributions, S13); their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
 
 ## Catalogue
 
@@ -20,6 +20,7 @@ This directory catalogues all supplementary figures (S1–S14) for the manuscrip
 | S12 | ICA out-of-stimulus recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S12_ica_oos_recurrence_m10_A_wta.png](figures/S12_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S12_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S12_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S12_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S12_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S12_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
 | S13 | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation, with the observed correlation marked (the distributions behind Table S2) | [S13_phase_randomized_null.png](figures/S13_phase_randomized_null.png) | [sm_rel_r5_phase_null.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r5_phase_null.md) | supplements |
 | S14 | All participants' states in one embedding: matches after removing the components shared with the other participants (A), all active states by state category (B), content-eligible states by recurrence score (C), the embedding under other UMAP settings, PCA and classical MDS (D), and the occupancy correlation of all matches across time lags (E); legends for networks, participants, categories and recurrence | [A](figures/S14_participant_umap_A_residual_matches.png) · [B](figures/S14_participant_umap_B_active_categories.png) · [C](figures/S14_participant_umap_C_recurrence.png) · [D](figures/S14_participant_umap_D_robustness.png) · [E](figures/S14_participant_umap_E_lagged_locking.png) · legends: [networks](figures/S14_participant_umap_legend_networks.png), [participants](figures/S14_participant_umap_legend_participants.png), [categories](figures/S14_participant_umap_legend_categories.png), [recurrence](figures/S14_participant_umap_legend_recurrence.png) | [../findings/05h_participant_state_matching.md](../findings/05h_participant_state_matching.md) | main |
+| S15 | Similarity of the states in each transition module: within-state functional-connectivity similarity (A) and activation-map similarity (B), per participant, with states in the module order of Figure 3A; legends for both scales and for networks | [A](figures/S15_transition_module_similarity_A_fc.png) · [B](figures/S15_transition_module_similarity_B_maps.png) · legends: [FC](figures/S15_transition_module_similarity_legend_fc.png), [maps](figures/S15_transition_module_similarity_legend_maps.png), [networks](figures/S15_transition_module_similarity_legend_networks.png) | [../findings/06e_transition_modules.md](../findings/06e_transition_modules.md) | main |
 
 ---
 
@@ -242,6 +243,22 @@ The content-eligible states of all six participants are embedded together with U
 **E.** Occupancy correlation of every matched pair of states (all matches, not only the time-locked ones) when the second participant's state sequence is shifted by up to 20 TRs (about 30 s) within each run. Thin lines are the mean per participant pair; the thick line is the mean over all matches. The value at zero lag is the occupancy correlation used for the time-locking test. Values are also written to `lagged_locking.json`.
 
 Legends: [networks](figures/S14_participant_umap_legend_networks.png) (A), [participants](figures/S14_participant_umap_legend_participants.png) (A, B, D), [state categories](figures/S14_participant_umap_legend_categories.png) (B), [recurrence score](figures/S14_participant_umap_legend_recurrence.png) (C).
+
+---
+
+## Figure S15 — Similarity of the states within transition modules
+
+Each participant's states are ordered as in Figure 3A: by the transition modules of the model's transition matrix (modules sorted by the recurrence of their most recurrent state, states within a module by recurrence), with mid-grey lines between modules. Colored ribbons on the top and left edges give each state's dominant network, and dots mark states excluded from content analyses. Both matrices are symmetric, and the diagonal is left white. Generated by `script/fig_F3_transition_structure.py`; the within- minus between-module differences and the co-membership model coefficients for each measure are written to `si_transition_modules_similarity_stats.json`.
+
+![Six state-by-state matrices, one per participant, of within-state functional-connectivity similarity as a percentile of that participant's state pairs, with states in transition-module order and module boundaries drawn as grey lines](figures/S15_transition_module_similarity_A_fc.png)
+
+**A.** Within-state functional-connectivity similarity: the RV coefficient between two states' within-state correlation matrices, the measure correlated with transition probability in Figure 3B. RV lies between 0.9 and 1 for nearly all pairs, so each cell shows the pair's percentile among that participant's state pairs. States with too few time points for a within-state correlation matrix are shown as light grey rows and columns.
+
+![Six state-by-state matrices, one per participant, of the correlation between states' mean activation maps on a blue-white-red scale, with states in transition-module order and module boundaries drawn as grey lines](figures/S15_transition_module_similarity_B_maps.png)
+
+**B.** Activation-map similarity: the Pearson correlation across the 156 regions between two states' mean activity maps, relative to the participant's mean, on one diverging scale shared by all participants.
+
+Legends: [FC similarity](figures/S15_transition_module_similarity_legend_fc.png) (A), [map similarity](figures/S15_transition_module_similarity_legend_maps.png) (B), [networks](figures/S15_transition_module_similarity_legend_networks.png) (A, B).
 
 ---
 
