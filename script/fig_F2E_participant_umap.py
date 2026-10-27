@@ -9,8 +9,8 @@ are not evidence; the matching statistics from 05h are.
 In 2E (and S A) colour encodes each state's dominant network, with the
 network colours of Fig 2C, and marker shape encodes participant, with the
 markers of Fig 1C. A line between two states of the same colour is a match
-between states with the same dominant network. S B also colours by dominant
-network (its markers carry the state category); S D keeps colour = participant.
+between states with the same dominant network. Marker shape is the participant
+in every panel; S B colours states by category with the colours of Fig 2A.
 
 Chart-family note: Fig 1D and Fig 5A already use scatter. Panel E is kept as a
 documented exception to the at-most-two-main-figures rule, because its axes are
@@ -22,17 +22,16 @@ decision 2026-10-22).
 | 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (16-31 per participant), pooled UMAP, colour = dominant network (05e state_flags, Fig 2C colours), marker = participant (Fig 1C markers); a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
-| S B | All active states, colour = dominant network (Fig 2C colours), marker = 05e summary category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
+| S B | All active states, colour = 05e summary category (Fig 2A colours: content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker = participant (Fig 1C markers), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
-| S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS | scatter small multiples | .../figS_participant_umap_D_robustness |
-| S E | One time-locked match (the one with the median locking r of all time-locked matches) as on/off occupancy of the two states in the first 4 runs both participants watched in which both states occur; colour = each state's dominant network | event raster | .../figS_participant_umap_E_time_locking_example |
-| S F | Occupancy correlation of every map match (all 353, not only time-locked) at lags of -20..20 TRs of the second participant within each run; thin lines = mean per participant pair, thick line = mean over matches; lag 0 equals 05h's locking r | line | .../figS_participant_umap_F_lagged_locking |
-| legends | 2E participant markers and dominant-network colours; supplementary network colours (active states), participant colours (S D), category markers, recurrence colorbar | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
+| S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS; marker = participant | scatter small multiples | .../figS_participant_umap_D_robustness |
+| S E | Occupancy correlation of every map match (all 353, not only time-locked) at lags of -20..20 TRs of the second participant within each run; thin lines = mean per participant pair, thick line = mean over matches; lag 0 equals 05h's locking r | line | .../figS_participant_umap_E_lagged_locking |
+| legends | 2E participant markers (also for S A, S B, S D) and dominant-network colours (also for S A); category colours (S B); recurrence colorbar (S C) | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
 
 Supplementary panels A-D share one chart family because they show one
-embedding with different encodings; the parallel layout is the point. E and F
-show the timing behind the time-locked flag, which the embedding cannot show.
-F's value at lag 0 is checked against 05h's per-match locking r.
+embedding with different encodings; the parallel layout is the point. E shows
+the timing behind the time-locked flag, which the embedding cannot show. E's
+value at lag 0 is checked against 05h's per-match locking r.
 
 Also written: fig2/supp_participant_umap/participant_mixing.json, the share of
 each state's 5 nearest neighbours (correlation distance, full 156-parcel space,
@@ -73,11 +72,12 @@ def imports():
     load_dotenv(Path(__file__).resolve().parent.parent / ".env")
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from utils.plot_style import (NETWORK_COLORS, RECURRENCE_CMAP, SUBJECT_MARKERS,
-                                  apply_publication_style)
+                                  SUBJECT_NEUTRAL, apply_publication_style)
     from utils.recurrence_utils import active_state_indices
 
     apply_publication_style()
-    return (NETWORK_COLORS, Path, RECURRENCE_CMAP, SUBJECT_MARKERS, active_state_indices,
+    return (NETWORK_COLORS, Path, RECURRENCE_CMAP, SUBJECT_MARKERS, SUBJECT_NEUTRAL,
+            active_state_indices,
             json, np, os, pd, pickle, plt, umap, warnings)
 
 
@@ -86,24 +86,22 @@ def config(Path, os):
     SCRATCH = Path(os.environ["SCRATCH_DIR"])
     PARC, VT = "atlas-4S156Parcels", "0.95"
     SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-    # Paul Tol "bright" (colourblind-safe)
-    SUBJ_COLORS = dict(zip(SUBJECTS, ["#4477AA", "#EE6677", "#228833",
-                                      "#CCBB44", "#66CCEE", "#AA3377"]))
     # 05e_a4 summary categories in the manuscript's names
     CATEGORY_NAMES = {"eligible_for_content_analysis": "content-eligible",
                       "low_confidence": "low-confidence",
                       "run_onset_anchored": "run-onset-anchored",
                       "season_temporal": "drift-anchored",
                       "rare": "rare"}  # active states are never "unused"
-    CATEGORY_MARKERS = {"content-eligible": "o", "low-confidence": "^",
-                        "run-onset-anchored": "X", "drift-anchored": "s",
-                        "rare": "v"}
+    # the category colours of Fig 2A (fig_F2_recurrence_sources.TAXONOMY_COLORS)
+    CATEGORY_COLORS = {"content-eligible": "#0C7BDC", "low-confidence": "#5A5A5A",
+                       "run-onset-anchored": "#FFC20A", "drift-anchored": "#D35FB7",
+                       "rare": "#CCCCCC"}
     UMAP_KW = dict(n_neighbors=15, min_dist=0.3, metric="correlation", random_state=0)
     OUT = SCRATCH / "output" / "manuscript_figures" / "fig2"
     SUPP = OUT / "supp_participant_umap"
     SUPP.mkdir(parents=True, exist_ok=True)
-    return (CATEGORY_MARKERS, CATEGORY_NAMES, OUT, PARC, SCRATCH, SUBJECTS,
-            SUBJ_COLORS, SUPP, UMAP_KW, VT)
+    return (CATEGORY_COLORS, CATEGORY_NAMES, OUT, PARC, SCRATCH, SUBJECTS,
+            SUPP, UMAP_KW, VT)
 
 
 @app.cell
@@ -317,16 +315,16 @@ def panel_2E(OUT, SUPP, draw_match_lines, full_match_table, residual_match_table
 
 
 @app.cell
-def panel_S_B(CATEGORY_MARKERS, NETWORK_COLORS, SUPP, emb_active, finish, np, plt,
-              state_table):
+def panel_S_B(CATEGORY_COLORS, SUBJECTS, SUBJECT_MARKERS, SUPP, emb_active, finish, np,
+              plt, state_table):
     _fig, _ax = plt.subplots(figsize=(3.4, 3.4))
     _size = 4 + 120 * np.sqrt(state_table["fo"].to_numpy())
-    for _cat, _mk in CATEGORY_MARKERS.items():
-        _m = (state_table["category"] == _cat).to_numpy()
-        if _m.any():
-            _ax.scatter(emb_active[_m, 0], emb_active[_m, 1], s=_size[_m], marker=_mk,
-                        c=[NETWORK_COLORS[n] for n in state_table.loc[_m, "network"]],
-                        edgecolors="white", linewidths=0.4, alpha=0.85)
+    for _s in SUBJECTS:
+        _m = (state_table["sub"] == _s).to_numpy()
+        _ax.scatter(emb_active[_m, 0], emb_active[_m, 1], s=_size[_m],
+                    marker=SUBJECT_MARKERS[_s],
+                    c=[CATEGORY_COLORS[c] for c in state_table.loc[_m, "category"]],
+                    edgecolors="white", linewidths=0.4, alpha=0.85)
     finish(_ax, SUPP / "figS_participant_umap_B_active_categories", _fig)
     return
 
@@ -342,7 +340,8 @@ def panel_S_C(RECURRENCE_CMAP, SUPP, emb_elig, finish, plt, state_table):
 
 
 @app.cell
-def panel_S_D(SUBJECTS, SUBJ_COLORS, SUPP, UMAP_KW, np, plt, state_maps, state_table, umap):
+def panel_S_D(SUBJECTS, SUBJECT_MARKERS, SUBJECT_NEUTRAL, SUPP, UMAP_KW, np, plt, state_maps,
+              state_table, umap):
     _elig = state_table["eligible"].to_numpy()
     _X = state_maps[_elig]
     _subj = state_table["sub"].to_numpy()[_elig]
@@ -368,7 +367,8 @@ def panel_S_D(SUBJECTS, SUBJ_COLORS, SUPP, UMAP_KW, np, plt, state_maps, state_t
         _ax.set_axis_on()
         for _s in SUBJECTS:
             _m = _subj == _s
-            _ax.scatter(_Y[_m, 0], _Y[_m, 1], s=7, c=SUBJ_COLORS[_s], linewidths=0)
+            _ax.scatter(_Y[_m, 0], _Y[_m, 1], s=9, marker=SUBJECT_MARKERS[_s],
+                        c=SUBJECT_NEUTRAL, linewidths=0, alpha=0.8)
         _ax.set_xticks([]); _ax.set_yticks([])
         _ax.set_xlabel(_name, fontsize=7)
         for _sp in ("top", "right"):
@@ -381,65 +381,7 @@ def panel_S_D(SUBJECTS, SUBJ_COLORS, SUPP, UMAP_KW, np, plt, state_maps, state_t
 
 
 @app.cell
-def panel_S_E(NETWORK_COLORS, PARC, SCRATCH, SUPP, VT, full_match_table, np, pickle, plt,
-              state_table):
-    # one time-locked match drawn as on/off occupancy in runs both participants
-    # watched. Pre-stated choices, so the example is not the strongest one: the
-    # time-locked match with the median locking r, and the first 4 shared runs
-    # (in run order) in which both states occur. Runs are aligned from their
-    # start and truncated to the shorter one, as in 05h.
-    TR = 1.49
-    _locked = full_match_table[full_match_table["time_locked"]].sort_values(
-        "lock_r", kind="stable").reset_index(drop=True)
-    _ex = _locked.iloc[(len(_locked) - 1) // 2]
-
-    def _decoded(sub):
-        _p = (SCRATCH / "output" / "04_combined_hdphmm" / PARC / sub / "final"
-              / f"vt{VT}" / "decoded_states.pkl")
-        with open(_p, "rb") as _f:
-            return {k: np.asarray(v, dtype=int) for k, v in pickle.load(_f).items()}
-
-    _da, _db = _decoded(_ex.sub_a), _decoded(_ex.sub_b)
-    _runs = []
-    for _r in sorted(set(_da) & set(_db)):
-        _L = min(_da[_r].size, _db[_r].size)
-        _oa, _ob = _da[_r][:_L] == _ex.a, _db[_r][:_L] == _ex.b
-        if _oa.any() and _ob.any():
-            _runs.append((_r, _oa, _ob))
-        if len(_runs) == 4:
-            break
-    _net = state_table.set_index(["sub", "state"])["network"]
-    _ca = NETWORK_COLORS[_net[(_ex.sub_a, _ex.a)]]
-    _cb = NETWORK_COLORS[_net[(_ex.sub_b, _ex.b)]]
-
-    _fig, _axes = plt.subplots(len(_runs), 1, figsize=(6.0, 0.62 * len(_runs) + 0.35),
-                               sharex=True)
-    for _ax, (_r, _oa, _ob) in zip(np.atleast_1d(_axes), _runs):
-        _t = np.arange(_oa.size) * TR / 60.0
-        _ax.fill_between(_t, 1.05, 1.95, where=_oa, step="post", color=_ca, lw=0)
-        _ax.fill_between(_t, 0.05, 0.95, where=_ob, step="post", color=_cb, lw=0)
-        _ax.set_ylim(0, 2); _ax.set_yticks([0.5, 1.5])
-        _ax.set_yticklabels([f"{_ex.sub_b} state {_ex.b}", f"{_ex.sub_a} state {_ex.a}"],
-                            fontsize=6)
-        _ax.text(1.0, 0.5, str(_r), transform=_ax.transAxes, fontsize=6,
-                 ha="left", va="center")
-        _ax.tick_params(axis="y", length=0)
-        for _sp in ("top", "right", "left"):
-            _ax.spines[_sp].set_visible(False)
-    _ax.set_xlabel("Time in run (min)", fontsize=7)
-    _ax.tick_params(axis="x", labelsize=6)
-    for _ext in ("png", "svg", "pdf"):
-        _fig.savefig(SUPP / f"figS_participant_umap_E_time_locking_example.{_ext}",
-                     bbox_inches="tight", pad_inches=0.02, dpi=300)
-    plt.close(_fig)
-    print(f"S E example: {_ex.sub_a} state {_ex.a} - {_ex.sub_b} state {_ex.b}, "
-          f"map r = {_ex.r:.3f}, locking r = {_ex.lock_r:.3f} (median of "
-          f"{len(_locked)} time-locked matches); runs {[r for r, _, _ in _runs]}")
-    return
-
-
-@app.cell
-def panel_S_F(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pickle, plt):
+def panel_S_E(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pickle, plt):
     # lagged occupancy correlation for every map match: Pearson r between one
     # state's on/off sequence and its match's, with the second participant
     # shifted by -20..20 TRs within each run (no wrap), pooled over the runs both
@@ -501,7 +443,7 @@ def panel_S_F(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pic
     for _sp in ("top", "right"):
         _ax.spines[_sp].set_visible(False)
     for _ext in ("png", "svg", "pdf"):
-        _fig.savefig(SUPP / f"figS_participant_umap_F_lagged_locking.{_ext}",
+        _fig.savefig(SUPP / f"figS_participant_umap_E_lagged_locking.{_ext}",
                      bbox_inches="tight", pad_inches=0.02, dpi=300)
     plt.close(_fig)
     _summary = {"lags_tr": LAGS.tolist(), "tr_s": TR_S, "n_matches": int(_C.shape[0]),
@@ -513,15 +455,15 @@ def panel_S_F(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pic
     with open(SUPP / "lagged_locking.json", "w") as _f:
         json.dump(_summary, _f, indent=1)
     _m = np.nanmean(_C, axis=0)
-    print(f"S F: mean r at lag 0 = {_m[_lag0]:.4f}, at +-20 TR = {_m[0]:.4f} / {_m[-1]:.4f}; "
+    print(f"S E: mean r at lag 0 = {_m[_lag0]:.4f}, at +-20 TR = {_m[0]:.4f} / {_m[-1]:.4f}; "
           f"peak lag {LAGS[np.nanargmax(_m)]} TR; pairs peaking at 0: "
           f"{int(sum(LAGS[np.nanargmax(p)] == 0 for p in _pair_mean))}/{len(_pairs)}")
     return
 
 
 @app.cell
-def legends(CATEGORY_MARKERS, NETWORK_COLORS, OUT, RECURRENCE_CMAP, SUBJECTS,
-            SUBJECT_MARKERS, SUBJ_COLORS, SUPP, plt, state_table):
+def legends(CATEGORY_COLORS, NETWORK_COLORS, OUT, RECURRENCE_CMAP, SUBJECTS,
+            SUBJECT_MARKERS, SUPP, plt, state_table):
     import matplotlib as mpl
     from matplotlib.lines import Line2D
 
@@ -543,18 +485,9 @@ def legends(CATEGORY_MARKERS, NETWORK_COLORS, OUT, RECURRENCE_CMAP, SUBJECTS,
     _fig, _ax = plt.subplots(figsize=(1.2, 1.6)); _ax.set_axis_off()
     _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
     _save(_fig, OUT / "fig2_E_legend_networks")
-    _h = [Line2D([], [], marker="o", ls="", color=SUBJ_COLORS[s], label=s) for s in SUBJECTS]
-    _fig, _ax = plt.subplots(figsize=(1.2, 1.6)); _ax.set_axis_off()
-    _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
-    _save(_fig, SUPP / "figS_participant_umap_legend_participants")
-    _nets = set(state_table["network"])
-    _h = [Line2D([], [], marker="o", ls="", color=c, label=n)
-          for n, c in NETWORK_COLORS.items() if n in _nets]
-    _fig, _ax = plt.subplots(figsize=(1.2, 1.8)); _ax.set_axis_off()
-    _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
-    _save(_fig, SUPP / "figS_participant_umap_legend_networks")
-    _h = [Line2D([], [], marker=_mk, ls="", color="#4A4A4A", label=_cat)
-          for _cat, _mk in CATEGORY_MARKERS.items()]
+    # S B: state category = colour (as in Fig 2A); participant markers as in 2E
+    _h = [Line2D([], [], marker="o", ls="", color=_c, label=_cat)
+          for _cat, _c in CATEGORY_COLORS.items()]
     _fig, _ax = plt.subplots(figsize=(1.6, 1.4)); _ax.set_axis_off()
     _ax.legend(handles=_h, loc="center", frameon=False, fontsize=7)
     _save(_fig, SUPP / "figS_participant_umap_legend_categories")
