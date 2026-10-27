@@ -26,6 +26,7 @@ separate files.
 | Panel | Content | Chart family | Source files | Output |
 |---|---|---|---|---|
 | A | Per-subject directed state transition matrices M (model transmat_, self-transitions removed), 2×3 small-multiples (full square; states ordered by the 06e best-Q partition of M: module rank, then recurrence descending; thin mid-grey module separators; single-hue Greys cells, shared log 5-95 scale; per-state network ribbon with flagged states dotted; non-modular subjects named in the title). Separate legend files. Caption numbers (from 06e summary): per subject Q, Q - mean Q_null and p under N2 and N3 on graph E. | heatmap | 06b transition_graph.graphml + 06e partitions.json + 06e transition_modules_summary.json + 05e state_flags.csv (×6 subj) | fig3_A_transition_matrices.{png,svg} + fig3_A_legend_networks.{png,svg} + fig3_A_legend_prob.{png,svg} + fig3_A_module_stats.json |
+| SI | FC similarity (A: RV of within-state correlation matrices, as percentile of the subject's state pairs) and activation-map similarity (B: Pearson r, diverging) in Panel A's module order, same ribbon, dots and separators; recomputed within- minus between-module differences checked against 06e | heatmap | 05f fc_similarity_corr_rv.npy + 04 state_means_parcel.npy / pca_model.pkl + 06e partitions.json / transition_modules_summary.json (×6 subj) | ../si_transition_modules/si_transition_modules_{A_fc_similarity,B_map_similarity,legend_fc,legend_map}.{png,svg} + si_transition_modules_similarity_stats.json |
 | B | Cross-subject consistency forest (4 metrics × 6 subjects; 7in wide to match Panel A; per-subject marker shapes, neutral color; assortativity CI; per-row null line) + standalone subject-marker legend | point-based 1D | 06b transition_structure_summary.json (all subjects) | fig3_B_cross_subject_consistency.{png,svg} + fig3_B_legend_markers.{png,svg} |
 
 Design notes (2026-05-26 revision):
@@ -149,6 +150,104 @@ def load_partition(path, graph_nodes):
 
 
 @app.function
+def display_order(graphml_path, partition_path):
+    """Panel A's state order for one subject, shared with the SI panels.
+
+    Returns the 06b transition graph, the ordered state ids, each one's module
+    rank, and the per-state recurrence and dominant network (keyed by state).
+    """
+    import networkx as _nx
+
+    _G = _nx.read_graphml(graphml_path)
+    _gnodes = {int(_n): _n for _n in _G.nodes()}
+    _recs = {_s: float(_G.nodes[_n].get("recurrence_score", 0.0))
+             for _s, _n in _gnodes.items()}
+    _nets = {_s: _G.nodes[_n].get("dominant_network", "Unknown")
+             for _s, _n in _gnodes.items()}
+    _pnodes, _plabels = load_partition(partition_path, _gnodes)
+    _order, _mods = module_order(_pnodes, _plabels, _recs)
+    return _G, _order, _mods, _recs, _nets
+
+
+@app.function
+def offdiag_percentile(S):
+    """Each off-diagonal entry's percentile (0-100) among the finite off-diagonal
+    entries of the symmetric matrix S; the diagonal and undefined entries are NaN.
+    Ties get their mean rank.
+    """
+    import numpy as _np
+    from scipy.stats import rankdata as _rankdata
+
+    S = _np.asarray(S, dtype=float)
+    _out = _np.full(S.shape, _np.nan)
+    _iu = _np.triu_indices(S.shape[0], 1)
+    _v = S[_iu]
+    _ok = _np.isfinite(_v)
+    if _ok.sum() < 2:
+        return _out
+    _r = _np.full(_v.shape, _np.nan)
+    _r[_ok] = 100.0 * (_rankdata(_v[_ok]) - 1) / (_ok.sum() - 1)
+    _out[_iu] = _r
+    _out.T[_iu] = _r
+    return _out
+
+
+@app.function
+def within_minus_between(S, labels):
+    """Mean of S over same-module pairs minus the mean over different-module
+    pairs (upper triangle), as 06e's univariate characterisation computes it.
+    """
+    import numpy as _np
+
+    _lab = _np.asarray(labels)
+    _iu = _np.triu_indices(len(_lab), 1)
+    _co = (_lab[:, None] == _lab[None, :])[_iu]
+    _v = _np.asarray(S, dtype=float)[_iu]
+    return float(_v[_co].mean() - _v[~_co].mean())
+
+
+@app.function
+def draw_state_matrix(ax, M, cmap, norm, networks, module_ranks, flagged,
+                      network_colors, sep_color):
+    """Draw one subject's state-by-state matrix in display order (Panel A style).
+
+    M is already ordered (masked cells take the colormap's bad colour). A
+    per-state network ribbon runs along the top and left margins, a black dot
+    in a ribbon cell marks a flagged state, and lines in `sep_color` separate
+    modules. Ticks and spines are removed; the caller sets the title.
+    """
+    from matplotlib.patches import Rectangle as _Rectangle
+
+    _N = M.shape[0]
+    _rib = max(1.0, 0.035 * _N)
+    ax.imshow(M, cmap=cmap, norm=norm, interpolation="nearest",
+              aspect="equal", extent=[0, _N, _N, 0], zorder=2)
+    for _i, _net in enumerate(networks):
+        _c = network_colors.get(_net, "#BBBBBB")
+        ax.add_patch(_Rectangle((_i, -_rib), 1, _rib, color=_c,
+                                lw=0, zorder=3, clip_on=False))
+        ax.add_patch(_Rectangle((-_rib, _i), _rib, 1, color=_c,
+                                lw=0, zorder=3, clip_on=False))
+    _fi = [_i + 0.5 for _i, _fl in enumerate(flagged) if _fl]
+    if _fi:
+        ax.scatter(_fi, [-_rib / 2] * len(_fi), s=1.2, color="black",
+                   lw=0, zorder=4, clip_on=False)
+        ax.scatter([-_rib / 2] * len(_fi), _fi, s=1.2, color="black",
+                   lw=0, zorder=4, clip_on=False)
+    for _b in module_boundaries(module_ranks):
+        ax.plot([_b, _b], [-_rib, _N], color=sep_color, lw=0.6, zorder=3.5,
+                clip_on=False)
+        ax.plot([-_rib, _N], [_b, _b], color=sep_color, lw=0.6, zorder=3.5,
+                clip_on=False)
+    ax.set_xlim(-_rib, _N)
+    ax.set_ylim(_N, -_rib)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for _spine in ax.spines.values():
+        _spine.set_visible(False)
+
+
+@app.function
 def rule_null_stats(summary):
     """Per-subject numbers for the Panel A caption, from 06e's summary JSON.
 
@@ -210,16 +309,21 @@ def config(Path, os):
     TRANS_DIR = SCRATCH_DIR / "output" / "06b_transition_structure" / PARCELLATION
     MODULES_DIR = SCRATCH_DIR / "output" / "06e_transition_modules" / PARCELLATION
     FLAGS_DIR = SCRATCH_DIR / "output" / "05e_temporal_trend_a4" / PARCELLATION
+    FC_DIR = SCRATCH_DIR / "output" / "05f_state_fc" / PARCELLATION
+    HMM_DIR = SCRATCH_DIR / "output" / "04_combined_hdphmm" / PARCELLATION
 
     # FIG3_OUT_DIR redirects all outputs (e.g. for a test render); default is
-    # the manuscript figure directory.
+    # the manuscript figure directory. The SI panels go to a topic-named
+    # sibling folder.
     OUT_F3 = Path(os.environ.get("FIG3_OUT_DIR")
                   or SCRATCH_DIR / "output" / "manuscript_figures" / "fig3")
     OUT_F3.mkdir(parents=True, exist_ok=True)
+    OUT_SI_MODULES = OUT_F3.parent / "si_transition_modules"
+    OUT_SI_MODULES.mkdir(parents=True, exist_ok=True)
 
     return (
         SCRATCH_DIR, PARCELLATION, VT, SUBJECTS,
-        TRANS_DIR, MODULES_DIR, FLAGS_DIR, OUT_F3,
+        TRANS_DIR, MODULES_DIR, FLAGS_DIR, FC_DIR, HMM_DIR, OUT_F3, OUT_SI_MODULES,
     )
 
 
@@ -235,7 +339,7 @@ def load_summaries(SUBJECTS, TRANS_DIR, VT, json):
 
 @app.cell
 def panel_A_transition_matrices(
-    SUBJECTS, TRANS_DIR, MODULES_DIR, FLAGS_DIR, VT, OUT_F3, csv, json, nx, plt, np,
+    SUBJECTS, TRANS_DIR, MODULES_DIR, FLAGS_DIR, VT, OUT_F3, csv, json, plt, np,
     NETWORK_COLORS, NETWORK_ORDER, display_network,
 ):
     """Panel A - per-subject state transition matrices ordered by transition module.
@@ -277,7 +381,6 @@ def panel_A_transition_matrices(
     Legends are SEPARATE files (fig3_A_legend_networks, fig3_A_legend_prob).
     """
     from matplotlib.colors import LogNorm
-    from matplotlib.patches import Rectangle
     from matplotlib.cm import ScalarMappable
 
     # Pass 1: per subject, the directed matrix in module order, the per-state
@@ -288,15 +391,9 @@ def panel_A_transition_matrices(
     _present_nets = set()
     _all_w = []
     for _sub in SUBJECTS:
-        _G = nx.read_graphml(TRANS_DIR / _sub / VT / "transition_graph.graphml")
-        _gnodes = {int(_n): _n for _n in _G.nodes()}
-        _recs = {_s: float(_G.nodes[_n].get("recurrence_score", 0.0))
-                 for _s, _n in _gnodes.items()}
-        _nets = {_s: _G.nodes[_n].get("dominant_network", "Unknown")
-                 for _s, _n in _gnodes.items()}
-        _pnodes, _plabels = load_partition(MODULES_DIR / _sub / VT / "partitions.json",
-                                           _gnodes)
-        _order, _mods = module_order(_pnodes, _plabels, _recs)
+        _G, _order, _mods, _recs, _nets = display_order(
+            TRANS_DIR / _sub / VT / "transition_graph.graphml",
+            MODULES_DIR / _sub / VT / "partitions.json")
         with open(FLAGS_DIR / _sub / VT / "state_flags.csv") as _f:
             _cat = {int(_r["state"]): _r["summary_category"] for _r in csv.DictReader(_f)}
         _flagged = [_cat[_s] != "eligible_for_content_analysis" for _s in _order]
@@ -367,35 +464,9 @@ def panel_A_transition_matrices(
     _fig, _axes = plt.subplots(2, 3, figsize=(7.0, 5.0))
     for _ax, _sub in zip(_axes.ravel(), SUBJECTS):
         _M, _onets, _mods, _flagged, _modular = _data[_sub]
-        _N = _M.shape[0]
-        _rib = max(1.0, 0.035 * _N)
-        _Mm = np.ma.masked_where(_M <= 0, _M)
-        _ax.imshow(_Mm, cmap=_cmap, norm=_norm, interpolation="nearest",
-                   aspect="equal", extent=[0, _N, _N, 0], zorder=2)
-        for _i, _net in enumerate(_onets):
-            _c = NETWORK_COLORS.get(_net, "#BBBBBB")
-            _ax.add_patch(Rectangle((_i, -_rib), 1, _rib, color=_c,
-                                    lw=0, zorder=3, clip_on=False))
-            _ax.add_patch(Rectangle((-_rib, _i), _rib, 1, color=_c,
-                                    lw=0, zorder=3, clip_on=False))
-        _fi = [_i + 0.5 for _i, _fl in enumerate(_flagged) if _fl]
-        if _fi:
-            _ax.scatter(_fi, [-_rib / 2] * len(_fi), s=1.2, color="black",
-                        lw=0, zorder=4, clip_on=False)
-            _ax.scatter([-_rib / 2] * len(_fi), _fi, s=1.2, color="black",
-                        lw=0, zorder=4, clip_on=False)
-        for _b in module_boundaries(_mods):
-            _ax.plot([_b, _b], [-_rib, _N], color=_sep_color, lw=0.6, zorder=3.5,
-                     clip_on=False)
-            _ax.plot([-_rib, _N], [_b, _b], color=_sep_color, lw=0.6, zorder=3.5,
-                     clip_on=False)
-        _ax.set_xlim(-_rib, _N)
-        _ax.set_ylim(_N, -_rib)
-        _ax.set_xticks([])
-        _ax.set_yticks([])
+        draw_state_matrix(_ax, np.ma.masked_where(_M <= 0, _M), _cmap, _norm,
+                          _onets, _mods, _flagged, NETWORK_COLORS, _sep_color)
         _ax.set_title(_sub if _modular else f"{_sub} (not modular)", fontsize=9, pad=2)
-        for _spine in _ax.spines.values():
-            _spine.set_visible(False)
 
     _left, _bottom, _top, _right = 0.045, 0.045, 0.94, 0.99
     _fig.subplots_adjust(left=_left, right=_right, bottom=_bottom, top=_top,
@@ -458,6 +529,181 @@ def panel_A_transition_matrices(
                   pad_inches=0.02)
     plt.close(_figC)
     print(f"saved: legends (networks={_present})")
+    return
+
+
+@app.cell
+def supp_module_similarity(
+    SUBJECTS, TRANS_DIR, MODULES_DIR, FLAGS_DIR, FC_DIR, HMM_DIR, VT,
+    OUT_SI_MODULES, csv, json, plt, np, NETWORK_COLORS,
+):
+    """SI - functional-connectivity and activation-map similarity in module order.
+
+    Two 2×3 grids laid out like Panel A, with the same state order, network
+    ribbon, flagged-state dots and module separators, so the reader can see
+    whether the transition modules are blocks of similar states:
+      A  within-state FC similarity: the RV coefficient between the states'
+         within-state correlation matrices (05f fc_similarity_corr_rv.npy,
+         the measure 06b correlates with transitions and 06e enters in its
+         co-membership model). RV is compressed near 1 (per subject, the
+         off-diagonal 5th percentile is 0.91-0.98 and the 95th 0.987-0.998),
+         so cells show each pair's
+         percentile among that subject's state pairs; a shared raw scale would
+         be nearly flat. States without a defined FC (05f drops states with
+         fewer than 30 TRs) are drawn as light grey rows and columns.
+      B  activation-map similarity: Pearson r across parcels between the
+         states' mean maps (04 state_means_parcel minus the PCA mean, as in
+         06e's map_r), on a diverging scale shared across subjects.
+    Diagonals are white. The matrices are symmetric.
+
+    Before drawing, the within- minus between-module difference of each
+    matrix is recomputed and checked against 06e's univariate
+    characterisation (same states, same partition); a mismatch is an error.
+    The caption numbers (that difference with its permutation p, and the
+    joint co-membership model's coefficient sign and p) are written to
+    si_transition_modules_similarity_stats.json and printed.
+    """
+    import pickle as _pickle
+    import warnings as _warnings
+    from matplotlib.cm import ScalarMappable as _ScalarMappable
+    from matplotlib.colors import ListedColormap as _ListedColormap
+    from matplotlib.colors import Normalize as _Normalize
+    from matplotlib.colors import TwoSlopeNorm as _TwoSlopeNorm
+
+    _sep_color = "#8C8C8C"
+    _data = {}
+    _stats = {}
+    _map_abs = []
+    for _sub in SUBJECTS:
+        _G, _order, _mods, _recs, _nets = display_order(
+            TRANS_DIR / _sub / VT / "transition_graph.graphml",
+            MODULES_DIR / _sub / VT / "partitions.json")
+        with open(FLAGS_DIR / _sub / VT / "state_flags.csv") as _f:
+            _cat = {int(_r["state"]): _r["summary_category"] for _r in csv.DictReader(_f)}
+        _flagged = [_cat[_s] != "eligible_for_content_analysis" for _s in _order]
+        _onets = [_nets[_s] for _s in _order]
+        _idx = np.asarray(_order)
+
+        _rv = np.load(FC_DIR / _sub / VT / "fc_similarity_corr_rv.npy")[np.ix_(_idx, _idx)]
+        _hmm = HMM_DIR / _sub / "final" / VT
+        with _warnings.catch_warnings():
+            _warnings.simplefilter("ignore")
+            with open(_hmm / "pca_model.pkl", "rb") as _f:
+                _pca = _pickle.load(_f)
+        _maps = np.load(_hmm / "state_means_parcel.npy")[_idx] - _pca.mean_
+        _Z = _maps - _maps.mean(1, keepdims=True)
+        _Z /= np.linalg.norm(_Z, axis=1, keepdims=True)
+        _map_r = _Z @ _Z.T
+
+        # Check against 06e: same states (minus the no-FC ones), same labels.
+        with open(MODULES_DIR / _sub / VT / "transition_modules_summary.json") as _f:
+            _char = json.load(_f)["characterisation"]
+        _drop = set(int(_s) for _s in _char["dropped_no_fc"])
+        _keep = [_i for _i, _s in enumerate(_order) if _s not in _drop]
+        _kix = np.ix_(_keep, _keep)
+        _klab = [_mods[_i] for _i in _keep]
+        _chk = {}
+        for _name, _S in (("fc_rv", _rv), ("map_r", _map_r)):
+            _mine = within_minus_between(_S[_kix], _klab)
+            _theirs = float(_char["univariate"][_name]["within_minus_between"])
+            if not np.isclose(_mine, _theirs, rtol=0, atol=1e-9):
+                raise RuntimeError(f"{_sub} {_name}: within-between {_mine:.6g} "
+                                   f"differs from 06e's {_theirs:.6g}")
+            _mr = _char["mrqap"][_name]
+            _chk[_name] = {
+                "within_minus_between": _theirs,
+                "p_two_sided": float(_char["univariate"][_name]["p_two_sided"]),
+                "mrqap_beta": float(_mr["beta"]), "mrqap_p": float(_mr["p"]),
+            }
+        _stats[_sub] = {"n_states": len(_order), "n_modules": len(set(_mods)),
+                        "states_without_fc": sorted(_drop), **_chk}
+
+        _fc_pct = offdiag_percentile(_rv)
+        _undef = ~np.isfinite(_rv)
+        np.fill_diagonal(_undef, False)
+        _m = _map_r.copy()
+        np.fill_diagonal(_m, np.nan)
+        _map_abs.append(np.abs(_m[np.isfinite(_m)]))
+        _data[_sub] = (_fc_pct, _undef, _m, _onets, _mods, _flagged)
+        print(f"  SI modules {_sub}: {len(_order)} states, {len(set(_mods))} modules, "
+              f"no FC {sorted(_drop) or 'none'}; within-between "
+              f"FC RV {_chk['fc_rv']['within_minus_between']:+.4f} "
+              f"(p {_chk['fc_rv']['p_two_sided']:.4f}), "
+              f"map r {_chk['map_r']['within_minus_between']:+.3f} "
+              f"(p {_chk['map_r']['p_two_sided']:.4f})")
+
+    _lim = float(np.percentile(np.concatenate(_map_abs), 99))
+    _lim = min(1.0, np.ceil(_lim * 10) / 10)
+    _stats_out = {
+        "note": ("Within- minus between-module mean similarity and its two-sided "
+                 "label-permutation p, and the coefficient and p of each measure in "
+                 "the joint co-membership model (MRQAP), from 06e's characterisation "
+                 "(states without a defined FC excluded). fc_rv is the RV coefficient "
+                 "of within-state correlation matrices; map_r is the Pearson r of "
+                 "mean activation maps."),
+        "panel_A_scale": "percentile of each pair's FC RV among the subject's state pairs",
+        "panel_B_scale": f"map r, diverging, limits +/-{_lim:g} (shared)",
+        "subjects": _stats,
+    }
+    with open(OUT_SI_MODULES / "si_transition_modules_similarity_stats.json", "w") as _f:
+        json.dump(_stats_out, _f, indent=1)
+
+    _fc_cmap = _ListedColormap(plt.get_cmap("viridis")(np.linspace(0, 1, 256)), name="fc_pct")
+    _fc_cmap.set_bad("white")
+    _fc_norm = _Normalize(vmin=0, vmax=100)
+    _map_cmap = _ListedColormap(plt.get_cmap("RdBu_r")(np.linspace(0, 1, 256)), name="map_r")
+    _map_cmap.set_bad("white")
+    _map_norm = _TwoSlopeNorm(vcenter=0.0, vmin=-_lim, vmax=_lim)
+    _undef_rgba = np.array([0.85, 0.85, 0.85, 1.0])
+
+    for _panel, _stem_tail in (("A", "A_fc_similarity"), ("B", "B_map_similarity")):
+        _fig, _axes = plt.subplots(2, 3, figsize=(7.0, 5.0))
+        for _ax, _sub in zip(_axes.ravel(), SUBJECTS):
+            _fc_pct, _undef, _m, _onets, _mods, _flagged = _data[_sub]
+            if _panel == "A":
+                draw_state_matrix(_ax, np.ma.masked_invalid(_fc_pct), _fc_cmap, _fc_norm,
+                                  _onets, _mods, _flagged, NETWORK_COLORS, _sep_color)
+                if _undef.any():
+                    _ov = np.zeros(_undef.shape + (4,))
+                    _ov[_undef] = _undef_rgba
+                    _N = _undef.shape[0]
+                    _ax.imshow(_ov, interpolation="nearest", aspect="equal",
+                               extent=[0, _N, _N, 0], zorder=2.5)
+            else:
+                draw_state_matrix(_ax, np.ma.masked_invalid(_m), _map_cmap, _map_norm,
+                                  _onets, _mods, _flagged, NETWORK_COLORS, _sep_color)
+            _ax.set_title(_sub, fontsize=9, pad=2)
+        _fig.subplots_adjust(left=0.045, right=0.99, bottom=0.045, top=0.94,
+                             wspace=0.08, hspace=0.06)
+        _fig.text(0.006, 0.4925, "State", rotation=90, ha="left", va="center",
+                  fontsize=10)
+        _fig.text(0.5175, 0.006, "State", ha="center", va="bottom", fontsize=10)
+        _stem = OUT_SI_MODULES / f"si_transition_modules_{_stem_tail}"
+        _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+        _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+        plt.close(_fig)
+        print(f"saved: {_stem.name}.png (+ .svg)")
+
+    # Colorbar legends, one per grid (the network key is fig3_A_legend_networks).
+    for _name, _cmap, _norm, _label, _ticks in (
+        ("fc", _fc_cmap, _fc_norm, "FC similarity (percentile of state pairs)",
+         [0, 25, 50, 75, 100]),
+        ("map", _map_cmap, _map_norm, "Activation-map similarity (r)",
+         [-_lim, -_lim / 2, 0, _lim / 2, _lim]),
+    ):
+        _sm = _ScalarMappable(norm=_norm, cmap=_cmap)
+        _sm.set_array([])
+        _figC, _axC = plt.subplots(figsize=(2.0, 0.34))
+        _cb = _figC.colorbar(_sm, cax=_axC, orientation="horizontal")
+        _cb.set_ticks(_ticks)
+        _cb.ax.set_xticklabels([f"{_t:g}" for _t in _ticks])
+        _cb.set_label(_label, fontsize=7)
+        _cb.ax.tick_params(labelsize=6)
+        _stem = OUT_SI_MODULES / f"si_transition_modules_legend_{_name}"
+        _figC.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+        _figC.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+        plt.close(_figC)
+    print(f"saved: SI module similarity legends (map r limits +/-{_lim:g})")
     return
 
 
