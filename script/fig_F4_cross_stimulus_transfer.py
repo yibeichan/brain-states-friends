@@ -1,8 +1,4 @@
-"""Figure F5 - Cross-stimulus recurrence transfer (R5) (code ID F5).
-
-NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
-Code ID "F5"/"fig5" now maps to manuscript Figure 4; R-labels are unchanged
-(R5 = cross-stimulus). See MANIFEST.md "Figure-order note".
+"""Figure F4 - Cross-stimulus recurrence transfer (R5).
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .png + .svg mini-figures for manual
@@ -34,7 +30,7 @@ panel letter; the user arranges the composite.
 | A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
 | B | Transfer-ρ by condition (single strip; all active states). x = 4 Movie10 films + Harry Potter + Petit Prince; per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer clearest for audiovisual film, weaker/variable for reduced-modality stimuli; within-film spread descriptive (fit-confounded), NOT a content axis. Rest is supplementary-only (fig_S08). | point-1D strip | m10 A2_per_type + hp/pp A1 |
 
-A `fig5_taxonomy_legend` file gives the 5-category color key for Panel A.
+A `fig4_taxonomy_legend` file gives the 5-category color key for Panel A.
 
 Modalities (verified against Methods draft): Movie10 = audiovisual films; Harry
 Potter = word-by-word RSVP reading (visual-only, no audio); Petit Prince =
@@ -56,7 +52,7 @@ Source-truth audit (reproduced from raw arrays):
     content account; within-M10 spread tracks LL-fit gap (0.92/1.54/2.43/4.98).
 
 Run:
-    marimo edit script/fig_F5_cross_stimulus_transfer.py
+    marimo edit script/fig_F4_cross_stimulus_transfer.py
 """
 
 import marimo
@@ -127,13 +123,13 @@ def config(Path, os):
     def xstim_dir(stim):
         return SCRATCH_DIR / "output" / f"{stim}_05_cross_validation" / PARCELLATION
 
-    OUT_F5 = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5"
-    OUT_F5.mkdir(parents=True, exist_ok=True)
+    OUT_F4 = SCRATCH_DIR / "output" / "manuscript_figures" / "fig4"
+    OUT_F4.mkdir(parents=True, exist_ok=True)
 
     return (
         SCRATCH_DIR, PARCELLATION, VT, SUBJECTS, EXEMPLAR, STIMULI,
         RECUR_DIR, FLAGS_DIR, M10_DEC_DIR, HP_DEC_DIR, PP_DEC_DIR,
-        PRESENCE_FO, xstim_dir, OUT_F5,
+        PRESENCE_FO, xstim_dir, OUT_F4,
     )
 
 
@@ -239,7 +235,7 @@ def load_presence(
 
 @app.cell
 def panel_A_per_subject_scatter(
-    SUBJECTS, VT, summaries, presence, OUT_F5,
+    SUBJECTS, VT, summaries, presence, OUT_F4,
     np, plt, sp_stats, SUBJECT_MARKERS, TAXONOMY_COLORS,
 ):
     """Panel A - per-subject recurrence→FO scatter, 2×3 small multiples (Movie10).
@@ -301,7 +297,7 @@ def panel_A_per_subject_scatter(
     _fig.supylabel("Mean Movie10 fractional occupancy", fontsize=7)
     _fig.subplots_adjust(left=0.09, right=0.985, bottom=0.11, top=0.98,
                          wspace=0.10, hspace=0.16)
-    _stem = OUT_F5 / "fig5_A_recurrence_fo_scatter"
+    _stem = OUT_F4 / "fig4_A_recurrence_fo_scatter"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
     print(f"saved: {_stem.name}.png (+ .svg)")
@@ -311,7 +307,7 @@ def panel_A_per_subject_scatter(
 
 @app.cell
 def panel_B_transfer_by_condition(
-    SUBJECTS, summaries, OUT_F5, np, plt,
+    SUBJECTS, summaries, OUT_F4, np, plt,
     SUBJECT_NEUTRAL, SUBJECT_MARKERS,
 ):
     """Panel B - recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
@@ -400,7 +396,7 @@ def panel_B_transfer_by_condition(
                frameon=False, fontsize=6.5, handletextpad=0.4)
 
     _fig.subplots_adjust(left=0.10, right=0.98, bottom=0.13, top=0.95)
-    _stem = OUT_F5 / "fig5_B_transfer_by_condition"
+    _stem = OUT_F4 / "fig4_B_transfer_by_condition"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
     print(f"saved: {_stem.name}.png (+ .svg)")
@@ -409,7 +405,7 @@ def panel_B_transfer_by_condition(
 
 
 @app.cell
-def taxonomy_legend(OUT_F5, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
+def taxonomy_legend(OUT_F4, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     """Taxonomy color legend for Panel A (separate mini-file).
 
     Five R2 taxonomy-category swatches, matching Figure 2's colors and Panel A's
@@ -423,7 +419,7 @@ def taxonomy_legend(OUT_F5, plt, TAXONOMY_ORDER, TAXONOMY_COLORS):
     _fig = plt.figure(figsize=(6.7, 0.35))
     _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
                 ncol=5, handletextpad=0.4, columnspacing=1.2)
-    _stem = OUT_F5 / "fig5_taxonomy_legend"
+    _stem = OUT_F4 / "fig4_taxonomy_legend"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
     print(f"saved: {_stem.name}.png (+ .svg)")

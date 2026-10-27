@@ -1,8 +1,4 @@
-"""fig_F4_within_friends.py - within-Friends representational depth (code ID F4).
-
-NB (2026-07 figure swap): manuscript Figures 4 and 5 were reordered in revision.
-Code ID "F4"/"fig4" now maps to manuscript Figure 5; R-labels are unchanged
-(R4b = decoding). See MANIFEST.md "Figure-order note".
+"""fig_F5_within_friends.py - within-Friends representational depth.
 
 Leads manuscript Figure 5 (§R4b) with the WITHIN-Friends primary result that the
 old "R4b slim" figure (``08e_plots.py``, transfer only) was missing. Three
@@ -58,7 +54,7 @@ apply_publication_style()
 
 SCRATCH_DIR = Path(os.environ["SCRATCH_DIR"])
 PARCELLATION = "atlas-4S156Parcels"
-OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "fig4"
+OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D1_ROOT = SCRATCH_DIR / "output" / "08d_transformer_depth" / PARCELLATION
 
@@ -251,7 +247,7 @@ def render_within_panel(panel, rows, ylim):
     ax.set_xlim(0, 1)
     ax.set_xticks([0, 0.5, 1.0])
     ax.set_xlabel("relative depth", fontsize=6.5)
-    # Shared y-axis lives in a separate file (fig4_ABC_yaxis); panels drop it.
+    # Shared y-axis lives in a separate file (fig5_ABC_yaxis); panels drop it.
     ax.set_yticks([])
     # Two-line title: model, then modality directly below (tight, centered).
     ax.set_title(f"{MODEL_DISPLAY[panel['model']]}\n({panel['modality']})",
@@ -260,7 +256,7 @@ def render_within_panel(panel, rows, ylim):
     for spine in ("top", "right", "left"):
         ax.spines[spine].set_visible(False)
 
-    _save(fig, f"fig4_{panel['name']}_within")
+    _save(fig, f"fig5_{panel['name']}_within")
     print(f"  {panel['name']} ({MODEL_DISPLAY[panel['model']]}): "
           f"peak rel-depth {min(r['peak_rel'] for r in rows):.2f}–"
           f"{max(r['peak_rel'] for r in rows):.2f}, "
@@ -280,7 +276,7 @@ def make_within_yaxis(ylim):
     ax.tick_params(labelsize=6)
     for spine in ("top", "right", "bottom"):
         ax.spines[spine].set_visible(False)
-    _save(fig, "fig4_ABC_yaxis")
+    _save(fig, "fig5_ABC_yaxis")
     print("  ABC_yaxis (separate shared y-axis) rendered.")
 
 
@@ -298,7 +294,7 @@ def make_subject_legend():
     ax.legend(handles=handles, frameon=False, loc="center", fontsize=7,
               handlelength=1.0)
     ax.axis("off")
-    _save(fig, "fig4_ABC_subject_legend")
+    _save(fig, "fig5_ABC_subject_legend")
     print("  ABC_subject_legend (separate, 6 subjects, marker-only) rendered.")
 
 
@@ -437,7 +433,7 @@ def render_panel_d():
     # cells be wide and short. Each column is then 7/3in, matching A/B/C, E/F/G.
     fig.subplots_adjust(left=0.125, right=1.0, bottom=0.13, top=0.93)
 
-    _save(fig, "fig4_D_transfer_depth_grid")
+    _save(fig, "fig5_D_transfer_depth_grid")
 
     # Colorbar emitted as a SEPARATE file for manual assembly, now HORIZONTAL
     # with the label and ticks along the bottom.
@@ -449,7 +445,7 @@ def render_panel_d():
     cbar.ax.set_xticklabels(["0\nshallow", "0.5\nmid", "1.0\ndeep"], fontsize=6.5)
     cbar.ax.xaxis.set_ticks_position("bottom")
     cbar.ax.xaxis.set_label_position("bottom")
-    _save(cfig, "fig4_D_colorbar")
+    _save(cfig, "fig5_D_colorbar")
     print("  D_transfer_depth_grid + D_colorbar (separate, horizontal) rendered.")
 
 
@@ -546,7 +542,7 @@ def render_perfilm(modality, model, n_layers, letter, series, ylim):
     # Film legend emitted separately (make_perfilm_legend) for manual assembly.
     for spine in ("top", "right", "left"):
         ax.spines[spine].set_visible(False)
-    _save(fig, f"fig4_{letter}_{modality}_perfilm")
+    _save(fig, f"fig5_{letter}_{modality}_perfilm")
     print(f"  {letter}_{modality}_perfilm rendered ({MODEL_DISPLAY[model]}, "
           f"{len(series)} films)")
 
@@ -561,7 +557,7 @@ def make_perfilm_legend():
     ax.legend(handles=handles, frameon=False, loc="center", fontsize=7,
               handlelength=1.6)
     ax.axis("off")
-    _save(fig, "fig4_EFG_legend")
+    _save(fig, "fig5_EFG_legend")
     print("  EFG_legend (separate, 4 films) rendered.")
 
 
@@ -577,7 +573,7 @@ def make_perfilm_yaxis(ylim):
     ax.tick_params(labelsize=5.5)
     for spine in ("top", "right", "bottom"):
         ax.spines[spine].set_visible(False)
-    _save(fig, "fig4_EFG_yaxis")
+    _save(fig, "fig5_EFG_yaxis")
     print("  EFG_yaxis (separate shared y-axis) rendered.")
 
 
@@ -611,7 +607,7 @@ def render_perfilm_trio():
 
 # ── Companion supplementary: main / neg-control / confound triple (Res C) ──────
 
-SUPP_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS_R4b_negcontrol"
+SUPP_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_decoding_negative_control"
 
 
 def _neg_cell_nearest(neg_results, best_lag, peak_layer):
@@ -715,7 +711,7 @@ def render_supp_negcontrol():
 
 
 def main():
-    print(f"=== Fig F4 within-Friends → {OUT_DIR} ===")
+    print(f"=== Fig F5 within-Friends → {OUT_DIR} ===")
     all_rows = {p["name"]: collect_within(p) for p in WITHIN_PANELS}
     # Shared y-axis (absolute balanced accuracy) across A/B/C so modalities are
     # directly comparable in magnitude.

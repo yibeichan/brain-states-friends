@@ -96,7 +96,7 @@ def main() -> None:
         scratch_dir
         / "output"
         / "manuscript_figures"
-        / "supp_network_participation_categories"
+        / "si_network_participation_categories"
     )
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -39,10 +39,10 @@ in the preprint; **SUPP** = supplementary / robustness / diagnostic;
 | `06c_higher_order_transitions` | SUPP | [06c_higher_order_transitions.md](06c_higher_order_transitions.md) | Supp |
 | `06d_preserved_chains` | SUPP | [06d_preserved_chains.md](06d_preserved_chains.md) | Supp |
 | `08c_transformer_features` | MAIN | [08c_transformer_features.md](08c_transformer_features.md) | R4b, Methods |
-| `08d_transformer_depth` | MAIN | [08d_transformer_depth.md](08d_transformer_depth.md) | R4b, Fig 4 |
-| `08e_transformer_cross_stim_aggregate` | MAIN | [08e_transformer_cross_stim_aggregate.md](08e_transformer_cross_stim_aggregate.md) | R4b, Fig 4 |
+| `08d_transformer_depth` | MAIN | [08d_transformer_depth.md](08d_transformer_depth.md) | R4b, Fig 5 |
+| `08e_transformer_cross_stim_aggregate` | MAIN | [08e_transformer_cross_stim_aggregate.md](08e_transformer_cross_stim_aggregate.md) | R4b, Fig 5 |
 
-## Cross-stimulus transfer (MAIN; R5, Figure 5)
+## Cross-stimulus transfer (MAIN; R5, Figure 4)
 
 | Script | Findings |
 |---|---|

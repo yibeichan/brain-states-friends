@@ -1,8 +1,5 @@
 """08e_plots.py - R4b cross-stimulus depth correspondence plots (R4b slim, decoding).
 
-NB (2026-07 figure swap): the decoding result is now manuscript Figure 5; the
-earlier "Figure F3" label on this line was stale. See MANIFEST.md.
-
 Companion figure script for ``08e_transformer_cross_stim_aggregate.py``,
 analogous to ``08d_plots.py`` for stage 08d.
 
@@ -28,16 +25,17 @@ Palettes (CB-safe, used for strip identity not overlap resolution):
 
 Each panel saves PDF + PNG + SVG. No on-panel legends (each strip self-labels).
 Standalone legend files are still emitted for caption / sidebar use:
-  - fig3_stim_legend.{pdf,png,svg}: 4 stim colours
-  - fig3_film_legend.{pdf,png,svg}: 4 film colours
+  - si_decoding_depth_stim_legend.{pdf,png,svg}: 4 stim colours
+  - si_decoding_depth_film_legend.{pdf,png,svg}: 4 film colours
 
 Source data:
   A, B: 08e .../D3a_transfer_{stim}_{model}.json (pooled, with permutation)
   C:    08e .../D3a_per_subset_movie10_dinov2-large.json (production, with
-        permutation). Falls back to .../manuscript_figures/fig3/perfilm/
-        sub-*_dinov2-large_movie10_perfilm.json (provisional, point estimates
-        only, no permutation) when production JSONs are absent - used for
-        the poster build while the production --per_subset run is in flight.
+        permutation). Falls back to .../manuscript_figures/fig5/perfilm/
+        sub-*_dinov2-large_movie10_perfilm.json (written by
+        fig_F5_per_film_video.py; provisional, point estimates only, no
+        permutation) when production JSONs are absent - used for the poster
+        build while the production --per_subset run was in flight.
 """
 import json
 import os
@@ -56,10 +54,10 @@ apply_publication_style()
 
 SCRATCH_DIR = Path(os.environ["SCRATCH_DIR"])
 PARCELLATION = "atlas-4S156Parcels"
-OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "fig3"
+OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_decoding_depth"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D3A_ROOT = SCRATCH_DIR / "output" / "08e_transformer_cross_stim_aggregate" / PARCELLATION
-PROVISIONAL_PERFILM_ROOT = OUT_DIR / "perfilm"
+PROVISIONAL_PERFILM_ROOT = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5" / "perfilm"
 
 # Paul Tol Vibrant 4-class (https://personal.sron.nl/~pault/), CB-safe.
 # Distinct from project palettes: Okabe–Ito (networks), ColorBrewer Set1
@@ -301,9 +299,9 @@ def render_panel(panel, series, ylim):
     fig.supylabel("Balanced accuracy − chance", fontsize=9, x=0.01)
     fig.subplots_adjust(hspace=0.18, left=0.16, right=0.99,
                         top=0.985, bottom=0.14)
-    out_pdf = OUT_DIR / f"fig3_{panel['name']}_depth.pdf"
-    out_png = OUT_DIR / f"fig3_{panel['name']}_depth.png"
-    out_svg = OUT_DIR / f"fig3_{panel['name']}_depth.svg"
+    out_pdf = OUT_DIR / f"si_decoding_depth_{panel['name']}.pdf"
+    out_png = OUT_DIR / f"si_decoding_depth_{panel['name']}.png"
+    out_svg = OUT_DIR / f"si_decoding_depth_{panel['name']}.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
@@ -328,9 +326,9 @@ def make_stim_legend():
     ax.legend(handles=handles, frameon=False, loc="center", fontsize=9,
               handlelength=2.0)
     ax.axis("off")
-    out_pdf = OUT_DIR / "fig3_stim_legend.pdf"
-    out_png = OUT_DIR / "fig3_stim_legend.png"
-    out_svg = OUT_DIR / "fig3_stim_legend.svg"
+    out_pdf = OUT_DIR / "si_decoding_depth_stim_legend.pdf"
+    out_png = OUT_DIR / "si_decoding_depth_stim_legend.png"
+    out_svg = OUT_DIR / "si_decoding_depth_stim_legend.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
@@ -348,9 +346,9 @@ def make_film_legend():
     ax.legend(handles=handles, frameon=False, loc="center", fontsize=9,
               handlelength=2.0)
     ax.axis("off")
-    out_pdf = OUT_DIR / "fig3_film_legend.pdf"
-    out_png = OUT_DIR / "fig3_film_legend.png"
-    out_svg = OUT_DIR / "fig3_film_legend.svg"
+    out_pdf = OUT_DIR / "si_decoding_depth_film_legend.pdf"
+    out_png = OUT_DIR / "si_decoding_depth_film_legend.png"
+    out_svg = OUT_DIR / "si_decoding_depth_film_legend.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
@@ -359,7 +357,7 @@ def make_film_legend():
 
 
 def main():
-    print(f"=== Fig F3 panels -> {OUT_DIR} ===")
+    print(f"=== S7 decoding-depth panels -> {OUT_DIR} ===")
     print(f"D3A_ROOT = {D3A_ROOT}")
     all_series = [collect_panel_curves(p) for p in PANELS]
     ylim = shared_ylim(all_series)

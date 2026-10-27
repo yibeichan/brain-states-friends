@@ -21,7 +21,7 @@ decision 2026-10-22).
 |---|---|---|---|
 | 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (16-31 per participant), pooled UMAP, colour = dominant network (05e state_flags, Fig 2C colours), marker = participant (Fig 1C markers); a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
-| S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | fig2/supp_participant_umap/figS_participant_umap_A_residual_matches |
+| S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | si_participant_umap/figS_participant_umap_A_residual_matches |
 | S B | All active states, colour = 05e summary category (Fig 2A colours: content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker = participant (Fig 1C markers), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS; marker = participant | scatter small multiples | .../figS_participant_umap_D_robustness |
@@ -33,7 +33,7 @@ embedding with different encodings; the parallel layout is the point. E shows
 the timing behind the time-locked flag, which the embedding cannot show. E's
 value at lag 0 is checked against 05h's per-match locking r.
 
-Also written: fig2/supp_participant_umap/participant_mixing.json, the share of
+Also written: si_participant_umap/participant_mixing.json, the share of
 each state's 5 nearest neighbours (correlation distance, full 156-parcel space,
 not the UMAP) that belong to other participants, against the share expected
 from the participants' state counts if participant identity did not matter.
@@ -98,7 +98,7 @@ def config(Path, os):
                        "rare": "#CCCCCC"}
     UMAP_KW = dict(n_neighbors=15, min_dist=0.3, metric="correlation", random_state=0)
     OUT = SCRATCH / "output" / "manuscript_figures" / "fig2"
-    SUPP = OUT / "supp_participant_umap"
+    SUPP = SCRATCH / "output" / "manuscript_figures" / "si_participant_umap"
     SUPP.mkdir(parents=True, exist_ok=True)
     return (CATEGORY_COLORS, CATEGORY_NAMES, OUT, PARC, SCRATCH, SUBJECTS,
             SUPP, UMAP_KW, VT)
