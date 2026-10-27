@@ -101,7 +101,8 @@ def main() -> None:
     )
 
     # Main Panel C: sub-01 per-state pie mosaic + shared network legend.
-    # Other subjects replicate into fig2/supp/<sub>/.
+    # The other participants' mosaics are not in a figure; they go to
+    # si_network_pies_by_participant/.
     main_subject = "sub-01"
     n_main = plot_network_pie_mosaic(
         metrics, main_subject, NETWORK_ORDER, NETWORK_COLORS,
@@ -114,13 +115,13 @@ def main() -> None:
     print(f"saved: fig2_C_{main_subject}_network_pies.{{png,svg}} ({n_main} states)")
     print("saved: fig2_C_legend_networks.{png,svg}")
     for subject in [s for s in args.subjects if s != main_subject]:
-        supp_dir = out_dir / "supp" / subject
-        supp_dir.mkdir(parents=True, exist_ok=True)
+        pies_dir = out_dir.parent / "si_network_pies_by_participant"
+        pies_dir.mkdir(parents=True, exist_ok=True)
         n_supp = plot_network_pie_mosaic(
             metrics, subject, NETWORK_ORDER, NETWORK_COLORS,
-            supp_dir / f"fig2_C_{subject}_network_pies",
+            pies_dir / f"network_pies_{subject}",
         )
-        print(f"saved: supp/{subject}/fig2_C_{subject}_network_pies.{{png,svg}} "
+        print(f"saved: si_network_pies_by_participant/network_pies_{subject}.{{png,svg}} "
               f"({n_supp} states)")
 
     medians = summary["metric_medians"]
