@@ -121,6 +121,34 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
 
     ("S13_phase_randomized_null.png", "SUPPLEMENTS",
      "script/fig_sm_rel_r5_phase_null.py (supplements branch)", None),
+
+    ("S14_participant_umap_A_residual_matches.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_A_residual_matches.png"),
+    ("S14_participant_umap_B_active_categories.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_B_active_categories.png"),
+    ("S14_participant_umap_C_recurrence.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_C_recurrence.png"),
+    ("S14_participant_umap_D_robustness.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_D_robustness.png"),
+    ("S14_participant_umap_E_lagged_locking.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_E_lagged_locking.png"),
+    ("S14_participant_umap_legend_networks.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/fig2_E_legend_networks.png"),
+    ("S14_participant_umap_legend_participants.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/fig2_E_legend_participants.png"),
+    ("S14_participant_umap_legend_categories.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_legend_categories.png"),
+    ("S14_participant_umap_legend_recurrence.png", "EXPORT",
+     "script/fig_F2E_participant_umap.py",
+     "fig2/supp_participant_umap/figS_participant_umap_legend_recurrence.png"),
 ]
 
 # Legacy emitted paths, kept only so a stale tree can be diagnosed. These are
@@ -150,22 +178,22 @@ def main() -> int:
     figroot = Path(scratch) / "output" / "manuscript_figures"
 
     copied = stale = missing = 0
-    print(f"{'SI file':44}{'status':<12}source / note")
-    print("-" * 110)
+    print(f"{'SI file':52}{'status':<12}source / note")
+    print("-" * 118)
 
     for si_name, category, generator, rel in SI_MAP:
         dest = SI_DIR / si_name
 
         if category == "DIRECT":
             status = "ok" if dest.exists() else "ABSENT"
-            print(f"{si_name:44}{status:<12}written directly by {generator}")
+            print(f"{si_name:52}{status:<12}written directly by {generator}")
             if not dest.exists():
                 missing += 1
             continue
 
         if category == "SUPPLEMENTS":
             status = "ok" if dest.exists() else "ABSENT"
-            print(f"{si_name:44}{status:<12}{generator}")
+            print(f"{si_name:52}{status:<12}{generator}")
             if not dest.exists():
                 missing += 1
             continue
@@ -175,22 +203,22 @@ def main() -> int:
             if args.copy:
                 real = src.resolve()  # git-annex symlinks -> real object
                 shutil.copyfile(real, dest)
-                print(f"{si_name:44}{'copied':<12}{rel}")
+                print(f"{si_name:52}{'copied':<12}{rel}")
             else:
-                print(f"{si_name:44}{'available':<12}{rel}")
+                print(f"{si_name:52}{'available':<12}{rel}")
             copied += 1
             continue
 
         legacy = LEGACY_SOURCES.get(rel)
         if legacy and (figroot / legacy).exists():
-            print(f"{si_name:44}{'STALE':<12}"
+            print(f"{si_name:52}{'STALE':<12}"
                   f"expected {rel}; only legacy {legacy} exists -> re-run {generator}")
             stale += 1
         else:
-            print(f"{si_name:44}{'MISSING':<12}expected {rel} -> run {generator}")
+            print(f"{si_name:52}{'MISSING':<12}expected {rel} -> run {generator}")
             missing += 1
 
-    print("-" * 110)
+    print("-" * 118)
     verb = "copied" if args.copy else "available"
     print(f"{copied} {verb}, {stale} stale (generator predates the 2026-08-19 "
           f"renumbering), {missing} missing")
