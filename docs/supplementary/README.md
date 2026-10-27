@@ -1,6 +1,6 @@
 # Supplementary Figures and Tables — Brain States Friends
 
-This directory catalogues all supplementary figures (S1–S13) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Three analyses reside on the orphan `supplements` branch of this repository (ICA convergence diagnostics, S10; ICA out-of-stimulus recurrence, S12; and the phase-randomized null distributions, S13); their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
+This directory catalogues all supplementary figures (S1–S14) for the manuscript. Each figure is provided as a PNG file under `figures/`, and detailed numerical results and analysis provenance appear in the linked findings documents. Three analyses reside on the orphan `supplements` branch of this repository (ICA convergence diagnostics, S10; ICA out-of-stimulus recurrence, S12; and the phase-randomized null distributions, S13); their findings links point to that branch on GitHub. Supplementary tables are numbered separately and catalogued in [Supplementary Tables](#supplementary-tables) at the end of this document.
 
 ## Catalogue
 
@@ -19,6 +19,7 @@ This directory catalogues all supplementary figures (S1–S13) for the manuscrip
 | S11 | Network participation profiles of recurring brain states across cortical and subcortical systems | [S11_network_participation.png](figures/S11_network_participation.png) | [../findings/05e_temporal_trend_a4.md](../findings/05e_temporal_trend_a4.md) | main |
 | S12 | ICA out-of-stimulus recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S12_ica_oos_recurrence_m10_A_wta.png](figures/S12_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S12_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S12_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S12_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S12_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S12_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
 | S13 | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation, with the observed correlation marked (the distributions behind Table S2) | [S13_phase_randomized_null.png](figures/S13_phase_randomized_null.png) | [sm_rel_r5_phase_null.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r5_phase_null.md) | supplements |
+| S14 | All participants' states in one embedding: matches after removing the components shared with the other participants (A), all active states by state category (B), content-eligible states by recurrence score (C), the embedding under other UMAP settings, PCA and classical MDS (D), and the occupancy correlation of all matches across time lags (E); legends for networks, participants, categories and recurrence | [A](figures/S14_participant_umap_A_residual_matches.png) · [B](figures/S14_participant_umap_B_active_categories.png) · [C](figures/S14_participant_umap_C_recurrence.png) · [D](figures/S14_participant_umap_D_robustness.png) · [E](figures/S14_participant_umap_E_lagged_locking.png) · legends: [networks](figures/S14_participant_umap_legend_networks.png), [participants](figures/S14_participant_umap_legend_participants.png), [categories](figures/S14_participant_umap_legend_categories.png), [recurrence](figures/S14_participant_umap_legend_recurrence.png) | [../findings/05h_participant_state_matching.md](../findings/05h_participant_state_matching.md) | main |
 
 ---
 
@@ -213,6 +214,34 @@ One panel per participant, labelled above the panel. The grey histogram is the d
 This figure shows the distributions that Table S2 tabulates. The observed correlation fell above the surrogate distribution in every participant (Δρ = +0.07 to +0.22; z = +5.97 to +15.62; 61 Movie10 runs and 10,000 draws per participant), while the null distributions themselves sat at substantial correlations: most of the raw correlation's magnitude is reproduced by surrogates that preserve each component's power spectrum and variance together with the cross-component covariance. Table S2 gives the per-participant values and the two limits on what the margin above the null can be attributed to.
 
 The test covers Movie10 only. Harry Potter (7 runs per participant) and Le Petit Prince (16–18 runs) contribute too few runs to support a per-run surrogate null.
+
+---
+
+## Figure S14 — Participant states in one embedding, and the timing of matched states
+
+The content-eligible states of all six participants are embedded together with UMAP (correlation distance on each state's mean activity map relative to the participant's mean, z-scored across the 156 regions; 15 neighbours, minimum distance 0.3, seed 0), as in Figure 2E. The embedding is a display: distances in it are not tested. Generated by `script/fig_F2E_participant_umap.py`.
+
+![Pooled UMAP of the content-eligible states of six participants; color is each state's strongest network, marker shape the participant, and grey lines join states matched between two participants after shared components are removed, darker for time-locked matches](figures/S14_participant_umap_A_residual_matches.png)
+
+**A.** As Figure 2E, but each participant pair is matched after the three largest components of a PCA over the other four participants' state maps are projected out of both participants' maps. Color is each state's strongest network and marker shape the participant; line width and opacity grow with the matched correlation, and dark lines mark time-locked matches.
+
+![UMAP of all active states of six participants; color is the state category, marker shape the participant, and marker area grows with fractional occupancy](figures/S14_participant_umap_B_active_categories.png)
+
+**B.** All active states in their own embedding. Color is the state category (content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; colors as in Figure 2A), marker shape the participant, and marker area grows with the square root of fractional occupancy.
+
+![UMAP of the content-eligible states of six participants colored by recurrence score from 0 to 1](figures/S14_participant_umap_C_recurrence.png)
+
+**C.** The content-eligible states of panel A and Figure 2E, colored by recurrence score.
+
+![Eleven small scatter plots of the content-eligible states with participant as marker shape: UMAP with 5, 15 and 30 neighbours at seeds 0, 1 and 2, then PCA and classical multidimensional scaling](figures/S14_participant_umap_D_robustness.png)
+
+**D.** The same states embedded with UMAP at 5, 15 and 30 neighbours and seeds 0, 1 and 2, and with PCA and classical multidimensional scaling of the same maps; marker shape is the participant.
+
+![Line plot of occupancy correlation against time lag from -30 to 30 s, peaking at zero lag, with one thin line per participant pair and a thick line for the mean over all matches](figures/S14_participant_umap_E_lagged_locking.png)
+
+**E.** Occupancy correlation of every matched pair of states (all matches, not only the time-locked ones) when the second participant's state sequence is shifted by up to 20 TRs (about 30 s) within each run. Thin lines are the mean per participant pair; the thick line is the mean over all matches. The value at zero lag is the occupancy correlation used for the time-locking test. Values are also written to `lagged_locking.json`.
+
+Legends: [networks](figures/S14_participant_umap_legend_networks.png) (A), [participants](figures/S14_participant_umap_legend_participants.png) (A, B, D), [state categories](figures/S14_participant_umap_legend_categories.png) (B), [recurrence score](figures/S14_participant_umap_legend_recurrence.png) (C).
 
 ---
 
