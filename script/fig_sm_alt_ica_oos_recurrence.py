@@ -61,7 +61,7 @@ def config(ICA_OOS_DIR, json, os):
     STIM_ORDER = ["movie10", "harrypotter", "petitprince"]
     STIM_LABELS = {"movie10": "Movie10", "harrypotter": "Harry Potter",
                    "petitprince": "Petit Prince"}
-    OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "fig_sm_ica_oos_recurrence")
+    OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "si_ica_oos_recurrence")
     os.makedirs(OUT, exist_ok=True)
 
     def _load(sub, stimulus):

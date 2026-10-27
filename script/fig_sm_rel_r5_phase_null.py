@@ -61,7 +61,7 @@ def config(os):
 
     NULL_DIR = os.path.join(SCRATCH, "output", "sm_rel_r5_phase_null", PARC)
     OUT = os.path.join(SCRATCH, "output", "manuscript_figures",
-                       "fig_sm_r5_phase_null")
+                       "si_phase_null")
     os.makedirs(OUT, exist_ok=True)
     return NULL_DIR, OUT, SUBS, VT
 

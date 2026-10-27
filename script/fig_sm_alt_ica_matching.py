@@ -62,7 +62,7 @@ def config(ICA_STATES_DIR, json, os):
     # K columns: primary HMM-independent low-dim set | near-K sensitivity grid
     KS = ["15", "25", "35", "41", "42", "43", "44", "45", "46", "47"]
     SEP_AFTER = 2  # divider between column index 2 (K=35) and 3 (K=41)
-    OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "fig_sm_ica")
+    OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "si_ica_convergence")
     os.makedirs(OUT, exist_ok=True)
 
     def _load(sub):
