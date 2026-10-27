@@ -110,8 +110,8 @@ SI figures with no dedicated `fig_S*` entry point (provenance verified
 
 | SI figure | Emitted by | Emitted filename |
 |---|---|---|
-| S6 | `fig_F5_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/figS_R4b_negcontrol/figS_R4b_negcontrol_triple.{png,svg}` |
-| S7 | `08e_plots.py` → `render_panel()`, one call per modality panel | `manuscript_figures/fig3/fig3_<panel>_depth.{pdf,png,svg}` |
+| S6 | `fig_F5_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/si_decoding_negative_control/figS_R4b_negcontrol_triple.{png,svg}` |
+| S7 | `08e_plots.py` → `render_panel()`, one call per modality panel | `manuscript_figures/si_decoding_depth/si_decoding_depth_<panel>.{pdf,png,svg}` |
 
 **S10** and **S12** are rendered on the orphan `supplements` branch by
 `fig_sm_alt_ica_matching.py` and `fig_sm_alt_ica_oos_recurrence.py`, so they
@@ -130,9 +130,9 @@ uv run python script/export_si_figures.py --copy   # place the files
 It classifies each SI figure as DIRECT (the generator already writes the SI
 name: S1, S2, S5), EXPORT (copied by this script: S3, S4, S6, S7, S8, S9, S11),
 or SUPPLEMENTS (S10, S12). It resolves git-annex symlinks before copying, so
-destinations are real files, and it reports STALE when a generator still writes
-a pre-2026-08-19 output name. Current status is **16 exported, 0 stale,
-0 missing**.
+destinations are real files, and it reports STALE when an output is still at
+the path it had before the SI output folders were given topic names. Current
+status is **16 exported, 0 stale, 0 missing**.
 
 The committed PNGs under `docs/supplementary/figures/` are byte-for-byte what
 `--copy` emits, so re-running the exporter leaves the working tree clean. That
@@ -147,10 +147,11 @@ validity.py` had genuinely drifted — its committed panels predated the
 resting-state addition (panel C had three rows, not four) — and the regenerated
 version is what is committed now.
 
-Two output-path gotchas the mapping encodes: `fig3/` is shared by
-`fig_F3_transition_structure.py` and `08e_plots.py`, so only the `*_depth.png`
-files in it belong to S7; and `fig_S11_*` writes into
-`supp_network_participation_categories/`, not a `figS11/` directory.
+Main-figure scripts write to `manuscript_figures/fig<N>/`. SI generators write
+to topic-named folders: `si_model_selection/` (S3), `si_reliability/` (S4),
+`si_decoding_negative_control/` (S6), `si_decoding_depth/` (S7),
+`si_cross_stimulus_validity/` (S8), `si_individual_differences/` (S9) and
+`si_network_participation_categories/` (S11).
 
 Numbering note (2026-08-19): SI figures were renumbered to follow the Methods
 reading order. `S3`/`S4` are new (model selection, reliability); former

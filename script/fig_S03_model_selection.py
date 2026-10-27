@@ -71,7 +71,7 @@ def config(Path, os):
         SCRATCH_DIR / "output" / "diagnostics" / PARCELLATION / "selection_metrics"
     )
     HMM_DIR = SCRATCH_DIR / "output" / "04_combined_hdphmm" / PARCELLATION
-    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS03"
+    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "si_model_selection"
     OUT.mkdir(parents=True, exist_ok=True)
 
     SUBJECTS = [f"sub-{i:02d}" for i in range(1, 7)]

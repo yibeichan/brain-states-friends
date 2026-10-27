@@ -607,7 +607,7 @@ def render_perfilm_trio():
 
 # ── Companion supplementary: main / neg-control / confound triple (Res C) ──────
 
-SUPP_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS_R4b_negcontrol"
+SUPP_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_decoding_negative_control"
 
 
 def _neg_cell_nearest(neg_results, best_lag, peak_layer):

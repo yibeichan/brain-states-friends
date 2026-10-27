@@ -87,7 +87,7 @@ def config(Path, os):
     PARCELLATION_FC = PARCELLATION
     LOSO_DIR = SCRATCH_DIR / "output" / "04ra_loso_struct_comp" / PARCELLATION
     SH_DIR = SCRATCH_DIR / "output" / "04rb_split_half" / PARCELLATION
-    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS04"
+    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "si_reliability"
     OUT.mkdir(parents=True, exist_ok=True)
 
     SUBJECTS = [f"sub-{i:02d}" for i in range(1, 7)]

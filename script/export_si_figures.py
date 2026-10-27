@@ -55,20 +55,20 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
      "script/fig_S02_pca_loadings.py", None),
 
     ("S03_model_selection_A.png", "EXPORT",
-     "script/fig_S03_model_selection.py", "figS03/figS03_A_pareto_ll_vs_states.png"),
+     "script/fig_S03_model_selection.py", "si_model_selection/figS03_A_pareto_ll_vs_states.png"),
     ("S03_model_selection_B.png", "EXPORT",
-     "script/fig_S03_model_selection.py", "figS03/figS03_B_states_vs_capacity.png"),
+     "script/fig_S03_model_selection.py", "si_model_selection/figS03_B_states_vs_capacity.png"),
     ("S03_model_selection_C.png", "EXPORT",
-     "script/fig_S03_model_selection.py", "figS03/figS03_C_overfit_gap.png"),
+     "script/fig_S03_model_selection.py", "si_model_selection/figS03_C_overfit_gap.png"),
 
     ("S04_reliability_A.png", "EXPORT",
-     "script/fig_S04_reliability.py", "figS04/figS04_A_matched_pair_r.png"),
+     "script/fig_S04_reliability.py", "si_reliability/figS04_A_matched_pair_r.png"),
     ("S04_reliability_B.png", "EXPORT",
-     "script/fig_S04_reliability.py", "figS04/figS04_B_structural_invariants.png"),
+     "script/fig_S04_reliability.py", "si_reliability/figS04_B_structural_invariants.png"),
     ("S04_reliability_C.png", "EXPORT",
-     "script/fig_S04_reliability.py", "figS04/figS04_C_fc_rv_raw.png"),
+     "script/fig_S04_reliability.py", "si_reliability/figS04_C_fc_rv_raw.png"),
     ("S04_reliability_D.png", "EXPORT",
-     "script/fig_S04_reliability.py", "figS04/figS04_D_fc_rv_delta.png"),
+     "script/fig_S04_reliability.py", "si_reliability/figS04_D_fc_rv_delta.png"),
 
     ("S05_video_peak_depth.png", "DIRECT",
      "script/fig_S05_video_peak_depth.py", None),
@@ -76,26 +76,24 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
     # Emitted by the Figure 5 script's companion supplementary renderer.
     ("S06_run_onset_negative_control.png", "EXPORT",
      "script/fig_F5_within_friends.py (render_supp_negcontrol)",
-     "figS_R4b_negcontrol/figS_R4b_negcontrol_triple.png"),
+     "si_decoding_negative_control/figS_R4b_negcontrol_triple.png"),
 
-    # 08e_plots.py shares the fig3/ output directory with
-    # fig_F3_transition_structure.py. Only the *_depth.png files are S7.
     ("S07_decoding_depth_strips_A.png", "EXPORT",
-     "script/08e_plots.py", "fig3/fig3_A_audio_depth.png"),
+     "script/08e_plots.py", "si_decoding_depth/si_decoding_depth_A_audio.png"),
     ("S07_decoding_depth_strips_B.png", "EXPORT",
-     "script/08e_plots.py", "fig3/fig3_B_text_depth.png"),
+     "script/08e_plots.py", "si_decoding_depth/si_decoding_depth_B_text.png"),
     ("S07_decoding_depth_strips_C.png", "EXPORT",
-     "script/08e_plots.py", "fig3/fig3_C_video_depth.png"),
+     "script/08e_plots.py", "si_decoding_depth/si_decoding_depth_C_video.png"),
 
     ("S08_cross_stimulus_validity_A.png", "EXPORT",
-     "script/fig_S08_cross_stimulus_validity.py", "figS08/figS08_A_pca_transfer.png"),
+     "script/fig_S08_cross_stimulus_validity.py", "si_cross_stimulus_validity/figS08_A_pca_transfer.png"),
     ("S08_cross_stimulus_validity_B.png", "EXPORT",
-     "script/fig_S08_cross_stimulus_validity.py", "figS08/figS08_B_fit_vs_transfer.png"),
+     "script/fig_S08_cross_stimulus_validity.py", "si_cross_stimulus_validity/figS08_B_fit_vs_transfer.png"),
     ("S08_cross_stimulus_validity_C.png", "EXPORT",
-     "script/fig_S08_cross_stimulus_validity.py", "figS08/figS08_C_presence_donut.png"),
+     "script/fig_S08_cross_stimulus_validity.py", "si_cross_stimulus_validity/figS08_C_presence_donut.png"),
 
     ("S09_individual_differences.png", "EXPORT",
-     "script/fig_S09_individual_differences.py", "figS09/figS09_radar_strip.png"),
+     "script/fig_S09_individual_differences.py", "si_individual_differences/figS09_radar_strip.png"),
 
     ("S10_ica_convergence_A.png", "SUPPLEMENTS",
      "script/fig_sm_alt_ica_matching.py (supplements branch)", None),
@@ -104,7 +102,7 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
 
     ("S11_network_participation.png", "EXPORT",
      "script/fig_S11_network_participation_categories.py",
-     "supp_network_participation_categories/figS11_network_participation_categories.png"),
+     "si_network_participation_categories/figS11_network_participation_categories.png"),
 
     ("S12_ica_oos_recurrence_m10_A_wta.png", "SUPPLEMENTS",
      "script/fig_sm_alt_ica_oos_recurrence.py (supplements branch)", None),
@@ -124,15 +122,28 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
 ]
 
 # Legacy emitted paths, kept only so a stale tree can be diagnosed. These are
-# the pre-2026-08-19 SI numbering. If an EXPORT source is missing but its
-# legacy path exists, the generator predates the renumbering and must be re-run.
+# the output paths used before the SI output folders were given topic names.
+# If an EXPORT source is missing but its legacy path exists, the outputs have
+# not been moved (or the generator re-run) since the rename.
 LEGACY_SOURCES: dict[str, str] = {
-    "figS08/figS08_A_pca_transfer.png": "figS06/figS06_A_pca_transfer.png",
-    "figS08/figS08_B_fit_vs_transfer.png": "figS06/figS06_B_fit_vs_transfer.png",
-    "figS08/figS08_C_presence_donut.png": "figS06/figS06_C_presence_donut.png",
-    "figS09/figS09_radar_strip.png": "figS7/figS7_radar_strip.png",
-    "supp_network_participation_categories/figS11_network_participation_categories.png":
-        "supp_network_participation_categories/figS9_network_participation_categories.png",
+    "si_model_selection/figS03_A_pareto_ll_vs_states.png": "figS03/figS03_A_pareto_ll_vs_states.png",
+    "si_model_selection/figS03_B_states_vs_capacity.png": "figS03/figS03_B_states_vs_capacity.png",
+    "si_model_selection/figS03_C_overfit_gap.png": "figS03/figS03_C_overfit_gap.png",
+    "si_reliability/figS04_A_matched_pair_r.png": "figS04/figS04_A_matched_pair_r.png",
+    "si_reliability/figS04_B_structural_invariants.png": "figS04/figS04_B_structural_invariants.png",
+    "si_reliability/figS04_C_fc_rv_raw.png": "figS04/figS04_C_fc_rv_raw.png",
+    "si_reliability/figS04_D_fc_rv_delta.png": "figS04/figS04_D_fc_rv_delta.png",
+    "si_decoding_negative_control/figS_R4b_negcontrol_triple.png":
+        "figS_R4b_negcontrol/figS_R4b_negcontrol_triple.png",
+    "si_decoding_depth/si_decoding_depth_A_audio.png": "fig3/fig3_A_audio_depth.png",
+    "si_decoding_depth/si_decoding_depth_B_text.png": "fig3/fig3_B_text_depth.png",
+    "si_decoding_depth/si_decoding_depth_C_video.png": "fig3/fig3_C_video_depth.png",
+    "si_cross_stimulus_validity/figS08_A_pca_transfer.png": "figS08/figS08_A_pca_transfer.png",
+    "si_cross_stimulus_validity/figS08_B_fit_vs_transfer.png": "figS08/figS08_B_fit_vs_transfer.png",
+    "si_cross_stimulus_validity/figS08_C_presence_donut.png": "figS08/figS08_C_presence_donut.png",
+    "si_individual_differences/figS09_radar_strip.png": "figS09/figS09_radar_strip.png",
+    "si_network_participation_categories/figS11_network_participation_categories.png":
+        "supp_network_participation_categories/figS11_network_participation_categories.png",
 }
 
 
@@ -184,7 +195,7 @@ def main() -> int:
         legacy = LEGACY_SOURCES.get(rel)
         if legacy and (figroot / legacy).exists():
             print(f"{si_name:44}{'STALE':<12}"
-                  f"expected {rel}; only legacy {legacy} exists -> re-run {generator}")
+                  f"expected {rel}; only legacy {legacy} exists -> move it or re-run {generator}")
             stale += 1
         else:
             print(f"{si_name:44}{'MISSING':<12}expected {rel} -> run {generator}")
@@ -192,11 +203,11 @@ def main() -> int:
 
     print("-" * 110)
     verb = "copied" if args.copy else "available"
-    print(f"{copied} {verb}, {stale} stale (generator predates the 2026-08-19 "
-          f"renumbering), {missing} missing")
+    print(f"{copied} {verb}, {stale} stale (output still at its pre-rename path), "
+          f"{missing} missing")
     if stale and not args.copy:
         print("Stale entries keep their current committed PNG, which is still valid "
-              "content; they simply cannot be regenerated until the generator is re-run.")
+              "content; they cannot be refreshed until the output is moved or the generator re-run.")
     return 0
 
 

@@ -21,7 +21,7 @@ end. Sub-04 was not scanned during Harry Potter or Le Petit Prince, so its
 HP+PP vertex and adjacent connecting segments are omitted rather than imputed.
 
 Output:
-  $SCRATCH_DIR/output/manuscript_figures/figS09/figS09_radar_strip.{pdf,png,svg}
+  $SCRATCH_DIR/output/manuscript_figures/si_individual_differences/figS09_radar_strip.{pdf,png,svg}
 
 Manuscript-figure conventions: no in-axis titles, no panel letters, minimal
 on-figure text (axis labels + subject IDs only). Caption carries axis full
@@ -62,7 +62,7 @@ PARCELLATION = "atlas-4S156Parcels"
 VT = "vt0.95"
 SUBJECTS: list[str] = [f"sub-0{i}" for i in range(1, 7)]
 AXIS_LABELS: list[str] = ["K", "%CE", "FCρ", "Homo", "Aud", "M10", "HP+PP"]
-OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "figS09"
+OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_individual_differences"
 PAD_FRACTION = 0.10
 
 

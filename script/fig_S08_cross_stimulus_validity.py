@@ -73,7 +73,7 @@ def config(Path, os):
     PARCELLATION = "atlas-4S156Parcels"
     VT = "vt0.95"
     SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "figS08"
+    OUT = SCRATCH_DIR / "output" / "manuscript_figures" / "si_cross_stimulus_validity"
     OUT.mkdir(parents=True, exist_ok=True)
 
     out_root = SCRATCH_DIR / "output"
