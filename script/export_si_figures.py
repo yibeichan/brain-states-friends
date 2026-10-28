@@ -147,6 +147,22 @@ SI_MAP: list[tuple[str, str, str, str | None]] = [
     ("S14_participant_umap_legend_recurrence.png", "EXPORT",
      "script/fig_F2E_participant_umap.py",
      "si_participant_umap/figS_participant_umap_legend_recurrence.png"),
+
+    ("S15_transition_module_similarity_A_fc.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_A_fc_similarity.png"),
+    ("S15_transition_module_similarity_B_maps.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_B_map_similarity.png"),
+    ("S15_transition_module_similarity_legend_fc.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_legend_fc.png"),
+    ("S15_transition_module_similarity_legend_maps.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "si_transition_modules/si_transition_modules_legend_map.png"),
+    ("S15_transition_module_similarity_legend_networks.png", "EXPORT",
+     "script/fig_F3_transition_structure.py",
+     "fig3/fig3_A_legend_networks.png"),
 ]
 
 # Legacy emitted paths, kept only so a stale tree can be diagnosed. These are
@@ -203,7 +219,7 @@ def main() -> int:
     figroot = Path(scratch) / "output" / "manuscript_figures"
 
     copied = stale = missing = 0
-    print(f"{'SI file':52}{'status':<12}source / note")
+    print(f"{'SI file':56}{'status':<12}source / note")
     print("-" * 118)
 
     for si_name, category, generator, rel in SI_MAP:
@@ -211,14 +227,14 @@ def main() -> int:
 
         if category == "DIRECT":
             status = "ok" if dest.exists() else "ABSENT"
-            print(f"{si_name:52}{status:<12}written directly by {generator}")
+            print(f"{si_name:56}{status:<12}written directly by {generator}")
             if not dest.exists():
                 missing += 1
             continue
 
         if category == "SUPPLEMENTS":
             status = "ok" if dest.exists() else "ABSENT"
-            print(f"{si_name:52}{status:<12}{generator}")
+            print(f"{si_name:56}{status:<12}{generator}")
             if not dest.exists():
                 missing += 1
             continue
@@ -228,19 +244,19 @@ def main() -> int:
             if args.copy:
                 real = src.resolve()  # git-annex symlinks -> real object
                 shutil.copyfile(real, dest)
-                print(f"{si_name:52}{'copied':<12}{rel}")
+                print(f"{si_name:56}{'copied':<12}{rel}")
             else:
-                print(f"{si_name:52}{'available':<12}{rel}")
+                print(f"{si_name:56}{'available':<12}{rel}")
             copied += 1
             continue
 
         legacy = LEGACY_SOURCES.get(rel)
         if legacy and (figroot / legacy).exists():
-            print(f"{si_name:52}{'STALE':<12}"
+            print(f"{si_name:56}{'STALE':<12}"
                   f"expected {rel}; only legacy {legacy} exists -> move it or re-run {generator}")
             stale += 1
         else:
-            print(f"{si_name:52}{'MISSING':<12}expected {rel} -> run {generator}")
+            print(f"{si_name:56}{'MISSING':<12}expected {rel} -> run {generator}")
             missing += 1
 
     print("-" * 118)
