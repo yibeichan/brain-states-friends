@@ -168,7 +168,7 @@ noted) before invoking a figure script.
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
 | **2** | `fig_F2_recurrence_sources.py` (Panels A–D); `fig_F2_network_participation.py` (batch Panel C); `fig_F2E_participant_umap.py` (Panel E and its supplementary panels; needs `uv sync --extra umap`) | Recurrence-screening categories + network participation; all participants' states in one embedding, with matched pairs between participants (R2) | `04`, `05a`, `05e`, `05h` |
 | **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
-| **4** | `fig_F4_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
+| **4** | `fig_F4_cross_stimulus_transfer.py` | Friends recurrence against Movie10 occupancy, and against its phase-randomized null (R5) | `04` decode, `05a`, `05e`, `m10_05`, `sm_rel_r5_phase_null` (`supplements` branch) |
 | **5** | `fig_F5_within_friends.py` (lead) + `fig_F5_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
 | **S2** | `fig_S02_pca_loadings.py` | PCA loadings diagnostics (one representative subject) | `03b` |
