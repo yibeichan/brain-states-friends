@@ -191,10 +191,13 @@ noted) before invoking a figure script.
 > the former `S3`–`S10` shifted to `S5`–`S12`. Older notes and plan documents
 > that cite `S8`/`S10` for the ICA figures refer to what are now `S10`/`S12`.
 
-Supplementary figures S6 and S7 have no `fig_S*.py` entry point: S6 comes from
-the Figure 5 script's companion renderer and S7 from `script/08e_plots.py`.
-Figures S10 and S12 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
-branch (ICA alternative decomposition) and cannot be built from `main`.
+Supplementary figures S6, S7, S14 and S15 have no `fig_S*.py` entry point: S6
+comes from the Figure 5 script's companion renderer, S7 from `script/08e_plots.py`,
+S14 from the supplementary cells of `fig_F2E_participant_umap.py` and S15 from the
+SI cell of `fig_F3_transition_structure.py`.
+Figures S10, S12 and S13 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch (ICA alternative decomposition, phase-randomized null) and cannot be built
+from `main`.
 
 Because several generators emit filenames that differ from the `S<nn>_*` names
 used in the supplement, [`script/export_si_figures.py`](script/export_si_figures.py)

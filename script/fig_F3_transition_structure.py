@@ -219,8 +219,9 @@ def check_against_06e(sub, name, S, labels, states, theirs, atol=1e-9):
     import numpy as _np
 
     S = _np.asarray(S, dtype=float)
-    _remedy = ("The inputs no longer match the ones 06e read; re-run "
-               "06e_transition_modules.py --mode aggregate, then this script.")
+    _remedy = ("Either this script now orders or selects states differently, or the "
+               "04/05f/06b inputs changed after 06e ran. Check the script first; re-run "
+               "06e_transition_modules.py --mode aggregate only if the inputs changed.")
     _off = ~_np.eye(len(states), dtype=bool)
     _bad = [int(states[_i]) for _i in range(len(states))
             if not _np.isfinite(S[_i][_off[_i]]).all()]
@@ -234,6 +235,27 @@ def check_against_06e(sub, name, S, labels, states, theirs, atol=1e-9):
             f"differs from 06e's {float(theirs)!r} by {_mine - float(theirs):+.3g} "
             f"(tolerance {atol:g}). {_remedy}")
     return _mine
+
+
+@app.function
+def check_no_fc_states(sub, rv, states, dropped):
+    """Raise if a state 06e left out for lacking a defined FC now has one.
+
+    `rv` is the FC RV matrix in display order and `states` the state ids; a
+    state counts as defined when its whole off-diagonal row is finite.
+    """
+    import numpy as _np
+
+    rv = _np.asarray(rv, dtype=float)
+    _off = ~_np.eye(len(states), dtype=bool)
+    _now = [int(states[_i]) for _i in range(len(states))
+            if int(states[_i]) in dropped and _np.isfinite(rv[_i][_off[_i]]).all()]
+    if _now:
+        raise RuntimeError(
+            f"{sub} fc_rv: states {_now} have a defined FC now, but 06e left them out "
+            "for lacking one. Either this script now reads a different RV matrix, or "
+            "05f was re-run after 06e; in that case re-run "
+            "06e_transition_modules.py --mode aggregate, then this script.")
 
 
 @app.function
@@ -781,6 +803,7 @@ def supp_module_similarity(
         _kix = np.ix_(_keep, _keep)
         _klab = [_mods[_i] for _i in _keep]
         _kstates = [_order[_i] for _i in _keep]
+        check_no_fc_states(_sub, _rv, _order, _drop)
         _chk = {}
         for _name, _S in (("fc_rv", _rv), ("map_r", _map_r)):
             _theirs = float(_char["univariate"][_name]["within_minus_between"])
@@ -810,6 +833,7 @@ def supp_module_similarity(
 
     _lim = float(np.percentile(np.concatenate(_map_abs), 99))
     _lim = min(1.0, np.ceil(_lim * 10) / 10)
+    _n_sat = sum(int((_a > _lim).sum()) for _a in _map_abs) // 2
     _stats_out = {
         "note": ("Within- minus between-module mean similarity and its two-sided "
                  "label-permutation p, and the coefficient and p of each measure in "
@@ -819,6 +843,7 @@ def supp_module_similarity(
                  "mean activation maps."),
         "panel_A_scale": "percentile of each pair's FC RV among the subject's state pairs",
         "panel_B_scale": f"map r, diverging, limits +/-{_lim:g} (shared)",
+        "panel_B_pairs_beyond_limits": _n_sat,
         "subjects": _stats,
     }
     with open(OUT_SI_MODULES / "si_transition_modules_similarity_stats.json", "w") as _f:
@@ -880,7 +905,6 @@ def supp_module_similarity(
         _figC.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
         _figC.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
         plt.close(_figC)
-    _n_sat = sum(int((_a > _lim).sum()) for _a in _map_abs) // 2
     print(f"saved: SI module similarity legends (map r limits +/-{_lim:g}; "
           f"{_n_sat} state pairs beyond them)")
     return

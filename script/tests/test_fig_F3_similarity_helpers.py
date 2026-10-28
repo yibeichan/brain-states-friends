@@ -131,3 +131,39 @@ def test_draw_state_matrix_draws_ribbons_dots_and_separators():
     assert all(len(c.get_offsets()) == 2 for c in ax.collections)
     assert len(ax.lines) == 2            # one boundary, drawn across and down
     plt.close(fig)
+
+
+def test_check_against_06e_ignores_the_diagonal_and_returns_its_own_value():
+    S = _sym([0.8, 0.1, 0.2, 0.3, 0.4, 0.6], 4)
+    S[1, 1] = np.nan
+    mine = f3.within_minus_between(S, [0, 0, 1, 1])
+    got = f3.check_against_06e("sub-00", "fc_rv", S, [0, 0, 1, 1],
+                               [10, 11, 12, 13], mine + 5e-10)
+    assert got == mine
+
+
+def test_check_no_fc_states_flags_a_dropped_state_that_now_has_fc():
+    S = _sym([0.8, 0.1, 0.2, 0.3, 0.4, 0.6], 4)
+    with pytest.raises(RuntimeError, match=r"states \[12\] have a defined FC now"):
+        f3.check_no_fc_states("sub-00", S, [10, 11, 12, 13], {12})
+    S[2, :] = np.nan
+    S[:, 2] = np.nan
+    f3.check_no_fc_states("sub-00", S, [10, 11, 12, 13], {12})   # still undefined: fine
+
+
+def test_draw_state_matrix_places_separators_and_ribbon_colours():
+    fig, ax = plt.subplots()
+    M = np.ma.masked_invalid(np.zeros((4, 4)))
+    colors = {"Visual": "#111111", "Default": "#222222", "Limbic": "#333333"}
+    nets = ["Visual", "Default", "Default", "Limbic"]
+    f3.draw_state_matrix(ax, M, plt.get_cmap("viridis"), matplotlib.colors.Normalize(0, 1),
+                         nets, [0, 0, 1, 1], [False] * 4, colors, "#8C8C8C")
+    xs = sorted({x for line in ax.lines for x in line.get_xdata()
+                 if len(set(line.get_xdata())) == 1})
+    ys = sorted({y for line in ax.lines for y in line.get_ydata()
+                 if len(set(line.get_ydata())) == 1})
+    assert xs == [2] and ys == [2]        # the boundary between states 1 and 2
+    top = sorted((p for p in ax.patches if p.get_y() < 0), key=lambda p: p.get_x())
+    assert [matplotlib.colors.to_hex(p.get_facecolor()) for p in top] == \
+        [colors[n] for n in nets]
+    plt.close(fig)

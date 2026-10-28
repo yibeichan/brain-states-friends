@@ -112,6 +112,8 @@ SI figures with no dedicated `fig_S*` entry point (provenance verified
 |---|---|---|
 | S6 | `fig_F5_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/si_decoding_negative_control/figS_R4b_negcontrol_triple.{png,svg}` |
 | S7 | `08e_plots.py` → `render_panel()`, one call per modality panel | `manuscript_figures/si_decoding_depth/si_decoding_depth_<panel>.{pdf,png,svg}` |
+| S14 | `fig_F2E_participant_umap.py` → its supplementary panel cells | `manuscript_figures/si_participant_umap/figS_participant_umap_<panel>.{png,svg}` |
+| S15 | `fig_F3_transition_structure.py` → `supp_module_similarity()` | `manuscript_figures/si_transition_modules/si_transition_modules_<panel>.{png,svg}` |
 
 **S10**, **S12** and **S13** are rendered on the orphan `supplements` branch by
 `fig_sm_alt_ica_matching.py`, `fig_sm_alt_ica_oos_recurrence.py` and
