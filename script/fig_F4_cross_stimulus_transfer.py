@@ -2,7 +2,8 @@
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .png + .svg mini-figures for manual
-assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
+assembly. No on-figure panel labels, no titles, no subject-ID tick labels
+(subjects are named by in-panel tags, as in panels A and B).
 
 R5 claim: a state's recurrence rank in Friends predicts its mean occupancy
 during audiovisual film (Movie10) in every participant, above a phase-randomized
@@ -343,8 +344,9 @@ def panel_B_observed_vs_null(
     null-distribution figure. The dark tick is the observed ρ (for Movie10, the
     value panel A annotates), and each row is tagged with its subject,
     Δρ = observed - null mean (three decimals, so near-zero values stay
-    readable) and the empirical p, the share of null draws at or above the
-    observed ρ (floored at 1/10,001, shown as p < 0.001). For Petit Prince
+    readable) and the empirical p, (k + 1) / (10,000 + 1) for k null draws at or
+    above the observed ρ (its floor 1/10,001 is shown as p < 0.001). A dashed
+    line marks ρ = 0. For Petit Prince
     sub-05 the null sits well below zero and the observed ρ near zero, so its
     margin is not a positive correlation. Subject identity is carried by the row and its
     tag, so the tick does not repeat it with a marker shape.
@@ -368,7 +370,11 @@ def panel_B_observed_vs_null(
         for _sub in SUBJECTS:
             _dir = null_dir(_stim, _sub)
             if summaries[_stim][_sub] is None:
-                assert (_dir / "skipped.json").exists(), f"{_stim} {_sub}: no data, no skip record"
+                _skip = _dir / "skipped.json"
+                assert _skip.exists() and json.loads(_skip.read_text()).get("skipped") is True, (
+                    f"{_stim} {_sub}: no cross-stimulus data, and no skip record")
+                assert not (_dir / "r5_phase_null_summary.json").exists(), (
+                    f"{_stim} {_sub}: a null summary but no cross-stimulus summary")
                 continue
             with open(_dir / "r5_phase_null_summary.json") as _f:
                 _n = json.load(_f)
@@ -398,6 +404,8 @@ def panel_B_observed_vs_null(
                   f"{_n['null']['pct97.5']:+.3f}]  Δρ {_rho - _n['null']['mean']:+.3f}  "
                   f"p {_n['p_empirical']:.4f}")
 
+    _n_rows = {_label: sum(_r[0] == _label for _r in _rows) for _, _label in STIMULI}
+    assert _n_rows == {"Movie10": 6, "Harry Potter": 5, "Petit Prince": 5}, _n_rows
     _bins = np.linspace(_x_min, _x_max, 237)    # 0.005-wide, shared by all rows
     _height = 0.8                               # ridge peak, in row units
     _gap = 0.7                                  # extra space between stimulus groups
@@ -408,7 +416,7 @@ def panel_B_observed_vs_null(
         _ys.append(_y)
         _prev = _label
 
-    _fig, _ax = plt.subplots(figsize=(6.7, 4.6))
+    _fig, _ax = plt.subplots(figsize=(6.06, 4.6))   # renders as wide as panel A (6.5 in)
     def _p_text(_p):
         if _p < 0.001:
             return "p < 0.001"
