@@ -9,9 +9,10 @@ R5 claim: a state's recurrence rank in Friends predicts its mean occupancy
 during audiovisual film (Movie10) in every participant, above a phase-randomized
 null that preserves each PCA component's power spectrum and variance and the
 cross-component covariance. The null reproduces most of the raw correlation, so
-the claim is the margin above the null, not the raw ρ. The same null run on
-Harry Potter (7 runs) and Petit Prince (16-18 runs) is wider and lower-powered;
-there the observed ρ clears it in 1 and 2 of 5 participants.
+the claim is the margin above the null, not the raw ρ. With the same null on
+Harry Potter (7 runs) and Petit Prince (16-18 runs), the observed ρ sits above
+its null in one and two participants, near or at it in most others, and below it
+in two Harry Potter participants (z -2.41 and -3.22).
 
 Rest placement (decided 2026-08-17): supplementary ONLY — rest appears in
 fig_S08, not in this figure. Rationale: rest transfer is descriptive only (no
@@ -64,9 +65,9 @@ Source-truth audit (reproduced from raw arrays):
     (0.92/1.54/2.43/4.98).
   * Panel B (2026-10-28): each null summary's observed ρ equals the
     cross-stimulus summary's A1 ρ for all 16 subject x stimulus cells; Δρ
-    M10 +0.07 to +0.22 (p 0.0001, the 10,000-draw floor, in 6/6), HP -0.08 to
-    +0.09 (p < 0.05 in 1/5, sub-05), PP +0.003 to +0.19 (p < 0.05 in 2/5,
-    sub-01 and sub-05).
+    M10 +0.07 to +0.22 (z 5.97 to 15.62, every p at the 10,000-draw floor),
+    HP -0.08 to +0.09 (z -3.22 to +2.77), PP +0.003 to +0.19 (z +0.11 to
+    +9.08; sub-05's +9.08 is against a null below zero).
 
 Run:
     marimo edit script/fig_F4_cross_stimulus_transfer.py
@@ -355,8 +356,8 @@ def panel_B_observed_vs_null(
     random phase vector, shared across components. It keeps each component's
     power spectrum and variance, the cross-component covariance, and the run
     count and lengths, and destroys stimulus-locked timing and higher-order
-    temporal structure. Harry Potter (7 runs) and Petit Prince (16-18) give wider
-    nulls than Movie10 (61), so those tests have less power.
+    temporal structure. Harry Potter has 7 runs per subject and Petit Prince
+    16-18, against 61 for Movie10.
 
     Checks, per subject and stimulus: the null summary's observed ρ equals the
     cross-stimulus summary's; the draw file holds the 10,000 draws the caption
