@@ -40,9 +40,12 @@
 #
 # Recovery: if the chain stops before the fits (00, 02 or 03a), use a new RUN_ROOT,
 # since stage 02 skips parcel files that already exist. If it stops in the fits
-# (the fit check lists the incomplete configs), resubmit just the fit tasks, the
-# fit check and the later steps into the same root: fit tasks resume from their
-# saved seeds.
+# (the fit check lists the incomplete configs), the same root can be reused, but
+# not through this script, which refuses a root that already holds fits: submit by
+# hand, with the same options as below, the fit arrays (MODE=fit, STAGE=1 and 2),
+# then clean_wmcsf_check_fits.py, select_seed, select_finalize and the compare, in
+# that order. Fit tasks resume from their saved seeds; a seed that raised is saved
+# as failed and skipped on resume, so delete its seeds/seed_<i>.json to retry it.
 #
 # Jobs inherit the calling shell's environment except the variables the stages read
 # as options or inputs (STAGE_VARS); those come only from this script or from the
@@ -162,7 +165,9 @@ STAGE2_ARRAY=$(IFS=,; echo "${STAGE2_TASKS[*]}")
 # Array tasks this call submits, against the per-user submit limit.
 per_variant=$((3 + FIT_ATTEMPTS * (N_STAGE1 + ${#STAGE2_TASKS[@]}) + 1 + N_FINAL_SEEDS + 1))
 needed=$(( $# * (2 * per_variant + 1) ))
-queued=$(squeue -h -r -u "$(id -un)" -p pi_satra 2> /dev/null | wc -l)
+queue=$(squeue -h -r -u "$(id -un)" -p pi_satra) \
+    || die "squeue failed; cannot check the submit limit"
+queued=$(printf '%s' "${queue}" | grep -c . || true)
 (( queued + needed <= MAX_SUBMIT )) || die "this needs ${needed} pi_satra jobs (array tasks) and ${queued} are queued, over the limit of ${MAX_SUBMIT}; submit fewer subjects per call"
 
 claimed=()
@@ -170,7 +175,7 @@ release() { for c in "${claimed[@]}"; do rmdir "$c"; done; }
 for sub in "$@"; do
     for variant in "${VARIANTS[@]}"; do
         root="${run_root}/${variant}"
-        for d in "${root}" "${root}/output"; do
+        for d in "${root}" "${root}/output" "${root}/logs"; do
             if [ "$(realpath -m "${d}")" != "${d}" ]; then
                 release; die "${d} resolves to $(realpath -m "${d}"); it must be a real directory"
             fi
@@ -190,7 +195,7 @@ done
 mkdir -p "${run_root}/compare/logs"
 
 # If submission stops partway (a failed sbatch or a signal), say what is already
-# queued; if nothing was, release this call's claims.
+# queued, or how to check when no job id was recorded.
 SUBMIT_LOG=$(mktemp)
 on_exit() {
     local st=$1 ids
@@ -200,8 +205,11 @@ on_exit() {
         echo "ERROR: submission stopped partway; already queued: ${ids}" >&2
         echo "Cancel them with: scancel ${ids}; then use a new RUN_ROOT." >&2
     else
-        release
-        echo "ERROR: nothing was submitted; the claims of this call were removed." >&2
+        # An sbatch interrupted mid-call may have queued a job whose id was lost,
+        # so the claims stay until squeue shows nothing from this call.
+        echo "ERROR: submission stopped before any job id was recorded. Check" >&2
+        echo "'squeue -u $(id -un) -n <job name>' for wcsf-* jobs; if there are none," >&2
+        echo "remove ${claimed[*]:-the claims} and rerun." >&2
     fi
 }
 trap 'on_exit $?' EXIT

@@ -150,7 +150,8 @@ def test_a_permutation_test_error_leaves_the_verdict(fits, monkeypatch):
     d = out["distribution_test"]
     assert d["error"] == "ari: 1 of 15 seed pairs are not finite"
     assert sorted(d["by_metric"]) == ["ari", "fo_distance", "median_r"]
-    assert all(np.isnan(m["p"]) for m in d["by_metric"].values())
+    assert all(np.isnan(m[k]) for m in d["by_metric"].values()
+               for k in ("statistic", "within_median", "cross_median", "p"))
     assert out["verdict"]["moved"] is True
 
 
