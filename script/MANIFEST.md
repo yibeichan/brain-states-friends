@@ -80,6 +80,8 @@ same MAIN tier.)
 | `05g_excluded_state_check.py` | Whether each excluded state is an interruption of a neighbouring state, or a blend of the two states it sits between (neighbours and partners drawn from all active states) | SUPP | Supp (Table S#); also a prerequisite of MAIN `05h` |
 | `06c_higher_order_transitions.py` | Higher-order transition adequacy (entropy, BIC) | SUPP | Supp |
 | `06d_preserved_chains.py` | Preserved transition chains | SUPP | Supp |
+| `clean_wmcsf_e2e_submit.sh` | Submits the end-to-end check of the CSF/WM tissue-map limitation: stages 00 to 04 refit per subject with the shared table's corrupt-mask and clean-mask regressors, then the comparison | SUPP | Methods §1 (limitation) |
+| `clean_wmcsf_compare.py` | Compares the two variants' fits: verdict against within-variant seed pairs, seed-level permutation test, stage-1 vt | SUPP | Methods §1 (limitation) |
 
 ## Figure
 

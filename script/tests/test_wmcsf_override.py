@@ -75,10 +75,24 @@ def test_missing_table_fails(tmp_path):
         replace_wmcsf(_confounds(), tmp_path, BOLD, "clean")
 
 
-def test_missing_wmcsf_columns_fails(tmp_path):
+@pytest.mark.parametrize("column", ["csf", "white_matter"])
+def test_missing_wmcsf_columns_fails(tmp_path, column):
     _write_table(tmp_path, STEM)
-    with pytest.raises(ValueError, match="csf"):
-        replace_wmcsf(_confounds().drop(columns="csf"), tmp_path, BOLD, "clean")
+    with pytest.raises(ValueError, match=f"lack \\['{column}'\\]"):
+        replace_wmcsf(_confounds().drop(columns=column), tmp_path, BOLD, "clean")
+
+
+@pytest.mark.parametrize("bad, match", [(np.nan, "non-finite"), (None, "constant")])
+def test_unusable_table_column_fails(tmp_path, bad, match):
+    path = _write_table(tmp_path, STEM)
+    table = pd.read_csv(path, sep="\t")
+    if bad is None:
+        table["white_matter_clean"] = 7.0
+    else:
+        table.loc[2, "white_matter_clean"] = bad
+    table.to_csv(path, sep="\t", index=False)
+    with pytest.raises(ValueError, match=match):
+        replace_wmcsf(_confounds(), tmp_path, BOLD, "clean")
 
 
 def test_unknown_variant_fails(tmp_path):

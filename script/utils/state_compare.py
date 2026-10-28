@@ -1,6 +1,6 @@
 """Compare the states of two HMM fits of the same runs.
 
-Used by the hazard-10 check to ask whether replacing the corrupt-mask CSF/WM
+Used by clean_wmcsf_compare.py to ask whether replacing the corrupt-mask CSF/WM
 regressors with clean ones moves the fitted states more than refitting with another
 seed does. A fit is a dict with `means` (n_states, n_parcels) in parcel space,
 `decoded` (run id -> state per TR) and `k_used` (states the model uses).
@@ -12,6 +12,10 @@ Metrics, for fit A against fit B:
   the matched one;
 - fo_distance: total-variation distance between pooled occupancies after mapping,
   with each fit's unmatched states pooled into one bin.
+
+The verdict and the permutation test use median_r, ari and fo_distance
+(VERDICT_METRICS); the other metrics are reported only. Both raise on a
+non-finite verdict metric instead of reading it as "not moved" or p = 0.
 """
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -133,10 +137,15 @@ def moved_verdict(cross, within):
     by_metric = {}
     for name, worse in VERDICT_METRICS.items():
         vals = np.array([w[name] for w in within], dtype=float)
+        if not np.isfinite(cross[name]):
+            raise ValueError(f"{name}: the cross-variant value is {cross[name]}")
+        if not np.isfinite(vals).all():
+            raise ValueError(f"{name}: {int((~np.isfinite(vals)).sum())} of {vals.size} "
+                             "within-variant seed pairs are not finite")
         entry = {"cross": float(cross[name]),
-                 "within_min": float(np.nanmin(vals)),
-                 "within_median": float(np.nanmedian(vals)),
-                 "within_max": float(np.nanmax(vals))}
+                 "within_min": float(vals.min()),
+                 "within_median": float(np.median(vals)),
+                 "within_max": float(vals.max())}
         if worse == "lower":
             entry["outside"] = bool(cross[name] < entry["within_min"])
         else:
@@ -166,8 +175,9 @@ def distribution_test(pair_metrics, labels, max_exact=200_000, n_random=20_000,
     signed so that larger means the cross-variant pairs look worse. The null
     reassigns the variant labels over whole fits, keeping group sizes, which
     respects pairs that share a seed. All splits are enumerated when there are at
-    most `max_exact`; otherwise `n_random` random splits plus the observed one.
-    p is the share of splits whose statistic is at least the observed one.
+    most `max_exact`; otherwise `n_random` random splits plus the observed one,
+    the same splits for every metric. p is the share of splits whose statistic is
+    at least the observed one.
     """
     from itertools import combinations
     from math import comb
@@ -192,13 +202,13 @@ def distribution_test(pair_metrics, labels, max_exact=200_000, n_random=20_000,
         n_splits = n_total
     else:
         rng = np.random.default_rng(seed)
+        sampled = np.zeros((n_random + 1, n), dtype=np.int8)
+        sampled[0] = observed
+        for row in sampled[1:]:
+            row[rng.choice(n, size=n1, replace=False)] = 1
 
         def gen():
-            yield observed
-            for _ in range(n_random):
-                row = np.zeros(n, dtype=np.int8)
-                row[rng.choice(n, size=n1, replace=False)] = 1
-                yield row
+            yield from sampled
         exact = False
         n_splits = n_random + 1
 
@@ -206,6 +216,9 @@ def distribution_test(pair_metrics, labels, max_exact=200_000, n_random=20_000,
     for name, worse in VERDICT_METRICS.items():
         values = np.array([pair_metrics[(int(i), int(j))][name] for i, j in zip(*iu)],
                           dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError(f"{name}: {int((~np.isfinite(values)).sum())} of "
+                             f"{values.size} seed pairs are not finite")
         obs, w_med, c_med = _split_statistics(values, iu, observed[None, :], worse)
         n_ge = 0
         rows = gen()

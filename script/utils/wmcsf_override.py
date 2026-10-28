@@ -2,14 +2,15 @@
 
 The CNeuroMod sMRIPrep tissue maps were resampled with trilinear interpolation, so
 fMRIPrep's `csf` and `white_matter` confounds are averaged over the wrong voxels.
-The shared table (`dataset:cneuromod-clean-wmcsf`) holds, per run and volume, the
-same mean signals rebuilt over clean masks (`*_clean`) and over the shipped corrupt
-masks (`*_corrupt`) with one recipe, so a clean-vs-corrupt comparison isolates the
-mask defect. Table layout: `<root>/friends/<sub>/<sub>_<ses>_<task>_wmcsf.tsv`.
+The shared CNeuroMod CSF/WM table holds, per run and volume, the same mean signals
+rebuilt over clean masks (`*_clean`) and over the shipped corrupt masks
+(`*_corrupt`) with one recipe, so a clean-vs-corrupt comparison isolates the mask
+defect. Table layout: `<root>/friends/<sub>/<sub>_<ses>_<task>_wmcsf.tsv`.
 """
 import os
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 WMCSF_VARIANTS = ("clean", "corrupt")
@@ -27,7 +28,8 @@ def replace_wmcsf(confounds, table_root, bold_file, variant, dataset="friends"):
     """Return a copy of `confounds` with csf/white_matter taken from the table.
 
     The replacement columns are demeaned, as nilearn's load_confounds demeans
-    every regressor it returns.
+    every regressor it returns. A non-finite or constant column is an error: signal
+    cleaning would drop a constant regressor without a word.
     """
     if variant not in WMCSF_VARIANTS:
         raise ValueError(f"wmcsf variant must be one of {WMCSF_VARIANTS}, got {variant!r}")
@@ -46,5 +48,9 @@ def replace_wmcsf(confounds, table_root, bold_file, variant, dataset="friends"):
     out = confounds.copy()
     for col in WMCSF_COLUMNS:
         values = table[f"{col}_{variant}"].to_numpy(dtype=float)
+        if not np.isfinite(values).all():
+            raise ValueError(f"{path.name}: {col}_{variant} has non-finite values")
+        if np.ptp(values) == 0:
+            raise ValueError(f"{path.name}: {col}_{variant} is constant")
         out[col] = values - values.mean()
     return out

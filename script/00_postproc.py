@@ -387,4 +387,4 @@ For detailed rationale: the design notes
                               standardize=standardize, wmcsf_table=args.wmcsf_table,
                               wmcsf_variant=args.wmcsf_variant)
     if any(r is None for r in results):
-        exit(1)
+        sys.exit(1)

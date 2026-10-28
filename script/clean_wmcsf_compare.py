@@ -1,29 +1,36 @@
 #!/usr/bin/env python3
-"""Hazard-10 check: do the states move when the CSF/WM regressors are cleaned?
+"""Do the states move when the CSF/WM regressors are rebuilt over clean masks?
 
 Compares, for one subject, the combined-HMM fits from the corrupt-mask and the
-clean-mask runs of `hazard10_e2e_submit.sh` (each a SCRATCH_DIR-style root with
+clean-mask runs of `clean_wmcsf_e2e_submit.sh` (each a SCRATCH_DIR-style root with
 its own output/). The selected fits (best seed) are compared across variants, and
 the result is judged against the spread between seeds within each variant: the
-states moved if a cross-variant metric is worse than every within-variant seed
-pair (see utils/state_compare.py for the metrics). A secondary seed-level
-permutation test asks whether cross-variant seed pairs as a whole are worse than
-within-variant ones.
+states moved if a verdict metric (median_r, ari or fo_distance; see
+utils/state_compare.py) of the selected pair is worse than every within-variant
+seed pair. A secondary seed-level permutation test asks whether cross-variant seed
+pairs as a whole are worse than within-variant ones.
 
 Every final seed model is back-projected with its variant's PCA and decoded over
-all runs, so the comparison sees exactly what the selected fit sees.
+all runs, so the comparison sees exactly what the selected fit sees. Stage 1's vt
+pick is recomputed from each variant's stage-1 fits with 04's own scoring, so it is
+reported even when select ran at a fixed vt.
+
+The JSON is written even when a check fails (a seed missing, the selected fit's
+saved decode differing from its seed model's), and the script then exits 1.
 
 Usage:
-    python script/hazard10_compare.py --run_root <RUN_ROOT> --sub_id sub-04 \\
+    python script/clean_wmcsf_compare.py --run_root <RUN_ROOT> --sub_id sub-04 \\
         --out <RUN_ROOT>/compare/sub-04.json
 """
 import argparse
+import importlib.util
 import itertools
 import json
 import os
 import pickle
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -46,6 +53,33 @@ def _load_pickle(path):
         return pickle.load(f)
 
 
+def _hdphmm04():
+    """04_combined_hdphmm.py as a module (its file name is not importable).
+
+    It reads SCRATCH_DIR when imported; the functions used here take explicit
+    paths, so any value will do.
+    """
+    os.environ.setdefault("SCRATCH_DIR", tempfile.gettempdir())
+    spec = importlib.util.spec_from_file_location(
+        "hdphmm04", Path(__file__).parent / "04_combined_hdphmm.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def stage1_vt(sub_dir):
+    """Stage 1's vt pick from the stage-1 fits under `sub_dir`/configs.
+
+    Uses 04's own scoring (per-dimension validation LL over the stage-1 grid).
+    Returns (vt or None when no stage-1 config was fit, configs scored, grid size).
+    """
+    m = _hdphmm04()
+    grid = m.build_stage1_grid()
+    scores = m._collect_config_scores(str(Path(sub_dir) / "configs"), grid, "ll_per_dim")
+    vt = float(scores[0]["config"]["variance_threshold"]) if scores else None
+    return vt, len(scores), len(grid)
+
+
 def load_variant(root, sub_id, parcellation):
     """Selected config, stage-1 vt and every final seed fit for one variant."""
     out = Path(root) / "output"
@@ -59,9 +93,7 @@ def load_variant(root, sub_id, parcellation):
     results = json.loads(finals[0].read_text())
     n_pcs = int(results["data_info"]["n_pcs"])
     best_seed = int(results["final_refit"]["best_seed"])
-
-    stage1 = sub_dir / "stage1_result.json"
-    stage1_vt = json.loads(stage1.read_text())["selected_vt"] if stage1.is_file() else None
+    vt1, n_scored, n_grid = stage1_vt(sub_dir)
 
     pca = _load_pickle(final_dir / "pca_model.pkl")
     split = load_split(str(combined_base))
@@ -89,7 +121,8 @@ def load_variant(root, sub_id, parcellation):
     return {
         "final_dir": str(final_dir),
         "selected_config": results["selected_config_name"],
-        "stage1_selected_vt": stage1_vt,
+        "stage1_selected_vt": vt1,
+        "stage1_configs_scored": f"{n_scored}/{n_grid}",
         "n_pcs": n_pcs,
         "best_seed": best_seed,
         "saved_decode_matches_best_seed": bool(decode_matches),
@@ -106,9 +139,12 @@ def _summary(rows):
         "n_pairs": len(rows)}
 
 
-def run(run_root, sub_id, parcellation):
-    fits = {v: load_variant(Path(run_root) / v, sub_id, parcellation) for v in VARIANTS}
+def compare_variants(fits):
+    """Verdict, permutation test and summaries for loaded fits of both variants.
 
+    `fits` maps each variant to a dict with `seeds` ({seed: fit}), `best_seed` and
+    `selected_config` (plus anything else to report, as load_variant returns).
+    """
     # Pool every seed fit of both variants and compare each pair once.
     pooled = [(v, s, f) for v in VARIANTS for s, f in sorted(fits[v]["seeds"].items())]
     labels = np.array([VARIANTS.index(v) for v, _, _ in pooled])
@@ -122,8 +158,6 @@ def run(run_root, sub_id, parcellation):
     selected = compare_fits(c["seeds"][c["best_seed"]], k["seeds"][k["best_seed"]])
 
     return {
-        "sub_id": sub_id,
-        "parcellation": parcellation,
         "variants": {v: {key: val for key, val in fit.items() if key != "seeds"}
                      | {"n_seeds": len(fit["seeds"]),
                         "k_used_by_seed": {str(s): int(f["k_used"])
@@ -138,8 +172,34 @@ def run(run_root, sub_id, parcellation):
     }
 
 
+def run(run_root, sub_id, parcellation):
+    fits = {v: load_variant(Path(run_root) / v, sub_id, parcellation) for v in VARIANTS}
+    return {"sub_id": sub_id, "parcellation": parcellation} | compare_variants(fits)
+
+
+def check_failures(result):
+    """Checks that make the comparison unusable, as a list of messages."""
+    return [f"{v}: the selected fit's saved decode differs from its seed model's"
+            for v, fit in result["variants"].items()
+            if not fit["saved_decode_matches_best_seed"]]
+
+
+def write_json(obj, path):
+    """Write `obj` to `path` through a temporary file in the same directory."""
+    path = os.path.abspath(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(obj, f, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        os.unlink(tmp)
+        raise
+
+
 def main():
-    p = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    p = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     p.add_argument("--run_root", required=True,
                    help="Directory holding corrupt/ and clean/ variant roots")
     p.add_argument("--sub_id", required=True)
@@ -148,13 +208,15 @@ def main():
     args = p.parse_args()
 
     result = run(args.run_root, args.sub_id, normalize_parcellation_name(args.parcellation))
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "w") as f:
-        json.dump(result, f, indent=2)
+    write_json(result, args.out)
 
     v = result["verdict"]
     print(f"{args.sub_id}: selected {result['variants']['corrupt']['selected_config']} (corrupt) "
           f"vs {result['variants']['clean']['selected_config']} (clean)")
+    for name in ("corrupt", "clean"):
+        fit = result["variants"][name]
+        print(f"  stage-1 vt ({name}): {fit['stage1_selected_vt']} "
+              f"({fit['stage1_configs_scored']} configs scored)")
     for name, e in v["by_metric"].items():
         print(f"  {name:12s} cross={e['cross']:.3f}  within "
               f"[{e['within_min']:.3f}, {e['within_max']:.3f}]  outside={e['outside']}")
@@ -165,6 +227,11 @@ def main():
         print(f"  {name:12s} within median={e['within_median']:.3f}  "
               f"cross median={e['cross_median']:.3f}  p={e['p']:.4f}")
     print(f"  -> {args.out}")
+    failures = check_failures(result)
+    for msg in failures:
+        print(f"  CHECK FAILED: {msg}")
+    if failures:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

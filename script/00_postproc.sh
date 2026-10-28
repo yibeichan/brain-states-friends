@@ -71,6 +71,10 @@ echo ""
 # Optional: WMCSF_TABLE + WMCSF_VARIANT (clean|corrupt) replace fMRIPrep's csf and
 # white_matter regressors with the shared clean CSF/WM table (see utils/wmcsf_override.py).
 WMCSF_ARGS=()
+if [ -n "${WMCSF_VARIANT:-}" ] && [ -z "${WMCSF_TABLE:-}" ]; then
+    echo "ERROR: WMCSF_VARIANT=${WMCSF_VARIANT} needs WMCSF_TABLE" >&2
+    exit 1
+fi
 if [ -n "${WMCSF_TABLE:-}" ]; then
     WMCSF_ARGS=(--wmcsf_table "${WMCSF_TABLE}" --wmcsf_variant "${WMCSF_VARIANT:-}")
     echo "CSF/WM regressors: ${WMCSF_VARIANT:-<unset>} columns of ${WMCSF_TABLE}"

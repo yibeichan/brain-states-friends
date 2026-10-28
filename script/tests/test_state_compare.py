@@ -1,4 +1,5 @@
 """Comparing two HMM fits' states: matching, label agreement, occupancy, verdict."""
+import itertools
 import sys
 from pathlib import Path
 
@@ -95,6 +96,7 @@ def test_compare_fits_identical_with_inactive_states():
     dec = {"r": np.concatenate([labels, [3]])}
     out = compare_fits(_fit(means, dec, 4), _fit(means, dec, 4))
     assert out["n_active_a"] == 3
+    assert out["n_matched"] == 3          # the inactive state is not matched
     assert out["fo_distance"] == pytest.approx(0.0)
 
 
@@ -120,6 +122,35 @@ def test_moved_verdict():
 def test_moved_verdict_needs_within_pairs():
     with pytest.raises(ValueError):
         moved_verdict({"median_r": 1, "ari": 1, "fo_distance": 0}, [])
+
+
+@pytest.mark.parametrize("name, worse, better", [
+    ("median_r", 0.80, 0.99), ("ari", 0.40, 0.70), ("fo_distance", 0.30, 0.05)])
+def test_moved_verdict_direction_per_metric(name, worse, better):
+    within = [{"median_r": 0.95, "ari": 0.6, "fo_distance": 0.10},
+              {"median_r": 0.90, "ari": 0.5, "fo_distance": 0.20}]
+    inside = {"median_r": 0.92, "ari": 0.55, "fo_distance": 0.15}
+    assert moved_verdict(inside | {name: worse}, within)["by_metric"][name]["outside"] is True
+    assert moved_verdict(inside | {name: better}, within)["by_metric"][name]["outside"] is False
+
+
+def test_moved_verdict_needs_strictly_worse_than_every_pair():
+    within = [{"median_r": 0.95, "ari": 0.6, "fo_distance": 0.10},
+              {"median_r": 0.90, "ari": 0.5, "fo_distance": 0.20}]
+    at_edge = {"median_r": 0.90, "ari": 0.5, "fo_distance": 0.20}
+    v = moved_verdict(at_edge, within)
+    assert v["moved"] is False
+    assert not any(e["outside"] for e in v["by_metric"].values())
+
+
+def test_moved_verdict_rejects_non_finite_values():
+    within = [{"median_r": 0.95, "ari": 0.6, "fo_distance": 0.10},
+              {"median_r": 0.90, "ari": 0.5, "fo_distance": 0.20}]
+    inside = {"median_r": 0.92, "ari": 0.55, "fo_distance": 0.15}
+    with pytest.raises(ValueError, match="cross-variant"):
+        moved_verdict(inside | {"ari": float("nan")}, within)
+    with pytest.raises(ValueError, match="within-variant"):
+        moved_verdict(inside, within + [inside | {"median_r": float("nan")}])
 
 
 def _pair_metrics(n, value):
@@ -148,13 +179,68 @@ def test_distribution_test_detects_shift():
     assert out["by_metric"]["median_r"]["cross_median"] == pytest.approx(0.80)
 
 
-def test_distribution_test_null_when_labels_carry_nothing():
+def _reference_p(pairs, labels, name, worse):
+    """Brute force: share of label splits whose median-difference statistic is at
+    least the observed one."""
+    n, n1 = len(labels), int((labels == labels[0]).sum())
+
+    def stat(lab):
+        w = [pairs[(i, j)][name] for i, j in itertools.combinations(range(n), 2)
+             if lab[i] == lab[j]]
+        c = [pairs[(i, j)][name] for i, j in itertools.combinations(range(n), 2)
+             if lab[i] != lab[j]]
+        d = np.median(w) - np.median(c)
+        return d if worse == "lower" else -d
+
+    obs = stat(labels == labels[0])
+    splits = []
+    for idx in itertools.combinations(range(n), n1):
+        lab = np.zeros(n, dtype=bool)
+        lab[list(idx)] = True
+        splits.append(stat(lab))
+    return float(np.mean(np.array(splits) >= obs - 1e-12)), obs
+
+
+def test_distribution_test_matches_brute_force_on_noise():
     labels = np.array([0] * 4 + [1] * 4)
     rng = np.random.default_rng(4)
     pairs = _pair_metrics(8, lambda i, j: tuple(rng.normal(size=3)))
     out = distribution_test(pairs, labels)
-    for m in out["by_metric"].values():
-        assert 0 < m["p"] <= 1
+    for name, worse in (("median_r", "lower"), ("ari", "lower"), ("fo_distance", "higher")):
+        p, obs = _reference_p(pairs, labels, name, worse)
+        assert out["by_metric"][name]["p"] == pytest.approx(p)
+        assert out["by_metric"][name]["statistic"] == pytest.approx(obs)
+
+
+def test_distribution_test_statistic_is_a_median_difference():
+    labels = np.array([0, 0, 1, 1])
+    ari = {(0, 1): 0.8, (2, 3): 0.6, (0, 2): 0.1, (0, 3): 0.2, (1, 2): 0.3, (1, 3): 0.9}
+    pairs = {k: {"median_r": 0.5, "ari": v, "fo_distance": 0.1} for k, v in ari.items()}
+    out = distribution_test(pairs, labels)
+    # median within 0.7, median cross 0.25 (means would give 0.7 and 0.375)
+    assert out["by_metric"]["ari"]["statistic"] == pytest.approx(0.45)
+
+
+def test_distribution_test_rejects_non_finite_pairs():
+    labels = np.array([0] * 3 + [1] * 3)
+    pairs = _pair_metrics(6, lambda i, j: (0.9, float("nan") if (i, j) == (0, 1) else 0.5, 0.1))
+    with pytest.raises(ValueError, match="ari"):
+        distribution_test(pairs, labels)
+
+
+def test_distribution_test_random_splits_are_shared_across_metrics():
+    # fo_distance = -ari and median_r = ari give the same statistic on every split,
+    # so their p values agree only if every metric sees the same splits.
+    labels = np.array([0] * 4 + [1] * 4)
+    rng = np.random.default_rng(5)
+    vals = {}
+    for i in range(8):
+        for j in range(i + 1, 8):
+            vals[(i, j)] = float(rng.normal())
+    pairs = {k: {"median_r": v, "ari": v, "fo_distance": -v} for k, v in vals.items()}
+    out = distribution_test(pairs, labels, max_exact=10, n_random=200, seed=1)
+    ps = {name: m["p"] for name, m in out["by_metric"].items()}
+    assert ps["median_r"] == ps["ari"] == ps["fo_distance"]
 
 
 def test_distribution_test_samples_when_too_many_splits():

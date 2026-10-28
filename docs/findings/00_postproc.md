@@ -10,6 +10,8 @@ _Cleans fMRIPrep CIFTI outputs with minimal confound regression and voxel-wise z
 - **Confound strategy:** 6 basic motion parameters (translations + rotations) + mean WM signal + mean CSF signal + high-pass filter (discrete cosine basis); approximately 13-18 regressors per run depending on run length
 - **No global signal regression; no scrubbing; detrending applied**
 - **Standardization:** voxel-wise z-scoring per run (`zscore_sample`); optional `--no_zscore` variant writes to `output/00_postproc_no_zscore/` (not materialized in current output)
+- **Optional CSF/WM override:** `--wmcsf_table` with `--wmcsf_variant clean|corrupt` (`WMCSF_TABLE` / `WMCSF_VARIANT` in `00_postproc.sh`) replaces the `csf` and `white_matter` columns with the clean-mask or corrupt-mask columns of the shared CNeuroMod CSF/WM table, demeaned like the other regressors (`utils/wmcsf_override.py`). Output names are unchanged, so the override is meant for a separate `SCRATCH_DIR`, as `clean_wmcsf_e2e_submit.sh` sets one per variant. Not used for the published outputs.
+- **Exit status:** the script exits 1 if any run fails, after processing the others; this applies to every stimulus wrapper that calls it.
 - **Parallelization:** up to 8 concurrent workers per subject (memory cap for 91k-grayordinate CIFTI)
 - **Subjects:** n=6 (sub-01 to sub-06); sub-04 has incomplete Friends coverage (seasons 1-6 available but fewer runs) and is missing Harry Potter and Petit Prince runs
 - **Stimuli processed:** Friends (all 6 seasons), Movie10 (Bourne Identity, Figures, Life, Wolf of Wall Street), Harry Potter, Petit Prince (lppFR, lppEN); outputs are not per-parcellation (no parcellation level in path)
