@@ -341,8 +341,12 @@ def panel_B_observed_vs_null(
     bins, scaled so every ridge has the same peak height: only the location and
     spread of the null carry information, as in the supplementary
     null-distribution figure. The dark tick is the observed ρ (for Movie10, the
-    value panel A annotates), and each row is tagged with its subject and
-    Δρ = observed - null mean. Subject identity is carried by the row and its
+    value panel A annotates), and each row is tagged with its subject,
+    Δρ = observed - null mean (three decimals, so near-zero values stay
+    readable) and the empirical p, the share of null draws at or above the
+    observed ρ (floored at 1/10,001, shown as p < 0.001). For Petit Prince
+    sub-05 the null sits well below zero and the observed ρ near zero, so its
+    margin is not a positive correlation. Subject identity is carried by the row and its
     tag, so the tick does not repeat it with a marker shape.
 
     The null randomizes the phases of the stimulus's PC scores: each run gets one
@@ -387,7 +391,8 @@ def panel_B_observed_vs_null(
             assert _x_min <= _lo and _hi <= _x_max, (
                 f"{_stim} {_sub}: values [{_lo:.3f}, {_hi:.3f}] outside the plotted range"
             )
-            _rows.append((_label, _sub, _rho, _n["null"]["mean"], _draws))
+            _rows.append((_label, _sub, _rho, _n["null"]["mean"], _draws,
+                          _n["p_empirical"]))
             print(f"  {_label:12s} {_sub}: observed {_rho:+.3f}  null mean "
                   f"{_n['null']['mean']:+.3f} [{_n['null']['pct2.5']:+.3f}, "
                   f"{_n['null']['pct97.5']:+.3f}]  Δρ {_rho - _n['null']['mean']:+.3f}  "
@@ -397,22 +402,29 @@ def panel_B_observed_vs_null(
     _height = 0.8                               # ridge peak, in row units
     _gap = 0.7                                  # extra space between stimulus groups
     _ys, _y, _prev = [], 0.0, None
-    for _label, *_ in _rows:
+    for _label, *_rest in _rows:
         if _prev is not None:
             _y -= 1.0 + (_gap if _label != _prev else 0.0)
         _ys.append(_y)
         _prev = _label
 
     _fig, _ax = plt.subplots(figsize=(6.7, 4.6))
-    for (_label, _sub, _rho, _mu, _draws), _y0 in zip(_rows, _ys):
+    def _p_text(_p):
+        if _p < 0.001:
+            return "p < 0.001"
+        if _p > 0.99:
+            return "p > 0.99"
+        return f"p = {_p:.3f}" if _p < 0.1 else f"p = {_p:.2f}"
+
+    for (_label, _sub, _rho, _mu, _draws, _p), _y0 in zip(_rows, _ys):
         _counts, _ = np.histogram(_draws, bins=_bins)
         _ax.stairs(_y0 + _height * _counts / _counts.max(), _bins, baseline=_y0,
                    fill=True, color="#BBBBBB", lw=0, zorder=2)
         _ax.plot([_x_min, _x_max], [_y0, _y0], color="#DDDDDD", lw=0.6, zorder=1)
         _ax.plot([_rho, _rho], [_y0, _y0 + 0.55], color=SUBJECT_NEUTRAL, lw=1.6,
                  solid_capstyle="butt", zorder=4)
-        _d = f"{_rho - _mu:+.2f}".replace("-", "\u2212")
-        _ax.text(_x_max + 0.005, _y0 + 0.2, f"{_sub}   Δρ = {_d}",
+        _d = f"{_rho - _mu:+.3f}".replace("-", "\u2212")
+        _ax.text(_x_max + 0.005, _y0 + 0.2, f"{_sub}   Δρ = {_d}   {_p_text(_p)}",
                  ha="left", va="center", fontsize=6.5)
     for _label in dict.fromkeys(_r[0] for _r in _rows):
         _yy = [_y0 for _r, _y0 in zip(_rows, _ys) if _r[0] == _label]
