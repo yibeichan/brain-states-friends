@@ -27,15 +27,22 @@
 #
 # Usage (from the repo root of a frozen worktree with its own .venv and .env):
 #   WMCSF_TABLE=<table dir> RUN_ROOT=<new absolute dir> \
-#       bash script/clean_wmcsf_e2e_submit.sh sub-03 sub-04
+#       bash script/clean_wmcsf_e2e_submit.sh sub-03
+# (one subject per call: the per-user submit limit holds about one subject's chain)
 #
-# Every check runs before the first sbatch. RUN_ROOT and each variant root must be
-# absolute, real directories (not symlinks) outside the home directory and the main
-# output dataset; each subject is given once; and each subject and variant claims
-# RUN_ROOT/<variant>/.claim_<sub> with mkdir, so a second submission for the same
-# subject is refused. To run a subject again, use a new RUN_ROOT: stage 02 skips
-# parcel files that already exist, so reusing a root after a failed chain can mix
-# runs.
+# Every check runs before the first sbatch. RUN_ROOT must be absolute (a symlink is
+# resolved), and each variant root and its output/ must be real directories, all
+# outside the home directory and the main output dataset; each subject is given
+# once; the jobs must fit under the partition's per-user submit limit together with
+# what is already queued (one subject is about 160 array tasks); and each subject
+# and variant claims RUN_ROOT/<variant>/.claim_<sub> with mkdir, so a second
+# submission for the same subject is refused.
+#
+# Recovery: if the chain stops before the fits (00, 02 or 03a), use a new RUN_ROOT,
+# since stage 02 skips parcel files that already exist. If it stops in the fits
+# (the fit check lists the incomplete configs), resubmit just the fit tasks, the
+# fit check and the later steps into the same root: fit tasks resume from their
+# saved seeds.
 #
 # Jobs inherit the calling shell's environment except the variables the stages read
 # as options or inputs (STAGE_VARS); those come only from this script or from the
@@ -49,6 +56,7 @@
 
 set -euo pipefail
 shopt -s inherit_errexit   # a failed sbatch inside $(submit ...) stops the script
+MAX_SUBMIT=${MAX_SUBMIT:-256}   # pi_satra QOS MaxSubmitJobsPerUser; array tasks count
 
 : "${WMCSF_TABLE:?set WMCSF_TABLE to the clean CSF/WM table directory}"
 : "${RUN_ROOT:?set RUN_ROOT to a new directory for this check}"
@@ -75,8 +83,8 @@ for v in "${STAGE_VARS[@]}"; do UNSET+=(-u "$v"); done
 die() { echo "ERROR: $*" >&2; exit 1; }
 
 # submit VAR=value ... -- <sbatch args>: sbatch with only these stage options set.
-# Job ids also go to SUBMIT_LOG, since submit runs in command substitutions.
-SUBMIT_LOG=$(mktemp)
+# Job ids also go to SUBMIT_LOG (created just before submission), since submit runs
+# in command substitutions.
 submit() {
     local vars=() id
     while [ "$1" != "--" ]; do vars+=("$1"); shift; done
@@ -94,7 +102,7 @@ submit() {
 [ -f .env ] || die "no .env in $(pwd); the stages read BASE_DIR, DATA_DIR and ATLAS_DIR from it"
 command -v python3 > /dev/null || die "python3 is not on PATH"
 [ -x .venv/bin/python ] || die "no .venv in $(pwd); jobs run 'uv run --no-sync' against it"
-.venv/bin/python -c "import numpy, scipy, sklearn, nibabel, nilearn" 2> /dev/null \
+.venv/bin/python -c "import numpy, scipy, sklearn, nibabel, nilearn, dotenv" 2> /dev/null \
     || die ".venv in $(pwd) lacks the pipeline's packages (run uv sync there first)"
 
 env_value() {  # the value of KEY in ./.env, quotes and a trailing comment removed
@@ -133,7 +141,7 @@ for sub in "$@"; do
     seen[$sub]=1
 done
 
-read -r N_STAGE1 N_STAGE2 STAGE2_SKIP < <(python3 -B - "${FIXED_VT}" <<'EOF' || true
+grid=$(python3 -B - "${FIXED_VT}" <<'EOF' || true
 import sys
 sys.path.insert(0, "script/config")
 import combined_hmm_config as c
@@ -142,6 +150,7 @@ s2 = [c.config_name(x) for x in c.build_stage2_grid(float(sys.argv[1]))]
 print(len(s1), len(s2), ",".join(str(i) for i, n in enumerate(s2) if n in s1) or "-")
 EOF
 )
+read -r N_STAGE1 N_STAGE2 STAGE2_SKIP <<< "${grid}" || true
 [[ "${N_STAGE1:-}" =~ ^[0-9]+$ && "${N_STAGE2:-}" =~ ^[0-9]+$ ]] \
     || die "could not read the stage-1/stage-2 grids from script/config"
 STAGE2_TASKS=()
@@ -150,14 +159,22 @@ for ((i = 0; i < N_STAGE2; i++)); do
 done
 STAGE2_ARRAY=$(IFS=,; echo "${STAGE2_TASKS[*]}")
 
+# Array tasks this call submits, against the per-user submit limit.
+per_variant=$((3 + FIT_ATTEMPTS * (N_STAGE1 + ${#STAGE2_TASKS[@]}) + 1 + N_FINAL_SEEDS + 1))
+needed=$(( $# * (2 * per_variant + 1) ))
+queued=$(squeue -h -r -u "$(id -un)" -p pi_satra 2> /dev/null | wc -l)
+(( queued + needed <= MAX_SUBMIT )) || die "this needs ${needed} pi_satra jobs (array tasks) and ${queued} are queued, over the limit of ${MAX_SUBMIT}; submit fewer subjects per call"
+
 claimed=()
 release() { for c in "${claimed[@]}"; do rmdir "$c"; done; }
 for sub in "$@"; do
     for variant in "${VARIANTS[@]}"; do
         root="${run_root}/${variant}"
-        if [ "$(realpath -m "${root}")" != "${root}" ]; then
-            release; die "${root} resolves to $(realpath -m "${root}"); variant roots must be real directories"
-        fi
+        for d in "${root}" "${root}/output"; do
+            if [ "$(realpath -m "${d}")" != "${d}" ]; then
+                release; die "${d} resolves to $(realpath -m "${d}"); it must be a real directory"
+            fi
+        done
         check_root "${root}"
         mkdir -p "${root}/logs"
         if [ -e "${root}/output/04_combined_hdphmm/${PARCELLATION}/${sub}" ]; then
@@ -172,12 +189,24 @@ for sub in "$@"; do
 done
 mkdir -p "${run_root}/compare/logs"
 
-# If an sbatch fails partway, say what is already queued.
-trap 'st=$?; ids=$(tr "\n" " " < "${SUBMIT_LOG}"); rm -f "${SUBMIT_LOG}"
-      if [ "$st" -ne 0 ] && [ -n "${ids}" ]; then
-        echo "ERROR: sbatch failed partway; already queued: ${ids}" >&2
+# If submission stops partway (a failed sbatch or a signal), say what is already
+# queued; if nothing was, release this call's claims.
+SUBMIT_LOG=$(mktemp)
+on_exit() {
+    local st=$1 ids
+    ids=$(tr "\n" " " < "${SUBMIT_LOG}"); rm -f "${SUBMIT_LOG}"
+    [ "${st}" -eq 0 ] && return
+    if [ -n "${ids}" ]; then
+        echo "ERROR: submission stopped partway; already queued: ${ids}" >&2
         echo "Cancel them with: scancel ${ids}; then use a new RUN_ROOT." >&2
-      fi' EXIT
+    else
+        release
+        echo "ERROR: nothing was submitted; the claims of this call were removed." >&2
+    fi
+}
+trap 'on_exit $?' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 # fit_attempts <stage> <array> <first dependency> VAR=... : FIT_ATTEMPTS fit jobs,
 # with the given stage options,
@@ -186,7 +215,7 @@ fit_attempts() {
     local stage=$1 array=$2 dep=$3 a id
     shift 3
     for ((a = 1; a <= FIT_ATTEMPTS; a++)); do
-        id=$(submit "$@" MODE=fit STAGE="${stage}" -- \
+        id=$(submit "$@" MODE=fit STAGE="${stage}" N_FIT_SEEDS="${N_FIT_SEEDS}" -- \
             --job-name="${tag}-s${stage}a${a}" --dependency="${dep}" \
             --array="${array}" --cpus-per-task=8 --mem=32G --time=48:00:00 \
             --output="${logs}/04s${stage}_%A_%a.out" --error="${logs}/04s${stage}_%A_%a.err" \

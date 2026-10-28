@@ -42,6 +42,15 @@ def test_missing_and_short_configs_are_listed(tmp_path):
         f"{names[0]}: no config_summary.json", f"{names[2]}: 4 of 5 seeds"]
 
 
+def test_stage2_only_configs_are_checked(tmp_path):
+    stage1 = {config_name(c) for c in build_stage1_grid()}
+    stage2_only = [config_name(c) for c in build_stage2_grid(0.95)
+                   if config_name(c) not in stage1]
+    _write(tmp_path, {n: 5 for n in _names() if n != stage2_only[-1]})
+    assert incomplete_configs(tmp_path, 0.95, 5) == [
+        f"{stage2_only[-1]}: no config_summary.json"]
+
+
 def test_script_exit_status(tmp_path):
     configs = tmp_path / "output" / "04_combined_hdphmm" / "atlas-4S156Parcels" / "sub-02" / "configs"
     _write(configs, {n: 5 for n in _names()[1:]})

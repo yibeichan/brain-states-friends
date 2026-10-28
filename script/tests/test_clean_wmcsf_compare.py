@@ -147,7 +147,10 @@ def test_a_permutation_test_error_leaves_the_verdict(fits, monkeypatch):
         raise ValueError("ari: 1 of 15 seed pairs are not finite")
     monkeypatch.setattr(cmp, "distribution_test", boom)
     out = cmp.compare_variants(fits)
-    assert out["distribution_test"] == {"error": "ari: 1 of 15 seed pairs are not finite"}
+    d = out["distribution_test"]
+    assert d["error"] == "ari: 1 of 15 seed pairs are not finite"
+    assert sorted(d["by_metric"]) == ["ari", "fo_distance", "median_r"]
+    assert all(np.isnan(m["p"]) for m in d["by_metric"].values())
     assert out["verdict"]["moved"] is True
 
 

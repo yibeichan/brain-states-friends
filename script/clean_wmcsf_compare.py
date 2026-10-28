@@ -43,7 +43,7 @@ from utils.hmm_io import (  # noqa: E402
 )
 from utils.recurrence_utils import used_state_indices  # noqa: E402
 from utils.state_compare import (  # noqa: E402
-    compare_fits, distribution_test, moved_verdict,
+    VERDICT_METRICS, compare_fits, distribution_test, moved_verdict,
 )
 
 VARIANTS = ("corrupt", "clean")
@@ -174,11 +174,20 @@ def compare_variants(fits):
 
 
 def _distribution_test_or_error(pairs, labels):
-    """The permutation test, or {"error": ...} if it cannot run; it never decides."""
+    """The permutation test, or its error if it cannot run; it never decides.
+
+    On an error the usual fields are kept, with NaN statistics and p, so a reader
+    that indexes them sees non-finite values (a failed check) rather than a
+    malformed result.
+    """
     try:
         return distribution_test(pairs, labels)
     except ValueError as e:
-        return {"error": str(e)}
+        nan = float("nan")
+        return {"error": str(e), "n_splits": 0, "exact": False,
+                "by_metric": {name: {"statistic": nan, "within_median": nan,
+                                     "cross_median": nan, "p": nan}
+                              for name in VERDICT_METRICS}}
 
 
 def run(run_root, sub_id, parcellation):
