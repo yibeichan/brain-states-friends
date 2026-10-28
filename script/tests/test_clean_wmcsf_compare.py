@@ -9,6 +9,7 @@ a failed check; the JSON is written whole. Synthetic data only.
 """
 import itertools
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -125,14 +126,75 @@ def test_stage1_vt_skips_configs_without_fits(tmp_path):
     assert cmp.stage1_vt(tmp_path / "nothing_here") == (None, 0, 5)
 
 
-def test_decode_mismatch_is_a_failed_check():
-    ok = {"variants": {"corrupt": {"saved_decode_matches_best_seed": True},
-                       "clean": {"saved_decode_matches_best_seed": True}}}
-    assert cmp.check_failures(ok) == []
-    bad = {"variants": {"corrupt": {"saved_decode_matches_best_seed": True},
-                        "clean": {"saved_decode_matches_best_seed": False}}}
-    assert cmp.check_failures(bad) == [
+def _result(n_seeds=10, matches=True, dist=None):
+    return {"variants": {"corrupt": {"n_seeds": 10, "saved_decode_matches_best_seed": True},
+                         "clean": {"n_seeds": n_seeds, "saved_decode_matches_best_seed": matches}},
+            "distribution_test": dist or {"n_splits": 20}}
+
+
+def test_failed_checks_are_listed():
+    assert cmp.check_failures(_result()) == []
+    assert cmp.check_failures(_result(matches=False)) == [
         "clean: the selected fit's saved decode differs from its seed model's"]
+    assert cmp.check_failures(_result(n_seeds=9)) == [
+        "clean: 9 final seed models, expected 10"]
+    assert cmp.check_failures(_result(dist={"error": "ari: 1 of 15 seed pairs are not finite"})) == [
+        "permutation test not run: ari: 1 of 15 seed pairs are not finite"]
+
+
+def test_a_permutation_test_error_leaves_the_verdict(fits, monkeypatch):
+    def boom(pairs, labels):
+        raise ValueError("ari: 1 of 15 seed pairs are not finite")
+    monkeypatch.setattr(cmp, "distribution_test", boom)
+    out = cmp.compare_variants(fits)
+    assert out["distribution_test"] == {"error": "ari: 1 of 15 seed pairs are not finite"}
+    assert out["verdict"]["moved"] is True
+
+
+def test_main_writes_the_json_then_exits_1_on_a_failed_check(tmp_path, monkeypatch, fits):
+    result = {"sub_id": "sub-00", "parcellation": "p"} | cmp.compare_variants(fits)
+    for v in ("corrupt", "clean"):
+        result["variants"][v]["stage1_selected_vt"] = 0.99
+        result["variants"][v]["stage1_configs_scored"] = "5/5"
+        result["variants"][v]["saved_decode_matches_best_seed"] = True
+    monkeypatch.setattr(cmp, "run", lambda *a: result)
+    out = tmp_path / "sub-00.json"
+    argv = ["x", "--run_root", str(tmp_path), "--sub_id", "sub-00", "--out", str(out),
+            "--n_final_seeds", "3"]
+    monkeypatch.setattr(sys, "argv", argv)
+    cmp.main()                                   # 3 seeds each, as expected: exit 0
+    result["variants"]["clean"]["saved_decode_matches_best_seed"] = False
+    out.unlink()
+    with pytest.raises(SystemExit) as e:
+        cmp.main()
+    assert e.value.code == 1
+    assert json.loads(out.read_text())["variants"]["clean"]["saved_decode_matches_best_seed"] is False
+
+
+def test_load_variant_compares_the_saved_decode_with_the_best_seed(tmp_path, monkeypatch):
+    final = tmp_path / "output" / "04_combined_hdphmm" / "p" / "sub-00" / "final" / "vt0.95"
+    (final / "seeds").mkdir(parents=True)
+    (final / "final_results.json").write_text(json.dumps({
+        "data_info": {"n_pcs": 3}, "final_refit": {"best_seed": 1},
+        "selected_config_name": "cfg"}))
+    for name in ("seeds/seed_0_model.pkl", "seeds/seed_1_model.pkl", "pca_model.pkl",
+                 "decoded_states.pkl"):
+        (final / name).write_bytes(b"")
+    models = {f"seed_{s}_model.pkl": {"decoded": {"r": np.array([s, s, 1])}} for s in (0, 1)}
+    saved = {"r": np.array([1, 1, 1])}           # seed 1's decode
+    monkeypatch.setattr(cmp, "_load_pickle", lambda path: saved if Path(path).name ==
+                        "decoded_states.pkl" else models.get(Path(path).name))
+    monkeypatch.setattr(cmp, "back_project_states", lambda m, pca, n: (np.zeros((2, 4)), None))
+    monkeypatch.setattr(cmp, "decode_all_runs", lambda m, split, d, n: m["decoded"])
+    monkeypatch.setattr(cmp, "load_split", lambda base: None)
+    monkeypatch.setattr(cmp, "get_projected_dir", lambda base: None)
+    monkeypatch.setattr(cmp, "used_state_indices", lambda m: np.arange(2))
+    monkeypatch.setattr(cmp, "stage1_vt", lambda sub_dir: (0.99, 5, 5))
+    fit = cmp.load_variant(tmp_path, "sub-00", "p")
+    assert sorted(fit["seeds"]) == [0, 1] and fit["best_seed"] == 1
+    assert fit["saved_decode_matches_best_seed"] is True
+    saved["r"] = np.array([0, 0, 1])             # seed 0's decode, not the best seed's
+    assert cmp.load_variant(tmp_path, "sub-00", "p")["saved_decode_matches_best_seed"] is False
 
 
 def test_write_json_replaces_the_file_whole(tmp_path):
@@ -141,3 +203,30 @@ def test_write_json_replaces_the_file_whole(tmp_path):
     cmp.write_json({"b": 2}, path)
     assert json.loads(path.read_text()) == {"b": 2}
     assert [p.name for p in path.parent.iterdir()] == ["sub-00.json"]
+
+
+def test_write_json_keeps_the_old_file_when_writing_fails(tmp_path, monkeypatch):
+    path = tmp_path / "sub-00.json"
+    cmp.write_json({"a": 1}, path)
+
+    def partial(obj, f, **kw):
+        f.write('{"trunc')
+        raise OSError("disk full")
+    monkeypatch.setattr(cmp.json, "dump", partial)
+    with pytest.raises(OSError):
+        cmp.write_json({"b": 2}, path)
+    assert json.loads(path.read_text()) == {"a": 1}
+    assert [p.name for p in tmp_path.iterdir()] == ["sub-00.json"]
+
+
+def test_write_json_keeps_or_sets_the_file_mode(tmp_path):
+    old = os.umask(0o022)
+    try:
+        path = tmp_path / "new.json"
+        cmp.write_json({"a": 1}, path)
+        assert path.stat().st_mode & 0o777 == 0o644
+        os.chmod(path, 0o664)
+        cmp.write_json({"b": 2}, path)
+        assert path.stat().st_mode & 0o777 == 0o664
+    finally:
+        os.umask(old)

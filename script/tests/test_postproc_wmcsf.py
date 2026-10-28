@@ -7,6 +7,7 @@ same output; the clean columns give a different one; the two table options must
 be given together; one failed run makes the script exit 1 while the other runs
 are still written, and a clean run exits 0.
 """
+import importlib.util
 import os
 import subprocess
 import sys
@@ -80,6 +81,18 @@ def outputs(layout):
     return res
 
 
+def test_default_output_is_nilearn_cleaning_of_the_input(layout, outputs):
+    spec = importlib.util.spec_from_file_location("postproc00", SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    from nilearn import signal
+    bold = layout / "fmriprep" / SUB / "ses-001" / "func" / f"{STEM}_space-fsLR_den-91k_bold.dtseries.nii"
+    confounds = mod.load_confounds_minimal(str(bold))
+    expected = signal.clean(nib.load(bold).get_fdata(), confounds=confounds, detrend=True,
+                            standardize="zscore_sample", t_r=1.49)
+    np.testing.assert_allclose(outputs["default"], expected, rtol=0, atol=1e-5)
+
+
 def test_corrupt_columns_reproduce_the_default_output(outputs):
     np.testing.assert_allclose(outputs["corrupt"], outputs["default"], rtol=0, atol=1e-5)
 
@@ -104,6 +117,9 @@ def test_one_failed_run_exits_1_and_keeps_the_others(layout, tmp_path):
         proc, out = _run(layout, "scratch_fail")
         assert proc.returncode == 1, proc.stdout + proc.stderr
         assert out.exists()
+        # The failure is caught per run and the summary is printed, whichever
+        # run is processed first.
+        assert "Successfully processed: 1/2 files" in proc.stdout, proc.stdout
     finally:
         for f in bad.iterdir():
             f.unlink()

@@ -15,8 +15,9 @@ all runs, so the comparison sees exactly what the selected fit sees. Stage 1's v
 pick is recomputed from each variant's stage-1 fits with 04's own scoring, so it is
 reported even when select ran at a fixed vt.
 
-The JSON is written even when a check fails (a seed missing, the selected fit's
-saved decode differing from its seed model's), and the script then exits 1.
+The JSON is written even when a check fails (fewer final seeds than expected, the
+selected fit's saved decode differing from its seed model's, or a non-finite value
+in the permutation test, which is then left out), and the script then exits 1.
 
 Usage:
     python script/clean_wmcsf_compare.py --run_root <RUN_ROOT> --sub_id sub-04 \\
@@ -166,10 +167,18 @@ def compare_variants(fits):
         "same_selected_config": c["selected_config"] == k["selected_config"],
         "selected_fits": selected,
         "verdict": moved_verdict(selected, within["corrupt"] + within["clean"]),
-        "distribution_test": distribution_test(pairs, labels),
+        "distribution_test": _distribution_test_or_error(pairs, labels),
         "within_variant": {v: _summary(rows) for v, rows in within.items()},
         "cross_variant_all_seed_pairs": _summary(cross_all),
     }
+
+
+def _distribution_test_or_error(pairs, labels):
+    """The permutation test, or {"error": ...} if it cannot run; it never decides."""
+    try:
+        return distribution_test(pairs, labels)
+    except ValueError as e:
+        return {"error": str(e)}
 
 
 def run(run_root, sub_id, parcellation):
@@ -177,21 +186,34 @@ def run(run_root, sub_id, parcellation):
     return {"sub_id": sub_id, "parcellation": parcellation} | compare_variants(fits)
 
 
-def check_failures(result):
+def check_failures(result, n_final_seeds=10):
     """Checks that make the comparison unusable, as a list of messages."""
-    return [f"{v}: the selected fit's saved decode differs from its seed model's"
-            for v, fit in result["variants"].items()
-            if not fit["saved_decode_matches_best_seed"]]
+    out = []
+    for v, fit in result["variants"].items():
+        if fit["n_seeds"] != n_final_seeds:
+            out.append(f"{v}: {fit['n_seeds']} final seed models, expected {n_final_seeds}")
+        if not fit["saved_decode_matches_best_seed"]:
+            out.append(f"{v}: the selected fit's saved decode differs from its seed model's")
+    if "error" in result["distribution_test"]:
+        out.append(f"permutation test not run: {result['distribution_test']['error']}")
+    return out
 
 
 def write_json(obj, path):
     """Write `obj` to `path` through a temporary file in the same directory."""
     path = os.path.abspath(path)
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.exists(path):
+        mode = os.stat(path).st_mode & 0o777
+    else:
+        umask = os.umask(0)
+        os.umask(umask)
+        mode = 0o666 & ~umask
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(obj, f, indent=2)
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         os.unlink(tmp)
@@ -204,6 +226,8 @@ def main():
                    help="Directory holding corrupt/ and clean/ variant roots")
     p.add_argument("--sub_id", required=True)
     p.add_argument("--parcellation", default="atlas-4S156Parcels")
+    p.add_argument("--n_final_seeds", type=int, default=10,
+                   help="Final seeds each variant must have (default 10)")
     p.add_argument("--out", required=True, help="Output JSON path")
     args = p.parse_args()
 
@@ -222,12 +246,13 @@ def main():
               f"[{e['within_min']:.3f}, {e['within_max']:.3f}]  outside={e['outside']}")
     print(f"  moved={v['moved']}")
     d = result["distribution_test"]
-    print(f"  distribution test ({d['n_splits']} splits, exact={d['exact']}):")
-    for name, e in d["by_metric"].items():
-        print(f"  {name:12s} within median={e['within_median']:.3f}  "
-              f"cross median={e['cross_median']:.3f}  p={e['p']:.4f}")
+    if "error" not in d:
+        print(f"  distribution test ({d['n_splits']} splits, exact={d['exact']}):")
+        for name, e in d["by_metric"].items():
+            print(f"  {name:12s} within median={e['within_median']:.3f}  "
+                  f"cross median={e['cross_median']:.3f}  p={e['p']:.4f}")
     print(f"  -> {args.out}")
-    failures = check_failures(result)
+    failures = check_failures(result, args.n_final_seeds)
     for msg in failures:
         print(f"  CHECK FAILED: {msg}")
     if failures:
