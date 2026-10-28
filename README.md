@@ -167,7 +167,7 @@ noted) before invoking a figure script.
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
 | **2** | `fig_F2_recurrence_sources.py` (Panels A–D); `fig_F2_network_participation.py` (batch Panel C); `fig_F2E_participant_umap.py` (Panel E and its supplementary panels; needs `uv sync --extra umap`) | Recurrence-screening categories + network participation; all participants' states in one embedding, with matched pairs between participants (R2) | `04`, `05a`, `05e`, `05h` |
-| **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
+| **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `04`, `05a`, `05e`, `05f`, `06a`, `06b`, `06e` |
 | **4** | `fig_F4_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **5** | `fig_F5_within_friends.py` (lead) + `fig_F5_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
@@ -183,6 +183,8 @@ noted) before invoking a figure script.
 | **S11** | `fig_S11_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
 | **S12** | `fig_sm_alt_ica_oos_recurrence.py` (`supplements` branch) | ICA out-of-stimulus recurrence across three stimuli | ICA OOS |
 | **S13** | `fig_sm_rel_r5_phase_null.py` (`supplements` branch) | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation | `sm_rel_r5_phase_null` |
+| **S14** | `fig_F2E_participant_umap.py` (supplementary panels) | All participants' states in one embedding: residual matches, categories, recurrence, other embeddings, lagged occupancy correlation of matches | `04`, `05e`, `05h` |
+| **S15** | `fig_F3_transition_structure.py` (SI cell) | FC and activation-map similarity of states in transition-module order | `04`, `05e`, `05f`, `06b`, `06e` |
 
 > **SI renumbering (2026-08-19).** The supplement was reordered to follow the
 > Methods reading order. `S3` and `S4` are new (model selection, reliability);

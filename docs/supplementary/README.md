@@ -256,7 +256,7 @@ Each participant's states are ordered as in Figure 3A: by the transition modules
 
 ![Six state-by-state matrices, one per participant, of the correlation between states' mean activation maps on a blue-white-red scale, with states in transition-module order and module boundaries drawn as grey lines](figures/S15_transition_module_similarity_B_maps.png)
 
-**B.** Activation-map similarity: the Pearson correlation across the 156 regions between two states' mean activity maps, relative to the participant's mean, on one diverging scale shared by all participants.
+**B.** Activation-map similarity: the Pearson correlation across the 156 regions between two states' mean activity maps, relative to the participant's mean, on one diverging scale shared by all participants and limited to ±0.8; the 43 state pairs beyond these limits, across the six participants, take the end colors, as the arrows on the legend indicate.
 
 Legends: [FC similarity](figures/S15_transition_module_similarity_legend_fc.png) (A), [map similarity](figures/S15_transition_module_similarity_legend_maps.png) (B), [networks](figures/S15_transition_module_similarity_legend_networks.png) (A, B).
 
