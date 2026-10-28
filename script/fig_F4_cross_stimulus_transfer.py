@@ -8,9 +8,9 @@ R5 claim: a state's recurrence rank in Friends predicts its mean occupancy
 during audiovisual film (Movie10) in every participant, above a phase-randomized
 null that preserves each PCA component's power spectrum and variance and the
 cross-component covariance. The null reproduces most of the raw correlation, so
-the claim is the margin above the null, not the raw ρ. Harry Potter and Petit
-Prince have too few runs for a per-run null; their raw ρ is plotted against the
-HMM fit gap in the supplementary cross-stimulus validity figure (fig_S08 B).
+the claim is the margin above the null, not the raw ρ. The same null run on
+Harry Potter (7 runs) and Petit Prince (16-18 runs) is wider and lower-powered;
+there the observed ρ clears it in 1 and 2 of 5 participants.
 
 Rest placement (decided 2026-08-17): supplementary ONLY — rest appears in
 fig_S08, not in this figure. Rationale: rest transfer is descriptive only (no
@@ -32,20 +32,20 @@ carry the panel letter; the user arranges the composite.
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
 | A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Observed vs phase-randomized null, Movie10 (one ridge per subject, all active states). Grey ridge = histogram of 10,000 null draws on shared bins, each scaled to the same height; dark dot = observed ρ (the value panel A annotates); Δρ (observed minus null mean) annotated per row. Wide and short, same width as A. | distribution (ridge) | m10 A1 + sm_rel_r5_phase_null summaries + null_draws.npy |
+| B | Observed vs phase-randomized null, by stimulus (Movie10, Harry Potter, Petit Prince; one ridge per subject, all active states). Grey ridge = histogram of 10,000 null draws on shared bins, each scaled to the same height; dark tick = observed ρ (for Movie10, the value panel A annotates); Δρ (observed minus null mean) annotated per row. Wide, same width as A. | distribution (ridge) | m10/hp/pp A1 + sm_rel_r5_phase_null summaries + null_draws.npy |
 
 A `fig4_taxonomy_legend` file gives the 5-category color key for Panel A, and
 `fig4_B_legend` the observed / null key for Panel B.
 
-The earlier Panel B (raw ρ by condition: 4 Movie10 films, Harry Potter, Petit
-Prince, against zero) was dropped: no condition-level null exists (the phase
-null covers pooled Movie10 only), the film-to-film spread tracks the HMM fit
-gap, and fig_S08 B already plots the per-condition ρ against that gap.
+Panel B keeps the stimuli of the raw-ρ-by-condition strip it replaced, with
+each set against its own null in place of zero. The four Movie10 films are
+pooled, since the null is computed over all 61 Movie10 runs; fig_S08 B plots
+the per-film ρ against the HMM fit gap.
 
 Modalities (verified against Methods draft): Movie10 = audiovisual films; Harry
 Potter = word-by-word RSVP reading (visual-only, no audio); Petit Prince =
-audiobook (audio-only, no visual). sub-04 has no HP/PP data, so HP/PP markers are
-absent for sub-04 in B.
+audiobook (audio-only, no visual). sub-04 has no HP/PP data, so the HP and PP
+groups in B have five rows.
 
 The presence donut grid and the validity diagnostics (PCA transfer R² uniform
 ~0.95; HMM LL gap uneven, ρ↔fit relationship with the HP outlier) move to the
@@ -57,9 +57,15 @@ Source-truth audit (reproduced from raw arrays):
     Spearman p<0.05), HP 0.232–0.444 (2/5), PP −0.018–0.332 (1/5);
     sub-04 has no HP/PP data. These p-values are descriptive per-subject
     flags, not cohort-level or multiplicity-corrected inference.
-  * Per-condition mean ρ: wolf 0.69, figures 0.63, bourne 0.40, life 0.16,
-    HP 0.32, PP 0.10. Cross-modality ordering (HP > Life > PP) contradicts a
-    content account; within-M10 spread tracks LL-fit gap (0.92/1.54/2.43/4.98).
+  * Per-condition mean ρ (fig_S08 B): wolf 0.69, figures 0.63, bourne 0.40,
+    life 0.16, HP 0.32, PP 0.10. Cross-modality ordering (HP > Life > PP)
+    contradicts a content account; within-M10 spread tracks LL-fit gap
+    (0.92/1.54/2.43/4.98).
+  * Panel B (2026-10-28): each null summary's observed ρ equals the
+    cross-stimulus summary's A1 ρ for all 16 subject x stimulus cells; Δρ
+    M10 +0.07 to +0.22 (p 0.0001, the 10,000-draw floor, in 6/6), HP -0.08 to
+    +0.09 (p < 0.05 in 1/5, sub-05), PP +0.003 to +0.19 (p < 0.05 in 2/5,
+    sub-01 and sub-05).
 
 Run:
     marimo edit script/fig_F4_cross_stimulus_transfer.py
@@ -130,8 +136,13 @@ def config(Path, os):
     # defines Friends-active states.
     PRESENCE_FO = 0.02
 
-    # Movie10 phase-randomized null (sm_rel_r5_phase_null, supplements branch).
-    NULL_DIR = SCRATCH_DIR / "output" / "sm_rel_r5_phase_null" / PARCELLATION
+    # Phase-randomized nulls (sm_rel_r5_phase_null, supplements branch): Movie10
+    # at the top level, the other stimuli in a subfolder named for each.
+    NULL_ROOT = SCRATCH_DIR / "output" / "sm_rel_r5_phase_null"
+    NULL_SUBDIR = {"m10": "", "hp": "harrypotter", "pp": "petitprince"}
+
+    def null_dir(stim, sub):
+        return NULL_ROOT / NULL_SUBDIR[stim] / PARCELLATION / sub / VT
 
     def xstim_dir(stim):
         return SCRATCH_DIR / "output" / f"{stim}_05_cross_validation" / PARCELLATION
@@ -142,7 +153,7 @@ def config(Path, os):
     return (
         SCRATCH_DIR, PARCELLATION, VT, SUBJECTS, EXEMPLAR, STIMULI,
         RECUR_DIR, FLAGS_DIR, M10_DEC_DIR, HP_DEC_DIR, PP_DEC_DIR,
-        PRESENCE_FO, NULL_DIR, xstim_dir, OUT_F4,
+        PRESENCE_FO, null_dir, xstim_dir, OUT_F4,
     )
 
 
@@ -319,85 +330,106 @@ def panel_A_per_subject_scatter(
 
 @app.cell
 def panel_B_observed_vs_null(
-    SUBJECTS, VT, NULL_DIR, summaries, OUT_F4, json, np, plt, SUBJECT_NEUTRAL,
+    SUBJECTS, STIMULI, null_dir, summaries, OUT_F4, json, np, plt, SUBJECT_NEUTRAL,
 ):
-    """Panel B - observed Movie10 ρ against its phase-randomized null, per subject.
+    """Panel B - observed ρ against its phase-randomized null, by stimulus.
 
-    One ridge per subject, sub-01 at the top, on a shared ρ axis. Each ridge is
-    the histogram of the subject's 10,000 phase-randomized surrogate ρ values on
-    one shared set of bins, scaled so every ridge has the same peak height: only
-    the location and spread of the null carry information, as in the
-    supplementary null-distribution figure. The dark dot is the observed ρ, the
-    same value panel A annotates, and each row is tagged with its subject and
+    Three groups of rows on one shared ρ axis: Movie10 (6 subjects), Harry
+    Potter and Petit Prince (5 each; sub-04 has no data for either), subjects in
+    order within a group. Each ridge is the histogram of the subject's 10,000
+    phase-randomized surrogate ρ values for that stimulus on one shared set of
+    bins, scaled so every ridge has the same peak height: only the location and
+    spread of the null carry information, as in the supplementary
+    null-distribution figure. The dark tick is the observed ρ (for Movie10, the
+    value panel A annotates), and each row is tagged with its subject and
     Δρ = observed - null mean. Subject identity is carried by the row and its
-    tag, so the dot does not repeat it with a marker shape.
+    tag, so the tick does not repeat it with a marker shape.
 
-    The null randomizes the phases of the Movie10 PC scores with one shared phase
-    draw per run (Prichard-Theiler), so it keeps each component's power spectrum
-    and variance, the cross-component covariance, and the run count and lengths,
-    and destroys stimulus-locked timing. Movie10 only: Harry Potter and Petit
-    Prince have too few runs for a per-run null.
+    The null randomizes the phases of the stimulus's PC scores: each run gets one
+    random phase vector, shared across components. It keeps each component's
+    power spectrum and variance, the cross-component covariance, and the run
+    count and lengths, and destroys stimulus-locked timing and higher-order
+    temporal structure. Harry Potter (7 runs) and Petit Prince (16-18) give wider
+    nulls than Movie10 (61), so those tests have less power.
 
-    Checks, per subject: the summary's observed ρ equals the cross-stimulus
-    summary panel A uses; the draw file holds the 10,000 draws the caption
-    states; and its mean and 2.5/97.5 percentiles equal the summary's.
+    Checks, per subject and stimulus: the null summary's observed ρ equals the
+    cross-stimulus summary's; the draw file holds the 10,000 draws the caption
+    states, with the summary's mean and 2.5/97.5 percentiles; a subject is
+    missing only where the cross-stimulus summary is missing too; and every draw
+    and observed value lies inside the plotted range.
     """
-    _rows = []
-    for _sub in SUBJECTS:
-        _dir = NULL_DIR / _sub / VT
-        with open(_dir / "r5_phase_null_summary.json") as _f:
-            _n = json.load(_f)
-        _draws = np.load(_dir / "null_draws.npy")
-        _rho = _n["observed"]["rho"]
-        _pub = summaries["m10"][_sub]["A1_recurrence_correlation"]["spearman_rho"]
-        assert abs(_rho - _pub) < 1e-3, (
-            f"{_sub}: null-summary ρ {_rho:.4f} != cross-stimulus summary {_pub:.4f}"
-        )
-        assert _draws.shape == (10000,) == (_n["null"]["n_draws"],), (
-            f"{_sub}: {_draws.shape} draws, summary says {_n['null']['n_draws']}"
-        )
-        for _key, _val in (("mean", _draws.mean()),
-                           ("pct2.5", np.percentile(_draws, 2.5)),
-                           ("pct97.5", np.percentile(_draws, 97.5))):
-            assert abs(_val - _n["null"][_key]) < 1e-9, (
-                f"{_sub}: draws {_key} {_val:.6f} != summary {_n['null'][_key]:.6f}"
+    _x_min, _x_max = -0.30, 0.88
+    _rows = []                                  # (stim label, sub, rho, null mean, draws)
+    for _stim, _label in STIMULI:
+        for _sub in SUBJECTS:
+            _dir = null_dir(_stim, _sub)
+            if summaries[_stim][_sub] is None:
+                assert (_dir / "skipped.json").exists(), f"{_stim} {_sub}: no data, no skip record"
+                continue
+            with open(_dir / "r5_phase_null_summary.json") as _f:
+                _n = json.load(_f)
+            _draws = np.load(_dir / "null_draws.npy")
+            _rho = _n["observed"]["rho"]
+            _pub = summaries[_stim][_sub]["A1_recurrence_correlation"]["spearman_rho"]
+            assert abs(_rho - _pub) < 1e-3, (
+                f"{_stim} {_sub}: null-summary ρ {_rho:.4f} != cross-stimulus summary {_pub:.4f}"
             )
-        _rows.append((_sub, _rho, _n["null"]["mean"], _draws))
-        print(f"  {_sub}: observed {_rho:.3f}  null mean {_n['null']['mean']:.3f} "
-              f"[{_n['null']['pct2.5']:.3f}, {_n['null']['pct97.5']:.3f}]  "
-              f"max draw {_draws.max():.3f}  Δρ {_rho - _n['null']['mean']:+.3f}  "
-              f"z {_n['z']:.2f}")
+            assert _draws.shape == (10000,) == (_n["null"]["n_draws"],), (
+                f"{_stim} {_sub}: {_draws.shape} draws, summary says {_n['null']['n_draws']}"
+            )
+            for _key, _val in (("mean", _draws.mean()),
+                               ("pct2.5", np.percentile(_draws, 2.5)),
+                               ("pct97.5", np.percentile(_draws, 97.5))):
+                assert abs(_val - _n["null"][_key]) < 1e-9, (
+                    f"{_stim} {_sub}: draws {_key} {_val:.6f} != summary {_n['null'][_key]:.6f}"
+                )
+            _lo, _hi = min(_draws.min(), _rho), max(_draws.max(), _rho)
+            assert _x_min <= _lo and _hi <= _x_max, (
+                f"{_stim} {_sub}: values [{_lo:.3f}, {_hi:.3f}] outside the plotted range"
+            )
+            _rows.append((_label, _sub, _rho, _n["null"]["mean"], _draws))
+            print(f"  {_label:12s} {_sub}: observed {_rho:+.3f}  null mean "
+                  f"{_n['null']['mean']:+.3f} [{_n['null']['pct2.5']:+.3f}, "
+                  f"{_n['null']['pct97.5']:+.3f}]  Δρ {_rho - _n['null']['mean']:+.3f}  "
+                  f"p {_n['p_empirical']:.4f}")
 
-    _x_max = 0.88
-    _bins = np.linspace(0.0, _x_max, 177)       # 0.005-wide, shared by all rows
+    _bins = np.linspace(_x_min, _x_max, 237)    # 0.005-wide, shared by all rows
     _height = 0.8                               # ridge peak, in row units
-    _fig, _ax = plt.subplots(figsize=(6.7, 2.3))
-    for _k, (_sub, _rho, _mu, _draws) in enumerate(_rows):
-        _y0 = len(_rows) - 1 - _k
-        assert _draws.min() >= _bins[0] and _draws.max() <= _bins[-1], (
-            f"{_sub}: null draws outside the plotted range"
-        )
-        _counts, _ = np.histogram(_draws, bins=_bins)
-        _top = _y0 + _height * _counts / _counts.max()
-        _ax.stairs(_top, _bins, baseline=_y0, fill=True, color="#BBBBBB",
-                   lw=0, zorder=2)
-        _ax.plot([0, _x_max], [_y0, _y0], color="#DDDDDD", lw=0.6, zorder=1)
-        _ax.scatter(_rho, _y0 + 0.12, s=26, color=SUBJECT_NEUTRAL,
-                    edgecolor="white", linewidth=0.4, zorder=4)
-        _ax.text(_x_max + 0.005, _y0 + 0.12, f"{_sub}   Δρ = {_rho - _mu:+.2f}",
-                 ha="left", va="center", fontsize=6.5)
+    _gap = 0.7                                  # extra space between stimulus groups
+    _ys, _y, _prev = [], 0.0, None
+    for _label, *_ in _rows:
+        if _prev is not None:
+            _y -= 1.0 + (_gap if _label != _prev else 0.0)
+        _ys.append(_y)
+        _prev = _label
 
-    _ax.set_xlim(0, _x_max)
-    _ax.set_ylim(-0.15, len(_rows) - 1 + _height + 0.1)
+    _fig, _ax = plt.subplots(figsize=(6.7, 4.6))
+    for (_label, _sub, _rho, _mu, _draws), _y0 in zip(_rows, _ys):
+        _counts, _ = np.histogram(_draws, bins=_bins)
+        _ax.stairs(_y0 + _height * _counts / _counts.max(), _bins, baseline=_y0,
+                   fill=True, color="#BBBBBB", lw=0, zorder=2)
+        _ax.plot([_x_min, _x_max], [_y0, _y0], color="#DDDDDD", lw=0.6, zorder=1)
+        _ax.plot([_rho, _rho], [_y0, _y0 + 0.55], color=SUBJECT_NEUTRAL, lw=1.6,
+                 solid_capstyle="butt", zorder=4)
+        _d = f"{_rho - _mu:+.2f}".replace("-", "\u2212")
+        _ax.text(_x_max + 0.005, _y0 + 0.2, f"{_sub}   Δρ = {_d}",
+                 ha="left", va="center", fontsize=6.5)
+    for _label in dict.fromkeys(_r[0] for _r in _rows):
+        _yy = [_y0 for _r, _y0 in zip(_rows, _ys) if _r[0] == _label]
+        _ax.text(_x_min - 0.02, (max(_yy) + min(_yy) + _height) / 2, _label,
+                 ha="right", va="center", fontsize=7)
+    _ax.axvline(0, color="#999999", lw=0.8, ls="--", zorder=1)
+
+    _ax.set_xlim(_x_min, _x_max)
+    _ax.set_ylim(min(_ys) - 0.15, max(_ys) + _height + 0.1)
     _ax.set_yticks([])
     _ax.spines["left"].set_visible(False)
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
     _ax.tick_params(axis="x", labelsize=6)
-    _ax.set_xlabel("Spearman ρ, Friends recurrence vs. Movie10 occupancy",
-                   fontsize=7)
+    _ax.set_xlabel("Spearman ρ, Friends recurrence vs. occupancy", fontsize=7)
 
-    _fig.subplots_adjust(left=0.02, right=0.84, bottom=0.18, top=0.99)
+    _fig.subplots_adjust(left=0.13, right=0.84, bottom=0.09, top=0.99)
     _stem = OUT_F4 / "fig4_B_observed_vs_null"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
@@ -412,9 +444,8 @@ def panel_B_legend(OUT_F4, plt, SUBJECT_NEUTRAL):
     from matplotlib.patches import Patch
 
     _handles = [
-        plt.Line2D([], [], marker="o", linestyle="none", markersize=6,
-                   markerfacecolor=SUBJECT_NEUTRAL, markeredgecolor="white",
-                   label="Observed ρ"),
+        plt.Line2D([], [], color=SUBJECT_NEUTRAL, lw=1.6, marker="|", markersize=9,
+                   markeredgewidth=1.6, linestyle="none", label="Observed ρ"),
         Patch(facecolor="#BBBBBB", edgecolor="none",
               label="Phase-randomized null, 10,000 draws"),
     ]
