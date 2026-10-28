@@ -267,7 +267,7 @@ def panel_B_fit_vs_transfer(SUBJECTS, XVAL, DEC, VT, LL_FILE, FILMS, OUT,
             print(f"  {_c}: mean gap={_mx:.2f} rho={_my:.3f}")
     _ax.axhline(0, color="#999999", lw=0.8, ls="--", zorder=1)
     _ax.set_xlabel("HMM model-fit gap\n(held-out Friends − stimulus LL/sample)", fontsize=7)
-    _ax.set_ylabel("Recurrence → occupancy transfer ρ", fontsize=7)
+    _ax.set_ylabel("Spearman ρ, Friends recurrence vs. occupancy", fontsize=7)
     _ax.tick_params(labelsize=6)
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)

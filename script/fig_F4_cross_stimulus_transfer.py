@@ -2,12 +2,17 @@
 
 One marimo notebook per figure (see `2026-05-24_manuscript_version_scope.md`).
 Panels are per-cell, saved as separate .png + .svg mini-figures for manual
-assembly. No on-figure panel labels, no titles, no subject-ID tick labels.
+assembly. No on-figure panel labels, no titles, no subject-ID tick labels
+(subjects are named by in-panel tags, as in panels A and B).
 
-R5 claim (reframed 2026-06-12): a state's recurrence rank in Friends predicts
-out-of-stimulus occupancy most clearly during audiovisual film (Movie10), with
-weaker and more variable transfer for reduced-modality reading (Harry Potter)
-and listening (Petit Prince).
+R5 claim: a state's recurrence rank in Friends predicts its mean occupancy
+during audiovisual film (Movie10) in every participant, above a phase-randomized
+null that preserves each PCA component's power spectrum and variance and the
+cross-component covariance. The null reproduces most of the raw correlation, so
+the claim is the margin above the null, not the raw ρ. With the same null on
+Harry Potter (7 runs) and Petit Prince (16-18 runs), the observed ρ sits above
+its null in one and two participants, near or at it in most others, and below it
+in two Harry Potter participants (z -2.41 and -3.22).
 
 Rest placement (decided 2026-08-17): supplementary ONLY — rest appears in
 fig_S08, not in this figure. Rationale: rest transfer is descriptive only (no
@@ -22,20 +27,27 @@ The within-Movie10 spread is reported descriptively and not attributed to
 content. The presence and fit diagnostics live in the supplementary
 cross-stimulus validity figure.
 
-Panel plan (chart families distinct within the figure). Filenames carry the
-panel letter; the user arranges the composite.
+Panel plan (chart families distinct within the figure, and B's family is used
+in no other main figure: point-based 1D is already in Figures 1 and 3). Filenames
+carry the panel letter; the user arranges the composite.
 
 | Panel | Content | Chart family | Source |
 |---|---|---|---|
-| A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). Movie10 = the strongest audiovisual transfer case in B. | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
-| B | Transfer-ρ by condition (single strip; all active states). x = 4 Movie10 films + Harry Potter + Petit Prince; per-subject markers (shape = subject), dark cohort-mean line over films + ticks for HP/PP. Transfer clearest for audiovisual film, weaker/variable for reduced-modality stimuli; within-film spread descriptive (fit-confounded), NOT a content axis. Rest is supplementary-only (fig_S08). | point-1D strip | m10 A2_per_type + hp/pp A1 |
+| A | Per-subject recurrence→FO scatter, 2×3 small multiples (Movie10; x=Friends recurrence, y=mean M10 FO; subject = marker shape + OLS line + per-subject ρ). Dots colored by R2 taxonomy category (Fig 2 colors). | scatter (small multiples) | m10_04 fractional_occupancy.pkl + 05a recurrence + 05e_a4 state_flags |
+| B | Observed vs phase-randomized null, by stimulus (Movie10, Harry Potter, Petit Prince; one ridge per subject, all active states). Grey ridge = histogram of 10,000 null draws on shared bins, each scaled to the same height; dark tick = observed ρ (for Movie10, the value panel A annotates); Δρ (observed minus null mean) annotated per row. Wide, same width as A. | distribution (ridge) | m10/hp/pp A1 + sm_rel_r5_phase_null summaries + null_draws.npy |
 
-A `fig4_taxonomy_legend` file gives the 5-category color key for Panel A.
+A `fig4_taxonomy_legend` file gives the 5-category color key for Panel A, and
+`fig4_B_legend` the observed / null key for Panel B.
+
+Panel B keeps the stimuli of the raw-ρ-by-condition strip it replaced, with
+each set against its own null in place of zero. The four Movie10 films are
+pooled, since the null is computed over all 61 Movie10 runs; fig_S08 B plots
+the per-film ρ against the HMM fit gap.
 
 Modalities (verified against Methods draft): Movie10 = audiovisual films; Harry
 Potter = word-by-word RSVP reading (visual-only, no audio); Petit Prince =
-audiobook (audio-only, no visual). sub-04 has no HP/PP data, so HP/PP markers are
-absent for sub-04 in B.
+audiobook (audio-only, no visual). sub-04 has no HP/PP data, so the HP and PP
+groups in B have five rows.
 
 The presence donut grid and the validity diagnostics (PCA transfer R² uniform
 ~0.95; HMM LL gap uneven, ρ↔fit relationship with the HP outlier) move to the
@@ -47,9 +59,15 @@ Source-truth audit (reproduced from raw arrays):
     Spearman p<0.05), HP 0.232–0.444 (2/5), PP −0.018–0.332 (1/5);
     sub-04 has no HP/PP data. These p-values are descriptive per-subject
     flags, not cohort-level or multiplicity-corrected inference.
-  * Per-condition mean ρ: wolf 0.69, figures 0.63, bourne 0.40, life 0.16,
-    HP 0.32, PP 0.10. Cross-modality ordering (HP > Life > PP) contradicts a
-    content account; within-M10 spread tracks LL-fit gap (0.92/1.54/2.43/4.98).
+  * Per-condition mean ρ (fig_S08 B): wolf 0.69, figures 0.63, bourne 0.40,
+    life 0.16, HP 0.32, PP 0.10. Cross-modality ordering (HP > Life > PP)
+    contradicts a content account; within-M10 spread tracks LL-fit gap
+    (0.92/1.54/2.43/4.98).
+  * Panel B (2026-10-28): each null summary's observed ρ equals the
+    cross-stimulus summary's A1 ρ for all 16 subject x stimulus cells; Δρ
+    M10 +0.07 to +0.22 (z 5.97 to 15.62, every p at the 10,000-draw floor),
+    HP -0.08 to +0.09 (z -3.22 to +2.77), PP +0.003 to +0.19 (z +0.11 to
+    +9.08; sub-05's +9.08 is against a null below zero).
 
 Run:
     marimo edit script/fig_F4_cross_stimulus_transfer.py
@@ -120,6 +138,14 @@ def config(Path, os):
     # defines Friends-active states.
     PRESENCE_FO = 0.02
 
+    # Phase-randomized nulls (sm_rel_r5_phase_null, supplements branch): Movie10
+    # at the top level, the other stimuli in a subfolder named for each.
+    NULL_ROOT = SCRATCH_DIR / "output" / "sm_rel_r5_phase_null"
+    NULL_SUBDIR = {"m10": "", "hp": "harrypotter", "pp": "petitprince"}
+
+    def null_dir(stim, sub):
+        return NULL_ROOT / NULL_SUBDIR[stim] / PARCELLATION / sub / VT
+
     def xstim_dir(stim):
         return SCRATCH_DIR / "output" / f"{stim}_05_cross_validation" / PARCELLATION
 
@@ -129,7 +155,7 @@ def config(Path, os):
     return (
         SCRATCH_DIR, PARCELLATION, VT, SUBJECTS, EXEMPLAR, STIMULI,
         RECUR_DIR, FLAGS_DIR, M10_DEC_DIR, HP_DEC_DIR, PP_DEC_DIR,
-        PRESENCE_FO, xstim_dir, OUT_F4,
+        PRESENCE_FO, null_dir, xstim_dir, OUT_F4,
     )
 
 
@@ -243,18 +269,17 @@ def panel_A_per_subject_scatter(
     One subplot per subject (shared x and y axes for comparability): x = Friends
     recurrence score (05a), y = mean Movie10 fractional occupancy across runs
     (m10_04), one point per Friends-active state. Each subject keeps its own
-    marker shape (SUBJECT_MARKERS - consistent with the transfer-ρ panel) and a
+    marker shape (SUBJECT_MARKERS, as in Figures 1 and 3) and a
     red OLS guide line; the per-subject Spearman ρ (asserted against the summary
     JSON) is annotated in-panel without a significance marker.
 
-    Dot fill = R2 taxonomy category (same colors as Figure 2), showing that the
-    Movie10 is the strongest audiovisual transfer case quantified in panel B;
-    the repertoire-presence view and the validity diagnostics live in the
-    supplementary cross-stimulus figure.
+    Dot fill = R2 taxonomy category (same colors as Figure 2). Panel B sets
+    each ρ against its phase-randomized null; the repertoire-presence view and
+    the validity diagnostics live in the supplementary cross-stimulus figure.
 
     Recurrence and occupancy are both within-subject quantities, so each panel's
     ρ is the correct per-subject statistic; no pooled correlation is drawn.
-    Width matches the transfer-ρ panel so the two stack as one figure column.
+    Width matches panel B so the two stack as one figure column.
     """
     _fig, _axes = plt.subplots(2, 3, figsize=(6.7, 4.25), sharex=True, sharey=True)
     _axes = _axes.ravel()
@@ -306,97 +331,149 @@ def panel_A_per_subject_scatter(
 
 
 @app.cell
-def panel_B_transfer_by_condition(
-    SUBJECTS, summaries, OUT_F4, np, plt,
-    SUBJECT_NEUTRAL, SUBJECT_MARKERS,
+def panel_B_observed_vs_null(
+    SUBJECTS, STIMULI, null_dir, summaries, OUT_F4, json, np, plt, SUBJECT_NEUTRAL,
 ):
-    """Panel B - recurrence→occupancy transfer ρ by condition, grouped by stimulus type.
+    """Panel B - observed ρ against its phase-randomized null, by stimulus.
 
-    A frozen Friends-trained state model transfers most strongly to audiovisual
-    film (Movie10) and weakly / variably to reduced-modality stimuli -
-    visual-only word-by-word reading (Harry Potter) and audio-only listening
-    (Petit Prince).
+    Three groups of rows on one shared ρ axis: Movie10 (6 subjects), Harry
+    Potter and Petit Prince (5 each; sub-04 has no data for either), subjects in
+    order within a group. Each ridge is the histogram of the subject's 10,000
+    phase-randomized surrogate ρ values for that stimulus on one shared set of
+    bins, scaled so every ridge has the same peak height: only the location and
+    spread of the null carry information, as in the supplementary
+    null-distribution figure. The dark tick is the observed ρ (for Movie10, the
+    value panel A annotates), and each row is tagged with its subject,
+    Δρ = observed - null mean (three decimals, so near-zero values stay
+    readable) and the empirical p, (k + 1) / (10,000 + 1) for k null draws at or
+    above the observed ρ (its floor 1/10,001 is shown as p < 0.001). A dashed
+    line marks ρ = 0. For Petit Prince
+    sub-05 the null sits well below zero and the observed ρ near zero, so its
+    margin is not a positive correlation. Subject identity is carried by the row and its
+    tag, so the tick does not repeat it with a marker shape.
 
-    Conditions are grouped by stimulus type, not ordered as a content axis. The
-    spread across the four Movie10 films is shown descriptively; it co-varies
-    with HMM model fit - see the supplementary cross-stimulus validity figure -
-    so it is NOT attributed to narrative content. Note that the reduced-modality
-    conditions do not isolate narrative content because they also differ in
-    modality, timing, language, run structure, and model fit.
+    The null randomizes the phases of the stimulus's PC scores: each run gets one
+    random phase vector, shared across components. It keeps each component's
+    power spectrum and variance, the cross-component covariance, and the run
+    count and lengths, and destroys stimulus-locked timing and higher-order
+    temporal structure. Harry Potter has 7 runs per subject and Petit Prince
+    16-18, against 61 for Movie10.
 
-    Per-subject markers (shape = subject, as in panel A; single neutral color).
-    Cohort mean: dark line over the Movie10 films, dark ticks for HP and PP.
-    sub-04 lacks HP/PP, so only 5 markers appear in those groups.
-
-    Rest is supplementary-only (fig_S08; see the module docstring's placement
-    note): no surrogate null was run for rest, and raw ρ's covariance floor
-    means a Rest column would not read as a gradient endpoint.
+    Checks, per subject and stimulus: the null summary's observed ρ equals the
+    cross-stimulus summary's; the draw file holds the 10,000 draws the caption
+    states, with the summary's mean and 2.5/97.5 percentiles; a subject is
+    missing only where the cross-stimulus summary is missing too; and every draw
+    and observed value lies inside the plotted range.
     """
-    _films = [("wolf", "Wolf of\nWall St."),
-              ("figures", "Hidden\nFigures"),
-              ("bourne", "Bourne"),
-              ("life", "Life")]
-    _xlabels = [lab for _, lab in _films] + ["Harry\nPotter", "Petit\nPrince"]
-    _n_x = len(_xlabels)
-    _rng = np.random.default_rng(20260526)
-
-    def _cond_rho(_sub, _xi):
-        if _xi < len(_films):
-            return summaries["m10"][_sub]["A2_per_type"][_films[_xi][0]]["spearman_rho"]
-        _stim = "hp" if _xi == len(_films) else "pp"
-        _d = summaries[_stim][_sub]
-        return None if _d is None else _d["A1_recurrence_correlation"]["spearman_rho"]
-
-    _fig, _ax = plt.subplots(figsize=(6.7, 3.95))
-    _mean_color = "#333333"
-
-    # Dividers between the three stimulus-type groups (no causal continuum).
-    for _d in (len(_films) - 0.5, len(_films) + 0.5):
-        _ax.axvline(_d, color="#BBBBBB", lw=1.0, ls="--", zorder=1)
-
-    # Per-subject markers (neutral; subject = shape).
-    for _sub in SUBJECTS:
-        for _xi in range(_n_x):
-            _v = _cond_rho(_sub, _xi)
-            if _v is None:
+    _x_min, _x_max = -0.30, 0.88
+    _rows = []                                  # (stim label, sub, rho, null mean, draws)
+    for _stim, _label in STIMULI:
+        for _sub in SUBJECTS:
+            _dir = null_dir(_stim, _sub)
+            if summaries[_stim][_sub] is None:
+                _skip = _dir / "skipped.json"
+                assert _skip.exists() and json.loads(_skip.read_text()).get("skipped") is True, (
+                    f"{_stim} {_sub}: no cross-stimulus data, and no skip record")
+                assert not (_dir / "r5_phase_null_summary.json").exists(), (
+                    f"{_stim} {_sub}: a null summary but no cross-stimulus summary")
                 continue
-            _jit = _rng.uniform(-0.12, 0.12)
-            _ax.scatter(
-                _xi + _jit, _v, s=30, color=SUBJECT_NEUTRAL, alpha=0.55,
-                marker=SUBJECT_MARKERS[_sub], edgecolor="white",
-                linewidth=0.4, zorder=3,
+            with open(_dir / "r5_phase_null_summary.json") as _f:
+                _n = json.load(_f)
+            _draws = np.load(_dir / "null_draws.npy")
+            _rho = _n["observed"]["rho"]
+            _pub = summaries[_stim][_sub]["A1_recurrence_correlation"]["spearman_rho"]
+            assert abs(_rho - _pub) < 1e-3, (
+                f"{_stim} {_sub}: null-summary ρ {_rho:.4f} != cross-stimulus summary {_pub:.4f}"
             )
+            assert _draws.shape == (10000,) == (_n["null"]["n_draws"],), (
+                f"{_stim} {_sub}: {_draws.shape} draws, summary says {_n['null']['n_draws']}"
+            )
+            for _key, _val in (("mean", _draws.mean()),
+                               ("pct2.5", np.percentile(_draws, 2.5)),
+                               ("pct97.5", np.percentile(_draws, 97.5))):
+                assert abs(_val - _n["null"][_key]) < 1e-9, (
+                    f"{_stim} {_sub}: draws {_key} {_val:.6f} != summary {_n['null'][_key]:.6f}"
+                )
+            _lo, _hi = min(_draws.min(), _rho), max(_draws.max(), _rho)
+            assert _x_min <= _lo and _hi <= _x_max, (
+                f"{_stim} {_sub}: values [{_lo:.3f}, {_hi:.3f}] outside the plotted range"
+            )
+            _rows.append((_label, _sub, _rho, _n["null"]["mean"], _draws,
+                          _n["p_empirical"]))
+            print(f"  {_label:12s} {_sub}: observed {_rho:+.3f}  null mean "
+                  f"{_n['null']['mean']:+.3f} [{_n['null']['pct2.5']:+.3f}, "
+                  f"{_n['null']['pct97.5']:+.3f}]  Δρ {_rho - _n['null']['mean']:+.3f}  "
+                  f"p {_n['p_empirical']:.4f}")
 
-    # Cohort means: dark line over M10 films, dark ticks for HP/PP
-    _m10_means = [float(np.mean([_cond_rho(_s, _xi) for _s in SUBJECTS]))
-                  for _xi in range(len(_films))]
-    _ax.plot(range(len(_films)), _m10_means, color=_mean_color, lw=2.0, zorder=5,
-             label="Cohort mean")
-    for _xi in (len(_films), len(_films) + 1):
-        _vals = [_cond_rho(_s, _xi) for _s in SUBJECTS if _cond_rho(_s, _xi) is not None]
-        _mean = float(np.mean(_vals))
-        _ax.plot([_xi - 0.22, _xi + 0.22], [_mean, _mean], color=_mean_color,
-                 lw=2.0, zorder=5)
-        print(f"  cond {_xlabels[_xi].split(chr(10))[0]}: mean ρ={_mean:.3f} (n={len(_vals)})")
-    for _xi in range(len(_films)):
-        print(f"  film {_films[_xi][0]}: mean ρ={_m10_means[_xi]:.3f}")
+    _n_rows = {_label: sum(_r[0] == _label for _r in _rows) for _, _label in STIMULI}
+    assert _n_rows == {"Movie10": 6, "Harry Potter": 5, "Petit Prince": 5}, _n_rows
+    _bins = np.linspace(_x_min, _x_max, 237)    # 0.005-wide, shared by all rows
+    _height = 0.8                               # ridge peak, in row units
+    _gap = 0.7                                  # extra space between stimulus groups
+    _ys, _y, _prev = [], 0.0, None
+    for _label, *_rest in _rows:
+        if _prev is not None:
+            _y -= 1.0 + (_gap if _label != _prev else 0.0)
+        _ys.append(_y)
+        _prev = _label
 
-    _ax.axhline(0, color="#999999", lw=1.0, ls="--", zorder=1)
+    _fig, _ax = plt.subplots(figsize=(6.06, 4.6))   # renders as wide as panel A (6.5 in)
+    def _p_text(_p):
+        if _p < 0.001:
+            return "p < 0.001"
+        if _p > 0.99:
+            return "p > 0.99"
+        return f"p = {_p:.3f}" if _p < 0.1 else f"p = {_p:.2f}"
 
-    _ax.set_xticks(range(_n_x))
-    _ax.set_xticklabels(_xlabels, fontsize=6.5)
-    _ax.set_ylabel("Recurrence → occupancy transfer ρ", fontsize=7)
-    _ax.set_xlim(-0.5, _n_x - 0.5)
-    _ax.tick_params(axis="y", labelsize=6)
-    _ax.tick_params(axis="x", length=0)
+    for (_label, _sub, _rho, _mu, _draws, _p), _y0 in zip(_rows, _ys):
+        _counts, _ = np.histogram(_draws, bins=_bins)
+        _ax.stairs(_y0 + _height * _counts / _counts.max(), _bins, baseline=_y0,
+                   fill=True, color="#BBBBBB", lw=0, zorder=2)
+        _ax.plot([_x_min, _x_max], [_y0, _y0], color="#DDDDDD", lw=0.6, zorder=1)
+        _ax.plot([_rho, _rho], [_y0, _y0 + 0.55], color=SUBJECT_NEUTRAL, lw=1.6,
+                 solid_capstyle="butt", zorder=4)
+        _d = f"{_rho - _mu:+.3f}".replace("-", "\u2212")
+        _ax.text(_x_max + 0.005, _y0 + 0.2, f"{_sub}   Δρ = {_d}   {_p_text(_p)}",
+                 ha="left", va="center", fontsize=6.5)
+    for _label in dict.fromkeys(_r[0] for _r in _rows):
+        _yy = [_y0 for _r, _y0 in zip(_rows, _ys) if _r[0] == _label]
+        _ax.text(_x_min - 0.02, (max(_yy) + min(_yy) + _height) / 2, _label,
+                 ha="right", va="center", fontsize=7)
+    _ax.axvline(0, color="#999999", lw=0.8, ls="--", zorder=1)
+
+    _ax.set_xlim(_x_min, _x_max)
+    _ax.set_ylim(min(_ys) - 0.15, max(_ys) + _height + 0.1)
+    _ax.set_yticks([])
+    _ax.spines["left"].set_visible(False)
     for _s in ("top", "right"):
         _ax.spines[_s].set_visible(False)
-    _h_mean = plt.Line2D([], [], color=_mean_color, lw=2.0, label="Cohort mean")
-    _ax.legend(handles=[_h_mean], loc="upper right",
-               frameon=False, fontsize=6.5, handletextpad=0.4)
+    _ax.tick_params(axis="x", labelsize=6)
+    _ax.set_xlabel("Spearman ρ, Friends recurrence vs. occupancy", fontsize=7)
 
-    _fig.subplots_adjust(left=0.10, right=0.98, bottom=0.13, top=0.95)
-    _stem = OUT_F4 / "fig4_B_transfer_by_condition"
+    _fig.subplots_adjust(left=0.13, right=0.84, bottom=0.09, top=0.99)
+    _stem = OUT_F4 / "fig4_B_observed_vs_null"
+    _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
+    _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
+    print(f"saved: {_stem.name}.png (+ .svg)")
+    plt.close(_fig)
+    return
+
+
+@app.cell
+def panel_B_legend(OUT_F4, plt, SUBJECT_NEUTRAL):
+    """Observed / null key for Panel B (separate mini-file, one row)."""
+    from matplotlib.patches import Patch
+
+    _handles = [
+        plt.Line2D([], [], color=SUBJECT_NEUTRAL, lw=1.6, marker="|", markersize=9,
+                   markeredgewidth=1.6, linestyle="none", label="Observed ρ"),
+        Patch(facecolor="#BBBBBB", edgecolor="none",
+              label="Phase-randomized null, 10,000 draws"),
+    ]
+    _fig = plt.figure(figsize=(6.7, 0.35))
+    _fig.legend(handles=_handles, loc="center", frameon=False, fontsize=6.5,
+                ncol=2, handletextpad=0.5, columnspacing=1.6)
+    _stem = OUT_F4 / "fig4_B_legend"
     _fig.savefig(f"{_stem}.png", bbox_inches="tight", pad_inches=0.02, dpi=300)
     _fig.savefig(f"{_stem}.svg", bbox_inches="tight", pad_inches=0.02)
     print(f"saved: {_stem.name}.png (+ .svg)")
