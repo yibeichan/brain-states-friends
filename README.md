@@ -11,12 +11,12 @@ This project maps the repertoire of brain states that recur during longitudinal 
 ## Supplementary material
 
 The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
-indexes Figures S1–S14 and Tables S1–S3, and for each one gives the caption, the
+indexes Figures S1–S15 and Tables S1–S3, and for each one gives the caption, the
 generating script, and the source outputs the reported values were read from.
 
 | | |
 |---|---|
-| [Figures S1–S14](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
+| [Figures S1–S15](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
 | [Tables S1–S3](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation; cross-stimulus correlation on the full repertoire versus content-eligible states |
 | [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
 
@@ -167,7 +167,7 @@ noted) before invoking a figure script.
 |---|---|---|---|
 | **1** | `fig_F1_recurrence_gradient.py` | Continuous recurrence gradient across states (R1) | `05a`, `06a` |
 | **2** | `fig_F2_recurrence_sources.py` (Panels A–D); `fig_F2_network_participation.py` (batch Panel C); `fig_F2E_participant_umap.py` (Panel E and its supplementary panels; needs `uv sync --extra umap`) | Recurrence-screening categories + network participation; all participants' states in one embedding, with matched pairs between participants (R2) | `04`, `05a`, `05e`, `05h` |
-| **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `05a`, `05f`, `06a`, `06b` |
+| **3** | `fig_F3_transition_structure.py` | Transition graph topology + FC–transition coupling (R3) | `04`, `05a`, `05e`, `05f`, `06a`, `06b`, `06e` |
 | **4** | `fig_F4_cross_stimulus_transfer.py` | Cross-stimulus recurrence transfer to Movie10/HP/PP (R5) | `04` decode, `05a`, `m10_`/`hp_`/`pp_05` |
 | **5** | `fig_F5_within_friends.py` (lead) + `fig_F5_per_film_video.py` (Movie10 per-film panel) | Within-Friends representational depth + Movie10 per-film depth (R4b) | `08d`, `08e` |
 | **S1** | `fig_S01_recurring_state_surface_maps.py` | Cortical + subcortical surface maps of the top recurring states, per subject | `05a`, `05b` |
@@ -183,16 +183,21 @@ noted) before invoking a figure script.
 | **S11** | `fig_S11_network_participation_categories.py` | Canonical-network participation across all recurrence-screening categories (descriptive provenance) | `04`, `05e` |
 | **S12** | `fig_sm_alt_ica_oos_recurrence.py` (`supplements` branch) | ICA out-of-stimulus recurrence across three stimuli | ICA OOS |
 | **S13** | `fig_sm_rel_r5_phase_null.py` (`supplements` branch) | Per-participant phase-randomized null distributions for the Movie10 recurrence–occupancy correlation | `sm_rel_r5_phase_null` |
+| **S14** | `fig_F2E_participant_umap.py` (supplementary panels) | All participants' states in one embedding: residual matches, categories, recurrence, other embeddings, lagged occupancy correlation of matches | `04`, `05e`, `05h` |
+| **S15** | `fig_F3_transition_structure.py` (SI cell) | FC and activation-map similarity of states in transition-module order | `04`, `05e`, `05f`, `06b`, `06e` |
 
 > **SI renumbering (2026-08-19).** The supplement was reordered to follow the
 > Methods reading order. `S3` and `S4` are new (model selection, reliability);
 > the former `S3`–`S10` shifted to `S5`–`S12`. Older notes and plan documents
 > that cite `S8`/`S10` for the ICA figures refer to what are now `S10`/`S12`.
 
-Supplementary figures S6 and S7 have no `fig_S*.py` entry point: S6 comes from
-the Figure 5 script's companion renderer and S7 from `script/08e_plots.py`.
-Figures S10 and S12 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
-branch (ICA alternative decomposition) and cannot be built from `main`.
+Supplementary figures S6, S7, S14 and S15 have no `fig_S*.py` entry point: S6
+comes from the Figure 5 script's companion renderer, S7 from `script/08e_plots.py`,
+S14 from the supplementary cells of `fig_F2E_participant_umap.py` and S15 from the
+SI cell of `fig_F3_transition_structure.py`.
+Figures S10, S12 and S13 live on the orphan [`supplements`](https://github.com/yibeichan/brain-states-friends/tree/supplements)
+branch (ICA alternative decomposition, phase-randomized null) and cannot be built
+from `main`.
 
 Because several generators emit filenames that differ from the `S<nn>_*` names
 used in the supplement, [`script/export_si_figures.py`](script/export_si_figures.py)
@@ -203,7 +208,7 @@ uv run python script/export_si_figures.py          # status only
 uv run python script/export_si_figures.py --copy   # place the files
 ```
 
-See [docs/supplementary/](docs/supplementary/) for the complete S1–S14 index
+See [docs/supplementary/](docs/supplementary/) for the complete S1–S15 index
 with per-figure captions, provenance, and branch.
 
 Shared plotting helpers live in `script/08d_plots.py`, `script/08e_plots.py`,

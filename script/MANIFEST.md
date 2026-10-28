@@ -92,7 +92,7 @@ outputs and renders the panels.
 | `fig_F2_recurrence_sources.py` | Figure 2 | R2 |
 | `fig_F2_network_participation.py` | Figure 2 (Panel C batch renderer) | R2 |
 | `fig_F2E_participant_umap.py` | Figure 2 (Panel E) and its supplementary panels | R2 |
-| `fig_F3_transition_structure.py` | Figure 3 | R3 |
+| `fig_F3_transition_structure.py` | Figure 3; Figure S15 (SI cell) | R3 |
 | `fig_F4_cross_stimulus_transfer.py` | Figure 4; rest is supplementary-only (Fig S8) | R5 |
 | `fig_F5_within_friends.py` | Figure 5 (lead) | R4b |
 | `fig_F5_per_film_video.py` | Figure 5 (Movie10 per-film panel) | R4b |
@@ -112,10 +112,12 @@ SI figures with no dedicated `fig_S*` entry point (provenance verified
 |---|---|---|
 | S6 | `fig_F5_within_friends.py` → `render_supp_negcontrol()` | `manuscript_figures/si_decoding_negative_control/figS_R4b_negcontrol_triple.{png,svg}` |
 | S7 | `08e_plots.py` → `render_panel()`, one call per modality panel | `manuscript_figures/si_decoding_depth/si_decoding_depth_<panel>.{pdf,png,svg}` |
+| S14 | `fig_F2E_participant_umap.py` → its supplementary panel cells | `manuscript_figures/si_participant_umap/figS_participant_umap_<panel>.{png,svg}` |
+| S15 | `fig_F3_transition_structure.py` → `supp_module_similarity()` | `manuscript_figures/si_transition_modules/si_transition_modules_<panel>.{png,svg}` |
 
-**S10** and **S12** are rendered on the orphan `supplements` branch by
-`fig_sm_alt_ica_matching.py` and `fig_sm_alt_ica_oos_recurrence.py`, so they
-cannot be produced from `main`.
+**S10**, **S12** and **S13** are rendered on the orphan `supplements` branch by
+`fig_sm_alt_ica_matching.py`, `fig_sm_alt_ica_oos_recurrence.py` and
+`fig_sm_rel_r5_phase_null.py`, so they cannot be produced from `main`.
 
 ### Rebuilding the SI figure directory
 
@@ -128,11 +130,11 @@ uv run python script/export_si_figures.py --copy   # place the files
 ```
 
 It classifies each SI figure as DIRECT (the generator already writes the SI
-name: S1, S2, S5), EXPORT (copied by this script: S3, S4, S6, S7, S8, S9, S11),
-or SUPPLEMENTS (S10, S12). It resolves git-annex symlinks before copying, so
+name: S1, S2, S5), EXPORT (copied by this script: S3, S4, S6, S7, S8, S9, S11,
+S14, S15), or SUPPLEMENTS (S10, S12, S13). It resolves git-annex symlinks before copying, so
 destinations are real files, and it reports STALE when an output is still at
-the path it had before the SI output folders were given topic names. Current
-status is **16 exported, 0 stale, 0 missing**.
+the path it had before the SI output folders were given topic names. The
+status run should report no STALE or MISSING rows.
 
 The committed PNGs under `docs/supplementary/figures/` are byte-for-byte what
 `--copy` emits, so re-running the exporter leaves the working tree clean. That
@@ -150,8 +152,9 @@ version is what is committed now.
 Main-figure scripts write to `manuscript_figures/fig<N>/`. SI generators write
 to topic-named folders: `si_model_selection/` (S3), `si_reliability/` (S4),
 `si_decoding_negative_control/` (S6), `si_decoding_depth/` (S7),
-`si_cross_stimulus_validity/` (S8), `si_individual_differences/` (S9) and
-`si_network_participation_categories/` (S11).
+`si_cross_stimulus_validity/` (S8), `si_individual_differences/` (S9),
+`si_network_participation_categories/` (S11), `si_participant_umap/` (S14) and
+`si_transition_modules/` (S15).
 
 Numbering note (2026-08-19): SI figures were renumbered to follow the Methods
 reading order. `S3`/`S4` are new (model selection, reliability); former
