@@ -19,13 +19,18 @@ Updated: November 2025
 """
 
 import os
+import sys
 import glob
+from pathlib import Path
 import nibabel as nib
 from nilearn.interfaces.fmriprep import load_confounds
 from nilearn import signal
 from joblib import Parallel, delayed
 from dotenv import load_dotenv
 from argparse import ArgumentParser
+
+sys.path.insert(0, str(Path(__file__).parent))
+from utils.wmcsf_override import WMCSF_VARIANTS, replace_wmcsf
 
 
 def load_confounds_minimal(task_file):
@@ -112,7 +117,8 @@ def load_confounds_minimal(task_file):
         return confounds_out
 
 
-def process_file(task_file, save_dir, standardize='zscore_sample'):
+def process_file(task_file, save_dir, standardize='zscore_sample',
+                 wmcsf_table=None, wmcsf_variant=None):
     """
     Process a single fMRI file with minimal confound regression.
 
@@ -136,6 +142,11 @@ def process_file(task_file, save_dir, standardize='zscore_sample'):
         Standardization mode for signal.clean(). Default 'zscore_sample' applies
         voxel-wise z-scoring. Set to False for A3 sensitivity analysis
         (no per-episode z-scoring).
+    wmcsf_table : str or None
+        Root of the shared clean CSF/WM table. When given, the csf and
+        white_matter regressors are replaced by its `wmcsf_variant` columns.
+    wmcsf_variant : {'clean', 'corrupt'} or None
+        Which table columns to use with `wmcsf_table`.
 
     Returns
     -------
@@ -154,6 +165,9 @@ def process_file(task_file, save_dir, standardize='zscore_sample'):
 
         # Load confounds using minimal strategy
         confounds = load_confounds_minimal(task_file)
+        if wmcsf_table:
+            confounds = replace_wmcsf(confounds, wmcsf_table, task_file, wmcsf_variant)
+            print(f"  Replaced csf/white_matter with the {wmcsf_variant} table columns")
 
         # Load functional data
         task_img = nib.load(task_file)
@@ -205,7 +219,8 @@ def process_file(task_file, save_dir, standardize='zscore_sample'):
         return cleaned_file_path
 
 
-def process_subject(subject_files, save_dir, n_jobs=-1, standardize='zscore_sample'):
+def process_subject(subject_files, save_dir, n_jobs=-1, standardize='zscore_sample',
+                    wmcsf_table=None, wmcsf_variant=None):
     """
     Process all fMRI files for a subject in parallel.
 
@@ -219,6 +234,8 @@ def process_subject(subject_files, save_dir, n_jobs=-1, standardize='zscore_samp
         Number of parallel jobs (-1 uses all CPUs, capped at 8)
     standardize : str or False
         Passed to process_file(). Default 'zscore_sample'.
+    wmcsf_table, wmcsf_variant
+        Passed to process_file().
 
     Returns
     -------
@@ -236,7 +253,8 @@ def process_subject(subject_files, save_dir, n_jobs=-1, standardize='zscore_samp
     print(f"\nProcessing {len(subject_files)} files with {n_jobs} parallel jobs...")
 
     results = Parallel(n_jobs=n_jobs)(
-        delayed(process_file)(task_file, save_dir, standardize=standardize)
+        delayed(process_file)(task_file, save_dir, standardize=standardize,
+                              wmcsf_table=wmcsf_table, wmcsf_variant=wmcsf_variant)
         for task_file in subject_files
     )
 
@@ -293,8 +311,15 @@ For detailed rationale: the design notes
                        help="Filter inputs to one BIDS task label (e.g., restingstate). "
                             "Required for multi-task fMRIPrep datasets like hcptrt; "
                             "default None keeps the historical any-task glob.")
+    parser.add_argument("--wmcsf_table", type=str, default=None,
+                       help="Root of the shared clean CSF/WM table; replaces fMRIPrep's "
+                            "csf/white_matter regressors (requires --wmcsf_variant)")
+    parser.add_argument("--wmcsf_variant", choices=WMCSF_VARIANTS, default=None,
+                       help="Table columns to regress: clean or corrupt masks")
 
     args = parser.parse_args()
+    if bool(args.wmcsf_table) != bool(args.wmcsf_variant):
+        parser.error("--wmcsf_table and --wmcsf_variant must be given together")
 
     # Load environment variables
     base_dir = os.getenv("BASE_DIR")
@@ -353,7 +378,13 @@ For detailed rationale: the design notes
     print(f"Files found: {len(subject_files)}")
     print(f"Output directory: {save_dir}")
     print(f"Parallel jobs: {args.n_jobs if args.n_jobs > 0 else 'all CPUs'}")
+    if args.wmcsf_table:
+        print(f"CSF/WM regressors: {args.wmcsf_variant} columns of {args.wmcsf_table}")
     print(f"{'='*60}\n")
 
     # Process subject
-    process_subject(subject_files, save_dir, n_jobs=args.n_jobs, standardize=standardize)
+    results = process_subject(subject_files, save_dir, n_jobs=args.n_jobs,
+                              standardize=standardize, wmcsf_table=args.wmcsf_table,
+                              wmcsf_variant=args.wmcsf_variant)
+    if any(r is None for r in results):
+        sys.exit(1)

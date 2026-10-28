@@ -68,7 +68,18 @@ echo ""
 
 # Run post-processing with minimal confound strategy
 # Uses --n_jobs to match SLURM allocation for efficient parallelization
-uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "friends" --n_jobs "${SLURM_CPUS_PER_TASK:-4}"
+# Optional: WMCSF_TABLE + WMCSF_VARIANT (clean|corrupt) replace fMRIPrep's csf and
+# white_matter regressors with the shared clean CSF/WM table (see utils/wmcsf_override.py).
+WMCSF_ARGS=()
+if [ -n "${WMCSF_VARIANT:-}" ] && [ -z "${WMCSF_TABLE:-}" ]; then
+    echo "ERROR: WMCSF_VARIANT=${WMCSF_VARIANT} needs WMCSF_TABLE" >&2
+    exit 1
+fi
+if [ -n "${WMCSF_TABLE:-}" ]; then
+    WMCSF_ARGS=(--wmcsf_table "${WMCSF_TABLE}" --wmcsf_variant "${WMCSF_VARIANT:-}")
+    echo "CSF/WM regressors: ${WMCSF_VARIANT:-<unset>} columns of ${WMCSF_TABLE}"
+fi
+uv run --project "${PROJECT_DIR}" --no-sync python "${SCRIPT_DIR}/00_postproc.py" "${TASK_ID}" "friends" --n_jobs "${SLURM_CPUS_PER_TASK:-4}" "${WMCSF_ARGS[@]}"
 
 exit_code=$?
 
