@@ -289,7 +289,7 @@ automatically by `uv sync`:
 
 ```toml
 [tool.uv.sources]
-yabplot = { git = "https://github.com/yibeichan/yabplot.git" }
+yabplot = { git = "https://github.com/yibeichan/yabplot.git", rev = "d7fee0baf8479a88376916ebea5237f5e4103434" }
 ```
 
 ## Configuration

@@ -25,7 +25,9 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 #   - Step 04 (select mode) completed (state_means_parcel.npy)
 #   - yabplot installed (git dependency; https://github.com/yibeichan/yabplot)
 #     at the commit pinned in pyproject.toml, which ships the
-#     schaefer100_cortical and 4s_subcortical atlases
+#     schaefer100_cortical atlas
+#   - 4s_subcortical VTK meshes built into that yabplot install
+#     (script/utils/render_state_posters.sh builds them)
 #
 # Usage:
 #   sbatch --export=SUB_ID=sub-01 script/05b_visualize_recurring_states.sh

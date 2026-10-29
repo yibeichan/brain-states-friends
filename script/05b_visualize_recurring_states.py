@@ -20,7 +20,9 @@ Prerequisites:
   - 04_combined_hdphmm.py (select mode) completed (state_means_parcel.npy)
   - yabplot installed (declared as a git dependency; see https://github.com/yibeichan/yabplot)
     at the commit pinned in pyproject.toml, which ships the schaefer100_cortical
-    and 4s_subcortical atlases
+    atlas
+  - 4s_subcortical VTK meshes built into that yabplot install (see
+    script/utils/render_state_posters.sh)
 
 Subcortical interpretation note:
   Subcortical parcels are anatomically-defined (CIT168, HCP), not functionally-
@@ -135,7 +137,9 @@ def validate_cortical_label_alignment(labels_df, parcellation: str) -> None:
         raise ValueError(
             "Cortical label mismatch with custom schaefer100 atlas LUT. "
             f"Missing {len(missing)} labels (first 10: {preview}). "
-            "Check that yabplot is installed at the commit pinned in pyproject.toml."
+            "The bundled schaefer100_cortical atlas covers only the 100 Schaefer parcels of "
+            "atlas-4S156Parcels; run with --parcellation atlas-4S156Parcels, or reinstall "
+            "yabplot at the commit pinned in pyproject.toml."
         )
 
     logger.info(

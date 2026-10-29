@@ -158,7 +158,8 @@ def get_cortical_atlas_dir() -> str:
     Return path to the custom Schaefer-100 cortical atlas built from CIFTI.
 
     The atlas ships with yabplot at the commit pinned in pyproject.toml
-    (built by tools/build_schaefer100_cortical.py in https://github.com/yibeichan/yabplot).
+    (built from the original Schaefer-100 release by
+    tools/build_schaefer100_cortical.py in https://github.com/yibeichan/yabplot).
 
     Expected structure:
         {atlas_dir}/
@@ -166,7 +167,7 @@ def get_cortical_atlas_dir() -> str:
             schaefer100_LUT.txt       (id name R G B 0)
 
     Raises:
-        RuntimeError: If atlas has not been built yet.
+        RuntimeError: If the atlas files are missing from the installed yabplot.
     """
     import yabplot
     atlas_dir = os.path.join(
@@ -175,14 +176,14 @@ def get_cortical_atlas_dir() -> str:
     if not os.path.isdir(atlas_dir):
         raise RuntimeError(
             f"Cortical atlas not found at {atlas_dir}.\n"
-            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
+            "Reinstall yabplot at the commit pinned in pyproject.toml: uv sync --reinstall-package yabplot"
         )
     csv_files = [f for f in os.listdir(atlas_dir) if f.endswith(".csv")]
     lut_files = [f for f in os.listdir(atlas_dir) if f.endswith(".txt")]
     if not csv_files or not lut_files:
         raise RuntimeError(
             f"Cortical atlas directory is incomplete (missing .csv or .txt): {atlas_dir}.\n"
-            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
+            "Reinstall yabplot at the commit pinned in pyproject.toml: uv sync --reinstall-package yabplot"
         )
     logger.info(f"Using cortical atlas: {atlas_dir}")
     return atlas_dir
@@ -190,14 +191,14 @@ def get_cortical_atlas_dir() -> str:
 
 def get_subcortical_atlas_dir() -> str:
     """
-    Return path to the pre-built 4S subcortical VTK directory inside yabplot.
+    Return path to the locally built 4S subcortical VTK directory inside yabplot.
 
     The directory is shared across all 4S atlas variants (4S156–4S1056) because
     the 56 subcortical parcels (CIT168, HCP thalamus, hippo/amyg, cerebellum)
     have identical MNI coordinates regardless of cortical parcel resolution.
 
     Raises:
-        RuntimeError: If yabplot is not installed or VTK files are missing.
+        RuntimeError: If the VTK meshes have not been built into the installed yabplot.
     """
     import yabplot
     atlas_dir = os.path.join(
@@ -206,13 +207,15 @@ def get_subcortical_atlas_dir() -> str:
     if not os.path.isdir(atlas_dir):
         raise RuntimeError(
             f"Subcortical atlas not found at {atlas_dir}.\n"
-            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
+            "B"
+            "u"
         )
     vtk_count = len([f for f in os.listdir(atlas_dir) if f.endswith(".vtk")])
     if vtk_count == 0:
         raise RuntimeError(
             f"No .vtk files in {atlas_dir}. "
-            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
+            "B"
+            "u"
         )
     logger.info(f"Using subcortical atlas: {atlas_dir} ({vtk_count} VTK files)")
     return atlas_dir
