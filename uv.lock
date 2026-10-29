@@ -342,7 +342,7 @@ requires-dist = [
     { name = "tqdm" },
     { name = "transformers", marker = "extra == 'torch'", specifier = ">=4.45" },
     { name = "umap-learn", marker = "extra == 'umap'", specifier = ">=0.5.7" },
-    { name = "yabplot", git = "https://github.com/yibeichan/yabplot.git" },
+    { name = "yabplot", git = "https://github.com/yibeichan/yabplot.git?rev=d7fee0baf8479a88376916ebea5237f5e4103434" },
 ]
 provides-extras = ["gpu", "torch", "umap", "datalad"]
 
@@ -3671,7 +3671,7 @@ wheels = [
 [[package]]
 name = "yabplot"
 version = "0.2.2"
-source = { git = "https://github.com/yibeichan/yabplot.git#524bca426a2ba0f95001c06f1744723d64f978e3" }
+source = { git = "https://github.com/yibeichan/yabplot.git?rev=d7fee0baf8479a88376916ebea5237f5e4103434#d7fee0baf8479a88376916ebea5237f5e4103434" }
 dependencies = [
     { name = "ipywidgets" },
     { name = "nibabel" },

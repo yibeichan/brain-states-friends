@@ -9,22 +9,15 @@ PREREQUISITE — per-subject renders
 -----------------------------------
 Each per-subject PNG (sub-0X_top5_recurring_states.png) must be produced
 BEFORE running this script by calling 05b_visualize_recurring_states.py in
-an environment that has yabplot + pyvista (OSMesa) installed, because the
-public venv lacks the yabplot atlas data needed for cortical surface rendering.
-
-Use the private repo's venv for the per-subject renders:
-
-    PRIVATE=$BASE_DIR                     # private repo checkout
-    PUB_05B=$PUBLIC_REPO_DIR/script/05b_visualize_recurring_states.py
-    cp $PUB_05B $PRIVATE/script/05b_visualize_recurring_states.py   # copy font-bumped version
+this repo's environment. The cortical atlas ships with the pinned yabplot; the
+4s_subcortical meshes must first be built into it (script/utils/render_state_posters.sh
+does this, or see tools/build_4s156_subcortical.py in yabplot). Then:
 
     for SUB in sub-01 sub-02 sub-03 sub-04 sub-05 sub-06; do
-        xvfb-run -a $PRIVATE/.venv/bin/python $PRIVATE/script/05b_visualize_recurring_states.py \\
+        xvfb-run -a uv run python script/05b_visualize_recurring_states.py \\
             --sub_id $SUB --parcellation atlas-4S156Parcels --n_states 5 --vt 0.95 \\
             --output_dir /tmp/05b_rerender/$SUB
     done
-
-    git -C $PRIVATE checkout -- script/05b_visualize_recurring_states.py  # restore private
 
 Then point RENDER_DIR (below) at /tmp/05b_rerender or wherever you placed the outputs.
 

@@ -289,8 +289,14 @@ automatically by `uv sync`:
 
 ```toml
 [tool.uv.sources]
-yabplot = { git = "https://github.com/yibeichan/yabplot.git" }
+yabplot = { git = "https://github.com/yibeichan/yabplot.git", rev = "d7fee0baf8479a88376916ebea5237f5e4103434" }
 ```
+
+The pinned yabplot ships the Schaefer-100 cortical atlas. The 4S subcortical
+meshes derive from the 4S atlas (CC BY-ND), so they are not shipped: build them
+once per environment with `script/utils/render_state_posters.sh`, which runs
+`tools/build_4s156_subcortical.py` from a yabplot checkout at the pinned commit
+(`YABPLOT_TOOLS`) on the 4S atlas under `ATLAS_DIR`.
 
 ## Configuration
 
