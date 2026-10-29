@@ -207,15 +207,17 @@ def get_subcortical_atlas_dir() -> str:
     if not os.path.isdir(atlas_dir):
         raise RuntimeError(
             f"Subcortical atlas not found at {atlas_dir}.\n"
-            "B"
-            "u"
+            "Build the meshes with script/utils/render_state_posters.sh, which runs "
+            "tools/build_4s156_subcortical.py from https://github.com/yibeichan/yabplot. "
+            "They derive from the CC BY-ND 4S atlas, so yabplot does not ship them."
         )
     vtk_count = len([f for f in os.listdir(atlas_dir) if f.endswith(".vtk")])
     if vtk_count == 0:
         raise RuntimeError(
             f"No .vtk files in {atlas_dir}. "
-            "B"
-            "u"
+            "Build the meshes with script/utils/render_state_posters.sh, which runs "
+            "tools/build_4s156_subcortical.py from https://github.com/yibeichan/yabplot. "
+            "They derive from the CC BY-ND 4S atlas, so yabplot does not ship them."
         )
     logger.info(f"Using subcortical atlas: {atlas_dir} ({vtk_count} VTK files)")
     return atlas_dir

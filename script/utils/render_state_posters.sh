@@ -43,7 +43,10 @@ fi
 
 if ! ls "$ATLAS_BASE"/4s_subcortical/*.vtk >/dev/null 2>&1; then
   ATLAS_DIR="${ATLAS_DIR:-$(run python -c 'import sys; from dotenv import dotenv_values; print(dotenv_values(sys.argv[1]).get("ATLAS_DIR") or "")' "$CODE_DIR/.env")}"
-  if [ ! -f "$YABPLOT_TOOLS/build_4s156_subcortical.py" ] || [ -z "$ATLAS_DIR" ]; then
+  # An older checkout's build script lacks --out-dir; check before building.
+  if ! { [ -f "$YABPLOT_TOOLS/build_4s156_subcortical.py" ] \
+         && run python "$YABPLOT_TOOLS/build_4s156_subcortical.py" --help 2>/dev/null | grep -- '--out-dir' >/dev/null; } \
+     || [ -z "$ATLAS_DIR" ]; then
     echo "ERROR: 4s_subcortical meshes missing from $ATLAS_BASE." >&2
     echo "Set YABPLOT_TOOLS to the tools/ dir of a yabplot checkout at the pinned commit" >&2
     echo "and ATLAS_DIR (in .env) to the directory holding atlas-4S156Parcels/." >&2
