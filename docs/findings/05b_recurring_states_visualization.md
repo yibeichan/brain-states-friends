@@ -11,7 +11,7 @@ _Renders top recurring brain states (by recurrence score from 05a) as cortical a
 - **PCA variance threshold**: vt=0.95 (67-77 PCs per subject).
 - **States visualized**: top 5 in multi-panel figure; top 10 in individual plots. Active states are those with recurrence score > 0 (all 42-47 active states qualify; top-N are selected by rank).
 - **Color range**: symmetric, set to the 95th percentile of absolute z-scores pooled across the top-N states; applied identically to cortical and subcortical panels.
-- **Rendering**: yabplot with headless PyVista/OSMesa backend. Cortical: Schaefer-100 on fsaverage5 surface. Subcortical: CIT168+HCP anatomically-defined 3D VTK meshes. Hippocampus and amygdala carry approximately 50-70% lower tSNR due to susceptibility artifacts.
+- **Rendering**: yabplot with headless PyVista/OSMesa backend. Cortical: Schaefer-100 on the fs_LR 32k surface (Conte69). Subcortical: CIT168+HCP anatomically-defined 3D VTK meshes. Hippocampus and amygdala carry approximately 50-70% lower tSNR due to susceptibility artifacts.
 - **No group statistic or cross-subject aggregation.** Each subject's states are visualized independently.
 - **Eligibility filtering**: not applied in 05b; all active states (score > 0) are eligible. State flags from 05e are not consumed here.
 - **Sub-04 note**: 194 runs (seasons 1-4 only; seasons 5-6 excluded for this subject).
