@@ -157,8 +157,8 @@ def get_cortical_atlas_dir() -> str:
     """
     Return path to the custom Schaefer-100 cortical atlas built from CIFTI.
 
-    The atlas is built once by running:
-        the yabplot repo's tools/build_schaefer100_cortical.py (https://github.com/yibeichan/yabplot)
+    The atlas ships with yabplot at the commit pinned in pyproject.toml
+    (built by tools/build_schaefer100_cortical.py in https://github.com/yibeichan/yabplot).
 
     Expected structure:
         {atlas_dir}/
@@ -175,14 +175,14 @@ def get_cortical_atlas_dir() -> str:
     if not os.path.isdir(atlas_dir):
         raise RuntimeError(
             f"Cortical atlas not found at {atlas_dir}.\n"
-            "Run: the yabplot repo's tools/build_schaefer100_cortical.py (https://github.com/yibeichan/yabplot)"
+            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
         )
     csv_files = [f for f in os.listdir(atlas_dir) if f.endswith(".csv")]
     lut_files = [f for f in os.listdir(atlas_dir) if f.endswith(".txt")]
     if not csv_files or not lut_files:
         raise RuntimeError(
             f"Cortical atlas directory is incomplete (missing .csv or .txt): {atlas_dir}.\n"
-            "Run: the yabplot repo's tools/build_schaefer100_cortical.py (https://github.com/yibeichan/yabplot)"
+            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
         )
     logger.info(f"Using cortical atlas: {atlas_dir}")
     return atlas_dir
@@ -206,14 +206,13 @@ def get_subcortical_atlas_dir() -> str:
     if not os.path.isdir(atlas_dir):
         raise RuntimeError(
             f"Subcortical atlas not found at {atlas_dir}.\n"
-            "Run tools/build_4s156_subcortical.py in the yabplot fork first.\n"
-            "(Any 4S atlas version works: --parcellation atlas-4S156Parcels)"
+            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
         )
     vtk_count = len([f for f in os.listdir(atlas_dir) if f.endswith(".vtk")])
     if vtk_count == 0:
         raise RuntimeError(
             f"No .vtk files in {atlas_dir}. "
-            "Run tools/build_4s156_subcortical.py to build the atlas."
+            "Reinstall the project environment (uv sync): the pinned yabplot ships it."
         )
     logger.info(f"Using subcortical atlas: {atlas_dir} ({vtk_count} VTK files)")
     return atlas_dir

@@ -60,4 +60,4 @@ datalad = [
 package = false
 
 [tool.uv.sources]
-yabplot = { git = "https://github.com/yibeichan/yabplot.git" }
+yabplot = { git = "https://github.com/yibeichan/yabplot.git", rev = "6443250132a86dc5a3a7c1993af80a85344551e8" }

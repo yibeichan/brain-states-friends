@@ -19,7 +19,8 @@ Prerequisites:
   - 05a_recurrence_analysis.py completed (recurrence_summary.json, fractional_occupancy.pkl)
   - 04_combined_hdphmm.py (select mode) completed (state_means_parcel.npy)
   - yabplot installed (declared as a git dependency; see https://github.com/yibeichan/yabplot)
-  - Subcortical VTK meshes built via yabplot's tools/build_4s156_subcortical.py
+    at the commit pinned in pyproject.toml, which ships the schaefer100_cortical
+    and 4s_subcortical atlases
 
 Subcortical interpretation note:
   Subcortical parcels are anatomically-defined (CIT168, HCP), not functionally-
@@ -134,7 +135,7 @@ def validate_cortical_label_alignment(labels_df, parcellation: str) -> None:
         raise ValueError(
             "Cortical label mismatch with custom schaefer100 atlas LUT. "
             f"Missing {len(missing)} labels (first 10: {preview}). "
-            "Rebuild the atlas with yabplot's tools/build_schaefer100_cortical.py"
+            "Check that yabplot is installed at the commit pinned in pyproject.toml."
         )
 
     logger.info(
