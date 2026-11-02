@@ -58,6 +58,8 @@ Note: movie10 has a +1 TR convention drift between 27 pre-2026-04-09 runs (bourn
 
 Harry Potter is text-only (RSVP word-by-word, no audio/video stream). Petit Prince is audio+text only (no video).
 
+Petit Prince audio starts at the onset given in each section's `events.tsv` (4.0 s after the scan starts in all 18 sections); Friends and Movie10 audio starts with the scan. Audio TR windows are placed on scan time: TR t pools the audio heard during [t × TR, (t + 1) × TR), TRs that end before the audio starts are zero, and a Petit Prince section has ceil((onset + duration) / TR) TRs. Text uses the same onset (`tr_idx = int((onset_s + word_onset) / TR)`). Petit Prince audio features extracted before this rule binned the audio from its own start after two zero TRs (2.98 s), about 1 s early; the TR counts in the table above are from those features.
+
 ## Outputs
 
 - output/08c_transformer_features/{stimulus}/{model}/layer_00/{run_id}_raw.npy: (n_trs, hidden_dim) float32
