@@ -89,6 +89,14 @@ CROSS_STIM_STAGE_MAP = {
     "petitprince_en": "pp_04_decoded",
 }
 
+# Brain-to-feature lag for the transfer decoder. ``friends_best`` uses the lag
+# at which this participant's within-Friends decoder (08d D1) peaked for the
+# same model, chosen on Friends only and never on the test stimulus. Lag 0 is
+# excluded from that peak search, as in 08d (PEAK_LAG_EXCLUDE there): it is
+# the synchronous diagnostic, not a candidate peak.
+LAG_FRIENDS_BEST = "friends_best"
+PEAK_LAG_EXCLUDE = {0}
+
 
 # ---------------------------------------------------------------------------
 # Loaders
@@ -341,6 +349,98 @@ def _plot_transfer(results, out_path, title, chance):
 # ---------------------------------------------------------------------------
 
 
+def find_best_lag_layer(results_per_lag, exclude_lags=None):
+    """Return ``(best_lag_key, best_layer_idx, best_acc)`` over a D1 result dict.
+
+    Same rule as ``_find_best_lag_layer`` in 08d_transformer_depth.py (the
+    08d module name starts with a digit, so it cannot be imported here):
+    the (lag, layer) cell with the highest balanced accuracy, skipping the
+    lags in ``exclude_lags``. ``results_per_lag`` maps ``"lag_N"`` keys to
+    ``{layer_idx: {"balanced_accuracy": ...}}``.
+    """
+    exclude = set(int(l) for l in exclude_lags) if exclude_lags else set()
+    best = (None, None, -np.inf)
+    for lag_key, lag_data in results_per_lag.items():
+        try:
+            lag_val = int(lag_key.split("_")[1])
+        except (IndexError, ValueError):
+            lag_val = None
+        if lag_val is not None and lag_val in exclude:
+            continue
+        for layer, entry in lag_data.items():
+            acc = entry.get("balanced_accuracy", -np.inf)
+            if acc is not None and acc > best[2]:
+                best = (lag_key, int(layer), float(acc))
+    return best
+
+
+def friends_d1_path(scratch_dir, parc, sub_id, model_key):
+    """Path of the participant's within-Friends depth profile (08d D1)."""
+    return os.path.join(
+        scratch_dir, "output", "08d_transformer_depth", parc, sub_id,
+        f"friends_{model_key}", "D1_depth_profile.json",
+    )
+
+
+def resolve_friends_best_lag(scratch_dir, parc, sub_id, model_key):
+    """Return ``(lag, info)`` for the participant's best within-Friends lag.
+
+    Raises if the 08d D1 output is missing or has no candidate lag, rather
+    than falling back to lag 0: a silent fallback would reproduce the
+    lag-0 transfer this option exists to replace.
+    """
+    path = friends_d1_path(scratch_dir, parc, sub_id, model_key)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"08d D1 output not found: {path}. Run 08d for {sub_id} "
+            f"{model_key} first, or pass an explicit --lag."
+        )
+    with open(path) as f:
+        d1 = json.load(f)
+    lag_key, layer, acc = find_best_lag_layer(
+        d1.get("results", {}), exclude_lags=PEAK_LAG_EXCLUDE,
+    )
+    if lag_key is None:
+        raise ValueError(f"No candidate lag in {path} (lag 0 excluded).")
+    lag = int(lag_key.split("_")[1])
+    return lag, {
+        "friends_d1_path": path,
+        "friends_best_layer": layer,
+        "friends_best_balanced_accuracy": round(acc, 4),
+    }
+
+
+def parse_lag(value):
+    """argparse type: ``friends_best`` or a non-negative integer number of TRs."""
+    if value == LAG_FRIENDS_BEST:
+        return value
+    try:
+        lag = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--lag must be {LAG_FRIENDS_BEST!r} or a non-negative integer, "
+            f"got {value!r}"
+        )
+    if lag < 0:
+        raise argparse.ArgumentTypeError(f"--lag must be >= 0, got {lag}")
+    return lag
+
+
+def output_subdir(stimulus, model_key, lag_arg):
+    """Output folder name for one (stimulus, model, lag) cell.
+
+    ``--lag 0`` keeps the original folder name, so its outputs stay where the
+    existing figures read them. Other lags get their own folder, so a rerun
+    never overwrites the lag-0 results.
+    """
+    base = f"{stimulus}_{model_key}"
+    if lag_arg == LAG_FRIENDS_BEST:
+        return f"{base}_lag-best"
+    if lag_arg == 0:
+        return base
+    return f"{base}_lag-{lag_arg}"
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description="Cross-stimulus aggregate transfer (08e).",
@@ -358,6 +458,13 @@ def parse_args():
                    help="Also emit per-subset breakdown (currently honored only "
                         "for --stimulus movie10, which splits by film: wolf / "
                         "figures / bourne / life). Pooled output is unchanged.")
+    p.add_argument("--lag", type=parse_lag, default=LAG_FRIENDS_BEST,
+                   help="Brain-to-feature lag in TRs for training and test "
+                        "features: 'friends_best' (default) uses the "
+                        "participant's best within-Friends lag for this model "
+                        "from 08d D1 (lag 0 excluded); an integer sets it. "
+                        "Outputs go to <stimulus>_<model>_lag-best (or "
+                        "_lag-N); --lag 0 writes to the original folder.")
     return p.parse_args()
 
 
@@ -435,9 +542,18 @@ def main():
     logger.info("Sub=%s test_stimulus=%s model=%s", sub_id, stimulus, model_key)
     logger.info("=" * 60)
 
+    if args.lag == LAG_FRIENDS_BEST:
+        lag, lag_info = resolve_friends_best_lag(
+            SCRATCH_DIR, parc, sub_id, model_key,
+        )
+        lag_source = LAG_FRIENDS_BEST
+    else:
+        lag, lag_info, lag_source = args.lag, {}, "explicit"
+    logger.info("Lag: %d TRs (source=%s)", lag, lag_source)
+
     out_dir = os.path.join(
         SCRATCH_DIR, "output", "08e_transformer_cross_stim_aggregate", parc,
-        sub_id, f"{stimulus}_{model_key}",
+        sub_id, output_subdir(stimulus, model_key, args.lag),
     )
     os.makedirs(out_dir, exist_ok=True)
 
@@ -678,11 +794,14 @@ def main():
         if not friends_runs or not test_runs:
             continue
         try:
+            # The same lag for training (Friends) and test features, so the
+            # decoder is applied at the lag it was fitted at. Zero-padded
+            # first `lag` TRs of each run stay in, as in 08d.
             friends_X = build_layer_feature_matrix(
-                friends_runs, friends_run_ids, friends_decoded,
+                friends_runs, friends_run_ids, friends_decoded, lag=lag,
             )
             test_X = build_layer_feature_matrix(
-                test_runs, test_run_ids, test_decoded,
+                test_runs, test_run_ids, test_decoded, lag=lag,
             )
         except ValueError as exc:
             logger.debug("Layer %d: %s", layer_idx, exc)
@@ -717,6 +836,9 @@ def main():
         "sub_id": sub_id,
         "test_stimulus": stimulus,
         "model": model_key,
+        "lag": lag,
+        "lag_source": lag_source,
+        **lag_info,
         "eligibility_source": eligibility["eligibility_source"],
         "intersection_states": intersect_ids,
         "intersection_fo": {str(k): v for k, v in fo_stats.items()},
@@ -767,6 +889,8 @@ def main():
             "sub_id": sub_id,
             "test_stimulus": stimulus,
             "model": model_key,
+            "lag": lag,
+            "lag_source": lag_source,
             "subset_axis": "film" if stimulus == "movie10" else stimulus,
             "subsets": subset_labels,
             "eligibility_source": eligibility["eligibility_source"],

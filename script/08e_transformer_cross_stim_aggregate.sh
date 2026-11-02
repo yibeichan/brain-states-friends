@@ -26,7 +26,11 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 #   MODEL       - transformer model key (default: llama-3.2-3b)
 #   VT          - 05e_a4 VT suffix       (default: 0.95)
 #   N_PERMS     - permutation count      (default: 1000)
-#   FORCE       - set to 1 to re-run even if checkpoint exists (default: off)
+#   LAG         - brain-to-feature lag in TRs, or friends_best (default):
+#                 the participant's best within-Friends lag for MODEL from
+#                 08d D1. Non-zero lags write to <stimulus>_<model>_lag-best
+#                 (or _lag-N); LAG=0 writes to the original folder.
+#   FORCE      - set to 1 to re-run even if checkpoint exists (default: off)
 #   PER_SUBSET  - set to 1 to also emit per-subset breakdown JSON
 #                 (currently honored only for STIMULUS=movie10, which splits
 #                 by film: wolf / figures / bourne / life). Off by default.
@@ -52,6 +56,7 @@ STIMULUS="${STIMULUS:-movie10}"
 MODEL="${MODEL:-llama-3.2-3b}"
 VT="${VT:-0.95}"
 N_PERMS="${N_PERMS:-1000}"
+LAG="${LAG:-friends_best}"
 FORCE="${FORCE:-}"
 PER_SUBSET="${PER_SUBSET:-}"
 
@@ -75,6 +80,7 @@ echo "Test stimulus:  ${STIMULUS}"
 echo "Model:          ${MODEL}"
 echo "VT:             ${VT}"
 echo "N perms:        ${N_PERMS}"
+echo "Lag:            ${LAG}"
 echo "Force:          ${FORCE:-no}"
 echo "Per-subset:     ${PER_SUBSET:-no}"
 echo "=============================================="
@@ -85,7 +91,8 @@ CMD="uv run --project ${PROJECT_DIR} --no-sync python \
     --stimulus ${STIMULUS} \
     --model ${MODEL} \
     --vt ${VT} \
-    --n_permutations ${N_PERMS}"
+    --n_permutations ${N_PERMS} \
+    --lag ${LAG}"
 
 if [ "$FORCE" = "1" ]; then
     CMD="${CMD} --force"
