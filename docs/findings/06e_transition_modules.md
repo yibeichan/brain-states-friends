@@ -131,7 +131,7 @@ sub-04 20/15/5/4; sub-05 25/8/7/5/2; sub-06 18/10/8/6.
 | sub-03 | 0.968 | 5.45 / 3.23 / 4.10, 0.001 | 5 / 5 | no / yes / yes |
 | sub-04 | 0.384 | 8.89 / 3.00 / 5.71, 0.001 | 5 / 5 | no / yes / yes |
 | sub-05 | 0.293 | 8.28 / 3.57 / 5.64, 0.001 | 5 / 5 | no / yes / yes |
-| sub-06 | 0.067 | 7.30 / 2.62 / 4.40, 0.001 | 5 / 5 | no / yes / yes |
+| sub-06 | 0.060 | 7.30 / 2.62 / 4.40, 0.001 | 5 / 5 | no / yes / yes |
 
 Across the 15 subject pairs, mean matched-module occupancy correlation was
 0.028-0.209 against circular-shift null means of -0.003 to 0.003; all 15 pairs have p
