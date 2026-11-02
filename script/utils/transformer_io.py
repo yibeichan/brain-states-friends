@@ -190,6 +190,7 @@ def extract_audio_features(
     device="cuda",
     chunk_seconds=AUDIO_CHUNK_SECONDS,
     overlap_seconds=AUDIO_OVERLAP_SECONDS,
+    onset_s=0.0,
 ):
     """Extract layer-wise audio features from Wav2VecBert with chunking.
 
@@ -201,10 +202,13 @@ def extract_audio_features(
         audio_path: Path to 16 kHz mono WAV file.
         model: Loaded Wav2VecBert model.
         processor: Wav2Vec2 feature extractor.
-        n_trs: Number of TRs (authoritative count).
+        n_trs: Number of TRs (authoritative count), counted from scan start.
         device: Torch device.
         chunk_seconds: Center duration of each chunk in seconds.
         overlap_seconds: Overlap on each side in seconds.
+        onset_s: Scan time, in seconds, at which the audio file starts. TR t
+            pools the audio heard during scan time [t * TR, (t + 1) * TR);
+            TRs that end before the audio starts are zero.
 
     Returns:
         dict: {layer_idx: np.ndarray of shape (n_trs, hidden_dim)}
@@ -288,30 +292,40 @@ def extract_audio_features(
     for layer_idx in range(n_layers):
         frames = np.concatenate(all_hidden_states[layer_idx], axis=0)  # (total_frames, dim)
         layer_features[layer_idx] = _aggregate_frames_to_trs(
-            frames, n_trs, MODEL_REGISTRY["w2v-bert-2.0"]["native_rate_hz"]
+            frames, n_trs, MODEL_REGISTRY["w2v-bert-2.0"]["native_rate_hz"],
+            onset_s=onset_s,
         )
 
     return layer_features
 
 
-def _aggregate_frames_to_trs(frames, n_trs, native_rate_hz):
+def _aggregate_frames_to_trs(frames, n_trs, native_rate_hz, onset_s=0.0):
     """Mean-pool native-rate frames into TR bins.
 
     Args:
-        frames: np.ndarray of shape (n_frames, dim).
-        n_trs: Number of TRs.
+        frames: np.ndarray of shape (n_frames, dim); frame 0 is the start of
+            the audio file.
+        n_trs: Number of TRs, counted from scan start.
         native_rate_hz: Frame rate of the model output.
+        onset_s: Scan time, in seconds, at which the audio starts. TR t pools
+            the frames whose scan time falls in [t * TR, (t + 1) * TR); a TR
+            that ends before the audio starts stays zero, and the TR in which
+            the audio starts pools only the frames after the start.
 
     Returns:
         np.ndarray of shape (n_trs, dim).
     """
     frames_per_tr = TR_DURATION * native_rate_hz
+    onset_frames = onset_s * native_rate_hz
     dim = frames.shape[1]
     result = np.zeros((n_trs, dim), dtype=np.float32)
 
     for t in range(n_trs):
-        start = int(t * frames_per_tr)
-        end = int((t + 1) * frames_per_tr)
+        start = int(t * frames_per_tr - onset_frames)
+        end = int((t + 1) * frames_per_tr - onset_frames)
+        if end <= 0:
+            continue
+        start = max(start, 0)
         if start >= len(frames):
             break
         chunk = frames[start : min(end, len(frames))]
