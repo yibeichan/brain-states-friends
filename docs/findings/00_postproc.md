@@ -29,7 +29,7 @@ _Cleans fMRIPrep CIFTI outputs with minimal confound regression and voxel-wise z
 | sub-05 | 289 | 136,529 | 428-592 | 470 |
 | sub-06 | 293 | 138,366 | 428-592 | 470 |
 
-Note: sub-04 has substantially fewer Friends runs than other subjects. Two runs were acquired twice, so the counts above include both copies: sub-02 s05e09a (ses-036, 456 TRs, and ses-037, a 33-TR partial acquisition) and sub-06 s02e04b (ses-006 and ses-041). Later stages use one copy of each, the session named in `DUPLICATE_RUN_SESSIONS` (`script/utils/common.py`): ses-037 for sub-02 and ses-006 for sub-06.
+Note: sub-04 has substantially fewer Friends runs than other subjects. Two runs were acquired twice, so the counts above include both copies: sub-02 s05e09a (ses-036, 456 TRs, and ses-037, a 33-TR partial acquisition) and sub-06 s02e04b (ses-006 and ses-041). Later stages use one copy of each, the session named in `DUPLICATE_RUN_SESSIONS` (`script/utils/common.py`): ses-037 for sub-02 and ses-006 for sub-06. Three more runs appear in two sessions of the raw scans tables but were processed only once (sub-04 s02e02a and s02e06a, sub-06 s05e03a); the same table pins their acquisition times to the processed copy.
 
 ### Total cleaned files per subject (all stimuli)
 
