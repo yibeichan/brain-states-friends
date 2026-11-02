@@ -1333,8 +1333,9 @@ def build_layer_feature_matrix(
     lag : int, default 0
         Lag in TRs applied via ``new_feats[t] = old_feats[t - lag]`` with
         zero-padding at the start, matching the 08b content-decoding
-        convention. 08e currently calls with ``lag=0``; 08d sweeps
-        ``lag ∈ LAGS_TO_TEST``.
+        convention. 08d sweeps ``lag ∈ LAGS_TO_TEST``; 08e uses one lag for
+        both the Friends training and the test features (by default the
+        participant's best within-Friends lag from 08d).
 
     Returns
     -------
