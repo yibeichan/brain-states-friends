@@ -13,6 +13,11 @@ _ENV="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/script/
 [ -f "$_ENV" ] || _ENV="${SLURM_SUBMIT_DIR:-.}/script/utils/_env.sh"
 source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit from the repo root" >&2; exit 1; }
 
+# Cap BLAS/OpenMP threads at the allocation; Python can otherwise see every
+# core on the node.
+n=${SLURM_CPUS_PER_TASK:-${SLURM_CPUS_ON_NODE:-1}}
+export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
+
 # =============================================================================
 # 08e - Cross-stimulus aggregate transfer (D3a)
 # =============================================================================
