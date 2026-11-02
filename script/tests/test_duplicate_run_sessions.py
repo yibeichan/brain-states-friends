@@ -30,6 +30,9 @@ def test_pinned_sessions():
     assert DUPLICATE_RUN_SESSIONS == {
         ("sub-02", "s05e09a"): "ses-037",
         ("sub-06", "s02e04b"): "ses-006",
+        ("sub-04", "s02e02a"): "ses-013",
+        ("sub-04", "s02e06a"): "ses-014",
+        ("sub-06", "s05e03a"): "ses-028",
     }
 
 
@@ -95,15 +98,19 @@ def test_03a_loads_pinned_copy(tmp_path):
     assert data.shape == (4, 156) and np.all(data == 1.0)
 
 
-def test_05e_acquisition_time_uses_pinned_copy(tmp_path, monkeypatch):
-    monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))  # the script requires it at import
-    mod = _load_script("05e_temporal_trend_a1")
+@pytest.mark.parametrize("script", ["05e_temporal_trend_a1", "05e_temporal_trend_a3"])
+def test_05e_acquisition_time_uses_pinned_copy(tmp_path, monkeypatch, script):
+    monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))  # the scripts require it at import
+    mod = _load_script(script)
     out = tmp_path / "output" / "00_get_scan" / "sub-06"
     out.mkdir(parents=True)
     rows = [
         ("s02e04b", "ses-006", "10.1", "func/sub-06_ses-006_task-s02e04b_bold.nii.gz"),
         ("s02e05a", "ses-006", "10.2", "func/sub-06_ses-006_task-s02e05a_bold.nii.gz"),
         ("s02e04b", "ses-041", "687.1", "func/sub-06_ses-041_task-s02e04b_bold.nii.gz"),
+        # Acquired twice, but only the ses-028 copy was processed.
+        ("s05e03a", "ses-028", "300.0", "func/sub-06_ses-028_task-s05e03a_bold.nii.gz"),
+        ("s05e03a", "ses-029", "300.5", "func/sub-06_ses-029_task-s05e03a_bold.nii.gz"),
     ]
     with open(out / "sub-06_run_acquisition_times.csv", "w", newline="") as f:
         w = csv.writer(f)
@@ -111,5 +118,5 @@ def test_05e_acquisition_time_uses_pinned_copy(tmp_path, monkeypatch):
         w.writerows(rows)
     monkeypatch.setattr(mod, "SCRATCH_DIR", str(tmp_path))
     acq, sessions = mod.load_acquisition_times("sub-06")
-    assert acq == {"s02e04b": 10.1, "s02e05a": 10.2}
-    assert sessions == {"s02e04b": "ses-006", "s02e05a": "ses-006"}
+    assert acq == {"s02e04b": 10.1, "s02e05a": 10.2, "s05e03a": 300.0}
+    assert sessions == {"s02e04b": "ses-006", "s02e05a": "ses-006", "s05e03a": "ses-028"}
