@@ -759,6 +759,22 @@ def main():
         if tmp_ctx is not None:
             tmp_ctx.cleanup()
 
+    # Every attempted run failed or was skipped: report it and exit nonzero
+    # so a SLURM job or caller sees the failure. No metadata is written, so a
+    # metadata.json from an earlier good extraction is not replaced by one
+    # that lists zero runs.
+    if n_success == 0 and n_skipped > 0:
+        logger.error("=" * 60)
+        logger.error("EXTRACTION FAILED")
+        logger.error("=" * 60)
+        logger.error("Stimulus: %s, Model: %s", stimulus, model_key)
+        logger.error(
+            "Processed: 0/%d runs; every run failed or was skipped "
+            "(see errors above). Metadata not written.", n_skipped,
+        )
+        logger.error("Output: %s", out_dir)
+        sys.exit(1)
+
     # ── Save metadata ─────────────────────────────────────────────────
     extra_metadata = {}
     if required_modality == "text":
