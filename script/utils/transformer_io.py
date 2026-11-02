@@ -182,6 +182,42 @@ def load_model(model_key, device="cuda", dtype=None):
 # ---------------------------------------------------------------------------
 
 
+def load_wav(audio_path):
+    """Read a WAV file as a float32 tensor of shape (channels, samples).
+
+    Integer PCM is scaled to [-1, 1] the way torchaudio.load scales it:
+    int16 / 32768, int32 / 2**31 (scipy returns 24-bit PCM left-justified in
+    int32, so the same divisor applies), and uint8 as (x - 128) / 128.
+    Float WAVs are returned unchanged apart from the cast to float32.
+
+    scipy is used instead of torchaudio.load, which in recent torchaudio
+    decodes through torchcodec and fails where torchcodec's native libraries
+    cannot load.
+
+    Returns:
+        (torch.Tensor, int): waveform (channels, samples) and sample rate.
+    """
+    import torch
+    from scipy.io import wavfile
+
+    sr, data = wavfile.read(str(audio_path))
+    if data.dtype == np.int16:
+        data = data.astype(np.float32) / 32768.0
+    elif data.dtype == np.int32:
+        data = data.astype(np.float32) / 2147483648.0
+    elif data.dtype == np.uint8:
+        data = (data.astype(np.float32) - 128.0) / 128.0
+    elif np.issubdtype(data.dtype, np.floating):
+        data = data.astype(np.float32)
+    else:
+        raise ValueError(f"Unsupported WAV sample type {data.dtype}: {audio_path}")
+    if data.ndim == 1:
+        data = data[None, :]
+    else:
+        data = data.T  # scipy gives (samples, channels)
+    return torch.from_numpy(np.ascontiguousarray(data)), int(sr)
+
+
 def extract_audio_features(
     audio_path,
     model,
@@ -215,12 +251,13 @@ def extract_audio_features(
             layer_idx 0 = first transformer layer (not embedding).
     """
     import torch
-    import torchaudio
 
-    waveform, sr = torchaudio.load(str(audio_path))
+    waveform, sr = load_wav(audio_path)
 
     # Resample if needed
     if sr != AUDIO_SAMPLE_RATE:
+        import torchaudio
+
         resampler = torchaudio.transforms.Resample(sr, AUDIO_SAMPLE_RATE)
         waveform = resampler(waveform)
         sr = AUDIO_SAMPLE_RATE
