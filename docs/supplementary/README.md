@@ -28,7 +28,7 @@ This directory catalogues all supplementary figures (S1–S15) for the manuscrip
 
 ![Cortical and subcortical surface maps of the top five recurring brain states for each of the six subjects](figures/S01_recurring_state_surface_maps.png)
 
-For each subject, the five states ranked highest by recurrence score are rendered on both cortical (Schaefer-100 parcels, fsaverage5 surface) and subcortical (CIT168 + HCP atlas meshes) surfaces. States are visualized independently per subject; no cross-subject aggregation was applied. Color scaling uses a symmetric range set to the 95th percentile of absolute z-scores pooled across the five displayed states. Subcortical regions with elevated susceptibility artifact (hippocampus, amygdala) carry lower signal-to-noise and should be interpreted with caution.
+For each subject, the five states ranked highest by recurrence score are rendered on both cortical (Schaefer-100 parcels, fs_LR 32k surface) and subcortical (CIT168 + HCP atlas meshes) surfaces. States are visualized independently per subject; no cross-subject aggregation was applied. Color scaling uses a symmetric range set to the 95th percentile of absolute z-scores pooled across the five displayed states. Subcortical regions with elevated susceptibility artifact (hippocampus, amygdala) carry lower signal-to-noise and should be interpreted with caution.
 
 ---
 
