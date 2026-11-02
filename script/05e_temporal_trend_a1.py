@@ -73,6 +73,7 @@ from utils.plot_style import recurrence_color, make_recurrence_colorbar, apply_p
 from utils.common import (
     normalize_parcellation_name, _get_season, parse_episode_order_key,
     group_runs_to_broadcast_episodes, aggregate_fo_broadcast,
+    pick_run_session, session_from_path,
 )
 from utils.state_blocks import load_eligible_states
 
@@ -116,13 +117,22 @@ def load_acquisition_times(sub_id):
     acq_dict = {}
     session_map = {}
     has_session_col = False
+    rows_by_run = {}
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)
         has_session_col = 'session_id' in reader.fieldnames
         for row in reader:
-            acq_dict[row['run_id']] = float(row['rel_acq_time'])
-            if has_session_col:
-                session_map[row['run_id']] = row['session_id']
+            rows_by_run.setdefault(row['run_id'], []).append(row)
+    for run_id, rows in rows_by_run.items():
+        # A run acquired twice has one row per session; use the copy the
+        # analyses use (DUPLICATE_RUN_SESSIONS), not the last row read.
+        row = pick_run_session(
+            sub_id, run_id, rows,
+            session_of=lambda r: r.get('session_id') or session_from_path(r.get('filename', '')),
+        )
+        acq_dict[run_id] = float(row['rel_acq_time'])
+        if has_session_col:
+            session_map[run_id] = row['session_id']
 
     logger.info("Loaded acquisition times for %d runs from %s", len(acq_dict), csv_path)
     if has_session_col:
@@ -580,7 +590,8 @@ def load_median_fd(sub_id, run_ids, data_dir):
             missing += 1
             continue
         try:
-            df = pd.read_csv(matches[0], sep='\t', usecols=['framewise_displacement'])
+            confounds_path = pick_run_session(sub_id, run_id, matches)
+            df = pd.read_csv(confounds_path, sep='\t', usecols=['framewise_displacement'])
             fd_dict[run_id] = float(df['framewise_displacement'].median(skipna=True))
         except Exception as e:
             logger.warning("Failed to load FD for %s: %s", run_id, e)

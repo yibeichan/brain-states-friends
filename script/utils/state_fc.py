@@ -21,6 +21,8 @@ from pathlib import Path
 import numpy as np
 from sklearn.covariance import LedoitWolf
 
+from utils.common import pick_run_session
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,21 +57,25 @@ def load_matched_data(sub_id, parcellation, decoded_states, n_expected_parcels,
     # Index parcel TS files by task entity
     ts_files = sorted(Path(ts_dir).glob("*_parcel_avg.npy"))
     task_re = re.compile(r"task-([^\s_]+)")
-    ts_by_task = {}
+    files_by_task = {}
     for f in ts_files:
         m = task_re.search(f.name)
         if m:
-            ts_by_task[m.group(1)] = f
+            files_by_task.setdefault(m.group(1), []).append(f)
 
     parcel_chunks = []
     viterbi_chunks = []
     n_matched = 0
 
     for run_id in sorted(decoded_states.keys()):
-        ts_path = ts_by_task.get(run_id)
-        if ts_path is None:
+        files = files_by_task.get(run_id)
+        if not files:
             logger.warning("No parcel TS for run %s", run_id)
             continue
+        # The folder holds every stimulus, and some task ids repeat across
+        # sessions. Resolve only the runs being matched; a run acquired twice
+        # uses the copy the decoding used (DUPLICATE_RUN_SESSIONS).
+        ts_path = pick_run_session(sub_id, run_id, files)
 
         ts = np.load(ts_path)
         vit = np.asarray(decoded_states[run_id])

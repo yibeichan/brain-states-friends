@@ -10,6 +10,62 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+# Friends runs that appear twice in the released CNeuroMod data, mapped to the
+# session whose copy the analyses use. Every loader that turns a run id into a
+# file or a per-run record must go through pick_run_session(), so that all
+# stages read the same copy. Without this, a glob or a dict build picks
+# whichever copy the filesystem or sort order returns first or last, and
+# different stages disagreed.
+#   sub-02 s05e09a: ses-036 is the complete run (456 volumes); ses-037 is a
+#     33-volume partial acquisition. The published outputs were computed from
+#     ses-037, so it stays pinned until stage 03a onward is rerun for sub-02.
+#   sub-06 s02e04b: ses-006 is the first viewing; ses-041 is a repeat.
+DUPLICATE_RUN_SESSIONS = {
+    ("sub-02", "s05e09a"): "ses-037",
+    ("sub-06", "s02e04b"): "ses-006",
+}
+
+_SESSION_RE = re.compile(r"(?:^|[_/])(ses-[A-Za-z0-9]+)(?=[_/]|$)")
+
+
+def session_from_path(path) -> str | None:
+    """BIDS session entity of a file name or path, e.g. 'ses-036', or None."""
+    m = _SESSION_RE.search(str(path))
+    return m.group(1) if m else None
+
+
+def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
+    """Return the one candidate to use for (sub_id, run_id).
+
+    ``candidates`` are file paths, or any records from which ``session_of``
+    returns the session id. One candidate is returned as is, unless a session
+    is pinned for this run and the candidate is from another session. Several
+    candidates are allowed only for a run listed in DUPLICATE_RUN_SESSIONS;
+    an unlisted duplicate raises ValueError, so a new duplicate cannot be
+    resolved silently.
+    """
+    candidates = list(candidates)
+    if not candidates:
+        raise ValueError(f"no candidates for {sub_id} {run_id}")
+    pinned = DUPLICATE_RUN_SESSIONS.get((sub_id, run_id))
+    if pinned is None:
+        if len(candidates) > 1:
+            found = sorted(str(session_of(c)) for c in candidates)
+            raise ValueError(
+                f"{sub_id} {run_id} has {len(candidates)} copies ({', '.join(found)}) "
+                "and none is chosen in DUPLICATE_RUN_SESSIONS"
+            )
+        return candidates[0]
+    chosen = [c for c in candidates if session_of(c) == pinned]
+    if len(chosen) != 1:
+        found = sorted(str(session_of(c)) for c in candidates)
+        raise ValueError(
+            f"{sub_id} {run_id}: expected exactly one copy from {pinned}, "
+            f"found sessions {', '.join(found)}"
+        )
+    return chosen[0]
+
+
 def resolve_n_jobs(n_jobs):
     """Resolve worker count, preferring the SLURM CPU allocation when present.
 

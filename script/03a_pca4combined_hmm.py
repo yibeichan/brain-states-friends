@@ -72,7 +72,7 @@ from sklearn.decomposition import PCA
 
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from utils.common import normalize_parcellation_name
+from utils.common import normalize_parcellation_name, pick_run_session
 
 from dotenv import load_dotenv
 
@@ -212,7 +212,7 @@ def load_single_run(subject_id, run_id, data_dir, parcellation):
     if not matching_files:
         return None, None
 
-    file_path = matching_files[0]
+    file_path = pick_run_session(subject_id, run_id, matching_files)
     data = np.load(file_path)
 
     # Drop background column (column 0)
