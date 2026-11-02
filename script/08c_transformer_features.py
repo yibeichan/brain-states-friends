@@ -589,6 +589,12 @@ Examples:
              "Default empty (production path).",
     )
     parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Re-extract runs whose layer files already exist instead of "
+             "skipping them (needed after a change to how features are computed).",
+    )
+    parser.add_argument(
         "--download_only",
         action="store_true",
         help="Download model weights to HF cache and exit (no extraction).",
@@ -712,8 +718,9 @@ def main():
             last_layer = os.path.join(
                 out_dir, f"layer_{n_layers - 1:02d}", f"{run_id}_raw.npy"
             )
-            if os.path.exists(first_layer) and os.path.exists(last_layer):
-                logger.info("  Already processed - skipping")
+            if (not args.overwrite and os.path.exists(first_layer)
+                    and os.path.exists(last_layer)):
+                logger.info("  Already processed - skipping (pass --overwrite to redo)")
                 # Record the actual on-disk TR count so metadata stays in sync
                 # with the saved tensors regardless of which convention wrote them.
                 actual_n_trs = int(np.load(first_layer, mmap_mode="r").shape[0])
