@@ -139,3 +139,22 @@ def test_s7_per_film_has_no_lag0_fallback(fig_env):
     }))
     curves, subs, source = s7.load_per_subset_curves("m", "movie10", 1, "wolf")
     assert curves is None and subs == [] and source is None
+
+
+def test_fig5_per_film_reads_best_lag(fig_env):
+    f5 = _load("_fig_f5_perfilm", "fig_F5_within_friends.py")
+    root = fig_env / "transfer_root"
+    f5.TRANSFER_ROOT = root
+    for sub in ("sub-01", "sub-02"):
+        for folder, acc in (("movie10_m", 0.10), (f"movie10_m{D3A_LAG_BEST_SUFFIX}", 0.90)):
+            lag_source = "friends_best" if folder.endswith(D3A_LAG_BEST_SUFFIX) else "explicit"
+            _write(root, sub, folder, "per_subset", "movie10", "m", {
+                "lag_source": lag_source,
+                "chance_level_full": 0.05,
+                "per_subset": {"wolf": {"0": {"balanced_accuracy": acc},
+                                        "1": {"balanced_accuracy": 0.06}}},
+            })
+    series = f5.collect_perfilm("m", 2)
+    assert [s["label"] for s in series] == ["Wolf of Wall St."]
+    assert series[0]["n"] == 2
+    assert series[0]["mean"][0] == pytest.approx(0.85)
