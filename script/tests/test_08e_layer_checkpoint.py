@@ -146,3 +146,23 @@ def test_fresh_flag_parses(monkeypatch):
     assert m08e.parse_args().fresh is False
     monkeypatch.setattr(sys, "argv", argv + ["--fresh"])
     assert m08e.parse_args().fresh is True
+
+
+def test_main_resumes_through_run_layers_and_clears_after_writing():
+    """main() routes every layer through run_layers with resume = not --fresh,
+    and removes the layer files only after the last output is written."""
+    import ast
+    import inspect
+
+    tree = ast.parse(inspect.getsource(m08e.main))
+    calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)]
+    names = [getattr(c.func, "id", None) for c in calls]
+    assert names.count("run_layers") == 1
+    run_call = calls[names.index("run_layers")]
+    resume = {k.arg: k.value for k in run_call.keywords}["resume"]
+    assert ast.unparse(resume) == "not args.fresh"
+    assert "_fit_eval_one_layer" in ast.unparse(tree)
+
+    src = inspect.getsource(m08e.main)
+    clear_at = src.index("clear_partial_layers(out_dir)")
+    assert clear_at > src.rindex("json.dump(")
