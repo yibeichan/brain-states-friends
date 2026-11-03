@@ -105,7 +105,7 @@ Network-stratified HP R² of the Friends-trained PCs, all participants with HP d
 | Hipp/Amyg | 6 | 0.871 | 0.879 | 0.866 | 0.889 | 0.857 |
 | Cerebellum | 10 | 0.818 | 0.784 | 0.832 | 0.829 | 0.893 |
 
-Neocortical networks (Vis, SomMot, DorsAttn, SalVentAttn, Cont, Default) all 0.93 or higher; the basal ganglia, midbrain and Hipp/Amyg groups 0.86 or higher. Thalamus has the lowest HP R² (0.34-0.55); Limbic is the weakest cortical network (0.66-0.86); Cerebellum 0.78-0.89.
+Neocortical networks (Vis, SomMot, DorsAttn, SalVentAttn, Cont, Default) all 0.93 or higher; the basal ganglia, midbrain and Hipp/Amyg groups 0.85 or higher. Thalamus has the lowest HP R² (0.34-0.55); Limbic is the weakest cortical network (0.66-0.86); Cerebellum 0.78-0.89.
 
 ### B1: Movie10 Baseline Rho (same subjects, full 61-run M10)
 
