@@ -87,6 +87,43 @@ BOOTSTRAP_SEED_RECURRENCE_DEPTH = 100_000
 
 
 # ---------------------------------------------------------------------------
+# 08e D3a outputs at each participant's best Friends lag
+# ---------------------------------------------------------------------------
+
+#: Folder suffix for 08e outputs computed at the participant's best
+#: within-Friends lag (``--lag friends_best``). 08e writes there and the
+#: figure scripts read from there; the lag-0 outputs stay in the folder
+#: without a suffix.
+D3A_LAG_BEST_SUFFIX = "_lag-best"
+
+
+def load_d3a_lag_best(root, stimulus, model_key, kind="transfer"):
+    """Return ``[(sub_id, data), ...]`` for every participant's best-lag D3a JSON.
+
+    Reads ``<root>/sub-*/<stimulus>_<model_key>_lag-best/D3a_<kind>_<stimulus>_<model_key>.json``,
+    sorted by participant. ``kind`` is ``"transfer"`` or ``"per_subset"``.
+    Returns an empty list when nothing is on disk yet. Raises ``ValueError``
+    if a JSON does not record ``lag_source == "friends_best"``, so a file
+    computed at another lag cannot enter a best-lag figure.
+    """
+    from pathlib import Path
+
+    folder = f"{stimulus}_{model_key}{D3A_LAG_BEST_SUFFIX}"
+    fname = f"D3a_{kind}_{stimulus}_{model_key}.json"
+    out = []
+    for path in sorted(Path(root).glob(f"sub-*/{folder}/{fname}")):
+        with open(path) as f:
+            data = json.load(f)
+        if data.get("lag_source") != "friends_best":
+            raise ValueError(
+                f"{path} records lag_source={data.get('lag_source')!r}, "
+                "expected 'friends_best'."
+            )
+        out.append((path.parent.parent.name, data))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # State eligibility (project-wide content-eligibility convention)
 # ---------------------------------------------------------------------------
 

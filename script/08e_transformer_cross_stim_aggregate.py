@@ -53,7 +53,8 @@ from utils.common import (
 )
 from utils.stats import benjamini_hochberg, permutation_pvalue
 from utils.transformer_analysis import (
-    INTERSECTION_MIN_FO, build_layer_feature_matrix, build_run_boundaries,
+    D3A_LAG_BEST_SUFFIX, INTERSECTION_MIN_FO, build_layer_feature_matrix,
+    build_run_boundaries,
     compute_effect_size, load_content_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
 )
@@ -437,7 +438,7 @@ def output_subdir(stimulus, model_key, lag_arg):
     """
     base = f"{stimulus}_{model_key}"
     if lag_arg == LAG_FRIENDS_BEST:
-        return f"{base}_lag-best"
+        return f"{base}{D3A_LAG_BEST_SUFFIX}"
     if lag_arg == 0:
         return base
     return f"{base}_lag-{lag_arg}"

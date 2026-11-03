@@ -49,6 +49,7 @@ from utils.plot_style import (  # noqa: E402
     apply_publication_style,
     modality_color,
 )
+from utils.transformer_analysis import load_d3a_lag_best  # noqa: E402
 
 apply_publication_style()
 
@@ -335,13 +336,12 @@ def load_transfer_cell(stim, model, n_layers):
     = argmax of balanced_accuracy − chance_level. Returns dict or None if no data.
     """
     from statsmodels.stats.multitest import multipletests
-    paths = sorted(TRANSFER_ROOT.glob(
-        f"sub-*/{stim}_{model}/D3a_transfer_{stim}_{model}.json"))
-    if not paths:
+    loaded = load_d3a_lag_best(TRANSFER_ROOT, stim, model)
+    if not loaded:
         return None
     rel_depths, peak_sig, peak_accs = [], [], []
-    for p in paths:
-        per_layer = json.loads(p.read_text()).get("per_layer", {})
+    for _sub, d in loaded:
+        per_layer = d.get("per_layer", {})
         acc = np.full(n_layers, np.nan)
         pp = np.full(n_layers, np.nan)
         for L in range(n_layers):
@@ -477,15 +477,13 @@ def collect_perfilm(model, n_layers):
     Returns a list of per-film series dicts, or None if the per-film
     (`D3a_per_subset`) JSONs are not on disk yet for this model.
     """
-    paths = sorted(TRANSFER_ROOT.glob(
-        f"sub-*/movie10_{model}/D3a_per_subset_movie10_{model}.json"))
-    if not paths:
+    loaded = load_d3a_lag_best(TRANSFER_ROOT, "movie10", model, kind="per_subset")
+    if not loaded:
         return None
     series = []
     for film, label, color in FILM_SERIES:
         rows = []
-        for p in paths:
-            d = json.loads(p.read_text())
+        for _sub, d in loaded:
             chance = d.get("chance_level_full")
             fl = d.get("per_subset", {}).get(film, {})
             if chance is None or not fl:
