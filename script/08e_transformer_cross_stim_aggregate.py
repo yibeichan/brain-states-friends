@@ -27,11 +27,13 @@ Outputs are written to
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
 import pickle
 import re as _re
+import shutil
 import sys
 from pathlib import Path
 
@@ -441,6 +443,103 @@ def output_subdir(stimulus, model_key, lag_arg):
     return f"{base}_lag-{lag_arg}"
 
 
+# ── Per-layer checkpoints ─────────────────────────────────────────────
+# One layer of a 28-layer language model with 1000 permutations takes over an
+# hour, and the D3a JSON is written only after the last layer. Each finished
+# layer is therefore saved to its own file, so a job that hits its time limit
+# can be resubmitted and continue from the next layer. A layer file is reused
+# only when its fingerprint (the settings and inputs that determine the
+# layer's result) matches the current run; the files are removed once the
+# D3a JSON is written.
+
+PARTIAL_LAYER_DIRNAME = "partial_layers"
+
+
+def layer_fingerprint(fields):
+    """Stable hash of the settings and inputs that determine one layer's result."""
+    blob = json.dumps(fields, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def partial_layer_path(out_dir, stimulus, model_key, layer_idx):
+    return os.path.join(
+        out_dir, PARTIAL_LAYER_DIRNAME,
+        f"D3a_layer-{layer_idx:03d}_{stimulus}_{model_key}.json",
+    )
+
+
+def save_partial_layer(path, fingerprint, layer_idx, res):
+    """Write one finished layer atomically (a killed job leaves no half file)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    with open(tmp, "w") as f:
+        json.dump(
+            {"fingerprint": fingerprint, "layer": int(layer_idx), "result": res},
+            f,
+        )
+    os.replace(tmp, path)
+
+
+def load_partial_layer(path, fingerprint, layer_idx):
+    """Return the saved result for this layer, or ``None`` if it can't be reused.
+
+    A missing, unreadable or truncated file, a file for another layer, and a
+    file whose fingerprint differs from the current run's all return ``None``,
+    so the layer is recomputed.
+    """
+    try:
+        with open(path) as f:
+            payload = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("fingerprint") != fingerprint
+        or payload.get("layer") != int(layer_idx)
+        or not isinstance(payload.get("result"), dict)
+    ):
+        return None
+    return payload["result"]
+
+
+def clear_partial_layers(out_dir):
+    """Remove the per-layer files once the full D3a output has been written."""
+    part_dir = os.path.join(out_dir, PARTIAL_LAYER_DIRNAME)
+    if os.path.isdir(part_dir):
+        shutil.rmtree(part_dir)
+
+
+def run_layers(layer_indices, compute_layer, out_dir, stimulus, model_key,
+               fingerprint, resume=True):
+    """Compute every layer, reusing saved layers and saving each new one.
+
+    ``compute_layer(layer_idx)`` returns the layer's result dict, or ``None``
+    to skip the layer (no features, degenerate fit). Skipped layers are not
+    saved, so they are attempted again on resume.
+    """
+    results = {}
+    for layer_idx in layer_indices:
+        path = partial_layer_path(out_dir, stimulus, model_key, layer_idx)
+        res = load_partial_layer(path, fingerprint, layer_idx) if resume else None
+        if res is not None:
+            logger.info("  Layer %d: reused saved result (%s)", layer_idx, path)
+        else:
+            res = compute_layer(layer_idx)
+            if res is None:
+                continue
+            # Same JSON round trip as a reused layer, so fresh and resumed
+            # layers reach the output in the same form (e.g. string keys).
+            res = json.loads(json.dumps(res))
+            save_partial_layer(path, fingerprint, layer_idx, res)
+        results[layer_idx] = res
+        logger.info(
+            "  Layer %d: bal_acc=%.4f (chance=%.4f, eff=%.3f, p=%.4f)",
+            layer_idx, res["balanced_accuracy"], res["chance_level"],
+            res["normalized_effect_size"], res["p_perm"],
+        )
+    return results
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description="Cross-stimulus aggregate transfer (08e).",
@@ -454,6 +553,9 @@ def parse_args():
     p.add_argument("--n_permutations", type=int, default=N_PERMUTATIONS_DEFAULT)
     p.add_argument("--force", action="store_true",
                    help="Re-run even if checkpoint output already exists.")
+    p.add_argument("--fresh", action="store_true",
+                   help="Ignore per-layer results saved by an earlier, "
+                        "interrupted run of this cell and recompute every layer.")
     p.add_argument("--per_subset", action="store_true",
                    help="Also emit per-subset breakdown (currently honored only "
                         "for --stimulus movie10, which splits by film: wolf / "
@@ -787,12 +889,23 @@ def main():
     n_layers = MODEL_REGISTRY[model_key]["n_layers"]
     n_classes = len(intersect_ids)
 
-    results = {}
-    for layer_idx in range(n_layers):
+    fingerprint = layer_fingerprint({
+        "sub_id": sub_id, "parcellation": parc, "stimulus": stimulus,
+        "model": model_key, "vt": args.vt, "lag": lag,
+        "n_permutations": args.n_permutations, "null_seed": NULL_SEED_D3A,
+        "eligibility_source": eligibility["eligibility_source"],
+        "intersection_states": intersect_ids, "n_classes": n_classes,
+        "friends_run_ids": friends_run_ids, "test_run_ids": test_run_ids,
+        "n_friends_trs": int(friends_mask.sum()),
+        "n_test_trs": int(test_mask.sum()),
+        "per_subset": bool(per_subset_active), "subsets": subset_labels,
+    })
+
+    def compute_layer(layer_idx):
         friends_runs = friends_features.get(layer_idx, {})
         test_runs = test_features.get(layer_idx, {})
         if not friends_runs or not test_runs:
-            continue
+            return None
         try:
             # The same lag for training (Friends) and test features, so the
             # decoder is applied at the lag it was fitted at. Zero-padded
@@ -805,22 +918,19 @@ def main():
             )
         except ValueError as exc:
             logger.debug("Layer %d: %s", layer_idx, exc)
-            continue
-        res = _fit_eval_one_layer(
+            return None
+        return _fit_eval_one_layer(
             layer_idx,
             friends_X, friends_states_cat.astype(int), friends_mask,
             test_X, test_states_cat.astype(int), test_mask,
             intersect_set, null_friends_seqs, n_classes,
             subsets=per_subset_masks,
         )
-        if res is None:
-            continue
-        results[layer_idx] = res
-        logger.info(
-            "  Layer %d: bal_acc=%.4f (chance=%.4f, eff=%.3f, p=%.4f)",
-            layer_idx, res["balanced_accuracy"], res["chance_level"],
-            res["normalized_effect_size"], res["p_perm"],
-        )
+
+    results = run_layers(
+        range(n_layers), compute_layer, out_dir, stimulus, model_key,
+        fingerprint, resume=not args.fresh,
+    )
 
     # Global BH-FDR across layers (mirrors 08d D1 which corrects across the
     # full layers × lags grid; 08e has no lag grid yet, so the correction is
@@ -909,6 +1019,9 @@ def main():
         with open(per_subset_path, "w") as f:
             json.dump(per_subset_payload, f, indent=2)
         logger.info("Saved %s", per_subset_path)
+
+    # Every output is on disk, so the per-layer files are no longer needed.
+    clear_partial_layers(out_dir)
 
     logger.info("=" * 60)
     logger.info("08e_transformer_cross_stim_aggregate complete")

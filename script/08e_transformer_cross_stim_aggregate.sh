@@ -36,6 +36,9 @@ export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
 #                 08d D1. Non-zero lags write to <stimulus>_<model>_lag-best
 #                 (or _lag-N); LAG=0 writes to the original folder.
 #   FORCE      - set to 1 to re-run even if checkpoint exists (default: off)
+#   FRESH       - set to 1 to ignore per-layer results saved by an earlier,
+#                 interrupted run of the same cell (default: off). Without it,
+#                 a resubmitted task continues from its last finished layer.
 #   PER_SUBSET  - set to 1 to also emit per-subset breakdown JSON
 #                 (currently honored only for STIMULUS=movie10, which splits
 #                 by film: wolf / figures / bourne / life). Off by default.
@@ -64,6 +67,7 @@ N_PERMS="${N_PERMS:-1000}"
 LAG="${LAG:-friends_best}"
 FORCE="${FORCE:-}"
 PER_SUBSET="${PER_SUBSET:-}"
+FRESH="${FRESH:-}"
 
 SUBJECTS=(sub-01 sub-02 sub-03 sub-04 sub-05 sub-06)
 SUB_ID="${SUBJECTS[$SLURM_ARRAY_TASK_ID]}"
@@ -88,6 +92,7 @@ echo "N perms:        ${N_PERMS}"
 echo "Lag:            ${LAG}"
 echo "Force:          ${FORCE:-no}"
 echo "Per-subset:     ${PER_SUBSET:-no}"
+echo "Fresh:          ${FRESH:-no}"
 echo "=============================================="
 
 CMD="uv run --project ${PROJECT_DIR} --no-sync python \
@@ -104,6 +109,9 @@ if [ "$FORCE" = "1" ]; then
 fi
 if [ "$PER_SUBSET" = "1" ]; then
     CMD="${CMD} --per_subset"
+fi
+if [ "$FRESH" = "1" ]; then
+    CMD="${CMD} --fresh"
 fi
 
 eval $CMD
