@@ -19,8 +19,9 @@ logger = logging.getLogger(__name__)
 # Both copies were processed (parcel time series and fMRIPrep outputs exist
 # for each):
 #   sub-02 s05e09a: ses-036 is the complete run (456 volumes); ses-037 is a
-#     33-volume partial acquisition. The published outputs were computed from
-#     ses-037, so it stays pinned until stage 03a onward is rerun for sub-02.
+#     33-volume partial acquisition. ses-037 is pinned because the existing
+#     outputs of stage 03a onward were computed from it; pinning ses-036
+#     instead means rerunning those stages for sub-02.
 #   sub-06 s02e04b: ses-006 is the first viewing; ses-041 is a repeat.
 # Only one copy was processed; the other appears only in the scans tables
 # that 00_get_scan reads, so only the acquisition times are affected:
