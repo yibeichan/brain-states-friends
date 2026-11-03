@@ -574,8 +574,10 @@ def load_median_fd(sub_id, run_ids, data_dir):
         if not matches:
             missing += 1
             continue
+        # Outside the try: a missing pinned copy or an unlisted duplicate must
+        # stop the run, not drop it from the FD-controlled partial Spearman.
+        confounds_path = pick_run_session(sub_id, run_id, matches)
         try:
-            confounds_path = pick_run_session(sub_id, run_id, matches)
             df = pd.read_csv(confounds_path, sep='\t', usecols=['framewise_displacement'])
             fd_dict[run_id] = float(df['framewise_displacement'].median(skipna=True))
         except Exception as e:

@@ -87,12 +87,18 @@ def test_state_fc_reads_pinned_copy_and_ignores_other_stimuli(tmp_path):
     assert np.all(parcel_ts == 1.0)
 
 
-def test_03a_loads_pinned_copy(tmp_path):
+@pytest.mark.parametrize("wrong_first", [True, False])
+def test_03a_loads_pinned_copy(tmp_path, monkeypatch, wrong_first):
     mod = _load_script("03a_pca4combined_hmm")
     d = tmp_path / "atlas-X" / "sub-06"
     d.mkdir(parents=True)
     np.save(d / _ts_name("sub-06", "ses-041", "s02e04b"), np.full((4, 157), 2.0))
     np.save(d / _ts_name("sub-06", "ses-006", "s02e04b"), np.full((4, 157), 1.0))
+    # Fix the listing order so the test does not depend on the filesystem's
+    # directory order: either copy may come first.
+    real_glob = mod.glob.glob
+    monkeypatch.setattr(mod.glob, "glob", lambda pat: sorted(real_glob(pat), key=lambda f: (
+        "ses-006" in f) == wrong_first))
     data, path = mod.load_single_run("sub-06", "s02e04b", str(tmp_path), "atlas-X")
     assert session_from_path(path) == "ses-006"
     assert data.shape == (4, 156) and np.all(data == 1.0)
@@ -120,3 +126,31 @@ def test_05e_acquisition_time_uses_pinned_copy(tmp_path, monkeypatch, script):
     acq, sessions = mod.load_acquisition_times("sub-06")
     assert acq == {"s02e04b": 10.1, "s02e05a": 10.2, "s05e03a": 300.0}
     assert sessions == {"s02e04b": "ses-006", "s02e05a": "ses-006", "s05e03a": "ses-028"}
+
+
+def _confounds(root, sub, ses, task, fd):
+    d = root / "cneuromod.processed" / "fmriprep" / "friends" / sub / ses / "func"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{sub}_{ses}_task-{task}_desc-confounds_timeseries.tsv").write_text(
+        "framewise_displacement\n" + "\n".join(str(fd) for _ in range(3)) + "\n")
+
+
+@pytest.mark.parametrize("wrong_first", [True, False])
+def test_05e_median_fd_uses_pinned_copy(tmp_path, monkeypatch, wrong_first):
+    monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))
+    mod = _load_script("05e_temporal_trend_a1")
+    _confounds(tmp_path, "sub-06", "ses-006", "s02e04b", 0.1)
+    _confounds(tmp_path, "sub-06", "ses-041", "s02e04b", 0.9)
+    real_glob = mod.glob.glob
+    monkeypatch.setattr(mod.glob, "glob", lambda pat: sorted(real_glob(pat), key=lambda f: (
+        "ses-006" in f) == wrong_first))
+    assert mod.load_median_fd("sub-06", ["s02e04b"], str(tmp_path)) == \
+        {"s02e04b": pytest.approx(0.1)}
+
+
+def test_05e_median_fd_raises_when_pinned_copy_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))
+    mod = _load_script("05e_temporal_trend_a1")
+    _confounds(tmp_path, "sub-06", "ses-041", "s02e04b", 0.9)
+    with pytest.raises(ValueError, match="expected exactly one copy from ses-006"):
+        mod.load_median_fd("sub-06", ["s02e04b"], str(tmp_path))
