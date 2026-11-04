@@ -995,18 +995,24 @@ def main():
     # Input identity for the layer fingerprint. Content hashes where the
     # data are already in memory (state sequences and masks after
     # alignment, which carry the decoded states and the state_flags
-    # eligibility; the PCA training runs; the per-layer PCA summary), and
-    # size + mtime_ns for the 08c feature files, which are too large to
-    # hash on every start.
+    # eligibility; the PCA training runs), and file identities for the 08c
+    # feature files, which are too large to hash on every start. Of the
+    # PCA summary only the integers (K and n_train_samples per layer) are
+    # kept: explained_variance is a float32 sum whose last bits differ
+    # between CPU types for the same inputs, so hashing it would make a
+    # resubmitted cell that lands on another node discard every saved
+    # layer. The PCA itself is a function of the features, the training
+    # runs and the code, which are all in the fingerprint.
     input_identity = {
         "states_masks_sha256": array_identity(
             friends_states_cat.astype(np.int64), test_states_cat.astype(np.int64),
             friends_mask, test_mask,
         ),
         "pca_train_runs_sha256": layer_fingerprint(sorted(splits["train"])),
-        "pca_info_sha256": layer_fingerprint(
-            {str(k): v for k, v in pca_info.items()}
-        ),
+        "pca_layers_k_n_train": {
+            str(k): [int(v["K"]), int(v["n_train_samples"])]
+            for k, v in sorted(pca_info.items())
+        },
         "content_eligible": eligibility["content_eligible"],
         "friends_features_stat_sha256": file_stat_identity(
             feature_file_paths(SCRATCH_DIR, "friends", model_key, friends_run_ids),

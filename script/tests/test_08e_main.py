@@ -165,7 +165,7 @@ def test_friends_best_writes_lag_best_folder_at_the_d1_lag(env):
     assert required <= set(fields)
     assert fields["lag"] == D1_BEST_LAG
     assert fields["code_sha256"] == m08e.code_identity()
-    assert {"states_masks_sha256", "pca_train_runs_sha256", "pca_info_sha256",
+    assert {"states_masks_sha256", "pca_train_runs_sha256", "pca_layers_k_n_train",
             "friends_features_stat_sha256", "test_features_stat_sha256",
             } <= set(fields["inputs"])
 
@@ -204,6 +204,48 @@ def test_interrupted_cell_resumes_and_records_reused_layers(env):
     assert env["run_layers"]["resume"] is True
     assert env["fit_calls"] == list(range(5, N_LAYERS))
     assert _pooled(env)["reused_layers"] == [0, 1, 2, 3, 4]
+
+
+def _patch_pca_info(monkeypatch, change):
+    """Wrap the stubbed PCA so the Friends fit returns ``change(info)``."""
+    real = m08e.stream_pca_features
+
+    def patched(*a, **k):
+        feats, info, models, eff, dropped = real(*a, **k)
+        if k.get("pca_models") is None:
+            info = change(info)
+        return feats, info, models, eff, dropped
+
+    monkeypatch.setattr(m08e, "stream_pca_features", patched)
+
+
+def test_resume_on_another_node_reuses_layers_despite_pca_float_jitter(env, monkeypatch):
+    """explained_variance differs in the 7th digit between CPU types; the
+    saved layers must still be reused."""
+    env["stop_at"] = 5
+    with pytest.raises(_Interrupt):
+        env["run"]()
+    _patch_pca_info(monkeypatch, lambda info: {
+        L: dict(v, explained_variance=v["explained_variance"] + 1e-7)
+        for L, v in info.items()})
+    env["stop_at"] = None
+    env["run"]()
+    assert env["fit_calls"] == list(range(5, N_LAYERS))
+    assert _pooled(env)["reused_layers"] == [0, 1, 2, 3, 4]
+
+
+@pytest.mark.parametrize("field", ["K", "n_train_samples"])
+def test_resume_with_a_changed_pca_size_recomputes_every_layer(env, monkeypatch, field):
+    env["stop_at"] = 5
+    with pytest.raises(_Interrupt):
+        env["run"]()
+    _patch_pca_info(monkeypatch, lambda info: {
+        L: dict(v, **{field: v[field] + (1 if L == 7 else 0)})
+        for L, v in info.items()})
+    env["stop_at"] = None
+    env["run"]()
+    assert env["fit_calls"] == list(range(N_LAYERS))
+    assert _pooled(env)["reused_layers"] == []
 
 
 def test_force_recomputes_every_layer(env):
