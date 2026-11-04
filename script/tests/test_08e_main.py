@@ -268,19 +268,51 @@ def test_completed_cell_at_the_d1_lag_is_skipped(env):
 def test_completed_cell_at_an_old_lag_raises_instead_of_skipping(env, tmp_path):
     env["run"]()
     _write_d1(tmp_path, lag=3)            # a D1 rerun moved the peak
-    with pytest.raises(RuntimeError, match="FORCE=1"):
+    with pytest.raises(RuntimeError) as exc:
         env["run"]()
+    msg = str(exc.value)
+    assert "lag 4 on disk vs 3 from 08d D1" in msg
+    assert "Either side may be stale" in msg and "without FORCE" in msg
+    assert "--array=0" in msg and msg.isascii()
     assert env["fit_calls"] == []
     env["run"]("--force")                 # recomputes at the new lag
     assert set(env["lags"]) == {3}
     assert _pooled(env)["lag"] == 3
 
 
-def test_completed_cell_with_moved_best_layer_raises(env, tmp_path):
+def test_completed_cell_with_moved_best_layer_warns_and_is_skipped(env, tmp_path, caplog):
+    """Only the best layer moved, at the same lag: the D3a result does not
+    depend on it, so the cell stays complete."""
     env["run"]()
     _write_d1(tmp_path, layer=D1_BEST_LAYER + 1)
-    with pytest.raises(RuntimeError, match="friends_best_layer"):
+    with caplog.at_level("WARNING"):
         env["run"]()
+    assert env["fit_calls"] == []
+    assert "friends_best_layer" in caplog.text
+
+
+@pytest.mark.parametrize("eligible, match", [
+    ([0, 2], r"intersection states \[1\] are not content-eligible"),
+    ([0, 1, 2, 5], r"content_eligible differs from 05e now \(added \[5\]"),
+])
+def test_completed_cell_with_changed_eligibility_raises(env, monkeypatch, eligible, match):
+    env["run"]()
+    monkeypatch.setattr(m08e, "load_content_eligibility", lambda *a, **k: {
+        "content_eligible": eligible, "eligibility_source": "05e_a4"})
+    with pytest.raises(RuntimeError, match=match):
+        env["run"]()
+    assert env["fit_calls"] == []
+
+
+def test_skip_guard_checks_every_output_file(env):
+    """A stale per-film file is caught even when the pooled file is current."""
+    env["run"]("--per_subset")
+    path = env["out_dir"] / f"D3a_per_subset_{STIM}_{MODEL}.json"
+    payload = json.loads(path.read_text())
+    payload["lag"] = 7
+    path.write_text(json.dumps(payload))
+    with pytest.raises(RuntimeError, match="D3a_per_subset.*lag 7 on disk"):
+        env["run"]("--per_subset")
 
 
 def test_unreadable_completed_output_raises(env):

@@ -63,7 +63,8 @@ from utils.transformer_analysis import (
     D3A_LAG_BEST_SUFFIX, INTERSECTION_MIN_FO, PEAK_LAG_EXCLUDE,
     best_lag_from_d1_file, build_layer_feature_matrix,
     build_run_boundaries,
-    compute_effect_size, find_best_lag_layer, friends_d1_path,
+    compute_effect_size, d3a_eligibility_problems, d3a_stale_output_message,
+    find_best_lag_layer, friends_d1_path,
     load_content_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
 )
@@ -567,13 +568,18 @@ def clear_partial_layers(out_dir):
                        part_dir, exc)
 
 
-def check_lag_best_outputs(out_dir, filenames, lag, lag_info):
-    """Raise if existing best-lag outputs were computed at another best lag.
+def check_lag_best_outputs(out_dir, filenames, lag, lag_info, eligibility,
+                           sub_id, stimulus, model_key):
+    """Raise if existing best-lag outputs no longer match 08d D1 and 05e.
 
-    The ``_lag-best`` folder name does not carry the lag value, so a cell
-    whose 08d D1 peak has moved since its outputs were written would
-    otherwise be skipped as complete. ``friends_best_layer`` is compared
-    when the file records it (older per-subset files do not).
+    The ``_lag-best`` folder name does not carry the lag value or the
+    eligible states, so a cell whose 08d D1 peak lag or 05e eligibility has
+    changed since its outputs were written would otherwise be skipped as
+    complete. Every file in ``filenames`` is checked for the lag and for
+    eligibility (:func:`d3a_eligibility_problems`, which says what can be
+    checked in files written by older code). A changed
+    ``friends_best_layer`` at the same lag only logs a warning: every layer
+    is computed at the lag, so the D3a result does not depend on it.
     """
     for name in filenames:
         path = os.path.join(out_dir, name)
@@ -581,24 +587,25 @@ def check_lag_best_outputs(out_dir, filenames, lag, lag_info):
             with open(path) as f:
                 data = json.load(f)
         except (OSError, ValueError) as exc:
-            raise RuntimeError(
-                f"{path} exists but cannot be read ({exc}). Rerun with "
-                "--force (FORCE=1), or move the folder aside."
-            ) from exc
+            raise RuntimeError(d3a_stale_output_message(
+                path, sub_id, stimulus, model_key,
+                [f"the file cannot be read: {exc}"],
+            )) from exc
         problems = []
         if data.get("lag") != lag:
             problems.append(f"lag {data.get('lag')!r} on disk vs {lag} from 08d D1")
-        if ("friends_best_layer" in data
-                and data["friends_best_layer"] != lag_info.get("friends_best_layer")):
-            problems.append(
-                f"friends_best_layer {data['friends_best_layer']!r} on disk vs "
-                f"{lag_info.get('friends_best_layer')!r} from 08d D1"
-            )
+        problems += d3a_eligibility_problems(data, eligibility)
         if problems:
             raise RuntimeError(
-                f"{path} was computed at a different best lag "
-                f"({'; '.join(problems)}). The 08d D1 output has changed since. "
-                "Rerun with --force (FORCE=1), or move the old folder aside."
+                d3a_stale_output_message(path, sub_id, stimulus, model_key, problems)
+            )
+        if ("friends_best_layer" in data
+                and data["friends_best_layer"] != lag_info.get("friends_best_layer")):
+            logger.warning(
+                "%s: friends_best_layer %r on disk vs %r from 08d D1 at the same "
+                "lag %d. The D3a result does not depend on the best layer; "
+                "keeping the output.", path, data["friends_best_layer"],
+                lag_info.get("friends_best_layer"), lag,
             )
 
 
@@ -767,9 +774,13 @@ def main():
     checkpoint_files = [f"D3a_transfer_{stimulus}_{model_key}.json"]
     if per_subset_active:
         checkpoint_files.append(f"D3a_per_subset_{stimulus}_{model_key}.json")
+    # Eligibility (Friends-defined; shared state space). Loaded before the
+    # checkpoint so the skip guard can compare it with existing outputs.
+    eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
     if (lag_source == LAG_FRIENDS_BEST and not args.force and all(
             os.path.exists(os.path.join(out_dir, f)) for f in checkpoint_files)):
-        check_lag_best_outputs(out_dir, checkpoint_files, lag, lag_info)
+        check_lag_best_outputs(out_dir, checkpoint_files, lag, lag_info,
+                               eligibility, sub_id, stimulus, model_key)
     if check_checkpoint(out_dir, checkpoint_files, "D3a", force=args.force):
         return
 
@@ -901,8 +912,7 @@ def main():
         {str(k): v for k, v in pca_info.items()}, indent=2,
     )
 
-    # ── Eligibility (Friends-defined; shared state space) ─────────────
-    eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
+    # ── Intersection of the eligible states (loaded above) ────────────
     intersect_ids, fo_stats = _compute_intersection(
         friends_states_cat, test_states_cat, eligibility["content_eligible"],
     )

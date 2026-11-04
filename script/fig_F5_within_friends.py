@@ -63,6 +63,8 @@ PARCELLATION = "atlas-4S156Parcels"
 OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D1_ROOT = SCRATCH_DIR / "output" / "08d_transformer_depth" / PARCELLATION
+# Where the best-lag reader finds the current 05e eligibility (as 08e does).
+ELIGIBILITY_SOURCE = {"scratch_dir": str(SCRATCH_DIR), "parcellation": PARCELLATION}
 
 SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
 PEAK_BAND_FRAC = 0.90             # contiguous Δ-above-floor ≥ 0.90 × peak (Res A)
@@ -345,7 +347,8 @@ def load_transfer_cell(stim, model, n_layers):
     participant has a finite layer.
     """
     from statsmodels.stats.multitest import multipletests
-    loaded = load_d3a_lag_best(TRANSFER_ROOT, D1_ROOT, stim, model)
+    loaded = load_d3a_lag_best(TRANSFER_ROOT, D1_ROOT, stim, model,
+                               **ELIGIBILITY_SOURCE)
     rel_depths, peak_sig, peak_accs = [], [], []
     for _sub, d in loaded:
         per_layer = d.get("per_layer", {})
@@ -499,7 +502,7 @@ def collect_perfilm(model, n_layers):
     missing, so a partial cohort is never drawn as the full one.
     """
     loaded = load_d3a_lag_best(TRANSFER_ROOT, D1_ROOT, "movie10", model,
-                               kind="per_subset")
+                               kind="per_subset", **ELIGIBILITY_SOURCE)
     series = []
     for film, label, color in FILM_SERIES:
         rows = []

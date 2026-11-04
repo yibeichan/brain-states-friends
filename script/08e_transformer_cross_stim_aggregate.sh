@@ -38,7 +38,15 @@ export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
 #   FORCE       - set to 1 to recompute the cell even if its outputs exist
 #                 (default: off). Implies FRESH=1: saved per-layer results are
 #                 not reused, so leave FORCE unset when resubmitting a task
-#                 that timed out.
+#                 that timed out, and do not use it to replace a stale
+#                 best-lag output (it would restart every layer of every
+#                 participant in the array on each resubmission).
+#
+# A completed best-lag cell whose lag or state eligibility disagrees with the
+# current 08d D1 / 05e output stops with an error instead of being skipped;
+# either side may be stale. If 08d D1 and 05e are current, move that
+# participant's <stimulus>_<model>_lag-best folder aside and resubmit only
+# that participant's array index (e.g. --array=5 for sub-06) without FORCE.
 #   FRESH       - set to 1 to ignore per-layer results saved by an earlier,
 #                 interrupted run of the same cell (default: off). Without it,
 #                 a resubmitted task continues from its last finished layer.

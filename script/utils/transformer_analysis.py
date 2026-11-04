@@ -118,6 +118,89 @@ def d3a_expected_subjects(stimulus):
     return list(D3A_SUBJECTS)
 
 
+#: VT suffix of the 05e_a4 state flags that the 08e wrapper passes (its VT
+#: default). The best-lag readers load the current eligibility with it.
+D3A_VT = "0.95"
+
+
+def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
+    """Error text for a best-lag D3a output that disagrees with 08d D1 / 05e.
+
+    Used by the 08e skip guard and by the figure reader, so both give the
+    same remedy. The text does not say which side is stale, because either
+    can be: a D1 or 05e rerun after the 08e output was written, or an 08e
+    output promoted before its D1 / 05e.
+    """
+    try:
+        index = str(D3A_SUBJECTS.index(sub_id))
+    except ValueError:
+        index = "<index of the participant>"
+    folder = os.path.dirname(str(path))
+    return (
+        f"{path} disagrees with the current 08d D1 / 05e eligibility for "
+        f"{sub_id} ({'; '.join(problems)}). Either side may be stale. If 08d "
+        f"D1 and 05e are current, move {folder} aside and resubmit only this "
+        f"participant (sbatch --array={index} with STIMULUS={stimulus} "
+        f"MODEL={model_key}) without FORCE: FORCE=1 implies --fresh, so every "
+        "resubmission would restart from layer 0. If the 08e output is the "
+        "current side, bring 08d D1 / 05e up to date instead."
+    )
+
+
+def d3a_eligibility_problems(data, eligibility):
+    """How a D3a JSON's state eligibility disagrees with the current 05e set.
+
+    ``eligibility`` is the participant's current
+    :func:`load_content_eligibility` result, the source 08e itself uses.
+    Returns a list of problems (empty when consistent).
+
+    Files written by this version record the full ``content_eligible``
+    list under ``input_identity``; it must equal the current list. Files
+    written by older code record only ``eligibility_source``,
+    ``intersection_states`` and the state count (``n_classes`` or
+    ``n_classes_intersection``). For those the check is: same
+    ``eligibility_source``, every intersection state still content-eligible,
+    and the count equal to the number of intersection states. An older file
+    cannot be checked for states that became content-eligible after it was
+    written (they might now enter the intersection), because it does not
+    record the eligible set it started from.
+    """
+    problems = []
+    current = sorted(int(s) for s in eligibility["content_eligible"])
+    cur_src = eligibility.get("eligibility_source")
+    if "eligibility_source" in data and data["eligibility_source"] != cur_src:
+        problems.append(
+            f"eligibility_source {data['eligibility_source']!r} on disk vs "
+            f"{cur_src!r} now"
+        )
+    recorded = (data.get("input_identity") or {}).get("content_eligible")
+    if recorded is not None:
+        recorded = sorted(int(s) for s in recorded)
+        if recorded != current:
+            added = sorted(set(current) - set(recorded))
+            removed = sorted(set(recorded) - set(current))
+            problems.append(
+                f"content_eligible differs from 05e now (added {added}, "
+                f"removed {removed})"
+            )
+    states = data.get("intersection_states")
+    if states is None:
+        problems.append("file records no intersection_states")
+        return problems
+    not_eligible = sorted(set(int(s) for s in states) - set(current))
+    if not_eligible:
+        problems.append(
+            f"intersection states {not_eligible} are not content-eligible in "
+            "05e now"
+        )
+    for key in ("n_classes", "n_classes_intersection"):
+        if key in data and data[key] != len(states):
+            problems.append(
+                f"{key}={data[key]!r} but {len(states)} intersection states"
+            )
+    return problems
+
+
 def find_best_lag_layer(results_per_lag, exclude_lags=None):
     """Return ``(best_lag_key, best_layer_idx, best_acc)`` over a D1 result dict.
 
@@ -188,23 +271,27 @@ def best_lag_from_d1_file(path):
 
 
 def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
-                      subjects=None):
+                      subjects=None, *, scratch_dir, parcellation, vt=D3A_VT):
     """Return ``[(sub_id, data), ...]`` of best-lag D3a JSONs, one per participant.
 
     Reads ``<root>/<sub>/<stimulus>_<model_key>_lag-best/D3a_<kind>_<stimulus>_<model_key>.json``
     for each participant in ``subjects`` (default:
     :func:`d3a_expected_subjects`), in that order. ``kind`` is
     ``"transfer"`` or ``"per_subset"``. ``d1_dir`` is the 08d D1 root
-    (:func:`friends_d1_dir`).
+    (:func:`friends_d1_dir`). ``scratch_dir``, ``parcellation`` and ``vt``
+    locate the 05e state flags for :func:`load_content_eligibility`, the
+    eligibility source 08e uses.
 
     Raises ``FileNotFoundError`` naming every participant whose file is
     missing, so a partial set never reaches a figure as if it were complete.
     Raises ``ValueError`` if a file does not record
     ``lag_source == "friends_best"``, if its ``lag`` is in
-    :data:`PEAK_LAG_EXCLUDE`, or if its ``lag`` differs from the best lag
+    :data:`PEAK_LAG_EXCLUDE`, if its ``lag`` differs from the best lag
     recomputed from that participant's current 08d D1 output (for example
-    after a D1 rerun moved the peak): such a file was computed at a lag
-    the figure does not claim to show.
+    after a D1 rerun moved the peak), or if its state eligibility disagrees
+    with the participant's current 05e set (:func:`d3a_eligibility_problems`
+    says exactly what is checked for files written by older code). Such a
+    file was computed from inputs the figure does not claim to show.
     """
     folder = f"{stimulus}_{model_key}{D3A_LAG_BEST_SUFFIX}"
     fname = f"D3a_{kind}_{stimulus}_{model_key}.json"
@@ -235,11 +322,15 @@ def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
             )
         d1_path = friends_d1_file(d1_dir, sub, model_key)
         d1_lag, _ = best_lag_from_d1_file(d1_path)
+        problems = []
         if int(lag) != d1_lag:
+            problems.append(f"lag {lag} on disk vs best lag {d1_lag} in {d1_path}")
+        problems += d3a_eligibility_problems(
+            data, load_content_eligibility(sub, parcellation, scratch_dir, vt=vt),
+        )
+        if problems:
             raise ValueError(
-                f"{path} was computed at lag {lag}, but the best lag in "
-                f"{d1_path} is now {d1_lag}. Rerun 08e for {sub} "
-                f"{stimulus} {model_key} with FORCE=1."
+                d3a_stale_output_message(path, sub, stimulus, model_key, problems)
             )
         out.append((sub, data))
     return out
