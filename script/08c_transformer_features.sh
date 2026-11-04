@@ -27,6 +27,8 @@ source "$_ENV" || { echo "ERROR: cannot locate script/utils/_env.sh — submit f
 # Optional exports:
 #   STIMULUS              Dataset (default: friends)
 #   DOWNLOAD_ONLY         Set to 1 for cache warmup (downloads model, no extraction)
+#   OVERWRITE             Set to 1 to re-extract runs whose layer files exist
+#                         (otherwise they are skipped)
 #   WINDOW_TRS            LLaMA local-window span in TRs (default: 1, the
 #                         published value; the W-sweep used {1,3,6,9})
 #   OUTPUT_SUBDIR_SUFFIX  Suffix for the 08c output directory (default: empty)
@@ -146,6 +148,10 @@ DOWNLOAD_ARGS=""
 if [ "${DOWNLOAD_ONLY}" = "1" ]; then
     DOWNLOAD_ARGS="--download_only"
 fi
+OVERWRITE_ARGS=""
+if [ "${OVERWRITE}" = "1" ]; then
+    OVERWRITE_ARGS="--overwrite"
+fi
 
 echo "=============================================="
 echo "08c - Transformer Feature Extraction"
@@ -155,6 +161,7 @@ echo "Model:             ${MODEL}"
 echo "Run ID:            ${RUN_ID}"
 echo "Device:            cuda"
 echo "Download:          ${DOWNLOAD_ONLY:-0}"
+echo "Overwrite:         ${OVERWRITE:-0}"
 echo "Window TRs:        ${WINDOW_TRS}"
 echo "Output suffix:     '${OUTPUT_SUBDIR_SUFFIX}'"
 echo "=============================================="
@@ -167,7 +174,7 @@ uv run --project "${PROJECT_DIR}" --no-sync python "${PROJECT_DIR}/script/08c_tr
     --audio_cache_dir "${AUDIO_CACHE}" \
     --window_trs "${WINDOW_TRS}" \
     --output_subdir_suffix "${OUTPUT_SUBDIR_SUFFIX}" \
-    ${DOWNLOAD_ARGS}
+    ${DOWNLOAD_ARGS} ${OVERWRITE_ARGS}
 
 echo "=============================================="
 echo "Feature extraction complete!"

@@ -182,6 +182,42 @@ def load_model(model_key, device="cuda", dtype=None):
 # ---------------------------------------------------------------------------
 
 
+def load_wav(audio_path):
+    """Read a WAV file as a float32 tensor of shape (channels, samples).
+
+    Integer PCM is scaled to [-1, 1] the way torchaudio.load scales it:
+    int16 / 32768, int32 / 2**31 (scipy returns 24-bit PCM left-justified in
+    int32, so the same divisor applies), and uint8 as (x - 128) / 128.
+    Float WAVs are returned unchanged apart from the cast to float32.
+
+    scipy is used instead of torchaudio.load, which in recent torchaudio
+    decodes through torchcodec and fails where torchcodec's native libraries
+    cannot load.
+
+    Returns:
+        (torch.Tensor, int): waveform (channels, samples) and sample rate.
+    """
+    import torch
+    from scipy.io import wavfile
+
+    sr, data = wavfile.read(str(audio_path))
+    if data.dtype == np.int16:
+        data = data.astype(np.float32) / 32768.0
+    elif data.dtype == np.int32:
+        data = data.astype(np.float32) / 2147483648.0
+    elif data.dtype == np.uint8:
+        data = (data.astype(np.float32) - 128.0) / 128.0
+    elif np.issubdtype(data.dtype, np.floating):
+        data = data.astype(np.float32)
+    else:
+        raise ValueError(f"Unsupported WAV sample type {data.dtype}: {audio_path}")
+    if data.ndim == 1:
+        data = data[None, :]
+    else:
+        data = data.T  # scipy gives (samples, channels)
+    return torch.from_numpy(np.ascontiguousarray(data)), int(sr)
+
+
 def extract_audio_features(
     audio_path,
     model,
@@ -190,6 +226,7 @@ def extract_audio_features(
     device="cuda",
     chunk_seconds=AUDIO_CHUNK_SECONDS,
     overlap_seconds=AUDIO_OVERLAP_SECONDS,
+    onset_s=0.0,
 ):
     """Extract layer-wise audio features from Wav2VecBert with chunking.
 
@@ -201,22 +238,26 @@ def extract_audio_features(
         audio_path: Path to 16 kHz mono WAV file.
         model: Loaded Wav2VecBert model.
         processor: Wav2Vec2 feature extractor.
-        n_trs: Number of TRs (authoritative count).
+        n_trs: Number of TRs (authoritative count), counted from scan start.
         device: Torch device.
         chunk_seconds: Center duration of each chunk in seconds.
         overlap_seconds: Overlap on each side in seconds.
+        onset_s: Scan time, in seconds, at which the audio file starts. TR t
+            pools the audio heard during scan time [t * TR, (t + 1) * TR);
+            TRs that end before the audio starts are zero.
 
     Returns:
         dict: {layer_idx: np.ndarray of shape (n_trs, hidden_dim)}
             layer_idx 0 = first transformer layer (not embedding).
     """
     import torch
-    import torchaudio
 
-    waveform, sr = torchaudio.load(str(audio_path))
+    waveform, sr = load_wav(audio_path)
 
     # Resample if needed
     if sr != AUDIO_SAMPLE_RATE:
+        import torchaudio
+
         resampler = torchaudio.transforms.Resample(sr, AUDIO_SAMPLE_RATE)
         waveform = resampler(waveform)
         sr = AUDIO_SAMPLE_RATE
@@ -288,30 +329,40 @@ def extract_audio_features(
     for layer_idx in range(n_layers):
         frames = np.concatenate(all_hidden_states[layer_idx], axis=0)  # (total_frames, dim)
         layer_features[layer_idx] = _aggregate_frames_to_trs(
-            frames, n_trs, MODEL_REGISTRY["w2v-bert-2.0"]["native_rate_hz"]
+            frames, n_trs, MODEL_REGISTRY["w2v-bert-2.0"]["native_rate_hz"],
+            onset_s=onset_s,
         )
 
     return layer_features
 
 
-def _aggregate_frames_to_trs(frames, n_trs, native_rate_hz):
+def _aggregate_frames_to_trs(frames, n_trs, native_rate_hz, onset_s=0.0):
     """Mean-pool native-rate frames into TR bins.
 
     Args:
-        frames: np.ndarray of shape (n_frames, dim).
-        n_trs: Number of TRs.
+        frames: np.ndarray of shape (n_frames, dim); frame 0 is the start of
+            the audio file.
+        n_trs: Number of TRs, counted from scan start.
         native_rate_hz: Frame rate of the model output.
+        onset_s: Scan time, in seconds, at which the audio starts. TR t pools
+            the frames whose scan time falls in [t * TR, (t + 1) * TR); a TR
+            that ends before the audio starts stays zero, and the TR in which
+            the audio starts pools only the frames after the start.
 
     Returns:
         np.ndarray of shape (n_trs, dim).
     """
     frames_per_tr = TR_DURATION * native_rate_hz
+    onset_frames = onset_s * native_rate_hz
     dim = frames.shape[1]
     result = np.zeros((n_trs, dim), dtype=np.float32)
 
     for t in range(n_trs):
-        start = int(t * frames_per_tr)
-        end = int((t + 1) * frames_per_tr)
+        start = int(t * frames_per_tr - onset_frames)
+        end = int((t + 1) * frames_per_tr - onset_frames)
+        if end <= 0:
+            continue
+        start = max(start, 0)
         if start >= len(frames):
             break
         chunk = frames[start : min(end, len(frames))]

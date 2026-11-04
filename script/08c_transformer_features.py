@@ -328,14 +328,15 @@ def discover_runs_pp(config):
     """Discover Petit Prince runs from WAV files in the stimuli directory.
 
     PP is audiobook listening - WAV files are the direct stimuli (no video).
-    n_trs is derived from audio duration.  Onset offset (pre-stimulus silence
+    n_trs counts TRs from scan start to the end of the audio.  Onset offset (pre-stimulus silence
     in the fMRI scan) is read live from each run's events.tsv and stored as
     ``onset_s`` so downstream text alignment can use the exact scan-time
     formula ``tr_idx = int((onset_s + word_onset) / TR_DURATION)`` without
-    compound-flooring errors.
+    compound-flooring errors, and audio TR windows are placed on scan time
+    from the same value (see ``process_run_audio``).
 
     Returns:
-        list of dict: [{run_id, audio_path, n_trs, audio_trs, onset_trs,
+        list of dict: [{run_id, audio_path, n_trs,
                         onset_s, section, transcript_path}, ...]
     """
     import wave
@@ -375,24 +376,23 @@ def discover_runs_pp(config):
             ev = pd.read_csv(events_path, sep="\t")
             onset_s = float(ev.iloc[0]["onset"])
 
-        onset_trs = int(onset_s / TR_DURATION)
-        audio_trs = int(np.ceil(duration_s / TR_DURATION))
-        n_trs = onset_trs + audio_trs
+        # TRs from scan start to the end of the audio. Same convention as
+        # Movie10 and HP: ceil((onset + duration) / TR); 08d truncates to the
+        # decoded length, so an overshoot is safe.
+        n_trs = int(np.ceil((onset_s + duration_s) / TR_DURATION))
 
         runs.append({
             "run_id": run_id,
             "audio_path": str(wav_path),
             "n_trs": n_trs,
-            "audio_trs": audio_trs,
-            "onset_trs": onset_trs,
             "onset_s": onset_s,
             "section": section,
             "transcript_path": (
                 str(transcript_path) if transcript_path and transcript_path.exists() else None
             ),
         })
-        logger.info("  %s: %.1f s → %d audio TRs + %d onset TRs = %d total (onset=%.2f s)",
-                     run_id, duration_s, audio_trs, onset_trs, n_trs, onset_s)
+        logger.info("  %s: %.1f s of audio starting at %.2f s → %d TRs",
+                     run_id, duration_s, onset_s, n_trs)
 
     return runs
 
@@ -430,20 +430,15 @@ def process_run_audio(run_info, model, processor, out_dir, device, tmp_dir):
         logger.warning("No audio source for run %s - skipping", run_id)
         return False
 
-    # For PP: extract features for audio portion only, then prepend onset TRs
-    onset_trs = run_info.get("onset_trs", 0)
-    audio_trs = run_info.get("audio_trs", n_trs)
-
+    # PP audio starts onset_s seconds after the scan (4.0 s of silence before
+    # each section). TR windows are placed on scan time, so each TR pools the
+    # audio heard during that TR; TRs before the audio starts are zero
+    # (mirrors HP text, where early TRs have empty text). Friends and Movie10
+    # audio starts with the scan (onset 0).
     layer_features = extract_audio_features(
-        audio_path, model, processor, audio_trs, device=device,
+        audio_path, model, processor, n_trs, device=device,
+        onset_s=float(run_info.get("onset_s", 0.0)),
     )
-
-    # Zero-pad onset TRs so features are scan-aligned (mirrors HP text
-    # where early TRs have empty text → zero-like embeddings)
-    if onset_trs > 0:
-        for layer_idx, features in layer_features.items():
-            pad = np.zeros((onset_trs, features.shape[1]), dtype=features.dtype)
-            layer_features[layer_idx] = np.concatenate([pad, features], axis=0)
 
     for layer_idx, features in layer_features.items():
         save_layer_features(out_dir, layer_idx, run_id, features)
@@ -594,6 +589,12 @@ Examples:
              "Default empty (production path).",
     )
     parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Re-extract runs whose layer files already exist instead of "
+             "skipping them (needed after a change to how features are computed).",
+    )
+    parser.add_argument(
         "--download_only",
         action="store_true",
         help="Download model weights to HF cache and exit (no extraction).",
@@ -717,8 +718,9 @@ def main():
             last_layer = os.path.join(
                 out_dir, f"layer_{n_layers - 1:02d}", f"{run_id}_raw.npy"
             )
-            if os.path.exists(first_layer) and os.path.exists(last_layer):
-                logger.info("  Already processed - skipping")
+            if (not args.overwrite and os.path.exists(first_layer)
+                    and os.path.exists(last_layer)):
+                logger.info("  Already processed - skipping (pass --overwrite to redo)")
                 # Record the actual on-disk TR count so metadata stays in sync
                 # with the saved tensors regardless of which convention wrote them.
                 actual_n_trs = int(np.load(first_layer, mmap_mode="r").shape[0])
@@ -756,6 +758,22 @@ def main():
     finally:
         if tmp_ctx is not None:
             tmp_ctx.cleanup()
+
+    # Every attempted run failed or was skipped: report it and exit nonzero
+    # so a SLURM job or caller sees the failure. No metadata is written, so a
+    # metadata.json from an earlier good extraction is not replaced by one
+    # that lists zero runs.
+    if n_success == 0 and n_skipped > 0:
+        logger.error("=" * 60)
+        logger.error("EXTRACTION FAILED")
+        logger.error("=" * 60)
+        logger.error("Stimulus: %s, Model: %s", stimulus, model_key)
+        logger.error(
+            "Processed: 0/%d runs; every run failed or was skipped "
+            "(see errors above). Metadata not written.", n_skipped,
+        )
+        logger.error("Output: %s", out_dir)
+        sys.exit(1)
 
     # ── Save metadata ─────────────────────────────────────────────────
     extra_metadata = {}
