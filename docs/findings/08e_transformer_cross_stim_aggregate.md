@@ -92,7 +92,7 @@ Films: Wolf of Wall Street (wolf), Figures in a Landscape (figures), Bourne Supr
 
 ## Outputs
 Each cell writes to `output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/<folder>/`, where `<folder>` is `{stimulus}_{model}_lag-best` for `--lag friends_best` (the default), `{stimulus}_{model}` for `--lag 0`, and `{stimulus}_{model}_lag-N` for another explicit lag. Each folder holds:
-- D3a_transfer_{stimulus}_{model}.json (records `lag`, `lag_source`, `eligibility_source`, `intersection_states`; best-lag files also record the 08d D1 path, best layer and accuracy; best-lag files written by this version also record the layer fingerprint, code and input identities (including the 05e `content_eligible` list) and which layers were reused from an interrupted run, which files written by earlier versions do not have)
+- D3a_transfer_{stimulus}_{model}.json (records `lag`, `lag_source`, `eligibility_source`, `intersection_states`; best-lag files also record the 08d D1 path (relative to `SCRATCH_DIR` in files written by this version, absolute in older ones), best layer and accuracy; best-lag files written by this version also record the layer fingerprint, code and input identities (including the 05e `content_eligible` list) and which layers were reused from an interrupted run, which files written by earlier versions do not have)
 - D3a_per_subset_{stimulus}_{model}.json (movie10 with `--per_subset`; records `lag`, `lag_source`, `eligibility_source`, `intersection_states`; files written by this version also record the 08d D1 fields and the same provenance fields as the transfer file)
 - pca_info.json
 - D3a_transfer_{stimulus}_{model}.png

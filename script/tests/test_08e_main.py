@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -193,7 +194,9 @@ def test_outputs_record_lag_provenance_and_fingerprint(env):
         assert payload["lag"] == D1_BEST_LAG
         assert payload["lag_source"] == "friends_best"
         assert payload["friends_best_layer"] == D1_BEST_LAYER
-        assert payload["friends_d1_path"].endswith("D1_depth_profile.json")
+        assert payload["friends_d1_path"] == os.path.join(
+            "output", "08d_transformer_depth", PARC, SUB, f"friends_{MODEL}",
+            "D1_depth_profile.json")        # relative to SCRATCH_DIR
         assert payload["layer_fingerprint"] == m08e.layer_fingerprint(env["fields"][-1])
         assert payload["code_sha256"] == m08e.CODE_SHA256
         assert payload["reused_layers"] == []
@@ -477,3 +480,14 @@ def test_best_lag_run_refuses_the_sub_hrf_fallback(env, monkeypatch, completed_f
         assert env["fit_calls"] == []
     env["run"]("--lag", "0")              # an explicit lag keeps the old fallback
     assert env["fit_calls"] == list(range(N_LAYERS))
+
+
+def test_completed_cell_with_an_absolute_d1_path_from_older_code_is_skipped(env, tmp_path):
+    env["run"]("--per_subset")
+    for name in (f"D3a_transfer_{STIM}_{MODEL}.json", f"D3a_per_subset_{STIM}_{MODEL}.json"):
+        p = env["out_dir"] / name
+        d = json.loads(p.read_text())
+        d["friends_d1_path"] = str(tmp_path / d["friends_d1_path"])
+        p.write_text(json.dumps(d))
+    env["run"]("--per_subset")
+    assert env["fit_calls"] == []

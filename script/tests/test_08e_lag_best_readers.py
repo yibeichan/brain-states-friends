@@ -548,3 +548,16 @@ def test_reader_reports_an_unreadable_file_as_an_incomplete_write(tmp_path):
     assert msg.startswith(f"{p} cannot be read (") and "incomplete write" in msg
     assert "--array=1" in msg and "without FORCE" in msg and "disagrees" not in msg
     assert "PER_SUBSET=1" not in msg and msg.isascii()
+
+
+def test_reader_accepts_absolute_and_relative_d1_paths_in_the_outputs(tmp_path):
+    """Older files record friends_d1_path as an absolute path, newer ones
+    relative to SCRATCH_DIR; the reader checks lags against D1 itself."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    for sub, rel in (("sub-01", False), ("sub-02", True)):
+        _write_d1(d1, sub, "m")
+        p = friends_d1_file(d1, sub, "m")
+        _write(root, sub, f"movie10_m{D3A_LAG_BEST_SUFFIX}", "transfer", "movie10",
+               "m", _best({"friends_d1_path":
+                           str(Path(p).relative_to(tmp_path)) if rel else p}))
+    assert [s for s, _ in _read(root, d1, "movie10", "m", subjects=SUBS)] == SUBS

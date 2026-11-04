@@ -1166,13 +1166,21 @@ def main():
         for l, q in zip(layer_order, fdr_p):
             results[l]["p_fdr"] = round(float(q), 4)
 
+    # The D1 path goes into the outputs relative to SCRATCH_DIR, so the files
+    # do not carry this machine's paths. Nothing reads it back; files written
+    # by older code hold an absolute path.
+    output_lag_info = dict(lag_info)
+    if "friends_d1_path" in output_lag_info:
+        output_lag_info["friends_d1_path"] = os.path.relpath(
+            output_lag_info["friends_d1_path"], SCRATCH_DIR,
+        )
     out_payload = {
         "sub_id": sub_id,
         "test_stimulus": stimulus,
         "model": model_key,
         "lag": lag,
         "lag_source": lag_source,
-        **lag_info,
+        **output_lag_info,
         "eligibility_source": eligibility["eligibility_source"],
         "intersection_states": intersect_ids,
         "intersection_fo": {str(k): v for k, v in fo_stats.items()},
@@ -1225,7 +1233,7 @@ def main():
             "model": model_key,
             "lag": lag,
             "lag_source": lag_source,
-            **lag_info,
+            **output_lag_info,
             **run_provenance,
             "subset_axis": "film" if stimulus == "movie10" else stimulus,
             "subsets": subset_labels,
