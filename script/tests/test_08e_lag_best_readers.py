@@ -95,11 +95,13 @@ def test_reader_ignores_folders_outside_the_expected_participants(tmp_path):
     assert [sub for sub, _ in out] == SUBS
 
 
-def test_reader_raises_naming_missing_participants(tmp_path):
+def test_reader_raises_naming_every_missing_participant(tmp_path):
     root, d1 = tmp_path / "d3a", tmp_path / "d1"
     _two_lags(root, d1, subjects=("sub-01",))
-    with pytest.raises(FileNotFoundError, match="sub-02"):
-        load_d3a_lag_best(root, d1, "movie10", "m", subjects=SUBS)
+    with pytest.raises(FileNotFoundError) as exc:
+        load_d3a_lag_best(root, d1, "movie10", "m",
+                          subjects=["sub-01", "sub-02", "sub-03"])
+    assert "sub-02, sub-03" in str(exc.value)
 
 
 def test_reader_raises_when_nothing_on_disk(tmp_path):
@@ -245,6 +247,15 @@ def test_fig5_panel_d_not_testable_comes_from_the_modality_check(fig_env, monkey
         f5.render_panel_d()
     assert ("harrypotter", "w2v-bert-2.0") not in asked
     assert ("harrypotter", "dinov2-large") not in asked
+
+
+def test_fig5_panel_d_testable_cell_without_data_raises(fig_env, monkeypatch):
+    """A testable cell that yields no data is an error, never an "n/t" cell."""
+    f5 = _load("_fig_f5_paneld_none", "fig_F5_within_friends.py")
+    monkeypatch.setattr(f5, "load_transfer_cell", lambda stim, model, n: None)
+    monkeypatch.setattr(f5, "_save", lambda fig, stem: f5.plt.close(fig))
+    with pytest.raises(ValueError, match="no finite layer"):
+        f5.render_panel_d()
 
 
 def test_s7_pooled_curves_read_best_lag(fig_env):
