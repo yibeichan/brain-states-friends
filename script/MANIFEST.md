@@ -97,8 +97,8 @@ outputs and renders the panels.
 | `fig_F2E_participant_umap.py` | Figure 2 (Panel E) and its supplementary panels | R2 |
 | `fig_F3_transition_structure.py` | Figure 3; Figure S15 (SI cell) | R3 |
 | `fig_F4_cross_stimulus_transfer.py` | Figure 4; rest is supplementary-only (Fig S8) | R5 |
-| `fig_F5_within_friends.py` | Figure 5 (lead) | R4b |
-| `fig_F5_per_film_video.py` | Figure 5 (Movie10 per-film panel) | R4b |
+| `fig_F5_within_friends.py` | Figure 5 (all panels; D-G from 08e `_lag-best`) | R4b |
+| `fig_F5_per_film_video.py` | None (lag-0 per-film check; Figure 5E-G come from `fig_F5_within_friends.py`) | R4b |
 | `fig_S01_recurring_state_surface_maps.py` | Figure S1 | Supp |
 | `fig_S02_pca_loadings.py` | Figure S2 | Supp |
 | `fig_S03_model_selection.py` | Figure S3 (K_max selection sweep) | Supp |

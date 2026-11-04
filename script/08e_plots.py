@@ -28,16 +28,17 @@ Standalone legend files are still emitted for caption / sidebar use:
   - si_decoding_depth_stim_legend.{pdf,png,svg}: 4 stim colours
   - si_decoding_depth_film_legend.{pdf,png,svg}: 4 film colours
 
-Source data:
-  A, B: 08e .../D3a_transfer_{stim}_{model}.json (pooled, with permutation)
-  C:    08e .../D3a_per_subset_movie10_dinov2-large.json (production, with
-        permutation). Falls back to .../manuscript_figures/fig5/perfilm/
-        sub-*_dinov2-large_movie10_perfilm.json (written by
-        fig_F5_per_film_video.py; provisional, point estimates only, no
-        permutation) when production JSONs are absent - used for the poster
-        build while the production --per_subset run was in flight.
+Source data (08e at each participant's best Friends lag, ``*_lag-best``):
+  A, B: 08e .../{stim}_{model}_lag-best/D3a_transfer_{stim}_{model}.json
+        (pooled, with permutation)
+  C:    08e .../movie10_dinov2-large_lag-best/D3a_per_subset_movie10_dinov2-large.json
+        (with permutation).
+  Every expected participant's file must be on disk (sub-04 has no Harry
+  Potter or Petit Prince data); the reader raises naming any that is
+  missing, and raises if a file's lag is not the participant's current best
+  lag in 08d D1 or its states disagree with the participant's current 05e
+  content eligibility.
 """
-import json
 import os
 import sys
 from pathlib import Path
@@ -49,6 +50,7 @@ from dotenv import load_dotenv
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from utils.plot_style import apply_publication_style
+from utils.transformer_analysis import load_d3a_lag_best
 
 apply_publication_style()
 
@@ -57,7 +59,9 @@ PARCELLATION = "atlas-4S156Parcels"
 OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_decoding_depth"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D3A_ROOT = SCRATCH_DIR / "output" / "08e_transformer_cross_stim_aggregate" / PARCELLATION
-PROVISIONAL_PERFILM_ROOT = SCRATCH_DIR / "output" / "manuscript_figures" / "fig5" / "perfilm"
+D1_ROOT = SCRATCH_DIR / "output" / "08d_transformer_depth" / PARCELLATION
+# Where the best-lag reader finds the current 05e eligibility (as 08e does).
+ELIGIBILITY_SOURCE = {"scratch_dir": str(SCRATCH_DIR), "parcellation": PARCELLATION}
 
 # Paul Tol Vibrant 4-class (https://personal.sron.nl/~pault/), CB-safe.
 # Distinct from project palettes: Okabe–Ito (networks), ColorBrewer Set1
@@ -116,9 +120,8 @@ PANELS = [
 def load_pooled_curves(model, stim, n_layers):
     """Return (n_subj, n_layers) of (balanced_acc − chance) for pooled D3a."""
     rows, sub_ids = [], []
-    for p in sorted(D3A_ROOT.glob(f"sub-*/{stim}_{model}/D3a_transfer_{stim}_{model}.json")):
-        sub = p.parent.parent.name
-        d = json.loads(p.read_text())
+    for sub, d in load_d3a_lag_best(D3A_ROOT, D1_ROOT, stim, model,
+                                    **ELIGIBILITY_SOURCE):
         per_layer = d.get("per_layer", {})
         curve = np.full(n_layers, np.nan)
         for L in range(n_layers):
@@ -136,57 +139,28 @@ def load_pooled_curves(model, stim, n_layers):
 def load_per_subset_curves(model, stim, n_layers, film_key):
     """Return (n_subj, n_layers) of (balanced_acc − chance_level_full) per film.
 
-    Prefers the production D3a_per_subset JSON (which has permutation p-values);
-    falls back to the provisional perfilm JSON (point estimates only, no
-    permutation) if production output isn't on disk yet. The fallback covers
-    the poster build window while SLURM 14648842 is still in flight.
+    Reads the best-lag D3a_per_subset JSONs (with permutation p-values). The
+    third return value is kept for the caller's panel bookkeeping and is
+    always ``"production"`` when data exist.
     """
-    rows, sub_ids, source = [], [], None
-    glob = f"sub-*/{stim}_{model}/D3a_per_subset_{stim}_{model}.json"
-    prod_paths = sorted(D3A_ROOT.glob(glob))
-    if prod_paths:
-        source = "production"
-        for p in prod_paths:
-            sub = p.parent.parent.name
-            d = json.loads(p.read_text())
-            per_subset = d.get("per_subset", {})
-            film_layers = per_subset.get(film_key, {})
-            chance = d.get("chance_level_full")
-            if chance is None or not film_layers:
+    rows, sub_ids = [], []
+    for sub, d in load_d3a_lag_best(D3A_ROOT, D1_ROOT, stim, model,
+                                    kind="per_subset", **ELIGIBILITY_SOURCE):
+        film_layers = d.get("per_subset", {}).get(film_key, {})
+        chance = d.get("chance_level_full")
+        if chance is None or not film_layers:
+            continue
+        curve = np.full(n_layers, np.nan)
+        for L in range(n_layers):
+            entry = film_layers.get(str(L))
+            if entry is None:
                 continue
-            curve = np.full(n_layers, np.nan)
-            for L in range(n_layers):
-                entry = film_layers.get(str(L))
-                if entry is None:
-                    continue
-                curve[L] = float(entry["balanced_accuracy"]) - float(chance)
-            rows.append(curve)
-            sub_ids.append(sub)
-    else:
-        prov_paths = sorted(PROVISIONAL_PERFILM_ROOT.glob(
-            f"sub-*_{model}_{stim}_perfilm.json"
-        ))
-        if prov_paths:
-            source = "provisional"
-        for p in prov_paths:
-            sub = p.name.split("_")[0]
-            d = json.loads(p.read_text())
-            chance = d.get("chance_level")
-            per_layer = d.get("per_layer", {})
-            if chance is None or not per_layer:
-                continue
-            curve = np.full(n_layers, np.nan)
-            for L in range(n_layers):
-                layer_entry = per_layer.get(str(L), {})
-                film_entry = layer_entry.get(film_key)
-                if film_entry is None:
-                    continue
-                curve[L] = float(film_entry["balanced_accuracy"]) - float(chance)
-            rows.append(curve)
-            sub_ids.append(sub)
+            curve[L] = float(entry["balanced_accuracy"]) - float(chance)
+        rows.append(curve)
+        sub_ids.append(sub)
     if not rows:
         return None, [], None
-    return np.vstack(rows), sub_ids, source
+    return np.vstack(rows), sub_ids, "production"
 
 
 def _draw_band(ax, xs, mean, sem, color, linewidth=1.6):
@@ -307,12 +281,6 @@ def render_panel(panel, series, ylim):
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)
     plt.close(fig)
     print(f"  -> wrote {out_pdf.name} + {out_png.name}")
-    if panel["kind"] == "per_subset" and any(s["source"] == "provisional"
-                                             for s in series):
-        print(f"  [NOTE] Panel {panel['name']} rendered from PROVISIONAL perfilm "
-              f"(point estimates only, no permutation). Re-run after the "
-              f"production --per_subset SLURM job finishes for the "
-              f"manuscript-grade version.")
 
 
 def make_stim_legend():

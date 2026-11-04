@@ -17,21 +17,30 @@ For each (subject, test_stimulus, model) triple, this script:
 5. Fits a single ``RidgeClassifier`` on Friends intersection TRs per layer and
    evaluates on the test-stimulus intersection TRs. Reports balanced accuracy,
    chance level, and per-state recall / precision.
-6. Builds a circular-shift null on **test-stimulus** labels per layer and
-   reports a permutation p-value.
+6. Builds a null per layer by circular-shifting the **Friends training**
+   labels within Friends runs, refitting the classifier, and scoring it on
+   the real test-stimulus labels; reports a permutation p-value.
+
+Training and test features use the same brain-to-feature lag (``--lag``).
+The default, ``friends_best``, is the participant's best within-Friends lag
+for the model from 08d D1 (lag 0 excluded).
 
 Outputs are written to
-``{SCRATCH_DIR}/output/08e_transformer_cross_stim_aggregate/{parcellation}/{sub_id}/{test_stimulus}_{model}/``.
+``{SCRATCH_DIR}/output/08e_transformer_cross_stim_aggregate/{parcellation}/{sub_id}/{test_stimulus}_{model}_lag-best/``
+for ``--lag friends_best``; ``--lag 0`` writes to ``{test_stimulus}_{model}/``
+and another explicit lag N to ``{test_stimulus}_{model}_lag-N/``.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
 import pickle
 import re as _re
+import shutil
 import sys
 from pathlib import Path
 
@@ -51,9 +60,16 @@ from utils.common import (
 )
 from utils.stats import benjamini_hochberg, permutation_pvalue
 from utils.transformer_analysis import (
-    INTERSECTION_MIN_FO, build_layer_feature_matrix, build_run_boundaries,
-    compute_effect_size, load_content_eligibility,
+    D3A_LAG_BEST_SUFFIX, D3A_VT, INTERSECTION_MIN_FO, PEAK_LAG_EXCLUDE,
+    best_lag_from_d1_file, build_layer_feature_matrix,
+    build_run_boundaries,
+    compute_effect_size, d1_eligibility_problems, d1_stale_message,
+    d3a_eligibility_problems, d3a_stale_output_message,
+    d3a_unreadable_output_message,
+    find_best_lag_layer, friends_d1_path,
+    load_content_eligibility, require_05e_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
+    transformer_feature_path,
 )
 from utils.transformer_io import MODEL_REGISTRY, validate_stimulus_model
 
@@ -88,6 +104,15 @@ CROSS_STIM_STAGE_MAP = {
     "petitprince_fr": "pp_04_decoded",
     "petitprince_en": "pp_04_decoded",
 }
+
+# Brain-to-feature lag for the transfer decoder. ``friends_best`` uses the lag
+# at which this participant's within-Friends decoder (08d D1) peaked for the
+# same model, chosen on Friends only and never on the test stimulus. The rule
+# (find_best_lag_layer), the excluded lags (PEAK_LAG_EXCLUDE: lag 0, the
+# synchronous diagnostic) and the D1 path (friends_d1_path) live in
+# utils.transformer_analysis, shared with the figure scripts that read the
+# best-lag outputs.
+LAG_FRIENDS_BEST = "friends_best"
 
 
 # ---------------------------------------------------------------------------
@@ -341,6 +366,321 @@ def _plot_transfer(results, out_path, title, chance):
 # ---------------------------------------------------------------------------
 
 
+def resolve_friends_best_lag(scratch_dir, parc, sub_id, model_key):
+    """Return ``(lag, info)`` for the participant's best within-Friends lag.
+
+    Raises if the 08d D1 output is missing or has no candidate lag, rather
+    than falling back to lag 0: a silent fallback would reproduce the
+    lag-0 transfer this option exists to replace.
+    """
+    path = friends_d1_path(scratch_dir, parc, sub_id, model_key)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"08d D1 output not found: {path}. Run 08d for {sub_id} "
+            f"{model_key} first, or pass an explicit --lag."
+        )
+    return best_lag_from_d1_file(path)
+
+
+def parse_lag(value):
+    """argparse type: ``friends_best`` or a non-negative integer number of TRs."""
+    if value == LAG_FRIENDS_BEST:
+        return value
+    try:
+        lag = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"--lag must be {LAG_FRIENDS_BEST!r} or a non-negative integer, "
+            f"got {value!r}"
+        )
+    if lag < 0:
+        raise argparse.ArgumentTypeError(f"--lag must be >= 0, got {lag}")
+    return lag
+
+
+def output_subdir(stimulus, model_key, lag_arg):
+    """Output folder name for one (stimulus, model, lag) cell.
+
+    ``--lag 0`` keeps the original folder name, so its outputs stay where the
+    existing figures read them. Other lags get their own folder, so a rerun
+    never overwrites the lag-0 results.
+    """
+    base = f"{stimulus}_{model_key}"
+    if lag_arg == LAG_FRIENDS_BEST:
+        return f"{base}{D3A_LAG_BEST_SUFFIX}"
+    if lag_arg == 0:
+        return base
+    return f"{base}_lag-{lag_arg}"
+
+
+# ── Per-layer checkpoints ─────────────────────────────────────────────
+# One layer of a 28-layer language model with 1000 permutations takes over an
+# hour, and the D3a JSON is written only after the last layer. Each finished
+# layer is therefore saved to its own file, so a job that hits its time limit
+# can be resubmitted and continue from the next layer. A layer file is reused
+# only when its fingerprint matches the current run's. The fingerprint covers
+# the run settings, a hash of whole source files (CODE_IDENTITY_FILES) and
+# identities of the inputs (see input_identity in main()); any change to one
+# of them recomputes every layer. The files are removed once the D3a JSON is
+# written.
+
+PARTIAL_LAYER_DIRNAME = "partial_layers"
+
+#: Source files whose contents enter the layer fingerprint: this script,
+#: utils/transformer_analysis.py (feature streaming, PCA, null sequences,
+#: lag shift, effect size), utils/stats.py (permutation p-value) and
+#: utils/transformer_io.py (model registry, within-run z-score). Whole files
+#: are hashed, so editing any line of them, comments and helpers that do not
+#: touch a layer included (e.g. the best-lag reader in
+#: transformer_analysis.py), makes saved layers stale; recomputing is the
+#: safe side. Library versions are not hashed.
+_UTILS_DIR = Path(__file__).resolve().parent / "utils"
+CODE_IDENTITY_FILES = (
+    Path(__file__).resolve(),
+    _UTILS_DIR / "transformer_analysis.py",
+    _UTILS_DIR / "stats.py",
+    _UTILS_DIR / "transformer_io.py",
+)
+
+
+def layer_fingerprint(fields):
+    """Stable hash of the fields that determine one layer's result."""
+    blob = json.dumps(fields, sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def code_identity(paths=CODE_IDENTITY_FILES):
+    """sha256 over the contents of the source files that compute a layer."""
+    h = hashlib.sha256()
+    for path in paths:
+        h.update(Path(path).name.encode("utf-8"))
+        h.update(Path(path).read_bytes())
+    return h.hexdigest()
+
+
+#: Hash of CODE_IDENTITY_FILES taken when this module is imported, i.e. of
+#: the code that this process runs. Hashing later (after the data load) would
+#: record an edit made while the job was loading, not the code in memory.
+CODE_SHA256 = code_identity()
+
+
+def array_identity(*arrays):
+    """sha256 over the dtype, shape and bytes of each array, in order."""
+    h = hashlib.sha256()
+    for arr in arrays:
+        arr = np.ascontiguousarray(arr)
+        h.update(f"{arr.dtype.str}{arr.shape}".encode("utf-8"))
+        h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def file_stat_identity(paths, base_dir):
+    """sha256 over one identity line per file, keyed by its path relative to
+    ``base_dir`` (so stable across moves of ``base_dir``).
+
+    Cheap: one stat (and for a link one readlink) per file, no reads. A
+    symlink, which is how git-annex stores a file, is identified by its
+    link target, which names the annex key and so the content hash, plus
+    the size of the file it points to; re-fetching the annex object after
+    a drop changes its mtime but not this identity. A regular file is
+    identified by size and mtime_ns. A missing file, or a link whose
+    content is not present, is recorded as missing.
+    """
+    h = hashlib.sha256()
+    for path in sorted(paths):
+        rel = os.path.relpath(path, base_dir)
+        try:
+            st = os.stat(path)
+        except FileNotFoundError:
+            h.update(f"{rel}\tmissing\n".encode("utf-8"))
+            continue
+        if os.path.islink(path):
+            line = f"{rel}\tlink\t{os.readlink(path)}\t{st.st_size}\n"
+        else:
+            line = f"{rel}\t{st.st_size}\t{st.st_mtime_ns}\n"
+        h.update(line.encode("utf-8"))
+    return h.hexdigest()
+
+
+def feature_file_paths(scratch_dir, stimulus, model_key, run_ids,
+                       feature_key_fn=None):
+    """The 08c feature files that stream_pca_features reads for these runs.
+
+    Built with the same helper (transformer_feature_path) that
+    stream_pca_features uses. Raises if none of them exists: the runs
+    passed here survived feature loading, so an all-missing set means the
+    paths are wrong, and the identity would not track the features.
+    """
+    fkey = feature_key_fn if feature_key_fn is not None else (lambda r: r)
+    stems = sorted({fkey(r) for r in run_ids})
+    paths = [
+        transformer_feature_path(scratch_dir, stimulus, model_key, layer_idx, stem)
+        for layer_idx in range(MODEL_REGISTRY[model_key]["n_layers"])
+        for stem in stems
+    ]
+    if not any(os.path.exists(p) for p in paths):
+        raise FileNotFoundError(
+            f"None of the {len(paths)} 08c feature files expected for "
+            f"{stimulus} x {model_key} exists (e.g. "
+            f"{paths[0] if paths else 'no runs'})."
+        )
+    return paths
+
+
+def write_json_atomic(path, payload, indent=None):
+    """Write JSON through a temporary file and ``os.replace``.
+
+    A job killed during the write leaves the old file or none, never a
+    truncated one, so an existing output file is always complete.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(payload, f, indent=indent)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def partial_layer_path(out_dir, stimulus, model_key, layer_idx):
+    return os.path.join(
+        out_dir, PARTIAL_LAYER_DIRNAME,
+        f"D3a_layer-{layer_idx:03d}_{stimulus}_{model_key}.json",
+    )
+
+
+def save_partial_layer(path, fingerprint, layer_idx, res):
+    """Write one finished layer atomically (a killed job leaves no half file)."""
+    write_json_atomic(
+        path, {"fingerprint": fingerprint, "layer": int(layer_idx), "result": res},
+    )
+
+
+def load_partial_layer(path, fingerprint, layer_idx):
+    """Return the saved result for this layer, or ``None`` if it can't be reused.
+
+    A missing, unreadable or truncated file, a file for another layer, and a
+    file whose fingerprint differs from the current run's all return ``None``,
+    so the layer is recomputed. When the file exists but is not reused, one
+    warning names the reason.
+    """
+    def _reject(reason):
+        logger.warning("  Layer %d: saved result not reused (%s): %s",
+                       layer_idx, reason, path)
+        return None
+
+    try:
+        with open(path) as f:
+            payload = json.load(f)
+    except FileNotFoundError:
+        return None
+    except (OSError, ValueError) as exc:
+        return _reject(f"unreadable: {exc.__class__.__name__}")
+    if not isinstance(payload, dict) or not isinstance(payload.get("result"), dict):
+        return _reject("malformed")
+    if payload.get("layer") != int(layer_idx):
+        return _reject(f"file is for layer {payload.get('layer')!r}")
+    if payload.get("fingerprint") != fingerprint:
+        return _reject("fingerprint differs: settings, code or inputs changed")
+    return payload["result"]
+
+
+def clear_partial_layers(out_dir):
+    """Remove the per-layer files once the full D3a output has been written.
+
+    Called only after every output is on disk, so a failure here (an NFS
+    ``.nfs*`` file, a duplicate job still writing) is logged, not raised:
+    it must not fail a finished cell.
+    """
+    part_dir = os.path.join(out_dir, PARTIAL_LAYER_DIRNAME)
+    if not os.path.isdir(part_dir):
+        return
+    try:
+        shutil.rmtree(part_dir)
+    except OSError as exc:
+        logger.warning("Could not remove %s (%s); the D3a outputs are complete.",
+                       part_dir, exc)
+
+
+def check_lag_best_outputs(out_dir, filenames, lag, lag_info, eligibility,
+                           sub_id, stimulus, model_key):
+    """Raise if existing best-lag outputs no longer match 08d D1 and 05e.
+
+    The ``_lag-best`` folder name does not carry the lag value or the
+    eligible states, so a cell whose 08d D1 peak lag or 05e eligibility has
+    changed since its outputs were written would otherwise be skipped as
+    complete. Every file in ``filenames`` is checked for the lag and for
+    eligibility (:func:`d3a_eligibility_problems`, which says what can be
+    checked in files written by older code). A changed
+    ``friends_best_layer`` at the same lag only logs a warning: every layer
+    is computed at the lag, so the D3a result does not depend on it.
+    """
+    for name in filenames:
+        path = os.path.join(out_dir, name)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(d3a_unreadable_output_message(
+                path, sub_id, stimulus, model_key, exc,
+            )) from exc
+        problems = []
+        if data.get("lag") != lag:
+            problems.append(f"lag {data.get('lag')!r} on disk vs {lag} from 08d D1")
+        problems += d3a_eligibility_problems(data, eligibility)
+        if problems:
+            raise RuntimeError(
+                d3a_stale_output_message(path, sub_id, stimulus, model_key, problems)
+            )
+        if ("friends_best_layer" in data
+                and data["friends_best_layer"] != lag_info.get("friends_best_layer")):
+            logger.warning(
+                "%s: friends_best_layer %r on disk vs %r from 08d D1 at the same "
+                "lag %d. The D3a result does not depend on the best layer; "
+                "keeping the output.", path, data["friends_best_layer"],
+                lag_info.get("friends_best_layer"), lag,
+            )
+
+
+def run_layers(layer_indices, compute_layer, out_dir, stimulus, model_key,
+               fingerprint, resume=True, reused=None):
+    """Compute every layer, reusing saved layers and saving each new one.
+
+    ``compute_layer(layer_idx)`` returns the layer's result dict, or ``None``
+    to skip the layer (no features, degenerate fit). Skipped layers are not
+    saved, so they are attempted again on resume. If ``reused`` is a list,
+    the index of each layer taken from a saved file is appended to it.
+    """
+    results = {}
+    for layer_idx in layer_indices:
+        path = partial_layer_path(out_dir, stimulus, model_key, layer_idx)
+        res = load_partial_layer(path, fingerprint, layer_idx) if resume else None
+        if res is not None:
+            logger.info("  Layer %d: reused saved result (%s)", layer_idx, path)
+            if reused is not None:
+                reused.append(int(layer_idx))
+        else:
+            res = compute_layer(layer_idx)
+            if res is None:
+                continue
+            # Same JSON round trip as a reused layer, so fresh and resumed
+            # layers reach the output in the same form (e.g. string keys).
+            res = json.loads(json.dumps(res))
+            save_partial_layer(path, fingerprint, layer_idx, res)
+        results[layer_idx] = res
+        logger.info(
+            "  Layer %d: bal_acc=%.4f (chance=%.4f, eff=%.3f, p=%.4f)",
+            layer_idx, res["balanced_accuracy"], res["chance_level"],
+            res["normalized_effect_size"], res["p_perm"],
+        )
+    return results
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description="Cross-stimulus aggregate transfer (08e).",
@@ -350,14 +690,29 @@ def parse_args():
     p.add_argument("--stimulus", required=True,
                    choices=list(CROSS_STIM_STAGE_MAP.keys()))
     p.add_argument("--model", required=True, choices=list(MODEL_REGISTRY.keys()))
-    p.add_argument("--vt", default=None)
+    p.add_argument("--vt", default=D3A_VT,
+                   help="Variance-threshold subfolder of the 05e state flags "
+                        f"and decoded states (default: {D3A_VT}, the wrapper's "
+                        "VT default and the value the best-lag readers use).")
     p.add_argument("--n_permutations", type=int, default=N_PERMUTATIONS_DEFAULT)
     p.add_argument("--force", action="store_true",
-                   help="Re-run even if checkpoint output already exists.")
+                   help="Re-run even if checkpoint output already exists. "
+                        "Implies --fresh: saved per-layer results are not "
+                        "reused, so do not set it to resume a timed-out cell.")
+    p.add_argument("--fresh", action="store_true",
+                   help="Ignore per-layer results saved by an earlier, "
+                        "interrupted run of this cell and recompute every layer.")
     p.add_argument("--per_subset", action="store_true",
                    help="Also emit per-subset breakdown (currently honored only "
                         "for --stimulus movie10, which splits by film: wolf / "
                         "figures / bourne / life). Pooled output is unchanged.")
+    p.add_argument("--lag", type=parse_lag, default=LAG_FRIENDS_BEST,
+                   help="Brain-to-feature lag in TRs for training and test "
+                        "features: 'friends_best' (default) uses the "
+                        "participant's best within-Friends lag for this model "
+                        "from 08d D1 (lag 0 excluded); an integer sets it. "
+                        "Outputs go to <stimulus>_<model>_lag-best (or "
+                        "_lag-N); --lag 0 writes to the original folder.")
     return p.parse_args()
 
 
@@ -435,9 +790,18 @@ def main():
     logger.info("Sub=%s test_stimulus=%s model=%s", sub_id, stimulus, model_key)
     logger.info("=" * 60)
 
+    if args.lag == LAG_FRIENDS_BEST:
+        lag, lag_info = resolve_friends_best_lag(
+            SCRATCH_DIR, parc, sub_id, model_key,
+        )
+        lag_source = LAG_FRIENDS_BEST
+    else:
+        lag, lag_info, lag_source = args.lag, {}, "explicit"
+    logger.info("Lag: %d TRs (source=%s)", lag, lag_source)
+
     out_dir = os.path.join(
         SCRATCH_DIR, "output", "08e_transformer_cross_stim_aggregate", parc,
-        sub_id, f"{stimulus}_{model_key}",
+        sub_id, output_subdir(stimulus, model_key, args.lag),
     )
     os.makedirs(out_dir, exist_ok=True)
 
@@ -451,6 +815,33 @@ def main():
     checkpoint_files = [f"D3a_transfer_{stimulus}_{model_key}.json"]
     if per_subset_active:
         checkpoint_files.append(f"D3a_per_subset_{stimulus}_{model_key}.json")
+    # Eligibility (Friends-defined; shared state space). Loaded before the
+    # checkpoint so the skip guard can compare it with existing outputs.
+    if lag_source == LAG_FRIENDS_BEST:
+        # Refuse the sub-HRF fallback: missing 05e flags are a missing
+        # input to restore, not a reason to rerun or move the cell aside.
+        eligibility = require_05e_eligibility(
+            sub_id, parc, SCRATCH_DIR, vt=args.vt,
+            loader=load_content_eligibility,
+        )
+    else:
+        eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR,
+                                               vt=args.vt)
+    if lag_source == LAG_FRIENDS_BEST:
+        # The lag comes from 08d D1 and the states from 05e: refuse to run or
+        # skip when D1 was computed from a different eligibility than 05e
+        # gives now (e.g. a 05e rerun not yet followed by 08d).
+        d1_problems = d1_eligibility_problems(
+            lag_info["friends_d1_path"], eligibility,
+        )
+        if d1_problems:
+            raise RuntimeError(d1_stale_message(
+                lag_info["friends_d1_path"], sub_id, d1_problems,
+            ))
+    if (lag_source == LAG_FRIENDS_BEST and not args.force and all(
+            os.path.exists(os.path.join(out_dir, f)) for f in checkpoint_files)):
+        check_lag_best_outputs(out_dir, checkpoint_files, lag, lag_info,
+                               eligibility, sub_id, stimulus, model_key)
     if check_checkpoint(out_dir, checkpoint_files, "D3a", force=args.force):
         return
 
@@ -577,11 +968,12 @@ def main():
         stimulus, len(test_run_ids), len(test_states_cat),
     )
 
-    with open(os.path.join(out_dir, "pca_info.json"), "w") as f:
-        json.dump({str(k): v for k, v in pca_info.items()}, f, indent=2)
+    write_json_atomic(
+        os.path.join(out_dir, "pca_info.json"),
+        {str(k): v for k, v in pca_info.items()}, indent=2,
+    )
 
-    # ── Eligibility (Friends-defined; shared state space) ─────────────
-    eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
+    # ── Intersection of the eligible states (loaded above) ────────────
     intersect_ids, fo_stats = _compute_intersection(
         friends_states_cat, test_states_cat, eligibility["content_eligible"],
     )
@@ -671,37 +1063,98 @@ def main():
     n_layers = MODEL_REGISTRY[model_key]["n_layers"]
     n_classes = len(intersect_ids)
 
-    results = {}
-    for layer_idx in range(n_layers):
+    # Input identity for the layer fingerprint. Content hashes where the
+    # data are already in memory (state sequences and masks after
+    # alignment, which carry the decoded states and the state_flags
+    # eligibility; the PCA training runs), and file identities for the 08c
+    # feature files, which are too large to hash on every start. Of the
+    # PCA summary only the integers (K and n_train_samples per layer) are
+    # kept: explained_variance is a float32 sum whose last bits differ
+    # between CPU types for the same inputs, so hashing it would make a
+    # resubmitted cell that lands on another node discard every saved
+    # layer. The PCA itself is a function of the features, the training
+    # runs and the code, which are all in the fingerprint.
+    input_identity = {
+        "states_masks_sha256": array_identity(
+            friends_states_cat.astype(np.int64), test_states_cat.astype(np.int64),
+            friends_mask, test_mask,
+        ),
+        "pca_train_runs_sha256": layer_fingerprint(sorted(splits["train"])),
+        "pca_layers_k_n_train": {
+            str(k): [int(v["K"]), int(v["n_train_samples"])]
+            for k, v in sorted(pca_info.items())
+        },
+        "content_eligible": eligibility["content_eligible"],
+        "friends_features_stat_sha256": file_stat_identity(
+            feature_file_paths(SCRATCH_DIR, "friends", model_key, friends_run_ids),
+            SCRATCH_DIR,
+        ),
+        "test_features_stat_sha256": file_stat_identity(
+            feature_file_paths(SCRATCH_DIR, stimulus, model_key, test_run_ids,
+                               feature_key_fn=test_feature_key_fn),
+            SCRATCH_DIR,
+        ),
+    }
+    code_sha256 = CODE_SHA256
+    fingerprint = layer_fingerprint({
+        "sub_id": sub_id, "parcellation": parc, "stimulus": stimulus,
+        "model": model_key, "vt": args.vt, "lag": lag,
+        "n_permutations": args.n_permutations, "null_seed": NULL_SEED_D3A,
+        "pca_variance_threshold": PCA_VARIANCE_THRESHOLD,
+        "test_max_drift": test_max_drift,
+        "eligibility_source": eligibility["eligibility_source"],
+        "intersection_states": intersect_ids, "n_classes": n_classes,
+        "friends_run_ids": friends_run_ids, "test_run_ids": test_run_ids,
+        "n_friends_trs": int(friends_mask.sum()),
+        "n_test_trs": int(test_mask.sum()),
+        "per_subset": bool(per_subset_active), "subsets": subset_labels,
+        "code_sha256": code_sha256,
+        "inputs": input_identity,
+    })
+
+    def compute_layer(layer_idx):
         friends_runs = friends_features.get(layer_idx, {})
         test_runs = test_features.get(layer_idx, {})
         if not friends_runs or not test_runs:
-            continue
+            return None
         try:
+            # The same lag for training (Friends) and test features, so the
+            # decoder is applied at the lag it was fitted at. Zero-padded
+            # first `lag` TRs of each run stay in, as in 08d.
             friends_X = build_layer_feature_matrix(
-                friends_runs, friends_run_ids, friends_decoded,
+                friends_runs, friends_run_ids, friends_decoded, lag=lag,
             )
             test_X = build_layer_feature_matrix(
-                test_runs, test_run_ids, test_decoded,
+                test_runs, test_run_ids, test_decoded, lag=lag,
             )
         except ValueError as exc:
             logger.debug("Layer %d: %s", layer_idx, exc)
-            continue
-        res = _fit_eval_one_layer(
+            return None
+        return _fit_eval_one_layer(
             layer_idx,
             friends_X, friends_states_cat.astype(int), friends_mask,
             test_X, test_states_cat.astype(int), test_mask,
             intersect_set, null_friends_seqs, n_classes,
             subsets=per_subset_masks,
         )
-        if res is None:
-            continue
-        results[layer_idx] = res
-        logger.info(
-            "  Layer %d: bal_acc=%.4f (chance=%.4f, eff=%.3f, p=%.4f)",
-            layer_idx, res["balanced_accuracy"], res["chance_level"],
-            res["normalized_effect_size"], res["p_perm"],
-        )
+
+    # --force means "recompute this cell", so it never reuses saved layers.
+    reused_layers = []
+    results = run_layers(
+        range(n_layers), compute_layer, out_dir, stimulus, model_key,
+        fingerprint, resume=not (args.fresh or args.force),
+        reused=reused_layers,
+    )
+    if reused_layers:
+        logger.info("Reused %d saved layers: %s", len(reused_layers), reused_layers)
+    # Recorded in each D3a JSON, so a result assembled from saved layers can
+    # be told from a single uninterrupted run and traced to its code/inputs.
+    run_provenance = {
+        "layer_fingerprint": fingerprint,
+        "code_sha256": code_sha256,
+        "input_identity": input_identity,
+        "reused_layers": sorted(reused_layers),
+    }
 
     # Global BH-FDR across layers (mirrors 08d D1 which corrects across the
     # full layers × lags grid; 08e has no lag grid yet, so the correction is
@@ -713,23 +1166,34 @@ def main():
         for l, q in zip(layer_order, fdr_p):
             results[l]["p_fdr"] = round(float(q), 4)
 
+    # The D1 path goes into the outputs relative to SCRATCH_DIR, so the files
+    # do not carry this machine's paths. Nothing reads it back; files written
+    # by older code hold an absolute path.
+    output_lag_info = dict(lag_info)
+    if "friends_d1_path" in output_lag_info:
+        output_lag_info["friends_d1_path"] = os.path.relpath(
+            output_lag_info["friends_d1_path"], SCRATCH_DIR,
+        )
     out_payload = {
         "sub_id": sub_id,
         "test_stimulus": stimulus,
         "model": model_key,
+        "lag": lag,
+        "lag_source": lag_source,
+        **output_lag_info,
         "eligibility_source": eligibility["eligibility_source"],
         "intersection_states": intersect_ids,
         "intersection_fo": {str(k): v for k, v in fo_stats.items()},
         "n_classes": n_classes,
         "n_friends_trs": int(friends_mask.sum()),
         "n_test_trs": int(test_mask.sum()),
+        **run_provenance,
         "per_layer": {str(k): v for k, v in results.items()},
     }
     out_path = os.path.join(
         out_dir, f"D3a_transfer_{stimulus}_{model_key}.json",
     )
-    with open(out_path, "w") as f:
-        json.dump(out_payload, f, indent=2)
+    write_json_atomic(out_path, out_payload, indent=2)
     logger.info("Saved %s", out_path)
 
     chance = 1.0 / n_classes if n_classes else None
@@ -767,6 +1231,10 @@ def main():
             "sub_id": sub_id,
             "test_stimulus": stimulus,
             "model": model_key,
+            "lag": lag,
+            "lag_source": lag_source,
+            **output_lag_info,
+            **run_provenance,
             "subset_axis": "film" if stimulus == "movie10" else stimulus,
             "subsets": subset_labels,
             "eligibility_source": eligibility["eligibility_source"],
@@ -782,9 +1250,11 @@ def main():
         per_subset_path = os.path.join(
             out_dir, f"D3a_per_subset_{stimulus}_{model_key}.json",
         )
-        with open(per_subset_path, "w") as f:
-            json.dump(per_subset_payload, f, indent=2)
+        write_json_atomic(per_subset_path, per_subset_payload, indent=2)
         logger.info("Saved %s", per_subset_path)
+
+    # Every output is on disk, so the per-layer files are no longer needed.
+    clear_partial_layers(out_dir)
 
     logger.info("=" * 60)
     logger.info("08e_transformer_cross_stim_aggregate complete")

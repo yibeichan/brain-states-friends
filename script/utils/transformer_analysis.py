@@ -87,6 +87,410 @@ BOOTSTRAP_SEED_RECURRENCE_DEPTH = 100_000
 
 
 # ---------------------------------------------------------------------------
+# Best within-Friends lag (08d D1) and the 08e D3a outputs computed at it
+# ---------------------------------------------------------------------------
+
+#: Lags left out of the peak-lag search. Lag 0 is the synchronous diagnostic
+#: in 08d D1, not a candidate peak. 08d_transformer_depth.py keeps its own
+#: copy of this set; tests/test_08e_lag.py checks the two are equal.
+PEAK_LAG_EXCLUDE = frozenset({0})
+
+#: Folder suffix for 08e outputs computed at the participant's best
+#: within-Friends lag (``--lag friends_best``). 08e writes there and the
+#: figure scripts read from there; the lag-0 outputs stay in the folder
+#: without a suffix.
+D3A_LAG_BEST_SUFFIX = "_lag-best"
+
+#: Participants of the 08e cross-stimulus transfer.
+D3A_SUBJECTS = ("sub-01", "sub-02", "sub-03", "sub-04", "sub-05", "sub-06")
+
+#: Test stimuli that CNeuroMod did not collect for sub-04 (a data-provenance
+#: limit, not a QC exclusion). The 08e wrapper skips sub-04 for these.
+D3A_STIMULI_WITHOUT_SUB04 = frozenset(
+    {"harrypotter", "petitprince_fr", "petitprince_en"}
+)
+
+
+def d3a_expected_subjects(stimulus):
+    """Participants that have 08e D3a outputs for ``stimulus``."""
+    if stimulus in D3A_STIMULI_WITHOUT_SUB04:
+        return [s for s in D3A_SUBJECTS if s != "sub-04"]
+    return list(D3A_SUBJECTS)
+
+
+#: VT suffix of the 05e_a4 state flags that the 08e wrapper passes (its VT
+#: default). The best-lag readers load the current eligibility with it.
+D3A_VT = "0.95"
+
+
+def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
+    """Error text for a best-lag D3a output that disagrees with 08d D1 / 05e.
+
+    Used by the 08e skip guard and by the figure reader, so both give the
+    same remedy. The text does not say which side is stale, because either
+    can be: a D1 or 05e rerun after the 08e output was written, or an 08e
+    output promoted before its D1 / 05e.
+    """
+    folder, resubmit = _d3a_resubmit_hint(path, sub_id, stimulus, model_key)
+    return (
+        f"{path} disagrees with the current 08d D1 / 05e eligibility for "
+        f"{sub_id} ({'; '.join(problems)}). Either side may be stale. If 08d "
+        f"D1 and 05e are current, move {folder} aside and {resubmit} "
+        "If the 08e output is the current side, bring 08d D1 / 05e "
+        "up to date instead."
+    )
+
+
+def d3a_unreadable_output_message(path, sub_id, stimulus, model_key, reason):
+    """Error text for a best-lag D3a output that cannot be read.
+
+    ``reason`` is the exception. A file that opens but does not parse
+    (``ValueError``) is probably an incomplete write and is recomputed; a
+    file that cannot be opened (``OSError``: permissions, storage, a
+    directory in its place) is an access problem, and recomputing would not
+    fix it.
+    """
+    if isinstance(reason, OSError):
+        return (
+            f"{path} cannot be opened ({reason}). This is an access or "
+            "storage problem, not a stale or incomplete output: check the "
+            "file's permissions and the filesystem, then rerun. Do not "
+            "recompute the cell for this."
+        )
+    folder, resubmit = _d3a_resubmit_hint(path, sub_id, stimulus, model_key)
+    return (
+        f"{path} cannot be read ({reason}). It is probably an incomplete "
+        f"write, for example from a job killed while writing. Move the file "
+        f"(or {folder}) aside and {resubmit}"
+    )
+
+
+def _d3a_resubmit_hint(path, sub_id, stimulus, model_key):
+    """``(folder, text)``: how to resubmit one participant's best-lag cell."""
+    try:
+        index = str(D3A_SUBJECTS.index(sub_id))
+    except ValueError:
+        index = "<index of the participant>"
+    folder = os.path.dirname(str(path))
+    # A folder that held the per-film file must be rerun with PER_SUBSET=1,
+    # or the rerun writes only the pooled file and the per-film readers fail.
+    per_subset_file = os.path.join(
+        folder, f"D3a_per_subset_{stimulus}_{model_key}.json",
+    )
+    env = f"STIMULUS={stimulus} MODEL={model_key}"
+    if os.path.exists(per_subset_file):
+        env += " PER_SUBSET=1"
+    return folder, (
+        f"resubmit only this participant (sbatch --array={index} with {env}) "
+        "without FORCE: FORCE=1 implies --fresh, so every resubmission would "
+        "restart from layer 0."
+    )
+
+
+def d1_eligibility_problems(d1_path, eligibility):
+    """How a 08d D1 file's state eligibility disagrees with the current 05e set.
+
+    08d records the eligibility it used (``eligibility_source`` and
+    ``n_eligible_states``) in its D1 output. 08e takes its lag from D1 and
+    its states from 05e, so the two must describe the same eligibility. A D1
+    file that records neither field cannot be checked and returns no problem.
+    Returns a list of problems (empty when consistent).
+    """
+    with open(str(d1_path)) as f:
+        d1 = json.load(f)
+    problems = []
+    cur_src = eligibility.get("eligibility_source")
+    if "eligibility_source" in d1 and d1["eligibility_source"] != cur_src:
+        problems.append(
+            f"08d D1 eligibility_source {d1['eligibility_source']!r} vs "
+            f"{cur_src!r} from 05e now"
+        )
+    n_cur = len(eligibility["content_eligible"])
+    if "n_eligible_states" in d1 and d1["n_eligible_states"] != n_cur:
+        problems.append(
+            f"08d D1 n_eligible_states={d1['n_eligible_states']!r} vs {n_cur} "
+            "content-eligible states in 05e now"
+        )
+    return problems
+
+
+def d1_stale_message(d1_path, sub_id, problems):
+    """Error text for a 08d D1 output whose eligibility disagrees with 05e."""
+    return (
+        f"{d1_path} does not match the current 05e eligibility for {sub_id} "
+        f"({'; '.join(problems)}). 08e reads its lag from 08d D1 and its states "
+        "from 05e, so both must come from the same eligibility. Bring 08d D1 "
+        "up to date with 05e (rerun 08d, or promote D1 together with the 05e "
+        "flags it was computed from) before running or reading 08e."
+    )
+
+
+def state_flags_path(sub_id, parcellation, scratch_dir, vt=None):
+    """Path of the 05e_a4 ``state_flags.csv`` that
+    :func:`utils.state_flags_io.load_state_flags` reads."""
+    base = os.path.join(
+        str(scratch_dir), "output", "05e_temporal_trend_a4", parcellation, sub_id,
+    )
+    if vt is not None:
+        base = os.path.join(base, f"vt{vt}")
+    return os.path.join(base, "state_flags.csv")
+
+
+def require_05e_eligibility(sub_id, parcellation, scratch_dir, vt=None,
+                            loader=None):
+    """Current 05e eligibility, refusing the sub-HRF fallback.
+
+    :func:`load_content_eligibility` falls back to the 05a sub-HRF filter
+    when ``state_flags.csv`` is missing (for example a dropped annex
+    object). Best-lag 08e outputs are computed and read against the 05e
+    set, so a fallback here means a missing input, not a stale output:
+    rerunning 08e would write fallback outputs. Raises
+    ``FileNotFoundError`` naming the expected file. ``loader`` defaults to
+    :func:`load_content_eligibility`; 08e passes its own reference.
+    """
+    path = state_flags_path(sub_id, parcellation, scratch_dir, vt=vt)
+    load = loader if loader is not None else load_content_eligibility
+
+    def _flags_usable():
+        """True when the flags file exists and has a summary_category column."""
+        if not os.path.isfile(path):
+            return False
+        try:
+            with open(path) as f:
+                header = f.readline()
+        except OSError:
+            return False
+        return "summary_category" in [c.strip() for c in header.split(",")]
+
+    def _missing():
+        if os.path.isfile(path):
+            what = f"at {path} have no summary_category column"
+        else:
+            what = f"were not found at {path}"
+        return FileNotFoundError(
+            f"The 05e state flags for {sub_id} {what}. 08e best-lag outputs "
+            "are computed and read against the 05e eligibility, and without "
+            "the flags it would fall back to the 05a sub-HRF filter. Restore "
+            "the file (e.g. datalad get), or run "
+            "script/05e_temporal_trend_a4.sh if 05e never ran for this "
+            "participant, instead of rerunning 08e: a rerun would write "
+            "outputs from the fallback."
+        )
+
+    try:
+        eligibility = load(sub_id, parcellation, scratch_dir, vt=vt)
+    except FileNotFoundError as exc:
+        # The fallback also needs the 05a outputs; when the 05e flags are
+        # missing or unusable, name the 05e file, not the 05a one.
+        if not _flags_usable():
+            raise _missing() from exc
+        raise
+    if eligibility.get("eligibility_source") == "sub_hrf_fallback":
+        raise _missing()
+    return eligibility
+
+
+def d3a_eligibility_problems(data, eligibility):
+    """How a D3a JSON's state eligibility disagrees with the current 05e set.
+
+    ``eligibility`` is the participant's current
+    :func:`load_content_eligibility` result, the source 08e itself uses.
+    Returns a list of problems (empty when consistent).
+
+    Files written by this version record the full ``content_eligible``
+    list under ``input_identity``; it must equal the current list. Files
+    written by older code record only ``eligibility_source``,
+    ``intersection_states`` and the state count (``n_classes`` or
+    ``n_classes_intersection``). For those the check is: same
+    ``eligibility_source``, every intersection state still content-eligible,
+    and the count equal to the number of intersection states. An older file
+    cannot be checked for states that became content-eligible after it was
+    written (they might now enter the intersection), because it does not
+    record the eligible set it started from.
+    """
+    problems = []
+    current = sorted(int(s) for s in eligibility["content_eligible"])
+    cur_src = eligibility.get("eligibility_source")
+    if "eligibility_source" in data and data["eligibility_source"] != cur_src:
+        problems.append(
+            f"eligibility_source {data['eligibility_source']!r} on disk vs "
+            f"{cur_src!r} now"
+        )
+    recorded = (data.get("input_identity") or {}).get("content_eligible")
+    if recorded is not None:
+        recorded = sorted(int(s) for s in recorded)
+        if recorded != current:
+            added = sorted(set(current) - set(recorded))
+            removed = sorted(set(recorded) - set(current))
+            problems.append(
+                f"content_eligible differs from 05e now (added {added}, "
+                f"removed {removed})"
+            )
+    states = data.get("intersection_states")
+    if states is None:
+        problems.append("file records no intersection_states")
+        return problems
+    not_eligible = sorted(set(int(s) for s in states) - set(current))
+    if not_eligible:
+        problems.append(
+            f"intersection states {not_eligible} are not content-eligible in "
+            "05e now"
+        )
+    for key in ("n_classes", "n_classes_intersection"):
+        if key in data and data[key] != len(states):
+            problems.append(
+                f"{key}={data[key]!r} but {len(states)} intersection states"
+            )
+    return problems
+
+
+def find_best_lag_layer(results_per_lag, exclude_lags=None):
+    """Return ``(best_lag_key, best_layer_idx, best_acc)`` over a D1 result dict.
+
+    The (lag, layer) cell with the highest balanced accuracy, skipping the
+    lags in ``exclude_lags`` and entries whose balanced accuracy is ``None``.
+    On a tie the first cell in dict order wins (strict ``>``). This is the
+    rule of ``_find_best_lag_layer`` in 08d_transformer_depth.py;
+    tests/test_08e_lag.py checks the two agree, ties included.
+    ``results_per_lag`` maps ``"lag_N"`` keys to
+    ``{layer_idx: {"balanced_accuracy": ...}}``.
+    """
+    exclude = set(int(l) for l in exclude_lags) if exclude_lags else set()
+    best = (None, None, -np.inf)
+    for lag_key, lag_data in results_per_lag.items():
+        try:
+            lag_val = int(lag_key.split("_")[1])
+        except (IndexError, ValueError):
+            lag_val = None
+        if lag_val is not None and lag_val in exclude:
+            continue
+        for layer, entry in lag_data.items():
+            acc = entry.get("balanced_accuracy", -np.inf)
+            if acc is not None and acc > best[2]:
+                best = (lag_key, int(layer), float(acc))
+    return best
+
+
+def friends_d1_dir(scratch_dir, parc):
+    """Root of the 08d D1 outputs for one parcellation."""
+    return os.path.join(scratch_dir, "output", "08d_transformer_depth", parc)
+
+
+def friends_d1_file(d1_dir, sub_id, model_key):
+    """Path of one participant's 08d D1 depth profile under ``d1_dir``."""
+    return os.path.join(
+        str(d1_dir), sub_id, f"friends_{model_key}", "D1_depth_profile.json",
+    )
+
+
+def friends_d1_path(scratch_dir, parc, sub_id, model_key):
+    """Path of the participant's within-Friends depth profile (08d D1)."""
+    return friends_d1_file(friends_d1_dir(scratch_dir, parc), sub_id, model_key)
+
+
+def best_lag_from_d1_file(path):
+    """Return ``(lag, info)`` for the best within-Friends lag in one D1 file.
+
+    Raises if the file is missing or has no candidate lag, rather than
+    falling back to lag 0: a silent fallback would reproduce the lag-0
+    transfer that ``--lag friends_best`` exists to replace.
+    """
+    path = str(path)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"08d D1 output not found: {path}.")
+    with open(path) as f:
+        d1 = json.load(f)
+    lag_key, layer, acc = find_best_lag_layer(
+        d1.get("results", {}), exclude_lags=PEAK_LAG_EXCLUDE,
+    )
+    if lag_key is None:
+        raise ValueError(f"No candidate lag in {path} (lag 0 excluded).")
+    lag = int(lag_key.split("_")[1])
+    return lag, {
+        "friends_d1_path": path,
+        "friends_best_layer": layer,
+        "friends_best_balanced_accuracy": round(acc, 4),
+    }
+
+
+def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
+                      subjects=None, *, scratch_dir, parcellation, vt=D3A_VT):
+    """Return ``[(sub_id, data), ...]`` of best-lag D3a JSONs, one per participant.
+
+    Reads ``<root>/<sub>/<stimulus>_<model_key>_lag-best/D3a_<kind>_<stimulus>_<model_key>.json``
+    for each participant in ``subjects`` (default:
+    :func:`d3a_expected_subjects`), in that order. ``kind`` is
+    ``"transfer"`` or ``"per_subset"``. ``d1_dir`` is the 08d D1 root
+    (:func:`friends_d1_dir`). ``scratch_dir``, ``parcellation`` and ``vt``
+    locate the 05e state flags for :func:`load_content_eligibility`, the
+    eligibility source 08e uses.
+
+    Raises ``FileNotFoundError`` naming every participant whose file is
+    missing, so a partial set never reaches a figure as if it were complete,
+    and when a participant's 05e state flags are missing
+    (:func:`require_05e_eligibility`).
+    Raises ``ValueError`` if a file does not record
+    ``lag_source == "friends_best"``, if its ``lag`` is in
+    :data:`PEAK_LAG_EXCLUDE`, if its ``lag`` differs from the best lag
+    recomputed from that participant's current 08d D1 output (for example
+    after a D1 rerun moved the peak), or if its state eligibility disagrees
+    with the participant's current 05e set (:func:`d3a_eligibility_problems`
+    says exactly what is checked for files written by older code). Such a
+    file was computed from inputs the figure does not claim to show.
+    """
+    folder = f"{stimulus}_{model_key}{D3A_LAG_BEST_SUFFIX}"
+    fname = f"D3a_{kind}_{stimulus}_{model_key}.json"
+    if subjects is None:
+        subjects = d3a_expected_subjects(stimulus)
+    paths = {sub: os.path.join(str(root), sub, folder, fname) for sub in subjects}
+    missing = [sub for sub, p in paths.items() if not os.path.exists(p)]
+    if missing:
+        raise FileNotFoundError(
+            f"Best-lag D3a {kind} output missing for {', '.join(missing)} "
+            f"({stimulus} x {model_key}); expected "
+            f"{os.path.join(str(root), '<sub>', folder, fname)}."
+        )
+    out = []
+    for sub, path in paths.items():
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, ValueError) as exc:
+            raise ValueError(d3a_unreadable_output_message(
+                path, sub, stimulus, model_key, exc,
+            )) from exc
+        if data.get("lag_source") != "friends_best":
+            raise ValueError(
+                f"{path} records lag_source={data.get('lag_source')!r}, "
+                "expected 'friends_best'."
+            )
+        lag = data.get("lag")
+        if lag is None or int(lag) in PEAK_LAG_EXCLUDE:
+            raise ValueError(
+                f"{path} records lag={lag!r}, which is not a candidate "
+                f"best lag (excluded: {sorted(PEAK_LAG_EXCLUDE)})."
+            )
+        d1_path = friends_d1_file(d1_dir, sub, model_key)
+        d1_lag, _ = best_lag_from_d1_file(d1_path)
+        eligibility = require_05e_eligibility(
+            sub, parcellation, scratch_dir, vt=vt,
+        )
+        d1_problems = d1_eligibility_problems(d1_path, eligibility)
+        if d1_problems:
+            raise ValueError(d1_stale_message(d1_path, sub, d1_problems))
+        problems = []
+        if int(lag) != d1_lag:
+            problems.append(f"lag {lag} on disk vs best lag {d1_lag} in {d1_path}")
+        problems += d3a_eligibility_problems(data, eligibility)
+        if problems:
+            raise ValueError(
+                d3a_stale_output_message(path, sub, stimulus, model_key, problems)
+            )
+        out.append((sub, data))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # State eligibility (project-wide content-eligibility convention)
 # ---------------------------------------------------------------------------
 
@@ -606,6 +1010,21 @@ def mask_a_run_opening(data_by_run, mask_tr=33):
 # ---------------------------------------------------------------------------
 
 
+def transformer_feature_path(scratch_dir, stimulus, model_key, layer_idx,
+                             feature_stem, extraction_subdir_suffix=""):
+    """Path of one 08c feature file (one run, one layer).
+
+    The one place the 08c layout is spelled out: :func:`stream_pca_features`
+    reads these files and 08e identifies the same files in its layer
+    fingerprint, so the two cannot drift apart.
+    """
+    return os.path.join(
+        scratch_dir, "output",
+        f"08c_transformer_features{extraction_subdir_suffix}",
+        stimulus, model_key, f"layer_{layer_idx:02d}", f"{feature_stem}_raw.npy",
+    )
+
+
 def stream_pca_features(
     stimulus,
     model_key,
@@ -740,11 +1159,12 @@ def stream_pca_features(
             "`pca_models` to know the per-layer component count K."
         )
 
-    feat_dir = os.path.join(
-        scratch_dir, "output",
-        f"08c_transformer_features{extraction_subdir_suffix}",
-        stimulus, model_key,
-    )
+    def _feature_path(layer_idx, feat_stem):
+        return transformer_feature_path(
+            scratch_dir, stimulus, model_key, layer_idx, feat_stem,
+            extraction_subdir_suffix=extraction_subdir_suffix,
+        )
+
     if model_key not in MODEL_REGISTRY:
         raise ValueError(f"Unknown model_key={model_key!r}")
     n_layers = MODEL_REGISTRY[model_key]["n_layers"]
@@ -773,9 +1193,7 @@ def stream_pca_features(
         feat_stem = _fkey(run_id)
         per_layer_lens = []
         for layer_idx in range(n_layers):
-            fpath = os.path.join(
-                feat_dir, f"layer_{layer_idx:02d}", f"{feat_stem}_raw.npy",
-            )
+            fpath = _feature_path(layer_idx, feat_stem)
             if not os.path.exists(fpath):
                 continue
             arr = np.load(fpath, mmap_mode="r")
@@ -838,9 +1256,7 @@ def stream_pca_features(
         raw_per_run = {}
         for run_id in kept_run_ids:
             feat_stem = _fkey(run_id)
-            fpath = os.path.join(
-                feat_dir, f"layer_{layer_idx:02d}", f"{feat_stem}_raw.npy",
-            )
+            fpath = _feature_path(layer_idx, feat_stem)
             if not os.path.exists(fpath):
                 continue
             arr = np.load(fpath)
@@ -1333,8 +1749,9 @@ def build_layer_feature_matrix(
     lag : int, default 0
         Lag in TRs applied via ``new_feats[t] = old_feats[t - lag]`` with
         zero-padding at the start, matching the 08b content-decoding
-        convention. 08e currently calls with ``lag=0``; 08d sweeps
-        ``lag ∈ LAGS_TO_TEST``.
+        convention. 08d sweeps ``lag ∈ LAGS_TO_TEST``; 08e uses one lag for
+        both the Friends training and the test features (by default the
+        participant's best within-Friends lag from 08d).
 
     Returns
     -------
