@@ -65,11 +65,14 @@ export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
 # uniform `--array=0-5` works for every stimulus without re-launching with a
 # trimmed array.
 #
-# If 05e_a4 state_flags.csv is missing for any subject, the script logs an
-# ERROR (non-fatal - falls back to 05a sub-HRF filter) and writes
-# `eligibility_source = sub_hrf_fallback` in the output JSON. Content-encoding
-# claims downstream of that fallback are unreliable; rerun
-# `script/05e_temporal_trend_a4.sh` for that subject before interpreting.
+# If 05e_a4 state_flags.csv is missing for a subject (not yet run, or a
+# dropped annex object), a best-lag cell (LAG=friends_best, the default)
+# stops and names the expected file: restore it (e.g. datalad get) or run
+# `script/05e_temporal_trend_a4.sh` for that subject; do not rerun or move
+# the 08e output. With an explicit LAG the script logs an ERROR, falls back
+# to the 05a sub-HRF filter and writes `eligibility_source =
+# sub_hrf_fallback` in the output JSON; content-encoding claims from such
+# outputs are unreliable.
 # =============================================================================
 
 set -e

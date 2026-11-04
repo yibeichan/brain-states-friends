@@ -66,7 +66,7 @@ from utils.transformer_analysis import (
     compute_effect_size, d1_eligibility_problems, d1_stale_message,
     d3a_eligibility_problems, d3a_stale_output_message,
     find_best_lag_layer, friends_d1_path,
-    load_content_eligibility,
+    load_content_eligibility, require_05e_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
     transformer_feature_path,
 )
@@ -817,7 +817,16 @@ def main():
         checkpoint_files.append(f"D3a_per_subset_{stimulus}_{model_key}.json")
     # Eligibility (Friends-defined; shared state space). Loaded before the
     # checkpoint so the skip guard can compare it with existing outputs.
-    eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
+    if lag_source == LAG_FRIENDS_BEST:
+        # Refuse the sub-HRF fallback: missing 05e flags are a missing
+        # input to restore, not a reason to rerun or move the cell aside.
+        eligibility = require_05e_eligibility(
+            sub_id, parc, SCRATCH_DIR, vt=args.vt,
+            loader=load_content_eligibility,
+        )
+    else:
+        eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR,
+                                               vt=args.vt)
     if lag_source == LAG_FRIENDS_BEST:
         # The lag comes from 08d D1 and the states from 05e: refuse to run or
         # skip when D1 was computed from a different eligibility than 05e

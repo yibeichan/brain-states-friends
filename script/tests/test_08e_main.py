@@ -445,3 +445,25 @@ def test_vt_defaults_to_the_wrapper_and_reader_value(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["08e", "--sub_id", SUB, "--stimulus", STIM,
                                       "--model", MODEL])
     assert m08e.parse_args().vt == m08e.D3A_VT == "0.95"
+
+
+@pytest.mark.parametrize("completed_first", [False, True])
+def test_best_lag_run_refuses_the_sub_hrf_fallback(env, monkeypatch, completed_first):
+    """05e flags missing: neither compute nor judge a completed cell stale;
+    ask for the flags to be restored."""
+    if completed_first:
+        env["run"]()
+    monkeypatch.setattr(m08e, "load_content_eligibility", lambda *a, **k: {
+        "content_eligible": [0, 1, 2], "eligibility_source": "sub_hrf_fallback"})
+    from utils.transformer_analysis import state_flags_path
+    expected = state_flags_path(SUB, PARC, str(m08e.SCRATCH_DIR), vt="0.95")
+    for extra in ((), ("--force",)):
+        with pytest.raises(FileNotFoundError) as exc:
+            env["run"](*extra)
+        msg = str(exc.value)
+        assert f"were not found at {expected}" in msg
+        assert "datalad get" in msg and "instead of rerunning 08e" in msg
+        assert "aside" not in msg and msg.isascii()
+        assert env["fit_calls"] == []
+    env["run"]("--lag", "0")              # an explicit lag keeps the old fallback
+    assert env["fit_calls"] == list(range(N_LAYERS))

@@ -33,6 +33,7 @@ from utils.transformer_analysis import (  # noqa: E402
     friends_d1_dir,
     friends_d1_file,
     load_d3a_lag_best,
+    state_flags_path,
 )
 
 PARC = "atlas-4S156Parcels"
@@ -501,3 +502,36 @@ def test_remedy_asks_for_per_subset_only_when_the_folder_held_it(tmp_path, with_
     with pytest.raises(ValueError) as exc:
         _read(root, d1, "movie10", "m", subjects=SUBS)
     assert ("PER_SUBSET=1" in str(exc.value)) is with_per_subset
+
+
+def test_state_flags_path_is_the_file_load_state_flags_reads(tmp_path):
+    from utils.state_flags_io import load_state_flags
+    _write_flags(tmp_path, "sub-01")
+    p = Path(state_flags_path("sub-01", PARC, str(tmp_path), vt=D3A_VT))
+    assert p.is_file()
+    assert load_state_flags("sub-01", PARC, str(tmp_path), vt=D3A_VT) is not None
+    p.unlink()
+    assert load_state_flags("sub-01", PARC, str(tmp_path), vt=D3A_VT) is None
+
+
+@pytest.mark.parametrize("how", ["removed", "removed_05a_present", "broken_link"])
+def test_reader_refuses_the_sub_hrf_fallback_and_asks_to_restore_the_flags(tmp_path, how):
+    """Missing 05e flags (e.g. a dropped annex object) are a missing input:
+    the remedy is to restore them, not to move the 08e output aside."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    flags = Path(state_flags_path("sub-02", PARC, str(tmp_path), vt=D3A_VT))
+    flags.unlink()
+    if how == "broken_link":
+        flags.symlink_to(tmp_path / "annex" / "objects" / "gone")
+    if how == "removed_05a_present":
+        rec = tmp_path / "output" / "05a_recurrence_analysis" / PARC / "sub-02"
+        rec.mkdir(parents=True)
+        (rec / "recurrence_summary.json").write_text(
+            json.dumps({"recurrence_scores": [1.0, 1.0, 1.0]}))
+    with pytest.raises(FileNotFoundError) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    msg = str(exc.value)
+    assert f"05e state flags for sub-02 were not found at {flags}" in msg
+    assert "datalad get" in msg and "instead of rerunning 08e" in msg
+    assert "aside" not in msg and msg.isascii()

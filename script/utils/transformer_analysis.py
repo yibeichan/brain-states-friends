@@ -193,6 +193,57 @@ def d1_stale_message(d1_path, sub_id, problems):
     )
 
 
+def state_flags_path(sub_id, parcellation, scratch_dir, vt=None):
+    """Path of the 05e_a4 ``state_flags.csv`` that
+    :func:`utils.state_flags_io.load_state_flags` reads."""
+    base = os.path.join(
+        str(scratch_dir), "output", "05e_temporal_trend_a4", parcellation, sub_id,
+    )
+    if vt is not None:
+        base = os.path.join(base, f"vt{vt}")
+    return os.path.join(base, "state_flags.csv")
+
+
+def require_05e_eligibility(sub_id, parcellation, scratch_dir, vt=None,
+                            loader=None):
+    """Current 05e eligibility, refusing the sub-HRF fallback.
+
+    :func:`load_content_eligibility` falls back to the 05a sub-HRF filter
+    when ``state_flags.csv`` is missing (for example a dropped annex
+    object). Best-lag 08e outputs are computed and read against the 05e
+    set, so a fallback here means a missing input, not a stale output:
+    rerunning 08e would write fallback outputs. Raises
+    ``FileNotFoundError`` naming the expected file. ``loader`` defaults to
+    :func:`load_content_eligibility`; 08e passes its own reference.
+    """
+    path = state_flags_path(sub_id, parcellation, scratch_dir, vt=vt)
+    load = loader if loader is not None else load_content_eligibility
+
+    def _missing():
+        if os.path.isfile(path):
+            what = f"{path} has no summary_category column"
+        else:
+            what = f"were not found at {path}"
+        return FileNotFoundError(
+            f"The 05e state flags for {sub_id} {what}. 08e best-lag outputs "
+            "are computed and read against the 05e eligibility, and without "
+            "the flags it would fall back to the 05a sub-HRF filter. Restore "
+            "the file (e.g. datalad get) instead of rerunning 08e: a rerun "
+            "would write outputs from the fallback."
+        )
+
+    try:
+        eligibility = load(sub_id, parcellation, scratch_dir, vt=vt)
+    except FileNotFoundError as exc:
+        # The fallback also needs the 05a outputs; name the 05e file first.
+        if not os.path.isfile(path):
+            raise _missing() from exc
+        raise
+    if eligibility.get("eligibility_source") == "sub_hrf_fallback":
+        raise _missing()
+    return eligibility
+
+
 def d3a_eligibility_problems(data, eligibility):
     """How a D3a JSON's state eligibility disagrees with the current 05e set.
 
@@ -329,7 +380,9 @@ def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
     eligibility source 08e uses.
 
     Raises ``FileNotFoundError`` naming every participant whose file is
-    missing, so a partial set never reaches a figure as if it were complete.
+    missing, so a partial set never reaches a figure as if it were complete,
+    and when a participant's 05e state flags are missing
+    (:func:`require_05e_eligibility`).
     Raises ``ValueError`` if a file does not record
     ``lag_source == "friends_best"``, if its ``lag`` is in
     :data:`PEAK_LAG_EXCLUDE`, if its ``lag`` differs from the best lag
@@ -368,7 +421,7 @@ def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
             )
         d1_path = friends_d1_file(d1_dir, sub, model_key)
         d1_lag, _ = best_lag_from_d1_file(d1_path)
-        eligibility = load_content_eligibility(
+        eligibility = require_05e_eligibility(
             sub, parcellation, scratch_dir, vt=vt,
         )
         d1_problems = d1_eligibility_problems(d1_path, eligibility)
