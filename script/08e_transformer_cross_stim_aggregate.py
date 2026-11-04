@@ -67,6 +67,7 @@ from utils.transformer_analysis import (
     find_best_lag_layer, friends_d1_path,
     load_content_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
+    transformer_feature_path,
 )
 from utils.transformer_io import MODEL_REGISTRY, validate_stimulus_model
 
@@ -472,35 +473,56 @@ def array_identity(*arrays):
 
 
 def file_stat_identity(paths, base_dir):
-    """sha256 over (path relative to ``base_dir``, size, mtime_ns) per file.
+    """sha256 over one identity line per file, keyed by its path relative to
+    ``base_dir`` (so stable across moves of ``base_dir``).
 
-    Cheap (one stat per file, no reads) and stable across moves of
-    ``base_dir``. A missing file is recorded as missing.
+    Cheap: one stat (and for a link one readlink) per file, no reads. A
+    symlink, which is how git-annex stores a file, is identified by its
+    link target, which names the annex key and so the content hash, plus
+    the size of the file it points to; re-fetching the annex object after
+    a drop changes its mtime but not this identity. A regular file is
+    identified by size and mtime_ns. A missing file, or a link whose
+    content is not present, is recorded as missing.
     """
     h = hashlib.sha256()
     for path in sorted(paths):
         rel = os.path.relpath(path, base_dir)
         try:
             st = os.stat(path)
-            h.update(f"{rel}\t{st.st_size}\t{st.st_mtime_ns}\n".encode("utf-8"))
         except FileNotFoundError:
             h.update(f"{rel}\tmissing\n".encode("utf-8"))
+            continue
+        if os.path.islink(path):
+            line = f"{rel}\tlink\t{os.readlink(path)}\t{st.st_size}\n"
+        else:
+            line = f"{rel}\t{st.st_size}\t{st.st_mtime_ns}\n"
+        h.update(line.encode("utf-8"))
     return h.hexdigest()
 
 
 def feature_file_paths(scratch_dir, stimulus, model_key, run_ids,
                        feature_key_fn=None):
-    """The 08c feature files that stream_pca_features reads for these runs."""
-    feat_dir = os.path.join(
-        scratch_dir, "output", "08c_transformer_features", stimulus, model_key,
-    )
+    """The 08c feature files that stream_pca_features reads for these runs.
+
+    Built with the same helper (transformer_feature_path) that
+    stream_pca_features uses. Raises if none of them exists: the runs
+    passed here survived feature loading, so an all-missing set means the
+    paths are wrong, and the identity would not track the features.
+    """
     fkey = feature_key_fn if feature_key_fn is not None else (lambda r: r)
     stems = sorted({fkey(r) for r in run_ids})
-    return [
-        os.path.join(feat_dir, f"layer_{layer_idx:02d}", f"{stem}_raw.npy")
+    paths = [
+        transformer_feature_path(scratch_dir, stimulus, model_key, layer_idx, stem)
         for layer_idx in range(MODEL_REGISTRY[model_key]["n_layers"])
         for stem in stems
     ]
+    if not any(os.path.exists(p) for p in paths):
+        raise FileNotFoundError(
+            f"None of the {len(paths)} 08c feature files expected for "
+            f"{stimulus} x {model_key} exists (e.g. "
+            f"{paths[0] if paths else 'no runs'})."
+        )
+    return paths
 
 
 def write_json_atomic(path, payload, indent=None):

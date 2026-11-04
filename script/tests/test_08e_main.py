@@ -67,8 +67,21 @@ def env(tmp_path, monkeypatch):
 
     monkeypatch.setattr(m08e, "_load_friends_decoded",
                         lambda sub, parc: {r: _states() for r in FRIENDS_RUNS})
+    rec["test_states"] = _states()
     monkeypatch.setattr(m08e, "_load_cross_stim_decoded",
-                        lambda sub, parc, stim: {r: _states() for r in TEST_RUNS})
+                        lambda sub, parc, stim: {r: rec["test_states"].copy()
+                                                 for r in TEST_RUNS})
+    # The 08c feature files whose identities enter the fingerprint (the
+    # stubbed PCA does not read them).
+    rec["feature_files"] = []
+    for stim, runs in (("friends", FRIENDS_RUNS), (STIM, TEST_RUNS)):
+        for r in runs:
+            stem = m08e.feature_key_for_cross_stim_run_id(r, stim) if stim == "movie10" else r
+            for L in range(N_LAYERS):
+                f = Path(m08e.transformer_feature_path(str(tmp_path), stim, MODEL, L, stem))
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_bytes(b"x")
+                rec["feature_files"].append(f)
     monkeypatch.setattr(m08e, "load_training_split",
                         lambda sub, parc, sd: {"train": set(FRIENDS_RUNS[:2]),
                                                "valid": set(), "test": set()})
@@ -246,6 +259,57 @@ def test_resume_with_a_changed_pca_size_recomputes_every_layer(env, monkeypatch,
     env["run"]()
     assert env["fit_calls"] == list(range(N_LAYERS))
     assert _pooled(env)["reused_layers"] == []
+
+
+def _interrupt_then(env, change):
+    """Stop after layer 4, apply ``change``, resume; return the fit calls."""
+    env["stop_at"] = 5
+    with pytest.raises(_Interrupt):
+        env["run"]()
+    change()
+    env["stop_at"] = None
+    env["run"]()
+    return env["fit_calls"]
+
+
+def test_resume_reuses_layers_when_nothing_changed(env):
+    assert _interrupt_then(env, lambda: None) == list(range(5, N_LAYERS))
+
+
+def test_changed_test_states_recompute_every_layer(env):
+    """Same state counts, run ids and TR counts, different label order: only
+    the state hash can tell, and it must."""
+    def change():
+        env["test_states"] = np.array([1, 0, 2] * 10, dtype=int)
+    assert _interrupt_then(env, change) == list(range(N_LAYERS))
+
+
+@pytest.mark.parametrize("which", ["friends", "test"])
+def test_changed_feature_file_recomputes_every_layer(env, which):
+    files = [f for f in env["feature_files"]
+             if ("/friends/" in str(f)) == (which == "friends")]
+
+    def change():
+        import os
+        st = os.stat(files[-1])
+        os.utime(files[-1], ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+    assert _interrupt_then(env, change) == list(range(N_LAYERS))
+
+
+def test_missing_feature_files_raise_instead_of_hashing_nothing(env):
+    for f in env["feature_files"]:
+        f.unlink()
+    with pytest.raises(FileNotFoundError, match="08c feature files"):
+        env["run"]()
+
+
+def test_pca_threshold_and_drift_cap_enter_the_fingerprint(env, monkeypatch):
+    def change():
+        monkeypatch.setattr(m08e, "PCA_VARIANCE_THRESHOLD", 0.9)
+    assert _interrupt_then(env, change) == list(range(N_LAYERS))
+    fields = env["fields"][-1]
+    assert fields["pca_variance_threshold"] == 0.9
+    assert fields["test_max_drift"] == 3      # movie10 drift cap
 
 
 def test_force_recomputes_every_layer(env):

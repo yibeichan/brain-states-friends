@@ -221,12 +221,77 @@ def test_file_stat_identity_tracks_size_mtime_and_presence(tmp_path):
     assert m08e.file_stat_identity([str(f)], str(tmp_path)) != present
 
 
+def test_file_stat_identity_keys_an_annexed_file_on_its_link_target(tmp_path):
+    """A git-annex file is a symlink whose target names the content hash.
+    Re-fetching the object (new mtime) keeps the identity; a new key or a
+    dropped object changes it."""
+    import os
+    objects = tmp_path / ".git" / "annex" / "objects"
+    obj_a = objects / "MD5E-s3--aaa.npy" / "MD5E-s3--aaa.npy"
+    obj_a.parent.mkdir(parents=True)
+    obj_a.write_bytes(b"abc")
+    link = tmp_path / "layer_00" / "run_raw.npy"
+    link.parent.mkdir()
+    link.symlink_to(os.path.relpath(obj_a, link.parent))
+    first = m08e.file_stat_identity([str(link)], str(tmp_path))
+    st = os.stat(obj_a)
+    os.utime(obj_a, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+    assert m08e.file_stat_identity([str(link)], str(tmp_path)) == first
+
+    obj_b = objects / "MD5E-s3--bbb.npy" / "MD5E-s3--bbb.npy"
+    obj_b.parent.mkdir(parents=True)
+    obj_b.write_bytes(b"abd")
+    link.unlink()
+    link.symlink_to(os.path.relpath(obj_b, link.parent))
+    assert m08e.file_stat_identity([str(link)], str(tmp_path)) != first
+
+    obj_b.unlink()                                  # annex drop
+    dropped = m08e.file_stat_identity([str(link)], str(tmp_path))
+    link.unlink()
+    assert dropped == m08e.file_stat_identity([str(link)], str(tmp_path))  # = missing
+    assert dropped != first
+
+
+def test_feature_file_paths_use_the_stream_pca_features_layout(tmp_path):
+    """The fingerprint identifies the files stream_pca_features reads."""
+    from utils.transformer_analysis import transformer_feature_path
+    f = Path(transformer_feature_path(str(tmp_path), STIM, MODEL, 0, "wolf01"))
+    assert f.relative_to(tmp_path).as_posix() == (
+        f"output/08c_transformer_features/{STIM}/{MODEL}/layer_00/wolf01_raw.npy")
+    f.parent.mkdir(parents=True)
+    f.write_bytes(b"x")
+    paths = m08e.feature_file_paths(str(tmp_path), STIM, MODEL, ["wolf01"])
+    assert str(f) in paths
+    assert len(paths) == m08e.MODEL_REGISTRY[MODEL]["n_layers"]
+    with pytest.raises(FileNotFoundError):
+        m08e.feature_file_paths(str(tmp_path), STIM, MODEL, ["life01"])
+
+
+def test_stream_pca_features_reads_through_the_shared_path_helper(tmp_path, monkeypatch):
+    """stream_pca_features opens exactly the paths transformer_feature_path
+    gives, so a layout change in one place moves both."""
+    import utils.transformer_analysis as ta
+    seen = []
+    real = ta.transformer_feature_path
+
+    def recording(*a, **k):
+        p = real(*a, **k)
+        seen.append(p)
+        return p
+
+    monkeypatch.setattr(ta, "transformer_feature_path", recording)
+    ta.stream_pca_features(STIM, "dinov2-large", ["wolf01"], {"wolf01": 5},
+                           str(tmp_path), train_run_ids={"wolf01"})
+    assert seen and all(p.endswith("wolf01_raw.npy") for p in seen)
+
+
 def test_write_json_atomic_leaves_old_file_when_dump_fails(tmp_path):
     path = tmp_path / "D3a.json"
     m08e.write_json_atomic(str(path), {"ok": 1})
     with pytest.raises(TypeError):
         m08e.write_json_atomic(str(path), {"bad": object()})
     assert json.loads(path.read_text()) == {"ok": 1}
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["D3a.json"]   # no temp left
 
 
 def test_fingerprint_depends_on_every_field():

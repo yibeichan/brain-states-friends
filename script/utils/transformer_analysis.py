@@ -856,6 +856,21 @@ def mask_a_run_opening(data_by_run, mask_tr=33):
 # ---------------------------------------------------------------------------
 
 
+def transformer_feature_path(scratch_dir, stimulus, model_key, layer_idx,
+                             feature_stem, extraction_subdir_suffix=""):
+    """Path of one 08c feature file (one run, one layer).
+
+    The one place the 08c layout is spelled out: :func:`stream_pca_features`
+    reads these files and 08e identifies the same files in its layer
+    fingerprint, so the two cannot drift apart.
+    """
+    return os.path.join(
+        scratch_dir, "output",
+        f"08c_transformer_features{extraction_subdir_suffix}",
+        stimulus, model_key, f"layer_{layer_idx:02d}", f"{feature_stem}_raw.npy",
+    )
+
+
 def stream_pca_features(
     stimulus,
     model_key,
@@ -990,11 +1005,12 @@ def stream_pca_features(
             "`pca_models` to know the per-layer component count K."
         )
 
-    feat_dir = os.path.join(
-        scratch_dir, "output",
-        f"08c_transformer_features{extraction_subdir_suffix}",
-        stimulus, model_key,
-    )
+    def _feature_path(layer_idx, feat_stem):
+        return transformer_feature_path(
+            scratch_dir, stimulus, model_key, layer_idx, feat_stem,
+            extraction_subdir_suffix=extraction_subdir_suffix,
+        )
+
     if model_key not in MODEL_REGISTRY:
         raise ValueError(f"Unknown model_key={model_key!r}")
     n_layers = MODEL_REGISTRY[model_key]["n_layers"]
@@ -1023,9 +1039,7 @@ def stream_pca_features(
         feat_stem = _fkey(run_id)
         per_layer_lens = []
         for layer_idx in range(n_layers):
-            fpath = os.path.join(
-                feat_dir, f"layer_{layer_idx:02d}", f"{feat_stem}_raw.npy",
-            )
+            fpath = _feature_path(layer_idx, feat_stem)
             if not os.path.exists(fpath):
                 continue
             arr = np.load(fpath, mmap_mode="r")
@@ -1088,9 +1102,7 @@ def stream_pca_features(
         raw_per_run = {}
         for run_id in kept_run_ids:
             feat_stem = _fkey(run_id)
-            fpath = os.path.join(
-                feat_dir, f"layer_{layer_idx:02d}", f"{feat_stem}_raw.npy",
-            )
+            fpath = _feature_path(layer_idx, feat_stem)
             if not os.path.exists(fpath):
                 continue
             arr = np.load(fpath)
