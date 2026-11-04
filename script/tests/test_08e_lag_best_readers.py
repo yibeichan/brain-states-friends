@@ -561,3 +561,42 @@ def test_reader_accepts_absolute_and_relative_d1_paths_in_the_outputs(tmp_path):
                "m", _best({"friends_d1_path":
                            str(Path(p).relative_to(tmp_path)) if rel else p}))
     assert [s for s, _ in _read(root, d1, "movie10", "m", subjects=SUBS)] == SUBS
+
+
+@pytest.mark.parametrize("with_05a", [False, True])
+def test_reader_names_flags_without_summary_category_not_05a(tmp_path, with_05a):
+    """A flags file that exists but has no usable column (e.g. a truncated
+    header): the error names that 05e file, never a missing 05a output."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    flags = Path(state_flags_path("sub-02", PARC, str(tmp_path), vt=D3A_VT))
+    flags.write_text("state,other\n0,x\n")
+    if with_05a:
+        rec = tmp_path / "output" / "05a_recurrence_analysis" / PARC / "sub-02"
+        rec.mkdir(parents=True)
+        (rec / "recurrence_summary.json").write_text(
+            json.dumps({"recurrence_scores": [1.0, 1.0, 1.0]}))
+    with pytest.raises(FileNotFoundError) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    msg = str(exc.value)
+    assert (f"05e state flags for sub-02 at {flags} have no summary_category "
+            "column") in msg
+    assert "05a_recurrence_analysis" not in msg
+    assert "05e_temporal_trend_a4.sh" in msg and msg.isascii()
+
+
+def test_reader_reports_a_file_it_cannot_open_as_an_access_problem(tmp_path):
+    """An OSError (here a directory in the file's place) is not an
+    incomplete write: the message must not offer a recompute remedy."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    p = root / "sub-02" / f"movie10_m{D3A_LAG_BEST_SUFFIX}" / "D3a_transfer_movie10_m.json"
+    p.unlink()
+    p.mkdir()
+    with pytest.raises(ValueError) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    msg = str(exc.value)
+    assert msg.startswith(f"{p} cannot be opened (")
+    assert "access or storage problem" in msg and "Do not recompute" in msg
+    assert "incomplete write" not in msg and "--array" not in msg
+    assert msg.isascii()

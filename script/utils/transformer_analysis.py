@@ -142,7 +142,21 @@ def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
 
 
 def d3a_unreadable_output_message(path, sub_id, stimulus, model_key, reason):
-    """Error text for a best-lag D3a output that cannot be read as JSON."""
+    """Error text for a best-lag D3a output that cannot be read.
+
+    ``reason`` is the exception. A file that opens but does not parse
+    (``ValueError``) is probably an incomplete write and is recomputed; a
+    file that cannot be opened (``OSError``: permissions, storage, a
+    directory in its place) is an access problem, and recomputing would not
+    fix it.
+    """
+    if isinstance(reason, OSError):
+        return (
+            f"{path} cannot be opened ({reason}). This is an access or "
+            "storage problem, not a stale or incomplete output: check the "
+            "file's permissions and the filesystem, then rerun. Do not "
+            "recompute the cell for this."
+        )
     folder, resubmit = _d3a_resubmit_hint(path, sub_id, stimulus, model_key)
     return (
         f"{path} cannot be read ({reason}). It is probably an incomplete "
@@ -237,24 +251,38 @@ def require_05e_eligibility(sub_id, parcellation, scratch_dir, vt=None,
     path = state_flags_path(sub_id, parcellation, scratch_dir, vt=vt)
     load = loader if loader is not None else load_content_eligibility
 
+    def _flags_usable():
+        """True when the flags file exists and has a summary_category column."""
+        if not os.path.isfile(path):
+            return False
+        try:
+            with open(path) as f:
+                header = f.readline()
+        except OSError:
+            return False
+        return "summary_category" in [c.strip() for c in header.split(",")]
+
     def _missing():
         if os.path.isfile(path):
-            what = f"{path} has no summary_category column"
+            what = f"at {path} have no summary_category column"
         else:
             what = f"were not found at {path}"
         return FileNotFoundError(
             f"The 05e state flags for {sub_id} {what}. 08e best-lag outputs "
             "are computed and read against the 05e eligibility, and without "
             "the flags it would fall back to the 05a sub-HRF filter. Restore "
-            "the file (e.g. datalad get) instead of rerunning 08e: a rerun "
-            "would write outputs from the fallback."
+            "the file (e.g. datalad get), or run "
+            "script/05e_temporal_trend_a4.sh if 05e never ran for this "
+            "participant, instead of rerunning 08e: a rerun would write "
+            "outputs from the fallback."
         )
 
     try:
         eligibility = load(sub_id, parcellation, scratch_dir, vt=vt)
     except FileNotFoundError as exc:
-        # The fallback also needs the 05a outputs; name the 05e file first.
-        if not os.path.isfile(path):
+        # The fallback also needs the 05a outputs; when the 05e flags are
+        # missing or unusable, name the 05e file, not the 05a one.
+        if not _flags_usable():
             raise _missing() from exc
         raise
     if eligibility.get("eligibility_source") == "sub_hrf_fallback":
