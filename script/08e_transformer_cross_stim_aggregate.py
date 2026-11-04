@@ -416,18 +416,27 @@ def output_subdir(stimulus, model_key, lag_arg):
 # layer is therefore saved to its own file, so a job that hits its time limit
 # can be resubmitted and continue from the next layer. A layer file is reused
 # only when its fingerprint matches the current run's. The fingerprint covers
-# the run settings, a hash of the code that computes a layer (this script and
-# utils/transformer_analysis.py) and identities of the inputs (see
-# input_identity in main()); any change to one of them recomputes every
-# layer. The files are removed once the D3a JSON is written.
+# the run settings, a hash of whole source files (CODE_IDENTITY_FILES) and
+# identities of the inputs (see input_identity in main()); any change to one
+# of them recomputes every layer. The files are removed once the D3a JSON is
+# written.
 
 PARTIAL_LAYER_DIRNAME = "partial_layers"
 
-#: Source files whose contents enter the layer fingerprint. Any edit to them,
-#: comments included, makes saved layers stale; recomputing is the safe side.
+#: Source files whose contents enter the layer fingerprint: this script,
+#: utils/transformer_analysis.py (feature streaming, PCA, null sequences,
+#: lag shift, effect size), utils/stats.py (permutation p-value) and
+#: utils/transformer_io.py (model registry, within-run z-score). Whole files
+#: are hashed, so editing any line of them, comments and helpers that do not
+#: touch a layer included (e.g. the best-lag reader in
+#: transformer_analysis.py), makes saved layers stale; recomputing is the
+#: safe side. Library versions are not hashed.
+_UTILS_DIR = Path(__file__).resolve().parent / "utils"
 CODE_IDENTITY_FILES = (
     Path(__file__).resolve(),
-    Path(__file__).resolve().parent / "utils" / "transformer_analysis.py",
+    _UTILS_DIR / "transformer_analysis.py",
+    _UTILS_DIR / "stats.py",
+    _UTILS_DIR / "transformer_io.py",
 )
 
 
@@ -444,6 +453,12 @@ def code_identity(paths=CODE_IDENTITY_FILES):
         h.update(Path(path).name.encode("utf-8"))
         h.update(Path(path).read_bytes())
     return h.hexdigest()
+
+
+#: Hash of CODE_IDENTITY_FILES taken when this module is imported, i.e. of
+#: the code that this process runs. Hashing later (after the data load) would
+#: record an edit made while the job was loading, not the code in memory.
+CODE_SHA256 = code_identity()
 
 
 def array_identity(*arrays):
@@ -1034,7 +1049,7 @@ def main():
             SCRATCH_DIR,
         ),
     }
-    code_sha256 = code_identity()
+    code_sha256 = CODE_SHA256
     fingerprint = layer_fingerprint({
         "sub_id": sub_id, "parcellation": parc, "stimulus": stimulus,
         "model": model_key, "vt": args.vt, "lag": lag,

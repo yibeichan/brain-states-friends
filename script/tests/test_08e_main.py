@@ -164,7 +164,7 @@ def test_friends_best_writes_lag_best_folder_at_the_d1_lag(env):
                 "intersection_states", "friends_run_ids", "test_run_ids"}
     assert required <= set(fields)
     assert fields["lag"] == D1_BEST_LAG
-    assert fields["code_sha256"] == m08e.code_identity()
+    assert fields["code_sha256"] == m08e.CODE_SHA256
     assert {"states_masks_sha256", "pca_train_runs_sha256", "pca_layers_k_n_train",
             "friends_features_stat_sha256", "test_features_stat_sha256",
             } <= set(fields["inputs"])
@@ -178,7 +178,7 @@ def test_outputs_record_lag_provenance_and_fingerprint(env):
         assert payload["friends_best_layer"] == D1_BEST_LAYER
         assert payload["friends_d1_path"].endswith("D1_depth_profile.json")
         assert payload["layer_fingerprint"] == m08e.layer_fingerprint(env["fields"][-1])
-        assert payload["code_sha256"] == m08e.code_identity()
+        assert payload["code_sha256"] == m08e.CODE_SHA256
         assert payload["reused_layers"] == []
     assert sorted(int(k) for k in _pooled(env)["per_layer"]) == list(range(N_LAYERS))
 

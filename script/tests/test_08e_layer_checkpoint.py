@@ -188,7 +188,24 @@ def test_code_identity_changes_with_the_source(tmp_path):
     assert m08e.code_identity((a, b)) != before
     assert {p.name for p in m08e.CODE_IDENTITY_FILES} == {
         "08e_transformer_cross_stim_aggregate.py", "transformer_analysis.py",
+        "stats.py", "transformer_io.py",
     }
+    assert all(p.is_file() for p in m08e.CODE_IDENTITY_FILES)
+
+
+def test_code_hash_is_taken_at_import_not_when_main_runs(monkeypatch):
+    """An edit made while a job loads data must not be recorded as the
+    code that job runs."""
+    assert m08e.CODE_SHA256 == m08e.code_identity()
+    import ast
+    import inspect
+    src = inspect.getsource(m08e.main)
+    assert "code_identity(" not in src
+    assert "CODE_SHA256" in src
+    module = ast.parse(Path(m08e.__file__).read_text())
+    assigned = [t.id for n in module.body if isinstance(n, ast.Assign)
+                for t in n.targets if isinstance(t, ast.Name)]
+    assert "CODE_SHA256" in assigned
 
 
 def test_file_stat_identity_tracks_size_mtime_and_presence(tmp_path):
