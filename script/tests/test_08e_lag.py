@@ -3,7 +3,8 @@
 The transfer decoder is fitted on Friends features and applied to the test
 stimulus at one brain-to-feature lag. These tests pin:
   (a) the best-lag rule matches 08d's (highest balanced accuracy, lag 0
-      excluded), including when lag 0 holds the overall maximum;
+      excluded, first cell on a tie), including when lag 0 holds the overall
+      maximum, and Figure 5A-C use the same rule;
   (b) ``friends_best`` reads the participant's 08d D1 output and fails loudly
       when it is missing instead of falling back to lag 0;
   (c) argument parsing and output-folder naming (lag 0 keeps the original
@@ -49,21 +50,62 @@ def test_best_lag_skips_lag0_even_when_it_is_the_maximum():
     assert (lag_key, layer, acc) == ("lag_3", 21, 0.12)
 
 
+# 08d rounds balanced accuracy to 4 decimals, so exact ties occur in real
+# D1 outputs. Here lag_3 layer 7, lag_3 layer 8 and lag_4 layer 2 tie at the
+# maximum: the first in dict order (lag_3, layer 7) must win. A None accuracy
+# is skipped, as 08d does.
+_TIE_RESULTS = {
+    "lag_0": {"1": {"balanced_accuracy": 0.5}},
+    "lag_1": {"2": {"balanced_accuracy": 0.10}, "3": {"balanced_accuracy": None}},
+    "lag_3": {"7": {"balanced_accuracy": 0.14}, "8": {"balanced_accuracy": 0.14}},
+    "lag_4": {"2": {"balanced_accuracy": 0.14}},
+    "lag_8": {"0": {"balanced_accuracy": 0.139}},
+}
+
+
+def test_best_lag_rule_takes_first_cell_on_a_tie_and_skips_none():
+    assert m08e.find_best_lag_layer(_TIE_RESULTS, m08e.PEAK_LAG_EXCLUDE) == \
+        ("lag_3", 7, 0.14)
+
+
 def test_best_lag_rule_matches_08d():
+    """The shared rule agrees with 08d's own function, ties included.
+
+    08d is imported for real; an import failure fails this test rather than
+    skipping it, so the parity check cannot silently stop running.
+    """
     spec = importlib.util.spec_from_file_location(
         "_module_08d_lag", _SCRIPT_DIR / "08d_transformer_depth.py",
     )
     m08d = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(m08d)
-    except Exception as exc:  # 08d needs its full environment to import
-        pytest.skip(f"08d not importable here: {exc}")
-    results = _d1_results({
-        (0, 1): 0.5, (1, 2): 0.10, (3, 7): 0.14, (3, 8): 0.13, (8, 0): 0.139,
-    })
+    spec.loader.exec_module(m08d)
     assert m08e.PEAK_LAG_EXCLUDE == m08d.PEAK_LAG_EXCLUDE
-    assert m08e.find_best_lag_layer(results, m08e.PEAK_LAG_EXCLUDE) == \
-        m08d._find_best_lag_layer(results, exclude_lags=m08d.PEAK_LAG_EXCLUDE)
+    for results in (
+        _TIE_RESULTS,
+        _d1_results({(0, 1): 0.5, (1, 2): 0.10, (3, 7): 0.14, (3, 8): 0.13,
+                     (8, 0): 0.139}),
+    ):
+        assert m08e.find_best_lag_layer(results, m08e.PEAK_LAG_EXCLUDE) == \
+            m08d._find_best_lag_layer(results, exclude_lags=m08d.PEAK_LAG_EXCLUDE)
+
+
+def test_fig5_within_panels_use_the_same_rule(monkeypatch, tmp_path):
+    """Figure 5A-C pick the same (lag, layer) as the 08e transfer, ties included."""
+    monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))
+    spec = importlib.util.spec_from_file_location(
+        "_fig_f5_rule", _SCRIPT_DIR / "fig_F5_within_friends.py",
+    )
+    f5 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(f5)
+    profile = {
+        int(k.split("_")[1]): {
+            int(li): {"balanced_accuracy": v["balanced_accuracy"], "chance_level": 0.05}
+            for li, v in layers.items()
+        }
+        for k, layers in _TIE_RESULTS.items()
+    }
+    best_lag, peak_layer, *_ = f5.best_lag_layer(profile, 9)
+    assert (best_lag, peak_layer) == (3, 7)
 
 
 def test_resolve_friends_best_lag_reads_d1(tmp_path):

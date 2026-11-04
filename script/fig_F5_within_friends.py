@@ -49,7 +49,12 @@ from utils.plot_style import (  # noqa: E402
     apply_publication_style,
     modality_color,
 )
-from utils.transformer_analysis import load_d3a_lag_best  # noqa: E402
+from utils.transformer_analysis import (  # noqa: E402
+    PEAK_LAG_EXCLUDE,
+    find_best_lag_layer,
+    load_d3a_lag_best,
+)
+from utils.transformer_io import validate_stimulus_model  # noqa: E402
 
 apply_publication_style()
 
@@ -60,7 +65,6 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 D1_ROOT = SCRATCH_DIR / "output" / "08d_transformer_depth" / PARCELLATION
 
 SUBJECTS = [f"sub-0{i}" for i in range(1, 7)]
-PEAK_LAG_EXCLUDE = {0}            # lag-0 is a synchrony diagnostic, not a peak
 PEAK_BAND_FRAC = 0.90             # contiguous Δ-above-floor ≥ 0.90 × peak (Res A)
 
 # Within-Friends panels. A = video, B = audio, C = text (Res D mapping).
@@ -99,17 +103,19 @@ def load_d1_profile(sub, model):
 def best_lag_layer(profile, n_layers):
     """Argmax balanced_accuracy over lag × layer (excluding lag-0).
 
-    Returns (best_lag, peak_layer, curve_acc, curve_chance, curve_pfdr) where
-    the curves are length-n_layers arrays at best_lag (NaN for absent layers).
+    The peak is chosen by the shared rule (``find_best_lag_layer``) that 08e
+    uses to pick each participant's transfer lag, so panels A-C and D-G
+    agree on the lag. Returns (best_lag, peak_layer, curve_acc, curve_chance,
+    curve_pfdr) where the curves are length-n_layers arrays at best_lag (NaN
+    for absent layers).
     """
-    best = (-np.inf, None, None)
-    for lag, layers in profile.items():
-        if lag in PEAK_LAG_EXCLUDE:
-            continue
-        for li, v in layers.items():
-            if v["balanced_accuracy"] > best[0]:
-                best = (v["balanced_accuracy"], lag, li)
-    _, best_lag, peak_layer = best
+    lag_key, peak_layer, _ = find_best_lag_layer(
+        {f"lag_{lag}": layers for lag, layers in profile.items()},
+        exclude_lags=PEAK_LAG_EXCLUDE,
+    )
+    if lag_key is None:
+        raise ValueError("No candidate lag in the D1 profile (lag 0 excluded).")
+    best_lag = int(lag_key.split("_")[1])
     layers = profile[best_lag]
     acc = np.full(n_layers, np.nan)
     chance = np.full(n_layers, np.nan)
@@ -333,12 +339,13 @@ def load_transfer_cell(stim, model, n_layers):
     BH-FDR is recomputed across each subject's layers here for an explicit,
     self-contained correction (verified numerically identical to the ``p_fdr``
     already stored in the transfer JSON, which 08e computes the same way). Peak
-    = argmax of balanced_accuracy − chance_level. Returns dict or None if no data.
+    = argmax of balanced_accuracy − chance_level. Reads every expected
+    participant's best-lag file and raises if one is missing, so a partial
+    set is never summarised as the full cohort. Returns None only if no
+    participant has a finite layer.
     """
     from statsmodels.stats.multitest import multipletests
-    loaded = load_d3a_lag_best(TRANSFER_ROOT, stim, model)
-    if not loaded:
-        return None
+    loaded = load_d3a_lag_best(TRANSFER_ROOT, D1_ROOT, stim, model)
     rel_depths, peak_sig, peak_accs = [], [], []
     for _sub, d in loaded:
         per_layer = d.get("per_layer", {})
@@ -390,7 +397,20 @@ def render_panel_d():
     for ri, (stim, _) in enumerate(STIM_ROWS):
         y = nr - 1 - ri                          # Movie10 at top
         for ci, (model, _, nl) in enumerate(MOD_COLS):
-            cell = load_transfer_cell(stim, model, nl)
+            # "Not testable" comes from the stimulus × model modality check
+            # (e.g. Harry Potter has no audio), never from missing files: a
+            # testable cell whose outputs are missing raises in the reader.
+            try:
+                validate_stimulus_model(stim, model)
+                testable = True
+            except ValueError:
+                testable = False
+            cell = load_transfer_cell(stim, model, nl) if testable else None
+            if cell is None and testable:
+                raise ValueError(
+                    f"{stim} x {model}: best-lag D3a outputs hold no finite "
+                    "layer for any participant."
+                )
             if cell is None:                     # not testable
                 ax.add_patch(mpatches.Rectangle(
                     (ci, y), 1, 1, facecolor="0.92", edgecolor="white",
@@ -474,12 +494,12 @@ PERFILM_PANELS = [
 def collect_perfilm(model, n_layers):
     """Per-film Movie10 transfer curves (mean±SEM Δ-above-chance) for one model.
 
-    Returns a list of per-film series dicts, or None if the per-film
-    (`D3a_per_subset`) JSONs are not on disk yet for this model.
+    Returns a list of per-film series dicts, or None if no film has data.
+    Raises if any participant's best-lag per-film (`D3a_per_subset`) JSON is
+    missing, so a partial cohort is never drawn as the full one.
     """
-    loaded = load_d3a_lag_best(TRANSFER_ROOT, "movie10", model, kind="per_subset")
-    if not loaded:
-        return None
+    loaded = load_d3a_lag_best(TRANSFER_ROOT, D1_ROOT, "movie10", model,
+                               kind="per_subset")
     series = []
     for film, label, color in FILM_SERIES:
         rows = []
@@ -578,15 +598,15 @@ def make_perfilm_yaxis(ylim):
 def render_perfilm_trio():
     """Render the three small Movie10 per-film line plots, shared y-axis.
 
-    Skips any modality whose 08e --per_subset data is not yet on disk (audio /
-    text land after jobs 15640110 / 15640111). Shared y across whatever is
-    available so the modalities are directly comparable when appended to D.
+    Every modality's 08e --per_subset outputs must be on disk for every
+    participant (the reader raises otherwise). Shared y across the
+    modalities so they are directly comparable when appended to D.
     """
     collected = {}
     for modality, model, n_layers, letter in PERFILM_PANELS:
         s = collect_perfilm(model, n_layers)
         if s is None:
-            print(f"  [pending] no per-film data yet for {modality} ({model})")
+            print(f"  [skip] no film has data for {modality} ({model})")
             continue
         collected[modality] = (model, n_layers, letter, s)
     if not collected:

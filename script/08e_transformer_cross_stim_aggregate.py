@@ -53,9 +53,11 @@ from utils.common import (
 )
 from utils.stats import benjamini_hochberg, permutation_pvalue
 from utils.transformer_analysis import (
-    D3A_LAG_BEST_SUFFIX, INTERSECTION_MIN_FO, build_layer_feature_matrix,
+    D3A_LAG_BEST_SUFFIX, INTERSECTION_MIN_FO, PEAK_LAG_EXCLUDE,
+    best_lag_from_d1_file, build_layer_feature_matrix,
     build_run_boundaries,
-    compute_effect_size, load_content_eligibility,
+    compute_effect_size, find_best_lag_layer, friends_d1_path,
+    load_content_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
 )
 from utils.transformer_io import MODEL_REGISTRY, validate_stimulus_model
@@ -94,11 +96,12 @@ CROSS_STIM_STAGE_MAP = {
 
 # Brain-to-feature lag for the transfer decoder. ``friends_best`` uses the lag
 # at which this participant's within-Friends decoder (08d D1) peaked for the
-# same model, chosen on Friends only and never on the test stimulus. Lag 0 is
-# excluded from that peak search, as in 08d (PEAK_LAG_EXCLUDE there): it is
-# the synchronous diagnostic, not a candidate peak.
+# same model, chosen on Friends only and never on the test stimulus. The rule
+# (find_best_lag_layer), the excluded lags (PEAK_LAG_EXCLUDE: lag 0, the
+# synchronous diagnostic) and the D1 path (friends_d1_path) live in
+# utils.transformer_analysis, shared with the figure scripts that read the
+# best-lag outputs.
 LAG_FRIENDS_BEST = "friends_best"
-PEAK_LAG_EXCLUDE = {0}
 
 
 # ---------------------------------------------------------------------------
@@ -352,39 +355,6 @@ def _plot_transfer(results, out_path, title, chance):
 # ---------------------------------------------------------------------------
 
 
-def find_best_lag_layer(results_per_lag, exclude_lags=None):
-    """Return ``(best_lag_key, best_layer_idx, best_acc)`` over a D1 result dict.
-
-    Same rule as ``_find_best_lag_layer`` in 08d_transformer_depth.py (the
-    08d module name starts with a digit, so it cannot be imported here):
-    the (lag, layer) cell with the highest balanced accuracy, skipping the
-    lags in ``exclude_lags``. ``results_per_lag`` maps ``"lag_N"`` keys to
-    ``{layer_idx: {"balanced_accuracy": ...}}``.
-    """
-    exclude = set(int(l) for l in exclude_lags) if exclude_lags else set()
-    best = (None, None, -np.inf)
-    for lag_key, lag_data in results_per_lag.items():
-        try:
-            lag_val = int(lag_key.split("_")[1])
-        except (IndexError, ValueError):
-            lag_val = None
-        if lag_val is not None and lag_val in exclude:
-            continue
-        for layer, entry in lag_data.items():
-            acc = entry.get("balanced_accuracy", -np.inf)
-            if acc is not None and acc > best[2]:
-                best = (lag_key, int(layer), float(acc))
-    return best
-
-
-def friends_d1_path(scratch_dir, parc, sub_id, model_key):
-    """Path of the participant's within-Friends depth profile (08d D1)."""
-    return os.path.join(
-        scratch_dir, "output", "08d_transformer_depth", parc, sub_id,
-        f"friends_{model_key}", "D1_depth_profile.json",
-    )
-
-
 def resolve_friends_best_lag(scratch_dir, parc, sub_id, model_key):
     """Return ``(lag, info)`` for the participant's best within-Friends lag.
 
@@ -398,19 +368,7 @@ def resolve_friends_best_lag(scratch_dir, parc, sub_id, model_key):
             f"08d D1 output not found: {path}. Run 08d for {sub_id} "
             f"{model_key} first, or pass an explicit --lag."
         )
-    with open(path) as f:
-        d1 = json.load(f)
-    lag_key, layer, acc = find_best_lag_layer(
-        d1.get("results", {}), exclude_lags=PEAK_LAG_EXCLUDE,
-    )
-    if lag_key is None:
-        raise ValueError(f"No candidate lag in {path} (lag 0 excluded).")
-    lag = int(lag_key.split("_")[1])
-    return lag, {
-        "friends_d1_path": path,
-        "friends_best_layer": layer,
-        "friends_best_balanced_accuracy": round(acc, 4),
-    }
+    return best_lag_from_d1_file(path)
 
 
 def parse_lag(value):

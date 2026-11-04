@@ -32,7 +32,11 @@ Source data (08e at each participant's best Friends lag, ``*_lag-best``):
   A, B: 08e .../{stim}_{model}_lag-best/D3a_transfer_{stim}_{model}.json
         (pooled, with permutation)
   C:    08e .../movie10_dinov2-large_lag-best/D3a_per_subset_movie10_dinov2-large.json
-        (with permutation). A film with no JSON on disk is left out.
+        (with permutation).
+  Every expected participant's file must be on disk (sub-04 has no Harry
+  Potter or Petit Prince data); the reader raises naming any that is
+  missing, and raises if a file's lag is not the participant's current best
+  lag in 08d D1.
 """
 import os
 import sys
@@ -54,6 +58,7 @@ PARCELLATION = "atlas-4S156Parcels"
 OUT_DIR = SCRATCH_DIR / "output" / "manuscript_figures" / "si_decoding_depth"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 D3A_ROOT = SCRATCH_DIR / "output" / "08e_transformer_cross_stim_aggregate" / PARCELLATION
+D1_ROOT = SCRATCH_DIR / "output" / "08d_transformer_depth" / PARCELLATION
 
 # Paul Tol Vibrant 4-class (https://personal.sron.nl/~pault/), CB-safe.
 # Distinct from project palettes: Okabe–Ito (networks), ColorBrewer Set1
@@ -112,7 +117,7 @@ PANELS = [
 def load_pooled_curves(model, stim, n_layers):
     """Return (n_subj, n_layers) of (balanced_acc − chance) for pooled D3a."""
     rows, sub_ids = [], []
-    for sub, d in load_d3a_lag_best(D3A_ROOT, stim, model):
+    for sub, d in load_d3a_lag_best(D3A_ROOT, D1_ROOT, stim, model):
         per_layer = d.get("per_layer", {})
         curve = np.full(n_layers, np.nan)
         for L in range(n_layers):
@@ -135,7 +140,8 @@ def load_per_subset_curves(model, stim, n_layers, film_key):
     always ``"production"`` when data exist.
     """
     rows, sub_ids = [], []
-    for sub, d in load_d3a_lag_best(D3A_ROOT, stim, model, kind="per_subset"):
+    for sub, d in load_d3a_lag_best(D3A_ROOT, D1_ROOT, stim, model,
+                                    kind="per_subset"):
         film_layers = d.get("per_subset", {}).get(film_key, {})
         chance = d.get("chance_level_full")
         if chance is None or not film_layers:

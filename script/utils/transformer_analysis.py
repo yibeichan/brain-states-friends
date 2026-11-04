@@ -87,8 +87,13 @@ BOOTSTRAP_SEED_RECURRENCE_DEPTH = 100_000
 
 
 # ---------------------------------------------------------------------------
-# 08e D3a outputs at each participant's best Friends lag
+# Best within-Friends lag (08d D1) and the 08e D3a outputs computed at it
 # ---------------------------------------------------------------------------
+
+#: Lags left out of the peak-lag search. Lag 0 is the synchronous diagnostic
+#: in 08d D1, not a candidate peak. 08d_transformer_depth.py keeps its own
+#: copy of this set; tests/test_08e_lag.py checks the two are equal.
+PEAK_LAG_EXCLUDE = frozenset({0})
 
 #: Folder suffix for 08e outputs computed at the participant's best
 #: within-Friends lag (``--lag friends_best``). 08e writes there and the
@@ -96,22 +101,125 @@ BOOTSTRAP_SEED_RECURRENCE_DEPTH = 100_000
 #: without a suffix.
 D3A_LAG_BEST_SUFFIX = "_lag-best"
 
+#: Participants of the 08e cross-stimulus transfer.
+D3A_SUBJECTS = ("sub-01", "sub-02", "sub-03", "sub-04", "sub-05", "sub-06")
 
-def load_d3a_lag_best(root, stimulus, model_key, kind="transfer"):
-    """Return ``[(sub_id, data), ...]`` for every participant's best-lag D3a JSON.
+#: Test stimuli that CNeuroMod did not collect for sub-04 (a data-provenance
+#: limit, not a QC exclusion). The 08e wrapper skips sub-04 for these.
+D3A_STIMULI_WITHOUT_SUB04 = frozenset(
+    {"harrypotter", "petitprince_fr", "petitprince_en"}
+)
 
-    Reads ``<root>/sub-*/<stimulus>_<model_key>_lag-best/D3a_<kind>_<stimulus>_<model_key>.json``,
-    sorted by participant. ``kind`` is ``"transfer"`` or ``"per_subset"``.
-    Returns an empty list when nothing is on disk yet. Raises ``ValueError``
-    if a JSON does not record ``lag_source == "friends_best"``, so a file
-    computed at another lag cannot enter a best-lag figure.
+
+def d3a_expected_subjects(stimulus):
+    """Participants that have 08e D3a outputs for ``stimulus``."""
+    if stimulus in D3A_STIMULI_WITHOUT_SUB04:
+        return [s for s in D3A_SUBJECTS if s != "sub-04"]
+    return list(D3A_SUBJECTS)
+
+
+def find_best_lag_layer(results_per_lag, exclude_lags=None):
+    """Return ``(best_lag_key, best_layer_idx, best_acc)`` over a D1 result dict.
+
+    The (lag, layer) cell with the highest balanced accuracy, skipping the
+    lags in ``exclude_lags`` and entries whose balanced accuracy is ``None``.
+    On a tie the first cell in dict order wins (strict ``>``). This is the
+    rule of ``_find_best_lag_layer`` in 08d_transformer_depth.py;
+    tests/test_08e_lag.py checks the two agree, ties included.
+    ``results_per_lag`` maps ``"lag_N"`` keys to
+    ``{layer_idx: {"balanced_accuracy": ...}}``.
     """
-    from pathlib import Path
+    exclude = set(int(l) for l in exclude_lags) if exclude_lags else set()
+    best = (None, None, -np.inf)
+    for lag_key, lag_data in results_per_lag.items():
+        try:
+            lag_val = int(lag_key.split("_")[1])
+        except (IndexError, ValueError):
+            lag_val = None
+        if lag_val is not None and lag_val in exclude:
+            continue
+        for layer, entry in lag_data.items():
+            acc = entry.get("balanced_accuracy", -np.inf)
+            if acc is not None and acc > best[2]:
+                best = (lag_key, int(layer), float(acc))
+    return best
 
+
+def friends_d1_dir(scratch_dir, parc):
+    """Root of the 08d D1 outputs for one parcellation."""
+    return os.path.join(scratch_dir, "output", "08d_transformer_depth", parc)
+
+
+def friends_d1_file(d1_dir, sub_id, model_key):
+    """Path of one participant's 08d D1 depth profile under ``d1_dir``."""
+    return os.path.join(
+        str(d1_dir), sub_id, f"friends_{model_key}", "D1_depth_profile.json",
+    )
+
+
+def friends_d1_path(scratch_dir, parc, sub_id, model_key):
+    """Path of the participant's within-Friends depth profile (08d D1)."""
+    return friends_d1_file(friends_d1_dir(scratch_dir, parc), sub_id, model_key)
+
+
+def best_lag_from_d1_file(path):
+    """Return ``(lag, info)`` for the best within-Friends lag in one D1 file.
+
+    Raises if the file is missing or has no candidate lag, rather than
+    falling back to lag 0: a silent fallback would reproduce the lag-0
+    transfer that ``--lag friends_best`` exists to replace.
+    """
+    path = str(path)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"08d D1 output not found: {path}.")
+    with open(path) as f:
+        d1 = json.load(f)
+    lag_key, layer, acc = find_best_lag_layer(
+        d1.get("results", {}), exclude_lags=PEAK_LAG_EXCLUDE,
+    )
+    if lag_key is None:
+        raise ValueError(f"No candidate lag in {path} (lag 0 excluded).")
+    lag = int(lag_key.split("_")[1])
+    return lag, {
+        "friends_d1_path": path,
+        "friends_best_layer": layer,
+        "friends_best_balanced_accuracy": round(acc, 4),
+    }
+
+
+def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
+                      subjects=None):
+    """Return ``[(sub_id, data), ...]`` of best-lag D3a JSONs, one per participant.
+
+    Reads ``<root>/<sub>/<stimulus>_<model_key>_lag-best/D3a_<kind>_<stimulus>_<model_key>.json``
+    for each participant in ``subjects`` (default:
+    :func:`d3a_expected_subjects`), in that order. ``kind`` is
+    ``"transfer"`` or ``"per_subset"``. ``d1_dir`` is the 08d D1 root
+    (:func:`friends_d1_dir`).
+
+    Raises ``FileNotFoundError`` naming every participant whose file is
+    missing, so a partial set never reaches a figure as if it were complete.
+    Raises ``ValueError`` if a file does not record
+    ``lag_source == "friends_best"``, if its ``lag`` is in
+    :data:`PEAK_LAG_EXCLUDE`, or if its ``lag`` differs from the best lag
+    recomputed from that participant's current 08d D1 output (for example
+    after a D1 rerun moved the peak): such a file was computed at a lag
+    the figure does not claim to show.
+    """
     folder = f"{stimulus}_{model_key}{D3A_LAG_BEST_SUFFIX}"
     fname = f"D3a_{kind}_{stimulus}_{model_key}.json"
+    if subjects is None:
+        subjects = d3a_expected_subjects(stimulus)
+    paths = {sub: os.path.join(str(root), sub, folder, fname) for sub in subjects}
+    missing = [sub for sub, p in paths.items() if not os.path.exists(p)]
+    if missing:
+        raise FileNotFoundError(
+            f"Best-lag D3a {kind} output missing for {', '.join(missing)} "
+            f"({stimulus} x {model_key}); expected "
+            f"{os.path.join(str(root), '<sub>', folder, fname)}."
+        )
     out = []
-    for path in sorted(Path(root).glob(f"sub-*/{folder}/{fname}")):
+    for sub, path in paths.items():
         with open(path) as f:
             data = json.load(f)
         if data.get("lag_source") != "friends_best":
@@ -119,7 +227,21 @@ def load_d3a_lag_best(root, stimulus, model_key, kind="transfer"):
                 f"{path} records lag_source={data.get('lag_source')!r}, "
                 "expected 'friends_best'."
             )
-        out.append((path.parent.parent.name, data))
+        lag = data.get("lag")
+        if lag is None or int(lag) in PEAK_LAG_EXCLUDE:
+            raise ValueError(
+                f"{path} records lag={lag!r}, which is not a candidate "
+                f"best lag (excluded: {sorted(PEAK_LAG_EXCLUDE)})."
+            )
+        d1_path = friends_d1_file(d1_dir, sub, model_key)
+        d1_lag, _ = best_lag_from_d1_file(d1_path)
+        if int(lag) != d1_lag:
+            raise ValueError(
+                f"{path} was computed at lag {lag}, but the best lag in "
+                f"{d1_path} is now {d1_lag}. Rerun 08e for {sub} "
+                f"{stimulus} {model_key} with FORCE=1."
+            )
+        out.append((sub, data))
     return out
 
 
