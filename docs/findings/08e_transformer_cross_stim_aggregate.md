@@ -9,11 +9,14 @@ _Trains a per-layer RidgeClassifier on Friends TRs and evaluates it on a held-ou
 - Test stimuli: movie10 (3 models: DINOv2-large video, LLaMA-3.2-3B text, Wav2Vec-BERT-2.0 audio); harrypotter (LLaMA-3.2-3B only; no audio stream); petitprince_fr and petitprince_en (LLaMA-3.2-3B and Wav2Vec-BERT-2.0).
 - Intersection states: content-eligible states (eligibility_source = 05e_a4) with FO >= 1% in both Friends and the test stimulus for a given subject.
 - Classifier: RidgeClassifier (alpha=1.0, balanced class weights) trained on all Friends intersection TRs, tested on test-stimulus intersection TRs.
+- Lag: Friends and test-stimulus features are shifted by the same brain-to-feature lag. The default (`--lag friends_best`) is each participant's best within-Friends lag for the model: the (lag, layer) cell with the highest 08d D1 balanced accuracy, lag 0 excluded, chosen on Friends only. `--lag N` sets it explicitly; `--lag 0` is the synchronous decoder of the original runs.
 - Null: 1000 circular-shift permutations of Friends training labels (within-run, preserving autocorrelation); Ridge refit per permutation; evaluated on real test-stimulus labels. BH-FDR correction across layers.
 - Effect size: normalized = (balanced_accuracy - chance) / (1 - chance), where chance = 1 / n_intersection_states.
 - sub-04 has no HP or Petit Prince decoded states; sub-04 results appear for Movie10 only.
 
 ## Results
+
+All tables below are lag-0 values (`--lag 0`, the folders without a suffix). Figure 5D-G and Figure S7 now read the best-lag outputs (`_lag-best` folders), whose values these tables do not show.
 
 ### Data coverage and intersection state counts
 
@@ -88,8 +91,11 @@ Films: Wolf of Wall Street (wolf), Figures in a Landscape (figures), Bourne Supr
 | sub-06  | 0.1381 / 28          | 0.1267 / 22             | 0.1311 / 12            | 0.0959 / 0           |
 
 ## Outputs
-- output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/{stimulus}_{model}/D3a_transfer_{stimulus}_{model}.json
-- output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/movie10_{model}/D3a_per_subset_movie10_{model}.json
-- output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/{stimulus}_{model}/pca_info.json
-- output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/{stimulus}_{model}/D3a_transfer_{stimulus}_{model}.png
-- Figure: fig_F5_within_friends.py (Panels F/G: Movie10 per-film lines from D3a_per_subset)
+Each cell writes to `output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/<folder>/`, where `<folder>` is `{stimulus}_{model}_lag-best` for `--lag friends_best` (the default), `{stimulus}_{model}` for `--lag 0`, and `{stimulus}_{model}_lag-N` for another explicit lag. Each folder holds:
+- D3a_transfer_{stimulus}_{model}.json (records `lag`, `lag_source`; best-lag files also record the 08d D1 path, best layer and accuracy, the layer fingerprint, code and input identities, and which layers were reused from an interrupted run)
+- D3a_per_subset_{stimulus}_{model}.json (movie10 with `--per_subset`; same lag fields)
+- pca_info.json
+- D3a_transfer_{stimulus}_{model}.png
+- partial_layers/ while a cell is running (one file per finished layer; removed when the cell completes)
+
+Figures: fig_F5_within_friends.py (Panel D grid and Panels E-G Movie10 per-film lines) and 08e_plots.py (Figure S7) read the `_lag-best` folders through `utils.transformer_analysis.load_d3a_lag_best`, which requires every expected participant's file and checks each file's lag against the participant's current 08d D1 best lag.

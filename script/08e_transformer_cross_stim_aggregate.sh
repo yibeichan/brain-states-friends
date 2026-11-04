@@ -22,8 +22,8 @@ export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
 # 08e - Cross-stimulus aggregate transfer (D3a)
 # =============================================================================
 # Trains a per-layer Ridge classifier on Friends content_eligible ∩ test FO
-# intersection, evaluates on the test stimulus, and builds a circular-shift
-# null distribution on test-stimulus labels.
+# intersection, evaluates on the test stimulus, and builds a null by
+# circular-shifting the Friends training labels within runs and refitting.
 #
 # Required exports:
 #   STIMULUS    - one of movie10 / harrypotter / petitprince_fr / petitprince_en

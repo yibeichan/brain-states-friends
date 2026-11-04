@@ -1,5 +1,9 @@
 """Figure F5 Panel C - DINOv2 × Movie10 per-film depth profile.
 
+Not used for any manuscript figure: this script computes lag-0 values.
+Figure 5E-G come from ``fig_F5_within_friends.py``, which reads the 08e
+per-film outputs at each participant's best Friends lag.
+
 For each of the 6 subjects, this script reproduces 08e's Friends-fit /
 Movie10-project pipeline for DINOv2-large only, then **breaks the Movie10
 balanced-accuracy evaluation into four per-film subsets** (bourne / figures /

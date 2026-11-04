@@ -17,11 +17,18 @@ For each (subject, test_stimulus, model) triple, this script:
 5. Fits a single ``RidgeClassifier`` on Friends intersection TRs per layer and
    evaluates on the test-stimulus intersection TRs. Reports balanced accuracy,
    chance level, and per-state recall / precision.
-6. Builds a circular-shift null on **test-stimulus** labels per layer and
-   reports a permutation p-value.
+6. Builds a null per layer by circular-shifting the **Friends training**
+   labels within Friends runs, refitting the classifier, and scoring it on
+   the real test-stimulus labels; reports a permutation p-value.
+
+Training and test features use the same brain-to-feature lag (``--lag``).
+The default, ``friends_best``, is the participant's best within-Friends lag
+for the model from 08d D1 (lag 0 excluded).
 
 Outputs are written to
-``{SCRATCH_DIR}/output/08e_transformer_cross_stim_aggregate/{parcellation}/{sub_id}/{test_stimulus}_{model}/``.
+``{SCRATCH_DIR}/output/08e_transformer_cross_stim_aggregate/{parcellation}/{sub_id}/{test_stimulus}_{model}_lag-best/``
+for ``--lag friends_best``; ``--lag 0`` writes to ``{test_stimulus}_{model}/``
+and another explicit lag N to ``{test_stimulus}_{model}_lag-N/``.
 """
 
 from __future__ import annotations
