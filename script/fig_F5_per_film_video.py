@@ -2,7 +2,11 @@
 
 Not used for any manuscript figure: this script computes lag-0 values.
 Figure 5E-G come from ``fig_F5_within_friends.py``, which reads the 08e
-per-film outputs at each participant's best Friends lag.
+per-film outputs at each participant's best Friends lag. Its outputs stay
+in the ``perfilm/`` subfolder of ``manuscript_figures/fig5/``; the figure
+was written as ``fig5_C_video_perfilm_depth.*`` directly in ``fig5/`` by
+earlier versions, a name that now reads as a Figure 5 panel, so it is
+named ``lag0_video_perfilm_depth.*`` instead.
 
 For each of the 6 subjects, this script reproduces 08e's Friends-fit /
 Movie10-project pipeline for DINOv2-large only, then **breaks the Movie10
@@ -14,7 +18,7 @@ film effect sizes for the poster's Video panel.
 
 Outputs:
   $SCRATCH_DIR/output/manuscript_figures/fig5/perfilm/{sub_id}_dinov2-large_movie10_perfilm.json
-  $SCRATCH_DIR/output/manuscript_figures/fig5/fig5_C_video_perfilm_depth.{pdf,png,svg}
+  $SCRATCH_DIR/output/manuscript_figures/fig5/perfilm/lag0_video_perfilm_depth.{pdf,png,svg}
 """
 from __future__ import annotations
 
@@ -259,9 +263,9 @@ def render_panel():
     ax.legend(frameon=False, loc="upper left", fontsize=7)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    out_pdf = OUT_DIR / "fig5_C_video_perfilm_depth.pdf"
-    out_png = OUT_DIR / "fig5_C_video_perfilm_depth.png"
-    out_svg = OUT_DIR / "fig5_C_video_perfilm_depth.svg"
+    out_pdf = PERFILM_DIR / "lag0_video_perfilm_depth.pdf"
+    out_png = PERFILM_DIR / "lag0_video_perfilm_depth.png"
+    out_svg = PERFILM_DIR / "lag0_video_perfilm_depth.svg"
     fig.savefig(out_pdf, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.02)
     fig.savefig(out_svg, bbox_inches="tight", pad_inches=0.02)

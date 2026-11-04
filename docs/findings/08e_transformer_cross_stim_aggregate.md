@@ -92,10 +92,11 @@ Films: Wolf of Wall Street (wolf), Figures in a Landscape (figures), Bourne Supr
 
 ## Outputs
 Each cell writes to `output/08e_transformer_cross_stim_aggregate/atlas-4S156Parcels/sub-*/<folder>/`, where `<folder>` is `{stimulus}_{model}_lag-best` for `--lag friends_best` (the default), `{stimulus}_{model}` for `--lag 0`, and `{stimulus}_{model}_lag-N` for another explicit lag. Each folder holds:
-- D3a_transfer_{stimulus}_{model}.json (records `lag`, `lag_source`; best-lag files also record the 08d D1 path, best layer and accuracy, the layer fingerprint, code and input identities, and which layers were reused from an interrupted run)
-- D3a_per_subset_{stimulus}_{model}.json (movie10 with `--per_subset`; same lag fields)
+- D3a_transfer_{stimulus}_{model}.json (records `lag`, `lag_source`, `eligibility_source`, `intersection_states`; best-lag files also record the 08d D1 path, best layer and accuracy; best-lag files written by this version also record the layer fingerprint, code and input identities (including the 05e `content_eligible` list) and which layers were reused from an interrupted run, which files written by earlier versions do not have)
+- D3a_per_subset_{stimulus}_{model}.json (movie10 with `--per_subset`; records `lag`, `lag_source`, `eligibility_source`, `intersection_states`; files written by this version also record the 08d D1 fields and the same provenance fields as the transfer file)
 - pca_info.json
 - D3a_transfer_{stimulus}_{model}.png
-- partial_layers/ while a cell is running (one file per finished layer; removed when the cell completes)
 
-Figures: fig_F5_within_friends.py (Panel D grid and Panels E-G Movie10 per-film lines) and 08e_plots.py (Figure S7) read the `_lag-best` folders through `utils.transformer_analysis.load_d3a_lag_best`, which requires every expected participant's file and checks each file's lag against the participant's current 08d D1 best lag.
+While a cell runs, its folder also holds `partial_layers/` (one file per finished layer, removed when the cell completes) and, during each JSON write, a `*.tmp.<pid>` file that is renamed into place; a killed job can leave either behind. Neither is an output: the output dataset should ignore them (its `.gitignore` is kept with the dataset, not in this repository).
+
+Figures: fig_F5_within_friends.py (Panel D grid and Panels E-G Movie10 per-film lines) and 08e_plots.py (Figure S7) read the `_lag-best` folders through `utils.transformer_analysis.load_d3a_lag_best`, which requires every expected participant's file and checks each file's lag against the participant's current 08d D1 best lag and its states against the participant's current 05e content eligibility. For files written by earlier versions, which do not record the eligible set, the check is that every intersection state is still content-eligible (and the eligibility source and state count agree); states that became eligible later cannot be detected in them.
