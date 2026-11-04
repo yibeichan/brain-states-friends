@@ -87,24 +87,25 @@ All subjects: HP R2 > 0.94, transfer gap < 0.01. No low-variance flags.
 
 ### A5: PCA Transfer - Per-Network HP R2
 
-Network-stratified HP R2 (per PCs from Friends training). Values shown are HP R2; sub-01 values representative; others similar.
+Network-stratified HP R² of the Friends-trained PCs, all participants with HP data (13 network groups; source `hp_03_projected/atlas-4S156Parcels/<sub>/vt0.95/pca_transfer_diagnostic.json`, `r2_by_network`).
 
-| Network      | sub-01 | sub-02 | sub-03 | sub-05 | sub-06 |
-|--------------|--------|--------|--------|--------|--------|
-| Vis          | 0.956  | 0.957  | 0.962  | 0.966  | 0.963  |
-| SomMot       | 0.966  | 0.952  | 0.961  | 0.964  | 0.965  |
-| DorsAttn     | 0.952  | 0.943  | 0.954  | 0.958  | 0.957  |
-| SalVentAttn  | 0.938  | 0.934  | 0.936  | 0.951  | 0.950  |
-| Limbic       | 0.661  | 0.797  | 0.801  | 0.861  | 0.820  |
-| Cont         | 0.969  | 0.968  | 0.971  | 0.973  | 0.968  |
-| Default      | 0.960  | 0.956  | 0.957  | 0.958  | 0.957  |
-| BG           | 0.786  | 0.864  | 0.692  | 0.731  | 0.720  |
-| Brainstem    | 0.984  | 0.982  | 0.948  | 0.956  | 0.963  |
-| Thalamus     | 0.424  | 0.342  | 0.424  | 0.549  | 0.434  |
-| Hipp/Amyg    | 0.289  | 0.496  | 0.410  | 0.602  | 0.342  |
-| Cerebellum   | 0.818  | 0.784  | 0.832  | 0.829  | 0.893  |
+| Network | Parcels | sub-01 | sub-02 | sub-03 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Vis | 17 | 0.956 | 0.957 | 0.962 | 0.966 | 0.963 |
+| SomMot | 14 | 0.966 | 0.952 | 0.961 | 0.964 | 0.965 |
+| DorsAttn | 15 | 0.952 | 0.943 | 0.954 | 0.958 | 0.957 |
+| SalVentAttn | 12 | 0.938 | 0.934 | 0.936 | 0.951 | 0.950 |
+| Limbic | 5 | 0.661 | 0.797 | 0.801 | 0.861 | 0.820 |
+| Cont | 13 | 0.969 | 0.968 | 0.971 | 0.973 | 0.968 |
+| Default | 24 | 0.960 | 0.956 | 0.957 | 0.958 | 0.957 |
+| BG | 16 | 0.920 | 0.952 | 0.866 | 0.883 | 0.883 |
+| Midbrain-DA | 2 | 0.995 | 0.996 | 0.973 | 0.975 | 0.981 |
+| Midbrain-Diencephalic | 8 | 0.963 | 0.959 | 0.906 | 0.923 | 0.936 |
+| Thalamus | 14 | 0.424 | 0.342 | 0.424 | 0.549 | 0.434 |
+| Hipp/Amyg | 6 | 0.871 | 0.879 | 0.866 | 0.889 | 0.857 |
+| Cerebellum | 10 | 0.818 | 0.784 | 0.832 | 0.829 | 0.893 |
 
-Cortical networks (Vis, SomMot, DorsAttn, SalVentAttn, Cont, Default): all >0.93. Subcortical networks (Thalamus, Hipp/Amyg): 0.29-0.60 across subjects.
+Neocortical networks (Vis, SomMot, DorsAttn, SalVentAttn, Cont, Default) all 0.93 or higher; the basal ganglia, midbrain and Hipp/Amyg groups 0.85 or higher. Thalamus has the lowest HP R² (0.34-0.55); Limbic is the weakest cortical network (0.66-0.86); Cerebellum 0.78-0.89.
 
 ### B1: Movie10 Baseline Rho (same subjects, full 61-run M10)
 

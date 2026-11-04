@@ -96,24 +96,27 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 | sub-05 | 67 | 0.951 | 0.952 | -0.001 | False |
 | sub-06 | 74 | 0.950 | 0.950 | 0.001 | False |
 
-### A5: PCA Transfer R2 by Network (PP audio, sub-01 shown; network order matches NETWORK_ORDER)
+### A5: PCA Transfer R2 by Network (PP audio, all subjects)
 
-Networks with consistently lower PP R2 (all subjects, values approx): Thalamus (0.41-0.52), Hipp/Amyg (0.28-0.55), BG (0.71-0.86); Limbic also reduced (0.66-0.86). Neocortical networks (Vis, SomMot, DorsAttn, Cont, Default) all above 0.94.
+Network-stratified PP R² of the Friends-trained PCs, all participants with PP data (13 network groups; source `pp_03_projected/atlas-4S156Parcels/<sub>/vt0.95/pca_transfer_diagnostic.json`, `r2_by_network`).
 
-| Network | sub-01 R2 | sub-02 R2 | sub-03 R2 | sub-05 R2 | sub-06 R2 |
-|---------|-----------|-----------|-----------|-----------|-----------|
-| Vis | 0.970 | 0.966 | 0.980 | 0.975 | 0.967 |
-| SomMot | 0.970 | 0.956 | 0.974 | 0.971 | 0.968 |
-| DorsAttn | 0.959 | 0.948 | 0.968 | 0.963 | 0.960 |
-| SalVentAttn | 0.942 | 0.939 | 0.949 | 0.949 | 0.954 |
-| Limbic | 0.664 | 0.814 | 0.841 | 0.855 | 0.856 |
-| Cont | 0.967 | 0.971 | 0.974 | 0.971 | 0.968 |
-| Default | 0.956 | 0.961 | 0.961 | 0.955 | 0.960 |
-| BG | 0.781 | 0.862 | 0.708 | 0.707 | 0.764 |
-| Brainstem | 0.980 | 0.982 | 0.946 | 0.949 | 0.962 |
-| Thalamus | 0.440 | 0.414 | 0.493 | 0.522 | 0.496 |
-| Hipp/Amyg | 0.283 | 0.554 | 0.463 | 0.480 | 0.434 |
-| Cerebellum | 0.801 | 0.766 | 0.877 | 0.695 | 0.907 |
+| Network | Parcels | sub-01 | sub-02 | sub-03 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Vis | 17 | 0.970 | 0.966 | 0.980 | 0.975 | 0.967 |
+| SomMot | 14 | 0.970 | 0.956 | 0.974 | 0.971 | 0.968 |
+| DorsAttn | 15 | 0.959 | 0.948 | 0.968 | 0.963 | 0.960 |
+| SalVentAttn | 12 | 0.942 | 0.939 | 0.949 | 0.949 | 0.954 |
+| Limbic | 5 | 0.664 | 0.814 | 0.841 | 0.854 | 0.856 |
+| Cont | 13 | 0.967 | 0.971 | 0.974 | 0.971 | 0.968 |
+| Default | 24 | 0.956 | 0.961 | 0.961 | 0.955 | 0.960 |
+| BG | 16 | 0.919 | 0.948 | 0.868 | 0.871 | 0.889 |
+| Midbrain-DA | 2 | 0.995 | 0.996 | 0.976 | 0.968 | 0.980 |
+| Midbrain-Diencephalic | 8 | 0.956 | 0.962 | 0.902 | 0.913 | 0.934 |
+| Thalamus | 14 | 0.440 | 0.414 | 0.493 | 0.522 | 0.496 |
+| Hipp/Amyg | 6 | 0.861 | 0.891 | 0.853 | 0.872 | 0.860 |
+| Cerebellum | 10 | 0.801 | 0.766 | 0.877 | 0.695 | 0.907 |
+
+Neocortical networks (Vis, SomMot, DorsAttn, SalVentAttn, Cont, Default) all 0.94 or higher; the basal ganglia, midbrain and Hipp/Amyg groups 0.85 or higher. Thalamus has the lowest PP R² (0.41-0.52); Limbic is the weakest cortical network (0.66-0.86); Cerebellum 0.70-0.91.
 
 ### B1: Movie10 Baseline (full 61 runs, same subject)
 

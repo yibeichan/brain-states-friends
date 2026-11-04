@@ -14,7 +14,7 @@ This directory catalogues all supplementary figures (S1–S15) for the manuscrip
 | S6 | Run-onset negative control and timing floor at the main decoding peak. Disclosure panel: the control is invalidated by a 2–8 vs 16–31 class-count asymmetry; the class-matched timing floor is the comparison that stands, and the main effect size clears it in all 18 cells | [S06_run_onset_negative_control.png](figures/S06_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S7 | Per-layer decoding depth strips for three transformer models (audio A, text B, video C) in the cross-stimulus analysis | [S07_decoding_depth_strips_A.png](figures/S07_decoding_depth_strips_A.png), [_B.png](figures/S07_decoding_depth_strips_B.png), [_C.png](figures/S07_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
 | S8 | Cross-stimulus validity, including resting state: PCA cross-stimulus fit diagnostic (A), within-Friends versus cross-stimulus fit (B), and state presence across stimuli (C) | [S08_cross_stimulus_validity_A.png](figures/S08_cross_stimulus_validity_A.png), [_B.png](figures/S08_cross_stimulus_validity_B.png), [_C.png](figures/S08_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md), [rest](../findings/rest_05_cross_stimulus_validation.md) | main |
-| S9 | Individual differences in state repertoire and decoding: radar-strip summary across subjects | [S09_individual_differences.png](figures/S09_individual_differences.png) | [../findings/06b_transition_structure.md](../findings/06b_transition_structure.md), [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
+| S9 | Individual differences across the main findings: one radar per subject with seven axes (active states, share of content-eligible states, FC–transition correlation, network homophily, audio decoding depth, Movie10 recurrence–occupancy correlation, and the mean Harry Potter and Le Petit Prince correlation) | [S09_individual_differences.png](figures/S09_individual_differences.png) | [../findings/06b_transition_structure.md](../findings/06b_transition_structure.md), [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S10 | ICA convergence diagnostics: K-sweep heatmap (A) and per-state matched absolute correlation (B) | [S10_ica_convergence_A.png](figures/S10_ica_convergence_A.png), [_B.png](figures/S10_ica_convergence_B.png) | [sm_alt_ica_states.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_states.md) | supplements |
 | S11 | Network participation profiles of recurring brain states across cortical and subcortical systems | [S11_network_participation.png](figures/S11_network_participation.png) | [../findings/05e_temporal_trend_a4.md](../findings/05e_temporal_trend_a4.md) | main |
 | S12 | ICA out-of-stimulus recurrence across three stimuli (Movie10, Harry Potter, Petit Prince): winner-take-all (A) and continuous (B) assignment panels for each stimulus | [S12_ica_oos_recurrence_m10_A_wta.png](figures/S12_ica_oos_recurrence_m10_A_wta.png), [_m10_B.png](figures/S12_ica_oos_recurrence_m10_B_continuous.png), [_hp_A.png](figures/S12_ica_oos_recurrence_hp_A_wta.png), [_hp_B.png](figures/S12_ica_oos_recurrence_hp_B_continuous.png), [_pp_A.png](figures/S12_ica_oos_recurrence_pp_A_wta.png), [_pp_B.png](figures/S12_ica_oos_recurrence_pp_B_continuous.png) | [sm_alt_ica_oos_recurrence.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_alt_ica_oos_recurrence.md) | supplements |
@@ -144,7 +144,7 @@ These strips show per-layer decoding accuracy (balanced accuracy minus chance) f
 **Panel C — State presence across stimuli**
 ![Fractional occupancy or coverage of recurring Friends states across held-out conditions, per subject](figures/S08_cross_stimulus_validity_C.png)
 
-These panels document the cross-stimulus validity checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; subcortical networks (thalamus, hippocampus/amygdala) explained less variance out-of-stimulus, consistent with their higher residual variance within Friends. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C counts how many Friends-active states were present in each held-out stimulus, using the Friends rule: fractional occupancy above 0.02 in at least one run. Most Friends-active states were present, but not all (Harry Potter 29–32 of 44–47 per subject; rest 27–32 of 42–47). No Friends-inactive state passed the same rule in any held-out stimulus. The rule is less sensitive in the held-out stimuli than in Friends, because they have far fewer runs per subject (7 for Harry Potter and 4–6 for rest, against 194–292 for Friends), so a state that is absent may be rare rather than unused.
+These panels document the cross-stimulus validity checks. Panel A shows that Friends-trained PCA components explained neocortical variance across Movie10, Harry Potter, and Petit Prince with minimal loss; among subcortical groups the thalamus explained least (R² 0.23–0.55 across the held-out stimuli and rest), while the hippocampus/amygdala group stayed at 0.82 or higher. Panel B compares within-Friends HMM fit against cross-stimulus fit. Panel C counts how many Friends-active states were present in each held-out stimulus, using the Friends rule: fractional occupancy above 0.02 in at least one run. Most Friends-active states were present, but not all (Harry Potter 29–32 of 44–47 per subject; rest 27–32 of 42–47). No Friends-inactive state passed the same rule in any held-out stimulus. The rule is less sensitive in the held-out stimuli than in Friends, because they have far fewer runs per subject (7 for Harry Potter and 4–6 for rest, against 194–292 for Friends), so a state that is absent may be rare rather than unused.
 
 Resting state appears in all three panels and is reported here only; it is not part of main Figure 4. All six subjects contributed resting-state data, unlike Harry Potter and Petit Prince, which lack sub-04. The Friends-trained subspace reconstructed rest about as well as it reconstructed the narrative conditions (rest R² 0.943–0.962; per-subject transfer gaps −0.011 to +0.007, Panel A), so the subspace is not stimulus-specific. Temporal fit behaved differently: the held-out-Friends-minus-rest log-likelihood gap spanned 0.49–15.98 per sample, the widest range of any condition, with sub-01 the extreme case (gap 15.98, negative recurrence correspondence). Recurrence correspondence across subjects was ρ = −0.289, 0.324, 0.138, 0.099, 0.274, and 0.445 for sub-01 through sub-06, with two of six reaching uncorrected p < 0.05 (sub-02 p = 0.028; sub-06 p = 0.003). No surrogate null was run for rest, so all rest values are descriptive. Rest's mean ρ (0.165) is not lower than Petit Prince's (0.101), which is expected because raw ρ carries a stimulus-independent covariance and stationarity floor; orderings among the weak conditions are confounded with fit, language, and modality and should not be read as a specificity gradient.
 
@@ -154,7 +154,7 @@ Resting state appears in all three panels and is reported here only; it is not p
 
 ![Radar-strip summary of individual-subject variation in state repertoire properties and transformer-depth decoding outcomes](figures/S09_individual_differences.png)
 
-This assembled strip summarizes subject-level variation across multiple analyses: transition graph topology, recurrence-occupancy relationships, and per-modality decoding effect sizes. The panel spans findings documented in the transition-structure analysis (edge count, bidirectionality index, community count, recurrence assortativity) and the transformer-depth analysis (peak layer and normalized effect size per model). Variation across the six subjects was present throughout these measures and is displayed here without cross-subject averaging, consistent with the per-subject analytic design used throughout the manuscript.
+One radar per subject (sub-01 to sub-06, left to right), each with the same seven axes: the number of active states (K), the share of them that are content-eligible (%CE), the FC–transition Mantel correlation (FCρ), the network-homophily ratio (Homo), the relative depth of the audio decoding peak (Aud), the Friends recurrence–Movie10 occupancy correlation (M10), and the mean of the Harry Potter and Le Petit Prince correlations (HP+PP). Each axis is scaled to the cohort minimum–maximum with 10% padding. Sub-04 has no Harry Potter or Le Petit Prince data, so its HP+PP vertex is omitted rather than imputed. Values are shown per subject, without cross-subject averaging. Generated by `script/fig_S09_individual_differences.py` from the 06b transition-structure summaries, the 05e state flags, the 08d audio depth profiles and the m10/hp/pp cross-stimulus summaries.
 
 ---
 
@@ -277,6 +277,9 @@ Supplementary tables are numbered separately from supplementary figures.
 | S1 | Random-direction null for the network-spread index of content-eligible state maps, per participant | [sm_rel_r2_network_spread.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r2_network_spread.md) | supplements |
 | S2 | Phase-randomized null for the Movie10 recurrence–occupancy correlation, per participant | [sm_rel_r5_phase_null.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r5_phase_null.md) | supplements |
 | S3 | Cross-stimulus recurrence–occupancy correlation on the full active repertoire and on content-eligible states alone, per participant and stimulus | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md) | main |
+| S4 | Matching of content-eligible states between participants, per pair: matched map correlation against the state-mixing null, the same after removing network means or the components shared with the other participants, and moment-to-moment time-locking of matched states | [05h_participant_state_matching.md](../findings/05h_participant_state_matching.md) | main |
+| S5 | Module co-membership, per participant: joint MRQAP coefficients for seven pairwise relations between states, and within-module minus between-module means | [06e_transition_modules.md](../findings/06e_transition_modules.md) | main |
+| S6 | Transition modularity for every participant, graph variant and null, with the decision rule, held-out-season folds and the further criteria | [06e_transition_modules.md](../findings/06e_transition_modules.md) | main |
 
 ### Table S1 — Random-direction null for the network-spread index
 
@@ -347,3 +350,67 @@ The restriction lowers the correlation in most cells, but not in all: it raises 
 The restriction has two consequences for the p-values. First, it removes between a third and two-thirds of each participant's states (33% in sub-01 up to 62% in sub-06), so 42–47 active states become 16–31 content-eligible ones and any correlation is estimated from far fewer points, raising its p-value on sample size alone. Harry Potter in sub-02 shows what that looks like: the correlation falls modestly, from ρ = +0.444 to +0.343, while its p rises from 0.002 to 0.063, so the change in significance is larger than the change in the correlation itself. Second, the screening removes states by temporal criteria that are not independent of occupancy, so the restricted repertoire is not a random subsample of the active one. For both reasons the two arms bracket the correspondence rather than forming a test and its confirmation, and counting significant cells across the table would not be meaningful.
 
 **Provenance.** Read from `A1_recurrence_correlation` (all active states) and `A1_recurrence_correlation_eligible` (content-eligible) in `$SCRATCH_DIR/output/{m10,hp,pp}_05_cross_validation/atlas-4S156Parcels/<sub>/vt0.95/cross_stimulus_summary.json`, with eligibility flags from `05e_a4`. Every cell was taken from those files rather than transcribed from the findings documents, and the two agree. The full-repertoire values for sub-02 are the ones quoted in the Figure 4 caption (Movie10 ρ = +0.264, Harry Potter ρ = +0.444, Le Petit Prince ρ = +0.332).
+
+### Table S4 — Matching of content-eligible states between participants
+
+Per participant pair, content-eligible states matched one-to-one by map correlation (all parcels; Hungarian matching). Median r is the median matched correlation, against the mean of the state-mixing null (1,000 draws; one participant's centred maps mixed by a random orthogonal matrix, which keeps each repertoire's mean map and spatial covariance). q is Benjamini–Hochberg corrected across the 15 pairs (p floor 1/1001). Within-network r is the same matching after each region's network mean is removed, and top-3 removed r after removing the three largest components of the other four participants' maps (each with its own null mean). Locking r is the mean moment-to-moment occupancy correlation of matched states over shared runs, against a circular-shift null; time-locked counts matches above the pair's family-wise threshold.
+
+| Pair | States | Median r (null mean) | q | Within-network r (null) | Top-3 removed r (null) | Locking r (shift null) | Time-locked matches |
+|---|---|---|---|---|---|---|---|
+| sub-01 / sub-02 | 31 x 30 | 0.726 (0.593) | 0.0012 | 0.658 (0.502) | 0.557 (0.462) | 0.0961 (0.0013) | 24 of 30 |
+| sub-01 / sub-03 | 31 x 26 | 0.653 (0.573) | 0.0012 | 0.643 (0.502) | 0.537 (0.465) | 0.1054 (0.0014) | 18 of 26 |
+| sub-01 / sub-04 | 31 x 27 | 0.600 (0.528) | 0.0021 | 0.547 (0.450) | 0.562 (0.465) | 0.0517 (0.0006) | 16 of 27 |
+| sub-01 / sub-05 | 31 x 29 | 0.688 (0.565) | 0.0012 | 0.631 (0.470) | 0.585 (0.450) | 0.0835 (0.0010) | 22 of 29 |
+| sub-01 / sub-06 | 31 x 16 | 0.684 (0.586) | 0.0012 | 0.657 (0.522) | 0.549 (0.466) | 0.0487 (0.0005) | 10 of 16 |
+| sub-02 / sub-03 | 30 x 26 | 0.688 (0.581) | 0.0012 | 0.636 (0.519) | 0.537 (0.456) | 0.0727 (0.0014) | 18 of 26 |
+| sub-02 / sub-04 | 30 x 27 | 0.619 (0.541) | 0.0050 | 0.527 (0.464) | 0.541 (0.475) | 0.0573 (0.0004) | 17 of 27 |
+| sub-02 / sub-05 | 30 x 29 | 0.734 (0.571) | 0.0012 | 0.654 (0.483) | 0.613 (0.464) | 0.0697 (0.0009) | 20 of 29 |
+| sub-02 / sub-06 | 30 x 16 | 0.691 (0.582) | 0.0012 | 0.623 (0.512) | 0.533 (0.469) | 0.0641 (0.0010) | 8 of 16 |
+| sub-03 / sub-04 | 26 x 27 | 0.804 (0.550) | 0.0012 | 0.736 (0.492) | 0.671 (0.477) | 0.0800 (0.0009) | 16 of 26 |
+| sub-03 / sub-05 | 26 x 29 | 0.756 (0.559) | 0.0012 | 0.663 (0.501) | 0.558 (0.442) | 0.0835 (0.0006) | 16 of 26 |
+| sub-03 / sub-06 | 26 x 16 | 0.781 (0.594) | 0.0012 | 0.683 (0.545) | 0.684 (0.495) | 0.0840 (0.0011) | 11 of 16 |
+| sub-04 / sub-05 | 27 x 29 | 0.626 (0.519) | 0.0012 | 0.609 (0.453) | 0.556 (0.460) | 0.0403 (0.0004) | 14 of 27 |
+| sub-04 / sub-06 | 27 x 16 | 0.791 (0.584) | 0.0012 | 0.691 (0.515) | 0.661 (0.511) | 0.0894 (0.0017) | 9 of 16 |
+| sub-05 / sub-06 | 29 x 16 | 0.732 (0.553) | 0.0012 | 0.608 (0.470) | 0.580 (0.459) | 0.0466 (0.0005) | 9 of 16 |
+
+Matched states were more similar than the state-mixing null in all 15 pairs, and remained so with network means removed (q ≤ 0.009) and with the shared components removed (q ≤ 0.016). Matched states were weakly time-locked in every pair; 228 of 353 matches passed individually.
+
+**Provenance.** `script/05h_participant_state_matching.py`; values from `$SCRATCH_DIR/output/05h_participant_state_matching/atlas-4S156Parcels/`. Every variant, the ceiling comparison and the timing-property checks are in [05h_participant_state_matching.md](../findings/05h_participant_state_matching.md).
+
+### Table S5 — Module co-membership
+
+For each participant, which pairwise relations between states predict whether two states share a transition module (states with a defined within-state FC; 42–45 per participant). Part A enters all seven relations together in a multiple-regression quadratic assignment model of co-membership (Dekker semi-partialling); part B compares each relation's mean between pairs in the same module and pairs in different modules, against permutations of module labels that keep module sizes. Values are β or difference, with two-sided p from 5,000 permutations (floor 0.0002, shown as p < 0.001).
+
+**A. Joint co-membership model (MRQAP): β (permutation p, 5,000 permutations, two-sided)**
+
+| Predictor | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| FC similarity (RV) | +3.062 (p = 0.52) | +1.345 (p = 0.77) | +0.780 (p = 0.64) | +3.318 (p = 0.008) | -3.830 (p = 0.05) | +3.284 (p = 0.33) |
+| Activation-map correlation | +0.318 (p < 0.001) | +0.342 (p < 0.001) | +0.287 (p < 0.001) | +0.085 (p = 0.05) | +0.087 (p = 0.11) | +0.229 (p < 0.001) |
+| Bhattacharyya distance | -0.037 (p = 0.37) | -0.085 (p = 0.02) | -0.020 (p = 0.43) | -0.006 (p = 0.89) | -0.119 (p = 0.005) | -0.022 (p = 0.61) |
+| Same dominant network | +0.056 (p = 0.10) | +0.016 (p = 0.62) | +0.137 (p < 0.001) | +0.000 (p = 1.00) | +0.065 (p = 0.08) | +0.042 (p = 0.23) |
+| Absolute recurrence difference | -0.232 (p = 0.04) | -0.267 (p = 0.02) | +0.051 (p = 0.44) | -0.095 (p = 0.39) | +0.045 (p = 0.83) | -0.103 (p = 0.23) |
+| Co-occurrence across runs | +1.045 (p < 0.001) | +1.176 (p < 0.001) | +1.283 (p < 0.001) | +1.199 (p < 0.001) | +0.938 (p < 0.001) | +1.355 (p < 0.001) |
+| Co-occurrence across seasons | +0.014 (p = 0.61) | +0.001 (p = 0.96) | -0.055 (p = 0.03) | -0.073 (p = 0.001) | -0.034 (p = 0.25) | -0.080 (p = 0.005) |
+
+**B. Within-module minus between-module mean (label-permutation p, 5,000 permutations, two-sided)**
+
+| Measure | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| FC similarity (RV) | +0.005 (p < 0.001) | +0.004 (p < 0.001) | +0.005 (p = 0.001) | +0.023 (p < 0.001) | +0.018 (p = 0.02) | +0.007 (p < 0.001) |
+| Activation-map correlation | +0.161 (p < 0.001) | +0.221 (p < 0.001) | +0.222 (p < 0.001) | +0.019 (p = 0.30) | +0.073 (p = 0.001) | +0.120 (p < 0.001) |
+| Bhattacharyya distance | -0.600 (p < 0.001) | -0.692 (p < 0.001) | -0.326 (p < 0.001) | -0.440 (p < 0.001) | -1.186 (p < 0.001) | -0.577 (p < 0.001) |
+| Same dominant network | +0.092 (p = 0.01) | +0.019 (p = 0.57) | +0.173 (p < 0.001) | +0.154 (p = 0.001) | +0.052 (p = 0.05) | +0.156 (p < 0.001) |
+| Absolute recurrence difference | -0.079 (p < 0.001) | -0.087 (p < 0.001) | -0.064 (p = 0.003) | -0.132 (p < 0.001) | -0.063 (p = 0.007) | -0.121 (p < 0.001) |
+| Co-occurrence across runs | +0.070 (p < 0.001) | +0.076 (p < 0.001) | +0.103 (p < 0.001) | +0.333 (p < 0.001) | +0.098 (p < 0.001) | +0.241 (p < 0.001) |
+| Co-occurrence across seasons | +0.155 (p = 0.002) | +0.150 (p = 0.002) | +0.149 (p = 0.003) | +0.125 (p = 0.01) | +0.184 (p < 0.001) | +0.258 (p < 0.001) |
+
+Co-occurrence across runs was the strongest predictor of sharing a module in every participant. Activation-map similarity contributed less consistently, and connectivity similarity made no consistent contribution in the joint model, although same-module pairs had more similar connectivity on their own (part B).
+
+**Provenance.** `script/06e_transition_modules.py --mode aggregate`; values from `characterisation.mrqap` and `characterisation.univariate` in `$SCRATCH_DIR/output/06e_transition_modules/atlas-4S156Parcels/<sub>/vt0.95/transition_modules_summary.json`.
+
+### Table S6 — Transition modularity by participant, graph and null
+
+All participants, graph variants and nulls for the transition-module analysis are tabulated in [06e_transition_modules.md](../findings/06e_transition_modules.md): calibration of each null on simulated chains, the decision rule on the counted transitions (directed modularity Q against the shuffled-order and non-modular-chain nulls, run-bootstrap stability, held-out-season folds), the further criteria (the similarity-predicted null, module dwell and cross-participant locking), the threshold and sensitivity variants of the learned matrix, and partition agreement between graphs. Every participant met the decision rule; none exceeded the similarity-predicted null (p = 0.06–0.97).
+
+**Provenance.** `script/06e_transition_modules.py` (`--mode run` for the null draws, then `--mode aggregate`); values from `transition_modules_summary.json` per participant and `r3_mapping.json` in `$SCRATCH_DIR/output/06e_transition_modules/atlas-4S156Parcels/`.
