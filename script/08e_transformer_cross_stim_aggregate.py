@@ -407,17 +407,97 @@ def output_subdir(stimulus, model_key, lag_arg):
 # hour, and the D3a JSON is written only after the last layer. Each finished
 # layer is therefore saved to its own file, so a job that hits its time limit
 # can be resubmitted and continue from the next layer. A layer file is reused
-# only when its fingerprint (the settings and inputs that determine the
-# layer's result) matches the current run; the files are removed once the
-# D3a JSON is written.
+# only when its fingerprint matches the current run's. The fingerprint covers
+# the run settings, a hash of the code that computes a layer (this script and
+# utils/transformer_analysis.py) and identities of the inputs (see
+# input_identity in main()); any change to one of them recomputes every
+# layer. The files are removed once the D3a JSON is written.
 
 PARTIAL_LAYER_DIRNAME = "partial_layers"
 
+#: Source files whose contents enter the layer fingerprint. Any edit to them,
+#: comments included, makes saved layers stale; recomputing is the safe side.
+CODE_IDENTITY_FILES = (
+    Path(__file__).resolve(),
+    Path(__file__).resolve().parent / "utils" / "transformer_analysis.py",
+)
+
 
 def layer_fingerprint(fields):
-    """Stable hash of the settings and inputs that determine one layer's result."""
+    """Stable hash of the fields that determine one layer's result."""
     blob = json.dumps(fields, sort_keys=True, default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+def code_identity(paths=CODE_IDENTITY_FILES):
+    """sha256 over the contents of the source files that compute a layer."""
+    h = hashlib.sha256()
+    for path in paths:
+        h.update(Path(path).name.encode("utf-8"))
+        h.update(Path(path).read_bytes())
+    return h.hexdigest()
+
+
+def array_identity(*arrays):
+    """sha256 over the dtype, shape and bytes of each array, in order."""
+    h = hashlib.sha256()
+    for arr in arrays:
+        arr = np.ascontiguousarray(arr)
+        h.update(f"{arr.dtype.str}{arr.shape}".encode("utf-8"))
+        h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def file_stat_identity(paths, base_dir):
+    """sha256 over (path relative to ``base_dir``, size, mtime_ns) per file.
+
+    Cheap (one stat per file, no reads) and stable across moves of
+    ``base_dir``. A missing file is recorded as missing.
+    """
+    h = hashlib.sha256()
+    for path in sorted(paths):
+        rel = os.path.relpath(path, base_dir)
+        try:
+            st = os.stat(path)
+            h.update(f"{rel}\t{st.st_size}\t{st.st_mtime_ns}\n".encode("utf-8"))
+        except FileNotFoundError:
+            h.update(f"{rel}\tmissing\n".encode("utf-8"))
+    return h.hexdigest()
+
+
+def feature_file_paths(scratch_dir, stimulus, model_key, run_ids,
+                       feature_key_fn=None):
+    """The 08c feature files that stream_pca_features reads for these runs."""
+    feat_dir = os.path.join(
+        scratch_dir, "output", "08c_transformer_features", stimulus, model_key,
+    )
+    fkey = feature_key_fn if feature_key_fn is not None else (lambda r: r)
+    stems = sorted({fkey(r) for r in run_ids})
+    return [
+        os.path.join(feat_dir, f"layer_{layer_idx:02d}", f"{stem}_raw.npy")
+        for layer_idx in range(MODEL_REGISTRY[model_key]["n_layers"])
+        for stem in stems
+    ]
+
+
+def write_json_atomic(path, payload, indent=None):
+    """Write JSON through a temporary file and ``os.replace``.
+
+    A job killed during the write leaves the old file or none, never a
+    truncated one, so an existing output file is always complete.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(payload, f, indent=indent)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
 
 
 def partial_layer_path(out_dir, stimulus, model_key, layer_idx):
@@ -429,14 +509,9 @@ def partial_layer_path(out_dir, stimulus, model_key, layer_idx):
 
 def save_partial_layer(path, fingerprint, layer_idx, res):
     """Write one finished layer atomically (a killed job leaves no half file)."""
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = f"{path}.tmp.{os.getpid()}"
-    with open(tmp, "w") as f:
-        json.dump(
-            {"fingerprint": fingerprint, "layer": int(layer_idx), "result": res},
-            f,
-        )
-    os.replace(tmp, path)
+    write_json_atomic(
+        path, {"fingerprint": fingerprint, "layer": int(layer_idx), "result": res},
+    )
 
 
 def load_partial_layer(path, fingerprint, layer_idx):
@@ -444,37 +519,90 @@ def load_partial_layer(path, fingerprint, layer_idx):
 
     A missing, unreadable or truncated file, a file for another layer, and a
     file whose fingerprint differs from the current run's all return ``None``,
-    so the layer is recomputed.
+    so the layer is recomputed. When the file exists but is not reused, one
+    warning names the reason.
     """
+    def _reject(reason):
+        logger.warning("  Layer %d: saved result not reused (%s): %s",
+                       layer_idx, reason, path)
+        return None
+
     try:
         with open(path) as f:
             payload = json.load(f)
-    except (OSError, ValueError):
+    except FileNotFoundError:
         return None
-    if (
-        not isinstance(payload, dict)
-        or payload.get("fingerprint") != fingerprint
-        or payload.get("layer") != int(layer_idx)
-        or not isinstance(payload.get("result"), dict)
-    ):
-        return None
+    except (OSError, ValueError) as exc:
+        return _reject(f"unreadable: {exc.__class__.__name__}")
+    if not isinstance(payload, dict) or not isinstance(payload.get("result"), dict):
+        return _reject("malformed")
+    if payload.get("layer") != int(layer_idx):
+        return _reject(f"file is for layer {payload.get('layer')!r}")
+    if payload.get("fingerprint") != fingerprint:
+        return _reject("fingerprint differs: settings, code or inputs changed")
     return payload["result"]
 
 
 def clear_partial_layers(out_dir):
-    """Remove the per-layer files once the full D3a output has been written."""
+    """Remove the per-layer files once the full D3a output has been written.
+
+    Called only after every output is on disk, so a failure here (an NFS
+    ``.nfs*`` file, a duplicate job still writing) is logged, not raised:
+    it must not fail a finished cell.
+    """
     part_dir = os.path.join(out_dir, PARTIAL_LAYER_DIRNAME)
-    if os.path.isdir(part_dir):
+    if not os.path.isdir(part_dir):
+        return
+    try:
         shutil.rmtree(part_dir)
+    except OSError as exc:
+        logger.warning("Could not remove %s (%s); the D3a outputs are complete.",
+                       part_dir, exc)
+
+
+def check_lag_best_outputs(out_dir, filenames, lag, lag_info):
+    """Raise if existing best-lag outputs were computed at another best lag.
+
+    The ``_lag-best`` folder name does not carry the lag value, so a cell
+    whose 08d D1 peak has moved since its outputs were written would
+    otherwise be skipped as complete. ``friends_best_layer`` is compared
+    when the file records it (older per-subset files do not).
+    """
+    for name in filenames:
+        path = os.path.join(out_dir, name)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f"{path} exists but cannot be read ({exc}). Rerun with "
+                "--force (FORCE=1), or move the folder aside."
+            ) from exc
+        problems = []
+        if data.get("lag") != lag:
+            problems.append(f"lag {data.get('lag')!r} on disk vs {lag} from 08d D1")
+        if ("friends_best_layer" in data
+                and data["friends_best_layer"] != lag_info.get("friends_best_layer")):
+            problems.append(
+                f"friends_best_layer {data['friends_best_layer']!r} on disk vs "
+                f"{lag_info.get('friends_best_layer')!r} from 08d D1"
+            )
+        if problems:
+            raise RuntimeError(
+                f"{path} was computed at a different best lag "
+                f"({'; '.join(problems)}). The 08d D1 output has changed since. "
+                "Rerun with --force (FORCE=1), or move the old folder aside."
+            )
 
 
 def run_layers(layer_indices, compute_layer, out_dir, stimulus, model_key,
-               fingerprint, resume=True):
+               fingerprint, resume=True, reused=None):
     """Compute every layer, reusing saved layers and saving each new one.
 
     ``compute_layer(layer_idx)`` returns the layer's result dict, or ``None``
     to skip the layer (no features, degenerate fit). Skipped layers are not
-    saved, so they are attempted again on resume.
+    saved, so they are attempted again on resume. If ``reused`` is a list,
+    the index of each layer taken from a saved file is appended to it.
     """
     results = {}
     for layer_idx in layer_indices:
@@ -482,6 +610,8 @@ def run_layers(layer_indices, compute_layer, out_dir, stimulus, model_key,
         res = load_partial_layer(path, fingerprint, layer_idx) if resume else None
         if res is not None:
             logger.info("  Layer %d: reused saved result (%s)", layer_idx, path)
+            if reused is not None:
+                reused.append(int(layer_idx))
         else:
             res = compute_layer(layer_idx)
             if res is None:
@@ -511,7 +641,9 @@ def parse_args():
     p.add_argument("--vt", default=None)
     p.add_argument("--n_permutations", type=int, default=N_PERMUTATIONS_DEFAULT)
     p.add_argument("--force", action="store_true",
-                   help="Re-run even if checkpoint output already exists.")
+                   help="Re-run even if checkpoint output already exists. "
+                        "Implies --fresh: saved per-layer results are not "
+                        "reused, so do not set it to resume a timed-out cell.")
     p.add_argument("--fresh", action="store_true",
                    help="Ignore per-layer results saved by an earlier, "
                         "interrupted run of this cell and recompute every layer.")
@@ -628,6 +760,9 @@ def main():
     checkpoint_files = [f"D3a_transfer_{stimulus}_{model_key}.json"]
     if per_subset_active:
         checkpoint_files.append(f"D3a_per_subset_{stimulus}_{model_key}.json")
+    if (lag_source == LAG_FRIENDS_BEST and not args.force and all(
+            os.path.exists(os.path.join(out_dir, f)) for f in checkpoint_files)):
+        check_lag_best_outputs(out_dir, checkpoint_files, lag, lag_info)
     if check_checkpoint(out_dir, checkpoint_files, "D3a", force=args.force):
         return
 
@@ -754,8 +889,10 @@ def main():
         stimulus, len(test_run_ids), len(test_states_cat),
     )
 
-    with open(os.path.join(out_dir, "pca_info.json"), "w") as f:
-        json.dump({str(k): v for k, v in pca_info.items()}, f, indent=2)
+    write_json_atomic(
+        os.path.join(out_dir, "pca_info.json"),
+        {str(k): v for k, v in pca_info.items()}, indent=2,
+    )
 
     # ── Eligibility (Friends-defined; shared state space) ─────────────
     eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
@@ -848,16 +985,47 @@ def main():
     n_layers = MODEL_REGISTRY[model_key]["n_layers"]
     n_classes = len(intersect_ids)
 
+    # Input identity for the layer fingerprint. Content hashes where the
+    # data are already in memory (state sequences and masks after
+    # alignment, which carry the decoded states and the state_flags
+    # eligibility; the PCA training runs; the per-layer PCA summary), and
+    # size + mtime_ns for the 08c feature files, which are too large to
+    # hash on every start.
+    input_identity = {
+        "states_masks_sha256": array_identity(
+            friends_states_cat.astype(np.int64), test_states_cat.astype(np.int64),
+            friends_mask, test_mask,
+        ),
+        "pca_train_runs_sha256": layer_fingerprint(sorted(splits["train"])),
+        "pca_info_sha256": layer_fingerprint(
+            {str(k): v for k, v in pca_info.items()}
+        ),
+        "content_eligible": eligibility["content_eligible"],
+        "friends_features_stat_sha256": file_stat_identity(
+            feature_file_paths(SCRATCH_DIR, "friends", model_key, friends_run_ids),
+            SCRATCH_DIR,
+        ),
+        "test_features_stat_sha256": file_stat_identity(
+            feature_file_paths(SCRATCH_DIR, stimulus, model_key, test_run_ids,
+                               feature_key_fn=test_feature_key_fn),
+            SCRATCH_DIR,
+        ),
+    }
+    code_sha256 = code_identity()
     fingerprint = layer_fingerprint({
         "sub_id": sub_id, "parcellation": parc, "stimulus": stimulus,
         "model": model_key, "vt": args.vt, "lag": lag,
         "n_permutations": args.n_permutations, "null_seed": NULL_SEED_D3A,
+        "pca_variance_threshold": PCA_VARIANCE_THRESHOLD,
+        "test_max_drift": test_max_drift,
         "eligibility_source": eligibility["eligibility_source"],
         "intersection_states": intersect_ids, "n_classes": n_classes,
         "friends_run_ids": friends_run_ids, "test_run_ids": test_run_ids,
         "n_friends_trs": int(friends_mask.sum()),
         "n_test_trs": int(test_mask.sum()),
         "per_subset": bool(per_subset_active), "subsets": subset_labels,
+        "code_sha256": code_sha256,
+        "inputs": input_identity,
     })
 
     def compute_layer(layer_idx):
@@ -886,10 +1054,23 @@ def main():
             subsets=per_subset_masks,
         )
 
+    # --force means "recompute this cell", so it never reuses saved layers.
+    reused_layers = []
     results = run_layers(
         range(n_layers), compute_layer, out_dir, stimulus, model_key,
-        fingerprint, resume=not args.fresh,
+        fingerprint, resume=not (args.fresh or args.force),
+        reused=reused_layers,
     )
+    if reused_layers:
+        logger.info("Reused %d saved layers: %s", len(reused_layers), reused_layers)
+    # Recorded in each D3a JSON, so a result assembled from saved layers can
+    # be told from a single uninterrupted run and traced to its code/inputs.
+    run_provenance = {
+        "layer_fingerprint": fingerprint,
+        "code_sha256": code_sha256,
+        "input_identity": input_identity,
+        "reused_layers": sorted(reused_layers),
+    }
 
     # Global BH-FDR across layers (mirrors 08d D1 which corrects across the
     # full layers × lags grid; 08e has no lag grid yet, so the correction is
@@ -914,13 +1095,13 @@ def main():
         "n_classes": n_classes,
         "n_friends_trs": int(friends_mask.sum()),
         "n_test_trs": int(test_mask.sum()),
+        **run_provenance,
         "per_layer": {str(k): v for k, v in results.items()},
     }
     out_path = os.path.join(
         out_dir, f"D3a_transfer_{stimulus}_{model_key}.json",
     )
-    with open(out_path, "w") as f:
-        json.dump(out_payload, f, indent=2)
+    write_json_atomic(out_path, out_payload, indent=2)
     logger.info("Saved %s", out_path)
 
     chance = 1.0 / n_classes if n_classes else None
@@ -960,6 +1141,8 @@ def main():
             "model": model_key,
             "lag": lag,
             "lag_source": lag_source,
+            **lag_info,
+            **run_provenance,
             "subset_axis": "film" if stimulus == "movie10" else stimulus,
             "subsets": subset_labels,
             "eligibility_source": eligibility["eligibility_source"],
@@ -975,8 +1158,7 @@ def main():
         per_subset_path = os.path.join(
             out_dir, f"D3a_per_subset_{stimulus}_{model_key}.json",
         )
-        with open(per_subset_path, "w") as f:
-            json.dump(per_subset_payload, f, indent=2)
+        write_json_atomic(per_subset_path, per_subset_payload, indent=2)
         logger.info("Saved %s", per_subset_path)
 
     # Every output is on disk, so the per-layer files are no longer needed.

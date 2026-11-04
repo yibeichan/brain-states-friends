@@ -35,7 +35,10 @@ export OMP_NUM_THREADS=$n OPENBLAS_NUM_THREADS=$n MKL_NUM_THREADS=$n
 #                 the participant's best within-Friends lag for MODEL from
 #                 08d D1. Non-zero lags write to <stimulus>_<model>_lag-best
 #                 (or _lag-N); LAG=0 writes to the original folder.
-#   FORCE      - set to 1 to re-run even if checkpoint exists (default: off)
+#   FORCE       - set to 1 to recompute the cell even if its outputs exist
+#                 (default: off). Implies FRESH=1: saved per-layer results are
+#                 not reused, so leave FORCE unset when resubmitting a task
+#                 that timed out.
 #   FRESH       - set to 1 to ignore per-layer results saved by an earlier,
 #                 interrupted run of the same cell (default: off). Without it,
 #                 a resubmitted task continues from its last finished layer.
@@ -105,7 +108,7 @@ CMD="uv run --project ${PROJECT_DIR} --no-sync python \
     --lag ${LAG}"
 
 if [ "$FORCE" = "1" ]; then
-    CMD="${CMD} --force"
+    CMD="${CMD} --force --fresh"
 fi
 if [ "$PER_SUBSET" = "1" ]; then
     CMD="${CMD} --per_subset"

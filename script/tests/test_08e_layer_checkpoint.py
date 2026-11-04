@@ -123,13 +123,93 @@ def test_skipped_layers_are_not_saved_and_retried(tmp_path):
     assert sorted(second) == list(range(6))
 
 
-def test_clear_partial_layers_removes_the_folder(tmp_path):
+def test_clear_partial_layers_removes_the_folder_and_keeps_the_outputs(tmp_path):
     _run(tmp_path, _compute([]))
     part_dir = tmp_path / m08e.PARTIAL_LAYER_DIRNAME
     assert len(list(part_dir.iterdir())) == 6
+    outputs = [tmp_path / f"D3a_transfer_{STIM}_{MODEL}.json", tmp_path / "pca_info.json"]
+    for p in outputs:
+        p.write_text("{}")
     m08e.clear_partial_layers(str(tmp_path))
     assert not part_dir.exists()
+    assert all(p.exists() for p in outputs)
     m08e.clear_partial_layers(str(tmp_path))  # no folder: no error
+
+
+def test_clear_partial_layers_logs_instead_of_raising(tmp_path, monkeypatch, caplog):
+    _run(tmp_path, _compute([]), n=1)
+
+    def failing_rmtree(path, *a, **k):
+        raise OSError(39, "Directory not empty", str(path))
+
+    monkeypatch.setattr(m08e.shutil, "rmtree", failing_rmtree)
+    with caplog.at_level("WARNING"):
+        m08e.clear_partial_layers(str(tmp_path))
+    assert "Could not remove" in caplog.text
+
+
+@pytest.mark.parametrize("make_file, reason", [
+    (lambda p: m08e.save_partial_layer(p, "fp-old", 0, {"x": 1}), "fingerprint differs"),
+    (lambda p: m08e.save_partial_layer(p, "fp-a", 5, {"x": 1}), "for layer 5"),
+    (lambda p: Path(p).write_text('{"fingerprint": "fp-a", "la'), "unreadable"),
+])
+def test_rejected_saved_layer_is_logged_with_reason(tmp_path, caplog, make_file, reason):
+    path = m08e.partial_layer_path(str(tmp_path), STIM, MODEL, 0)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    make_file(path)
+    with caplog.at_level("WARNING"):
+        assert m08e.load_partial_layer(path, "fp-a", 0) is None
+    assert reason in caplog.text
+
+
+def test_missing_saved_layer_is_not_logged(tmp_path, caplog):
+    path = m08e.partial_layer_path(str(tmp_path), STIM, MODEL, 0)
+    with caplog.at_level("WARNING"):
+        assert m08e.load_partial_layer(path, "fp-a", 0) is None
+    assert caplog.text == ""
+
+
+def test_run_layers_reports_reused_layers(tmp_path):
+    with pytest.raises(_Interrupt):
+        _run(tmp_path, _compute([], stop_at=3))
+    reused = []
+    m08e.run_layers(range(6), _compute([]), str(tmp_path), STIM, MODEL, "fp-a",
+                    reused=reused)
+    assert reused == [0, 1, 2]
+
+
+def test_code_identity_changes_with_the_source(tmp_path):
+    a, b = tmp_path / "a.py", tmp_path / "b.py"
+    a.write_text("x = 1\n")
+    b.write_text("y = 2\n")
+    before = m08e.code_identity((a, b))
+    assert before == m08e.code_identity((a, b))
+    b.write_text("y = 3\n")
+    assert m08e.code_identity((a, b)) != before
+    assert {p.name for p in m08e.CODE_IDENTITY_FILES} == {
+        "08e_transformer_cross_stim_aggregate.py", "transformer_analysis.py",
+    }
+
+
+def test_file_stat_identity_tracks_size_mtime_and_presence(tmp_path):
+    f = tmp_path / "layer_00" / "run_raw.npy"
+    f.parent.mkdir()
+    missing = m08e.file_stat_identity([str(f)], str(tmp_path))
+    f.write_bytes(b"abc")
+    present = m08e.file_stat_identity([str(f)], str(tmp_path))
+    assert present != missing
+    import os
+    st = os.stat(f)
+    os.utime(f, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+    assert m08e.file_stat_identity([str(f)], str(tmp_path)) != present
+
+
+def test_write_json_atomic_leaves_old_file_when_dump_fails(tmp_path):
+    path = tmp_path / "D3a.json"
+    m08e.write_json_atomic(str(path), {"ok": 1})
+    with pytest.raises(TypeError):
+        m08e.write_json_atomic(str(path), {"bad": object()})
+    assert json.loads(path.read_text()) == {"ok": 1}
 
 
 def test_fingerprint_depends_on_every_field():
@@ -149,8 +229,9 @@ def test_fresh_flag_parses(monkeypatch):
 
 
 def test_main_resumes_through_run_layers_and_clears_after_writing():
-    """main() routes every layer through run_layers with resume = not --fresh,
-    and removes the layer files only after the last output is written."""
+    """main() routes every layer through run_layers with resume off under
+    --fresh or --force, and removes the layer files only after the last
+    output is written."""
     import ast
     import inspect
 
@@ -160,9 +241,9 @@ def test_main_resumes_through_run_layers_and_clears_after_writing():
     assert names.count("run_layers") == 1
     run_call = calls[names.index("run_layers")]
     resume = {k.arg: k.value for k in run_call.keywords}["resume"]
-    assert ast.unparse(resume) == "not args.fresh"
+    assert ast.unparse(resume) == "not (args.fresh or args.force)"
     assert "_fit_eval_one_layer" in ast.unparse(tree)
 
     src = inspect.getsource(m08e.main)
     clear_at = src.index("clear_partial_layers(out_dir)")
-    assert clear_at > src.rindex("json.dump(")
+    assert clear_at > src.rindex("write_json_atomic(")
