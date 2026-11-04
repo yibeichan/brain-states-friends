@@ -15,9 +15,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 _SCRIPT_DIR = Path(__file__).resolve().parent.parent
@@ -280,9 +282,57 @@ def test_stream_pca_features_reads_through_the_shared_path_helper(tmp_path, monk
         return p
 
     monkeypatch.setattr(ta, "transformer_feature_path", recording)
-    ta.stream_pca_features(STIM, "dinov2-large", ["wolf01"], {"wolf01": 5},
-                           str(tmp_path), train_run_ids={"wolf01"})
-    assert seen and all(p.endswith("wolf01_raw.npy") for p in seen)
+    model = "dinov2-large"
+    n_layers = m08e.MODEL_REGISTRY[model]["n_layers"]
+    runs = {"wolf01": 6, "bourne01": 5}
+    rng = np.random.default_rng(0)
+    for run, n in runs.items():
+        for layer in range(n_layers):
+            f = Path(real(str(tmp_path), STIM, model, layer, run))
+            f.parent.mkdir(parents=True, exist_ok=True)
+            np.save(f, rng.standard_normal((n, 3)).astype(np.float32))
+    feats, _, _, eff, dropped = ta.stream_pca_features(
+        STIM, model, sorted(runs), runs, str(tmp_path),
+        train_run_ids={"wolf01"},
+    )
+    assert dropped == {} and eff == runs
+    # Pass 1 probes every file and pass 2 loads every file, both through
+    # the helper: each path is asked for exactly twice.
+    expected = {real(str(tmp_path), STIM, model, layer, run)
+                for run in runs for layer in range(n_layers)}
+    assert set(seen) == expected
+    assert all(seen.count(p) == 2 for p in expected)
+    assert sorted(feats) == list(range(n_layers))
+    assert all(feats[layer][run].shape[0] == n
+               for layer in feats for run, n in runs.items())
+
+
+def test_feature_path_puts_the_extraction_suffix_in_the_folder_name(tmp_path):
+    """08d --features_subdir_suffix runs (e.g. sweep_w3) read their own
+    feature folder, never the main 08c features."""
+    import utils.transformer_analysis as ta
+    main = ta.transformer_feature_path("/s", STIM, MODEL, 3, "wolf01")
+    sweep = ta.transformer_feature_path("/s", STIM, MODEL, 3, "wolf01",
+                                        extraction_subdir_suffix="_sweep_w3")
+    assert main == os.path.join("/s", "output", "08c_transformer_features",
+                                STIM, MODEL, "layer_03", "wolf01_raw.npy")
+    assert sweep == os.path.join("/s", "output", "08c_transformer_features_sweep_w3",
+                                 STIM, MODEL, "layer_03", "wolf01_raw.npy")
+    # stream_pca_features with the suffix finds files only in the suffixed folder.
+    model = "dinov2-large"
+    for layer in range(m08e.MODEL_REGISTRY[model]["n_layers"]):
+        f = Path(ta.transformer_feature_path(str(tmp_path), STIM, model, layer,
+                                             "wolf01", "_sweep_w3"))
+        f.parent.mkdir(parents=True, exist_ok=True)
+        np.save(f, np.arange(15, dtype=np.float32).reshape(5, 3) ** 2)
+    kw = dict(train_run_ids={"wolf01"})
+    _, _, _, eff, _ = ta.stream_pca_features(
+        STIM, model, ["wolf01"], {"wolf01": 5}, str(tmp_path),
+        extraction_subdir_suffix="_sweep_w3", **kw)
+    assert eff == {"wolf01": 5}
+    _, _, _, eff, dropped = ta.stream_pca_features(
+        STIM, model, ["wolf01"], {"wolf01": 5}, str(tmp_path), **kw)
+    assert eff == {} and "wolf01" in dropped
 
 
 def test_write_json_atomic_leaves_old_file_when_dump_fails(tmp_path):

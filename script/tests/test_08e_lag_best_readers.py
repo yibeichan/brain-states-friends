@@ -212,6 +212,16 @@ def test_reader_rejects_state_count_that_disagrees_with_the_states(tmp_path):
         _read(root, d1, "movie10", "m", kind="per_subset", subjects=["sub-01"])
 
 
+def test_reader_rejects_transfer_class_count_that_disagrees_with_the_states(tmp_path):
+    """Transfer files record the count as n_classes."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _write_d1(d1, "sub-01", "m")
+    _write(root, "sub-01", f"movie10_m{D3A_LAG_BEST_SUFFIX}", "transfer",
+           "movie10", "m", _best({"n_classes": 3}))
+    with pytest.raises(ValueError, match="n_classes=3 but 2 intersection states"):
+        _read(root, d1, "movie10", "m", subjects=["sub-01"])
+
+
 def test_reader_rejects_other_eligibility_source(tmp_path):
     root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
     _write_d1(d1, "sub-01", "m")

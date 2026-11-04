@@ -37,7 +37,10 @@ D1_BEST_LAG, D1_BEST_LAYER = 4, 12
 N_LAYERS = m08e.MODEL_REGISTRY[MODEL]["n_layers"]
 
 FRIENDS_RUNS = ["s01e01a", "s01e01b", "s01e02a"]
-TEST_RUNS = ["wolf01", "figures01", "bourne01", "life01"]
+# movie10 has two viewings of figures and life; both viewings read one 08c
+# feature file (feature_key_for_cross_stim_run_id strips "_run-N").
+TEST_RUNS = ["wolf01", "figures01_run-1", "figures01_run-2", "bourne01",
+             "life01_run-2"]
 
 
 class _Interrupt(Exception):
@@ -80,8 +83,9 @@ def env(tmp_path, monkeypatch):
             for L in range(N_LAYERS):
                 f = Path(m08e.transformer_feature_path(str(tmp_path), stim, MODEL, L, stem))
                 f.parent.mkdir(parents=True, exist_ok=True)
-                f.write_bytes(b"x")
-                rec["feature_files"].append(f)
+                if f not in rec["feature_files"]:
+                    f.write_bytes(b"x")
+                    rec["feature_files"].append(f)
     monkeypatch.setattr(m08e, "load_training_split",
                         lambda sub, parc, sd: {"train": set(FRIENDS_RUNS[:2]),
                                                "valid": set(), "test": set()})
@@ -293,6 +297,19 @@ def test_changed_feature_file_recomputes_every_layer(env, which):
         import os
         st = os.stat(files[-1])
         os.utime(files[-1], ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+    assert _interrupt_then(env, change) == list(range(N_LAYERS))
+
+
+def test_second_viewing_feature_file_enters_the_test_identity(env):
+    """life01 is seen only as "life01_run-2": its feature file is found
+    through the movie10 key function, so a change to it recomputes."""
+    files = [f for f in env["feature_files"] if f.name == "life01_raw.npy"]
+    assert files
+
+    def change():
+        import os
+        st = os.stat(files[0])
+        os.utime(files[0], ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
     assert _interrupt_then(env, change) == list(range(N_LAYERS))
 
 
