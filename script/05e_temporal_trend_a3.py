@@ -71,7 +71,7 @@ from utils.plot_style import (
     recurrence_color, make_recurrence_colorbar, apply_publication_style,
     NETWORK_ORDER, NETWORK_COLORS, load_parcel_networks, compute_dominant_networks,
 )
-from utils.common import normalize_parcellation_name
+from utils.common import normalize_parcellation_name, read_run_acquisition_times
 from utils.state_blocks import load_eligible_states
 
 from dotenv import load_dotenv
@@ -112,16 +112,10 @@ def load_acquisition_times(sub_id):
         logger.warning("Acquisition time CSV not found: %s", csv_path)
         return None, None
 
-    acq_dict = {}
-    session_map = {}
-    has_session_col = False
-    with open(csv_path, 'r') as f:
-        reader = csv.DictReader(f)
-        has_session_col = 'session_id' in reader.fieldnames
-        for row in reader:
-            acq_dict[row['run_id']] = float(row['rel_acq_time'])
-            if has_session_col:
-                session_map[row['run_id']] = row['session_id']
+    # A run acquired twice has one row per session; use the copy the
+    # analyses use (DUPLICATE_RUN_SESSIONS), not the last row read.
+    acq_dict, session_map = read_run_acquisition_times(sub_id, csv_path)
+    has_session_col = session_map is not None
 
     logger.info("Loaded acquisition times for %d runs from %s",
                 len(acq_dict), csv_path)

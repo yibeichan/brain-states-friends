@@ -10,6 +10,106 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+# Friends runs that were acquired in two sessions, mapped to the session whose
+# copy the analyses use. Every loader that turns a run id into a file or a
+# per-run record must go through pick_run_session(), so that all stages read
+# the same copy. Without this, a glob or a dict build picks whichever copy the
+# filesystem or sort order returns first or last, and different stages
+# disagreed.
+# Both copies were processed (parcel time series and fMRIPrep outputs exist
+# for each):
+#   sub-02 s05e09a: ses-036 is the complete run (456 volumes); ses-037 is a
+#     33-volume partial acquisition. ses-037 is pinned because the existing
+#     outputs of stage 03a onward were computed from it; pinning ses-036
+#     instead means rerunning those stages for sub-02.
+#   sub-06 s02e04b: ses-006 is the first viewing; ses-041 is a repeat.
+# Only one copy was processed; the other appears only in the scans tables
+# that 00_get_scan reads, so only the acquisition times are affected:
+#   sub-04 s02e02a (ses-012, ses-013), sub-04 s02e06a (ses-014, ses-015),
+#   sub-06 s05e03a (ses-028, ses-029).
+# This table covers the atlas-4S156Parcels outputs; the atlas-4S456Parcels
+# folder has further duplicated runs that are not listed, so loaders raise
+# there until they are.
+DUPLICATE_RUN_SESSIONS = {
+    ("sub-02", "s05e09a"): "ses-037",
+    ("sub-06", "s02e04b"): "ses-006",
+    ("sub-04", "s02e02a"): "ses-013",
+    ("sub-04", "s02e06a"): "ses-014",
+    ("sub-06", "s05e03a"): "ses-028",
+}
+
+_SESSION_RE = re.compile(r"(?:^|[_/])(ses-[A-Za-z0-9]+)(?=[_/]|$)")
+
+
+def session_from_path(path) -> str | None:
+    """BIDS session entity of a file name or path, e.g. 'ses-036', or None."""
+    m = _SESSION_RE.search(str(path))
+    return m.group(1) if m else None
+
+
+def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
+    """Return the one candidate to use for (sub_id, run_id).
+
+    ``candidates`` are file paths, or any records from which ``session_of``
+    returns the session id. One candidate is returned as is, unless a session
+    is pinned for this run and the candidate is from another session. Several
+    candidates are allowed only for a run listed in DUPLICATE_RUN_SESSIONS;
+    an unlisted duplicate raises ValueError, so a new duplicate cannot be
+    resolved silently.
+    """
+    candidates = list(candidates)
+    if not candidates:
+        raise ValueError(f"no candidates for {sub_id} {run_id}")
+    pinned = DUPLICATE_RUN_SESSIONS.get((sub_id, run_id))
+    if pinned is None:
+        if len(candidates) > 1:
+            found = sorted(str(session_of(c)) for c in candidates)
+            raise ValueError(
+                f"{sub_id} {run_id} has {len(candidates)} copies ({', '.join(found)}) "
+                "and none is chosen in DUPLICATE_RUN_SESSIONS"
+            )
+        return candidates[0]
+    chosen = [c for c in candidates if session_of(c) == pinned]
+    if len(chosen) != 1:
+        found = sorted(str(session_of(c)) for c in candidates)
+        raise ValueError(
+            f"{sub_id} {run_id}: expected exactly one copy from {pinned}, "
+            f"found sessions {', '.join(found)}"
+        )
+    return chosen[0]
+
+
+def read_run_acquisition_times(sub_id, csv_path):
+    """Read a 00_get_scan ``<sub>_run_acquisition_times.csv``.
+
+    A run with rows from two sessions resolves through pick_run_session().
+
+    Returns:
+        acq_dict: dict run_id -> float (rel_acq_time in days).
+        session_map: dict run_id -> str (BIDS session_id), or None when the
+            file has no session_id column.
+    """
+    import csv
+
+    rows_by_run = {}
+    with open(csv_path, 'r') as f:
+        reader = csv.DictReader(f)
+        has_session_col = 'session_id' in (reader.fieldnames or [])
+        for row in reader:
+            rows_by_run.setdefault(row['run_id'], []).append(row)
+    acq_dict = {}
+    session_map = {} if has_session_col else None
+    for run_id, rows in rows_by_run.items():
+        row = pick_run_session(
+            sub_id, run_id, rows,
+            session_of=lambda r: r.get('session_id') or session_from_path(r.get('filename', '')),
+        )
+        acq_dict[run_id] = float(row['rel_acq_time'])
+        if has_session_col:
+            session_map[run_id] = row['session_id']
+    return acq_dict, session_map
+
+
 def resolve_n_jobs(n_jobs):
     """Resolve worker count, preferring the SLURM CPU allocation when present.
 
