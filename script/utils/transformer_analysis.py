@@ -131,6 +131,28 @@ def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
     can be: a D1 or 05e rerun after the 08e output was written, or an 08e
     output promoted before its D1 / 05e.
     """
+    folder, resubmit = _d3a_resubmit_hint(path, sub_id, stimulus, model_key)
+    return (
+        f"{path} disagrees with the current 08d D1 / 05e eligibility for "
+        f"{sub_id} ({'; '.join(problems)}). Either side may be stale. If 08d "
+        f"D1 and 05e are current, move {folder} aside and {resubmit} "
+        "If the 08e output is the current side, bring 08d D1 / 05e "
+        "up to date instead."
+    )
+
+
+def d3a_unreadable_output_message(path, sub_id, stimulus, model_key, reason):
+    """Error text for a best-lag D3a output that cannot be read as JSON."""
+    folder, resubmit = _d3a_resubmit_hint(path, sub_id, stimulus, model_key)
+    return (
+        f"{path} cannot be read ({reason}). It is probably an incomplete "
+        f"write, for example from a job killed while writing. Move the file "
+        f"(or {folder}) aside and {resubmit}"
+    )
+
+
+def _d3a_resubmit_hint(path, sub_id, stimulus, model_key):
+    """``(folder, text)``: how to resubmit one participant's best-lag cell."""
     try:
         index = str(D3A_SUBJECTS.index(sub_id))
     except ValueError:
@@ -144,14 +166,10 @@ def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
     env = f"STIMULUS={stimulus} MODEL={model_key}"
     if os.path.exists(per_subset_file):
         env += " PER_SUBSET=1"
-    return (
-        f"{path} disagrees with the current 08d D1 / 05e eligibility for "
-        f"{sub_id} ({'; '.join(problems)}). Either side may be stale. If 08d "
-        f"D1 and 05e are current, move {folder} aside and resubmit only this "
-        f"participant (sbatch --array={index} with {env}) without FORCE: "
-        "FORCE=1 implies --fresh, so every resubmission would restart from "
-        "layer 0. If the 08e output is the current side, bring 08d D1 / 05e "
-        "up to date instead."
+    return folder, (
+        f"resubmit only this participant (sbatch --array={index} with {env}) "
+        "without FORCE: FORCE=1 implies --fresh, so every resubmission would "
+        "restart from layer 0."
     )
 
 
@@ -406,8 +424,13 @@ def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
         )
     out = []
     for sub, path in paths.items():
-        with open(path) as f:
-            data = json.load(f)
+        try:
+            with open(path) as f:
+                data = json.load(f)
+        except (OSError, ValueError) as exc:
+            raise ValueError(d3a_unreadable_output_message(
+                path, sub, stimulus, model_key, exc,
+            )) from exc
         if data.get("lag_source") != "friends_best":
             raise ValueError(
                 f"{path} records lag_source={data.get('lag_source')!r}, "

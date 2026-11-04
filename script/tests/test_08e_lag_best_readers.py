@@ -535,3 +535,16 @@ def test_reader_refuses_the_sub_hrf_fallback_and_asks_to_restore_the_flags(tmp_p
     assert f"05e state flags for sub-02 were not found at {flags}" in msg
     assert "datalad get" in msg and "instead of rerunning 08e" in msg
     assert "aside" not in msg and msg.isascii()
+
+
+def test_reader_reports_an_unreadable_file_as_an_incomplete_write(tmp_path):
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    p = root / "sub-02" / f"movie10_m{D3A_LAG_BEST_SUFFIX}" / "D3a_transfer_movie10_m.json"
+    p.write_text(p.read_text()[:10])
+    with pytest.raises(ValueError) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    msg = str(exc.value)
+    assert msg.startswith(f"{p} cannot be read (") and "incomplete write" in msg
+    assert "--array=1" in msg and "without FORCE" in msg and "disagrees" not in msg
+    assert "PER_SUBSET=1" not in msg and msg.isascii()

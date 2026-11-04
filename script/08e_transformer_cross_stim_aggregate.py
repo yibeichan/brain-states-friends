@@ -65,6 +65,7 @@ from utils.transformer_analysis import (
     build_run_boundaries,
     compute_effect_size, d1_eligibility_problems, d1_stale_message,
     d3a_eligibility_problems, d3a_stale_output_message,
+    d3a_unreadable_output_message,
     find_best_lag_layer, friends_d1_path,
     load_content_eligibility, require_05e_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
@@ -625,9 +626,8 @@ def check_lag_best_outputs(out_dir, filenames, lag, lag_info, eligibility,
             with open(path) as f:
                 data = json.load(f)
         except (OSError, ValueError) as exc:
-            raise RuntimeError(d3a_stale_output_message(
-                path, sub_id, stimulus, model_key,
-                [f"the file cannot be read: {exc}"],
+            raise RuntimeError(d3a_unreadable_output_message(
+                path, sub_id, stimulus, model_key, exc,
             )) from exc
         problems = []
         if data.get("lag") != lag:

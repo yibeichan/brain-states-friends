@@ -396,12 +396,22 @@ def test_skip_guard_checks_every_output_file(env):
         env["run"]("--per_subset")
 
 
-def test_unreadable_completed_output_raises(env):
-    env["run"]()
-    path = env["out_dir"] / f"D3a_transfer_{STIM}_{MODEL}.json"
+@pytest.mark.parametrize("kind", ["transfer", "per_subset"])
+def test_unreadable_completed_output_raises(env, kind):
+    """A truncated file is an incomplete write, not a disagreement with 08d
+    D1 / 05e: the message says so and keeps PER_SUBSET=1 for the rerun."""
+    env["run"]("--per_subset")
+    path = env["out_dir"] / f"D3a_{kind}_{STIM}_{MODEL}.json"
     path.write_text(path.read_text()[:20])
-    with pytest.raises(RuntimeError, match="cannot be read"):
-        env["run"]()
+    with pytest.raises(RuntimeError) as exc:
+        env["run"]("--per_subset")
+    msg = str(exc.value)
+    assert msg.startswith(f"{path} cannot be read (")
+    assert "probably an incomplete write" in msg
+    assert "disagrees" not in msg and "08d D1" not in msg
+    assert "--array=0" in msg and "PER_SUBSET=1" in msg and "without FORCE" in msg
+    assert msg.isascii()
+    assert env["fit_calls"] == []
 
 
 def test_force_flag_parses_and_help_says_it_implies_fresh(monkeypatch, capsys):
