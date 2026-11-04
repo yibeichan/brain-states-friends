@@ -427,3 +427,20 @@ def test_fig5_per_film_reads_best_lag(fig_env):
     assert [s["label"] for s in series] == ["Wolf of Wall St."]
     assert series[0]["n"] == len(ALL_SUBS)
     assert series[0]["mean"][0] == pytest.approx(0.85)
+
+
+def test_wrapper_rules_match_the_reader_constants():
+    """The 08e wrapper's participant list, sub-04 skip rule and VT default
+    are the ones the reader assumes (D3A_SUBJECTS, D3A_STIMULI_WITHOUT_SUB04,
+    D3A_VT)."""
+    import re
+    from utils.transformer_analysis import D3A_STIMULI_WITHOUT_SUB04, D3A_SUBJECTS
+    sh = (_SCRIPT_DIR / "08e_transformer_cross_stim_aggregate.sh").read_text()
+    subjects = re.search(r"^SUBJECTS=\(([^)]*)\)", sh, re.M).group(1).split()
+    assert tuple(subjects) == D3A_SUBJECTS
+    skip = [line for line in sh.splitlines()
+            if line.startswith("if ") and '"sub-04"' in line]
+    assert len(skip) == 1
+    assert set(re.findall(r'== "([a-z_]+)"', skip[0])) == set(
+        D3A_STIMULI_WITHOUT_SUB04)
+    assert re.search(r'^VT="\$\{VT:-([0-9.]+)\}"', sh, re.M).group(1) == D3A_VT
