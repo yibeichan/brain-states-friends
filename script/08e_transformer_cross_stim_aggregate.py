@@ -60,10 +60,11 @@ from utils.common import (
 )
 from utils.stats import benjamini_hochberg, permutation_pvalue
 from utils.transformer_analysis import (
-    D3A_LAG_BEST_SUFFIX, INTERSECTION_MIN_FO, PEAK_LAG_EXCLUDE,
+    D3A_LAG_BEST_SUFFIX, D3A_VT, INTERSECTION_MIN_FO, PEAK_LAG_EXCLUDE,
     best_lag_from_d1_file, build_layer_feature_matrix,
     build_run_boundaries,
-    compute_effect_size, d3a_eligibility_problems, d3a_stale_output_message,
+    compute_effect_size, d1_eligibility_problems, d1_stale_message,
+    d3a_eligibility_problems, d3a_stale_output_message,
     find_best_lag_layer, friends_d1_path,
     load_content_eligibility,
     precompute_eligible_null_state_sequences, stream_pca_features,
@@ -689,7 +690,10 @@ def parse_args():
     p.add_argument("--stimulus", required=True,
                    choices=list(CROSS_STIM_STAGE_MAP.keys()))
     p.add_argument("--model", required=True, choices=list(MODEL_REGISTRY.keys()))
-    p.add_argument("--vt", default=None)
+    p.add_argument("--vt", default=D3A_VT,
+                   help="Variance-threshold subfolder of the 05e state flags "
+                        f"and decoded states (default: {D3A_VT}, the wrapper's "
+                        "VT default and the value the best-lag readers use).")
     p.add_argument("--n_permutations", type=int, default=N_PERMUTATIONS_DEFAULT)
     p.add_argument("--force", action="store_true",
                    help="Re-run even if checkpoint output already exists. "
@@ -814,6 +818,17 @@ def main():
     # Eligibility (Friends-defined; shared state space). Loaded before the
     # checkpoint so the skip guard can compare it with existing outputs.
     eligibility = load_content_eligibility(sub_id, parc, SCRATCH_DIR, vt=args.vt)
+    if lag_source == LAG_FRIENDS_BEST:
+        # The lag comes from 08d D1 and the states from 05e: refuse to run or
+        # skip when D1 was computed from a different eligibility than 05e
+        # gives now (e.g. a 05e rerun not yet followed by 08d).
+        d1_problems = d1_eligibility_problems(
+            lag_info["friends_d1_path"], eligibility,
+        )
+        if d1_problems:
+            raise RuntimeError(d1_stale_message(
+                lag_info["friends_d1_path"], sub_id, d1_problems,
+            ))
     if (lag_source == LAG_FRIENDS_BEST and not args.force and all(
             os.path.exists(os.path.join(out_dir, f)) for f in checkpoint_files)):
         check_lag_best_outputs(out_dir, checkpoint_files, lag, lag_info,

@@ -136,14 +136,60 @@ def d3a_stale_output_message(path, sub_id, stimulus, model_key, problems):
     except ValueError:
         index = "<index of the participant>"
     folder = os.path.dirname(str(path))
+    # A folder that held the per-film file must be rerun with PER_SUBSET=1,
+    # or the rerun writes only the pooled file and the per-film readers fail.
+    per_subset_file = os.path.join(
+        folder, f"D3a_per_subset_{stimulus}_{model_key}.json",
+    )
+    env = f"STIMULUS={stimulus} MODEL={model_key}"
+    if os.path.exists(per_subset_file):
+        env += " PER_SUBSET=1"
     return (
         f"{path} disagrees with the current 08d D1 / 05e eligibility for "
         f"{sub_id} ({'; '.join(problems)}). Either side may be stale. If 08d "
         f"D1 and 05e are current, move {folder} aside and resubmit only this "
-        f"participant (sbatch --array={index} with STIMULUS={stimulus} "
-        f"MODEL={model_key}) without FORCE: FORCE=1 implies --fresh, so every "
-        "resubmission would restart from layer 0. If the 08e output is the "
-        "current side, bring 08d D1 / 05e up to date instead."
+        f"participant (sbatch --array={index} with {env}) without FORCE: "
+        "FORCE=1 implies --fresh, so every resubmission would restart from "
+        "layer 0. If the 08e output is the current side, bring 08d D1 / 05e "
+        "up to date instead."
+    )
+
+
+def d1_eligibility_problems(d1_path, eligibility):
+    """How a 08d D1 file's state eligibility disagrees with the current 05e set.
+
+    08d records the eligibility it used (``eligibility_source`` and
+    ``n_eligible_states``) in its D1 output. 08e takes its lag from D1 and
+    its states from 05e, so the two must describe the same eligibility. A D1
+    file that records neither field cannot be checked and returns no problem.
+    Returns a list of problems (empty when consistent).
+    """
+    with open(str(d1_path)) as f:
+        d1 = json.load(f)
+    problems = []
+    cur_src = eligibility.get("eligibility_source")
+    if "eligibility_source" in d1 and d1["eligibility_source"] != cur_src:
+        problems.append(
+            f"08d D1 eligibility_source {d1['eligibility_source']!r} vs "
+            f"{cur_src!r} from 05e now"
+        )
+    n_cur = len(eligibility["content_eligible"])
+    if "n_eligible_states" in d1 and d1["n_eligible_states"] != n_cur:
+        problems.append(
+            f"08d D1 n_eligible_states={d1['n_eligible_states']!r} vs {n_cur} "
+            "content-eligible states in 05e now"
+        )
+    return problems
+
+
+def d1_stale_message(d1_path, sub_id, problems):
+    """Error text for a 08d D1 output whose eligibility disagrees with 05e."""
+    return (
+        f"{d1_path} does not match the current 05e eligibility for {sub_id} "
+        f"({'; '.join(problems)}). 08e reads its lag from 08d D1 and its states "
+        "from 05e, so both must come from the same eligibility. Bring 08d D1 "
+        "up to date with 05e (rerun 08d, or promote D1 together with the 05e "
+        "flags it was computed from) before running or reading 08e."
     )
 
 
@@ -322,12 +368,16 @@ def load_d3a_lag_best(root, d1_dir, stimulus, model_key, kind="transfer",
             )
         d1_path = friends_d1_file(d1_dir, sub, model_key)
         d1_lag, _ = best_lag_from_d1_file(d1_path)
+        eligibility = load_content_eligibility(
+            sub, parcellation, scratch_dir, vt=vt,
+        )
+        d1_problems = d1_eligibility_problems(d1_path, eligibility)
+        if d1_problems:
+            raise ValueError(d1_stale_message(d1_path, sub, d1_problems))
         problems = []
         if int(lag) != d1_lag:
             problems.append(f"lag {lag} on disk vs best lag {d1_lag} in {d1_path}")
-        problems += d3a_eligibility_problems(
-            data, load_content_eligibility(sub, parcellation, scratch_dir, vt=vt),
-        )
+        problems += d3a_eligibility_problems(data, eligibility)
         if problems:
             raise ValueError(
                 d3a_stale_output_message(path, sub, stimulus, model_key, problems)

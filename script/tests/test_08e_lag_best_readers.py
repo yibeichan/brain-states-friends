@@ -444,3 +444,50 @@ def test_wrapper_rules_match_the_reader_constants():
     assert set(re.findall(r'== "([a-z_]+)"', skip[0])) == set(
         D3A_STIMULI_WITHOUT_SUB04)
     assert re.search(r'^VT="\$\{VT:-([0-9.]+)\}"', sh, re.M).group(1) == D3A_VT
+
+
+def _set_d1_eligibility(d1_dir, sub, model, **fields):
+    """Add the eligibility fields 08d records to an existing test D1 file."""
+    p = Path(friends_d1_file(d1_dir, sub, model))
+    d = json.loads(p.read_text())
+    d.update(fields)
+    p.write_text(json.dumps(d))
+
+
+def test_reader_accepts_d1_whose_eligibility_matches_05e(tmp_path):
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    for sub in SUBS:
+        _set_d1_eligibility(d1, sub, "m", eligibility_source="05e_a4",
+                            n_eligible_states=len(ELIGIBLE))
+    assert [s for s, _ in _read(root, d1, "movie10", "m", subjects=SUBS)] == SUBS
+
+
+@pytest.mark.parametrize("fields, match", [
+    ({"n_eligible_states": len(ELIGIBLE) + 1}, "n_eligible_states=4 vs 3"),
+    ({"eligibility_source": "sub_hrf_fallback"}, "08d D1 eligibility_source"),
+])
+def test_reader_rejects_d1_computed_from_another_eligibility(tmp_path, fields, match):
+    """An 08e output and its D1 promoted before the 05e flags they were
+    computed from: the D3a file alone can look consistent, D1 cannot."""
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    _set_d1_eligibility(d1, "sub-02", "m", **fields)
+    with pytest.raises(ValueError, match=match) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    msg = str(exc.value)
+    assert "sub-02" in msg and "Bring 08d D1 up to date with 05e" in msg
+    assert msg.isascii()
+
+
+@pytest.mark.parametrize("with_per_subset", [True, False])
+def test_remedy_asks_for_per_subset_only_when_the_folder_held_it(tmp_path, with_per_subset):
+    root, d1 = tmp_path / "d3a", _d1_dir(tmp_path)
+    _two_lags(root, d1)
+    if with_per_subset:
+        _write(root, "sub-02", f"movie10_m{D3A_LAG_BEST_SUFFIX}", "per_subset",
+               "movie10", "m", _best())
+    _write_d1(d1, "sub-02", "m", best_lag=4)
+    with pytest.raises(ValueError) as exc:
+        _read(root, d1, "movie10", "m", subjects=SUBS)
+    assert ("PER_SUBSET=1" in str(exc.value)) is with_per_subset

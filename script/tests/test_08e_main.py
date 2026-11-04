@@ -392,3 +392,39 @@ def test_force_flag_parses_and_help_says_it_implies_fresh(monkeypatch, capsys):
     with pytest.raises(SystemExit):
         m08e.parse_args()
     assert "Implies --fresh" in " ".join(capsys.readouterr().out.split())
+
+
+def _set_d1_eligibility(scratch, **fields):
+    path = Path(m08e.friends_d1_path(str(scratch), PARC, SUB, MODEL))
+    d = json.loads(path.read_text())
+    d.update(fields)
+    path.write_text(json.dumps(d))
+
+
+def test_d1_with_matching_eligibility_runs(env, tmp_path):
+    _set_d1_eligibility(tmp_path, eligibility_source="05e_a4", n_eligible_states=3)
+    env["run"]()
+    assert _pooled(env)["lag"] == D1_BEST_LAG
+
+
+@pytest.mark.parametrize("completed_first", [False, True])
+def test_d1_from_another_eligibility_stops_before_any_compute_or_skip(
+        env, tmp_path, completed_first):
+    """05e rerun but 08d D1 not yet: 08e must neither compute at the old D1
+    lag nor skip a completed cell, whatever --force says."""
+    if completed_first:
+        env["run"]()
+    _set_d1_eligibility(tmp_path, eligibility_source="05e_a4", n_eligible_states=4)
+    for extra in ((), ("--force",)):
+        with pytest.raises(RuntimeError) as exc:
+            env["run"](*extra)
+        msg = str(exc.value)
+        assert "n_eligible_states=4 vs 3" in msg
+        assert "Bring 08d D1 up to date with 05e" in msg and msg.isascii()
+        assert env["fit_calls"] == []
+
+
+def test_vt_defaults_to_the_wrapper_and_reader_value(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["08e", "--sub_id", SUB, "--stimulus", STIM,
+                                      "--model", MODEL])
+    assert m08e.parse_args().vt == m08e.D3A_VT == "0.95"
