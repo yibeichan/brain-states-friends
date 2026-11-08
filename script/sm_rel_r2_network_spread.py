@@ -1,7 +1,7 @@
 """R2 network-spread null: are multi-network state maps inherited from the PCA basis?
 
 Results R2 reports that content-eligible state maps mix several canonical
-networks (pooled medians across 159 states: top-1 network share 0.25, top-3
+networks (pooled medians across 158 states: top-1 network share 0.25, top-3
 share 0.60, 4 networks >= 10%, normalized network entropy 0.81). Every state
 mean, however, lives in the participant's retained PCA subspace, and the PCA
 basis itself mixes networks, so an *arbitrary* direction in that subspace could
@@ -21,7 +21,7 @@ Faithfulness gates (hard aborts, run before any null is drawn):
   1. Back-projection: state_means_pca @ components_[:n_pcs] + mean_ must
      reproduce state_means_parcel.npy to 1e-8. The null relies on this map.
   2. Published medians: pooled content-eligible metrics must reproduce the
-     manuscript's R2 values (n = 159; top1 0.25, top3 0.60, n>=10% 4,
+     manuscript's R2 values (n = 158; top1 0.25, top3 0.60, n>=10% 4,
      entropy 0.81 after rounding).
 
 Statistic and inference: per participant, the median metric over that
@@ -29,7 +29,7 @@ participant's content-eligible states, compared with a null distribution of
 medians (each draw: K_elig per-draw values resampled from the participant's
 null pool, median taken; n_group draws). Two-sided empirical p by doubled
 min-tail with the (count + 1) / (n + 1) correction (Phipson & Smyth, 2010).
-A pooled (159-state) comparison mirrors the manuscript's pooled medians.
+A pooled (158-state) comparison mirrors the manuscript's pooled medians.
 
 Outputs (per subject, under
 {SCRATCH_DIR}/output/sm_rel_r2_network_spread/{parcellation}/{sub}/{vt}/):
@@ -68,7 +68,7 @@ logger = logging.getLogger("sm_rel_r2_network_spread")
 ELIGIBLE_CATEGORY = "eligible_for_content_analysis"
 
 # Published R2 pooled medians (results.md, R2), reproduced as a gate.
-PUBLISHED = {"n_states": 159, "top1": 0.25, "top3": 0.60,
+PUBLISHED = {"n_states": 158, "top1": 0.25, "top3": 0.60,
              "n_ge10": 4.0, "entropy": 0.81}
 
 
@@ -301,7 +301,7 @@ def main():
             summary["null"]["isotropic"]["entropy"]["null_median_mean"],
             summary["null"]["isotropic"]["entropy"]["p_two_sided"])
 
-    # Pooled comparison mirroring the manuscript's 159-state medians: each
+    # Pooled comparison mirroring the manuscript's 158-state medians: each
     # group draw takes k_elig values from each subject's null pool.
     pooled_summary = {"n_states": int(len(pooled["entropy"])),
                       "observed": {k: float(np.median(v))
