@@ -11,7 +11,7 @@ _Tests whether the Friends recurrence ordering corresponds to state occupancy du
 - n=6 subjects. Resting state is the only out-of-Friends condition covering all six participants.
 - Resting runs: 5, 5, 5, 5, 4, 6 for sub-01 through sub-06
 - Active states (Friends recurrence > 0): 46, 46, 44, 44, 47, 42
-- Content-eligible states (`05e_a4` state_flags.csv): 31, 30, 26, 27, 29, 16
+- Content-eligible states (`05e_a4` state_flags.csv): 31, 30, 26, 27, 29, 15
 - A1: Spearman rho between Friends recurrence score and mean resting FO across all active states. p-values are approximate: FO is compositional (sums to 1 per run) and resting runs carry serial dependence, so p is an upper bound on confidence.
 - A1 eligible: same analysis restricted to content-eligible states
 - A3: LL per sample, Friends test vs resting overall, against the heuristic log(1/n_active) reference
@@ -48,7 +48,7 @@ Correspondence is weak and inconsistent in sign. Two of six participants reach u
 | sub-03 | 26 | 0.129 | 0.530 |
 | sub-04 | 27 | 0.023 | 0.908 |
 | sub-05 | 29 | 0.109 | 0.573 |
-| sub-06 | 16 | 0.592 | 0.016 |
+| sub-06 | 15 | 0.577 | 0.024 |
 
 Restricting to content-eligible states leaves only sub-06 significant.
 

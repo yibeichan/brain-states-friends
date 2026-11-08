@@ -11,7 +11,7 @@ This directory catalogues all supplementary figures (S1–S15) for the manuscrip
 | S3 | HMM model selection: validation log-likelihood against occupied states (A), occupied states against truncation capacity (B), and train-to-validation likelihood gap against capacity (C), per subject | [S03_model_selection_A.png](figures/S03_model_selection_A.png), [_B.png](figures/S03_model_selection_B.png), [_C.png](figures/S03_model_selection_C.png) | [../findings/04_combined_hdphmm.md](../findings/04_combined_hdphmm.md) | main |
 | S4 | Within-Friends reliability: matched-pair spatial correlation for LOSO and split-half refits (A), structural invariants across LOSO folds against the 10-seed initialization range (B), and the within-state functional-connectivity arm, raw (C) and mean-removed (D), each against a mismatched-pair null | [S04_reliability_A.png](figures/S04_reliability_A.png), [_B.png](figures/S04_reliability_B.png), [_C.png](figures/S04_reliability_C.png), [_D.png](figures/S04_reliability_D.png) | [04ra](../findings/04ra_loso_struct_comp.md), [04rb](../findings/04rb_split_half_reliability.md), [04rc](../findings/04rc_reliability_fc.md) | main |
 | S5 | Network-stratified video (DINOv2) decoding depth: per-subject montage testing whether the video depth peak localizes to specific networks (five subjects; sub-06's groups all fell below the minimum-states gate) | [S05_video_peak_depth.png](figures/S05_video_peak_depth.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
-| S6 | Run-onset negative control and timing floor at the main decoding peak. Disclosure panel: the control is invalidated by a 2–8 vs 16–31 class-count asymmetry; the class-matched timing floor is the comparison that stands, and the main effect size clears it in all 18 cells | [S06_run_onset_negative_control.png](figures/S06_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
+| S6 | Run-onset negative control and timing floor at the main decoding peak. Disclosure panel: the control is invalidated by a 2–8 vs 15–31 class-count asymmetry; the class-matched timing floor is the comparison that stands, and the main effect size clears it in all 18 cells | [S06_run_onset_negative_control.png](figures/S06_run_onset_negative_control.png) | [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
 | S7 | Per-layer decoding depth strips for three transformer models (audio A, text B, video C) in the cross-stimulus analysis | [S07_decoding_depth_strips_A.png](figures/S07_decoding_depth_strips_A.png), [_B.png](figures/S07_decoding_depth_strips_B.png), [_C.png](figures/S07_decoding_depth_strips_C.png) | [../findings/08e_transformer_cross_stim_aggregate.md](../findings/08e_transformer_cross_stim_aggregate.md) | main |
 | S8 | Cross-stimulus validity, including resting state: PCA cross-stimulus fit diagnostic (A), within-Friends versus cross-stimulus fit (B), and state presence across stimuli (C) | [S08_cross_stimulus_validity_A.png](figures/S08_cross_stimulus_validity_A.png), [_B.png](figures/S08_cross_stimulus_validity_B.png), [_C.png](figures/S08_cross_stimulus_validity_C.png) | [m10](../findings/m10_05_cross_stimulus_validation.md), [hp](../findings/hp_05_cross_stimulus_validation.md), [pp](../findings/pp_05_cross_stimulus_validation.md), [rest](../findings/rest_05_cross_stimulus_validation.md) | main |
 | S9 | Individual differences across the main findings: one radar per subject with seven axes (active states, share of content-eligible states, FC–transition correlation, network homophily, audio decoding depth, Movie10 recurrence–occupancy correlation, and the mean Harry Potter and Le Petit Prince correlation) | [S09_individual_differences.png](figures/S09_individual_differences.png) | [../findings/06b_transition_structure.md](../findings/06b_transition_structure.md), [../findings/08d_transformer_depth.md](../findings/08d_transformer_depth.md) | main |
@@ -292,9 +292,9 @@ Random-direction null for the network-spread index, per participant (10,000 draw
 | sub-03 | 26 | 0.801 | 0.925 [0.914, 0.935] | -22.6 | 0.957 | -39.7 | 0.243 | 0.171 (+10.4) |
 | sub-04 | 27 | 0.788 | 0.921 [0.910, 0.931] | -25.0 | 0.948 | -42.3 | 0.253 | 0.171 (+11.9) |
 | sub-05 | 29 | 0.825 | 0.933 [0.923, 0.942] | -21.9 | 0.958 | -37.0 | 0.241 | 0.164 (+12.0) |
-| sub-06 | 16 | 0.806 | 0.932 [0.919, 0.944] | -19.3 | 0.956 | -30.2 | 0.230 | 0.164 (+7.8) |
+| sub-06 | 15 | 0.809 | 0.932 [0.918, 0.945] | -17.6 | 0.956 | -27.9 | 0.224 | 0.164 (+6.7) |
 
-Fitted states were more network-concentrated than random directions in every participant and under both null variants. Observed spread ranged 0.79 to 0.83 across participants, against variance-matched null medians of 0.92 to 0.93 (z = -19 to -27) and equal-weight null medians of 0.95 to 0.96 (z = -30 to -44), with the observed largest-network share correspondingly above the null (0.23 to 0.26 versus about 0.17); the two-sided empirical p reached the 10,000-draw floor of 0.0002 in every participant. Pooled across the 159 content-eligible states, the observed spread index was 0.807 against a variance-matched null median of 0.929 (95% interval 0.924 to 0.933; z = -57.2).
+Fitted states were more network-concentrated than random directions in every participant and under both null variants. Observed spread ranged 0.79 to 0.83 across participants, against variance-matched null medians of 0.92 to 0.93 (z = -18 to -27) and equal-weight null medians of 0.95 to 0.96 (z = -28 to -44), with the observed largest-network share correspondingly above the null (0.22 to 0.26 versus about 0.17); the two-sided empirical p reached the 10,000-draw floor of 0.0002 in every participant. Pooled across the 158 content-eligible states, the observed spread index was 0.807 against a variance-matched null median of 0.929 (95% interval 0.924 to 0.933; z = -56.9).
 
 The comparison holds the participant's retained principal-component subspace fixed and redraws directions within it, so it tests whether the multi-network composition of the fitted states is inherited from the principal-component basis. It is not: the fitted states are substantially more network-structured than arbitrary patterns in the same subspace, while still drawing on several networks each.
 
@@ -333,21 +333,21 @@ Per-participant Spearman correlation between the Friends recurrence score and me
 | Movie10 | sub-03 | 44 | +0.518 | <0.001 | 26 | +0.457 | 0.019 |
 | Movie10 | sub-04 | 44 | +0.753 | <0.001 | 27 | +0.657 | <0.001 |
 | Movie10 | sub-05 | 47 | +0.610 | <0.001 | 29 | +0.502 | 0.006 |
-| Movie10 | sub-06 | 42 | +0.773 | <0.001 | 16 | +0.818 | <0.001 |
+| Movie10 | sub-06 | 42 | +0.773 | <0.001 | 15 | +0.779 | <0.001 |
 | Harry Potter | sub-01 | 46 | +0.232 | 0.121 | 31 | +0.223 | 0.227 |
 | Harry Potter | sub-02 | 46 | +0.444 | 0.002 | 30 | +0.343 | 0.063 |
 | Harry Potter | sub-03 | 44 | +0.367 | 0.014 | 26 | +0.404 | 0.041 |
 | Harry Potter | sub-05 | 47 | +0.258 | 0.080 | 29 | −0.028 | 0.887 |
-| Harry Potter | sub-06 | 42 | +0.294 | 0.059 | 16 | +0.231 | 0.389 |
+| Harry Potter | sub-06 | 42 | +0.294 | 0.059 | 15 | +0.191 | 0.495 |
 | Le Petit Prince | sub-01 | 46 | +0.056 | 0.710 | 31 | +0.053 | 0.778 |
 | Le Petit Prince | sub-02 | 46 | +0.332 | 0.024 | 30 | +0.287 | 0.124 |
 | Le Petit Prince | sub-03 | 44 | +0.133 | 0.389 | 26 | +0.178 | 0.384 |
 | Le Petit Prince | sub-05 | 47 | −0.000 | 0.998 | 29 | −0.273 | 0.153 |
-| Le Petit Prince | sub-06 | 42 | −0.018 | 0.908 | 16 | +0.126 | 0.641 |
+| Le Petit Prince | sub-06 | 42 | −0.018 | 0.908 | 15 | +0.093 | 0.742 |
 
 The restriction lowers the correlation in most cells, but not in all: it raises ρ for Movie10 in sub-06, for Harry Potter in sub-03, and for Le Petit Prince in sub-03 and sub-06. The audiovisual ordering survives the restriction. Movie10 remains the strongest of the three conditions in every participant who contributed all three except sub-02 (that is, in sub-01, sub-03, sub-05, and sub-06), and sub-02 is the same exception under the full repertoire. The two reduced-modality stimuli stay weak and variable under both state sets.
 
-The restriction has two consequences for the p-values. First, it removes between a third and two-thirds of each participant's states (33% in sub-01 up to 62% in sub-06), so 42–47 active states become 16–31 content-eligible ones and any correlation is estimated from far fewer points, raising its p-value on sample size alone. Harry Potter in sub-02 shows what that looks like: the correlation falls modestly, from ρ = +0.444 to +0.343, while its p rises from 0.002 to 0.063, so the change in significance is larger than the change in the correlation itself. Second, the screening removes states by temporal criteria that are not independent of occupancy, so the restricted repertoire is not a random subsample of the active one. For both reasons the two arms bracket the correspondence rather than forming a test and its confirmation, and counting significant cells across the table would not be meaningful.
+The restriction has two consequences for the p-values. First, it removes between a third and two-thirds of each participant's states (33% in sub-01 up to 64% in sub-06), so 42–47 active states become 15–31 content-eligible ones and any correlation is estimated from far fewer points, raising its p-value on sample size alone. Harry Potter in sub-02 shows what that looks like: the correlation falls modestly, from ρ = +0.444 to +0.343, while its p rises from 0.002 to 0.063, so the change in significance is larger than the change in the correlation itself. Second, the screening removes states by temporal criteria that are not independent of occupancy, so the restricted repertoire is not a random subsample of the active one. For both reasons the two arms bracket the correspondence rather than forming a test and its confirmation, and counting significant cells across the table would not be meaningful.
 
 **Provenance.** Read from `A1_recurrence_correlation` (all active states) and `A1_recurrence_correlation_eligible` (content-eligible) in `$SCRATCH_DIR/output/{m10,hp,pp}_05_cross_validation/atlas-4S156Parcels/<sub>/vt0.95/cross_stimulus_summary.json`, with eligibility flags from `05e_a4`. Every cell was taken from those files rather than transcribed from the findings documents, and the two agree. The full-repertoire values for sub-02 are the ones quoted in the Figure 4 caption (Movie10 ρ = +0.264, Harry Potter ρ = +0.444, Le Petit Prince ρ = +0.332).
 
@@ -357,23 +357,23 @@ Per participant pair, content-eligible states matched one-to-one by map correlat
 
 | Pair | States | Median r (null mean) | q | Within-network r (null) | Top-3 removed r (null) | Locking r (shift null) | Time-locked matches |
 |---|---|---|---|---|---|---|---|
-| sub-01 / sub-02 | 31 x 30 | 0.726 (0.593) | 0.0012 | 0.658 (0.502) | 0.557 (0.462) | 0.0961 (0.0013) | 24 of 30 |
-| sub-01 / sub-03 | 31 x 26 | 0.653 (0.573) | 0.0012 | 0.643 (0.502) | 0.537 (0.465) | 0.1054 (0.0014) | 18 of 26 |
-| sub-01 / sub-04 | 31 x 27 | 0.600 (0.528) | 0.0021 | 0.547 (0.450) | 0.562 (0.465) | 0.0517 (0.0006) | 16 of 27 |
-| sub-01 / sub-05 | 31 x 29 | 0.688 (0.565) | 0.0012 | 0.631 (0.470) | 0.585 (0.450) | 0.0835 (0.0010) | 22 of 29 |
-| sub-01 / sub-06 | 31 x 16 | 0.684 (0.586) | 0.0012 | 0.657 (0.522) | 0.549 (0.466) | 0.0487 (0.0005) | 10 of 16 |
-| sub-02 / sub-03 | 30 x 26 | 0.688 (0.581) | 0.0012 | 0.636 (0.519) | 0.537 (0.456) | 0.0727 (0.0014) | 18 of 26 |
-| sub-02 / sub-04 | 30 x 27 | 0.619 (0.541) | 0.0050 | 0.527 (0.464) | 0.541 (0.475) | 0.0573 (0.0004) | 17 of 27 |
-| sub-02 / sub-05 | 30 x 29 | 0.734 (0.571) | 0.0012 | 0.654 (0.483) | 0.613 (0.464) | 0.0697 (0.0009) | 20 of 29 |
-| sub-02 / sub-06 | 30 x 16 | 0.691 (0.582) | 0.0012 | 0.623 (0.512) | 0.533 (0.469) | 0.0641 (0.0010) | 8 of 16 |
-| sub-03 / sub-04 | 26 x 27 | 0.804 (0.550) | 0.0012 | 0.736 (0.492) | 0.671 (0.477) | 0.0800 (0.0009) | 16 of 26 |
-| sub-03 / sub-05 | 26 x 29 | 0.756 (0.559) | 0.0012 | 0.663 (0.501) | 0.558 (0.442) | 0.0835 (0.0006) | 16 of 26 |
-| sub-03 / sub-06 | 26 x 16 | 0.781 (0.594) | 0.0012 | 0.683 (0.545) | 0.684 (0.495) | 0.0840 (0.0011) | 11 of 16 |
-| sub-04 / sub-05 | 27 x 29 | 0.626 (0.519) | 0.0012 | 0.609 (0.453) | 0.556 (0.460) | 0.0403 (0.0004) | 14 of 27 |
-| sub-04 / sub-06 | 27 x 16 | 0.791 (0.584) | 0.0012 | 0.691 (0.515) | 0.661 (0.511) | 0.0894 (0.0017) | 9 of 16 |
-| sub-05 / sub-06 | 29 x 16 | 0.732 (0.553) | 0.0012 | 0.608 (0.470) | 0.580 (0.459) | 0.0466 (0.0005) | 9 of 16 |
+| sub-01 / sub-02 | 31 x 30 | 0.726 (0.593) | 0.0012 | 0.658 (0.502) | 0.544 (0.462) | 0.0961 (0.0013) | 24 of 30 |
+| sub-01 / sub-03 | 31 x 26 | 0.653 (0.573) | 0.0012 | 0.643 (0.502) | 0.535 (0.463) | 0.1054 (0.0014) | 18 of 26 |
+| sub-01 / sub-04 | 31 x 27 | 0.600 (0.528) | 0.0023 | 0.547 (0.450) | 0.566 (0.465) | 0.0517 (0.0006) | 16 of 27 |
+| sub-01 / sub-05 | 31 x 29 | 0.688 (0.565) | 0.0012 | 0.631 (0.470) | 0.581 (0.449) | 0.0835 (0.0010) | 22 of 29 |
+| sub-01 / sub-06 | 31 x 15 | 0.701 (0.593) | 0.0012 | 0.654 (0.527) | 0.556 (0.466) | 0.0520 (0.0007) | 10 of 15 |
+| sub-02 / sub-03 | 30 x 26 | 0.688 (0.581) | 0.0012 | 0.636 (0.519) | 0.522 (0.456) | 0.0727 (0.0014) | 18 of 26 |
+| sub-02 / sub-04 | 30 x 27 | 0.619 (0.541) | 0.0050 | 0.527 (0.464) | 0.549 (0.473) | 0.0573 (0.0004) | 17 of 27 |
+| sub-02 / sub-05 | 30 x 29 | 0.734 (0.571) | 0.0012 | 0.654 (0.483) | 0.605 (0.463) | 0.0697 (0.0009) | 20 of 29 |
+| sub-02 / sub-06 | 30 x 15 | 0.678 (0.594) | 0.0032 | 0.623 (0.525) | 0.540 (0.480) | 0.0672 (0.0010) | 8 of 15 |
+| sub-03 / sub-04 | 26 x 27 | 0.804 (0.550) | 0.0012 | 0.736 (0.492) | 0.662 (0.478) | 0.0800 (0.0009) | 16 of 26 |
+| sub-03 / sub-05 | 26 x 29 | 0.756 (0.559) | 0.0012 | 0.663 (0.501) | 0.594 (0.442) | 0.0835 (0.0006) | 16 of 26 |
+| sub-03 / sub-06 | 26 x 15 | 0.819 (0.610) | 0.0012 | 0.731 (0.566) | 0.703 (0.508) | 0.0902 (0.0014) | 11 of 15 |
+| sub-04 / sub-05 | 27 x 29 | 0.626 (0.519) | 0.0012 | 0.609 (0.453) | 0.561 (0.459) | 0.0403 (0.0004) | 14 of 27 |
+| sub-04 / sub-06 | 27 x 15 | 0.795 (0.585) | 0.0012 | 0.738 (0.518) | 0.681 (0.509) | 0.0953 (0.0019) | 9 of 15 |
+| sub-05 / sub-06 | 29 x 15 | 0.702 (0.565) | 0.0012 | 0.612 (0.478) | 0.575 (0.456) | 0.0491 (0.0007) | 9 of 15 |
 
-Matched states were more similar than the state-mixing null in all 15 pairs, and remained so with network means removed (q ≤ 0.009) and with the shared components removed (q ≤ 0.016). Matched states were weakly time-locked in every pair; 228 of 353 matches passed individually.
+Matched states were more similar than the state-mixing null in all 15 pairs, and remained so with network means removed (q ≤ 0.009) and with the shared components removed (q ≤ 0.014). Matched states were weakly time-locked in every pair; 228 of 348 matches passed individually.
 
 **Provenance.** `script/05h_participant_state_matching.py`; values from `$SCRATCH_DIR/output/05h_participant_state_matching/atlas-4S156Parcels/`. Every variant, the ceiling comparison and the timing-property checks are in [05h_participant_state_matching.md](../findings/05h_participant_state_matching.md).
 

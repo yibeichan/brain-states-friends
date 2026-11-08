@@ -39,7 +39,7 @@ Same correlation restricted to the 05e_a4 content-eligible subset intersected wi
 | sub-03 | 26 | 0.457 | 0.019 |
 | sub-04 | 27 | 0.657 | 2.0e-04 |
 | sub-05 | 29 | 0.502 | 0.006 |
-| sub-06 | 16 | 0.818 | 1.1e-04 |
+| sub-06 | 15 | 0.779 | 6.3e-04 |
 
 ### A2: Per-Movie-Type Correlation (all active states, FDR-corrected)
 
