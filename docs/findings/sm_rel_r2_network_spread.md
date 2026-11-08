@@ -4,12 +4,12 @@ Null for main-analysis Results R2's multi-network claim. Code: `script/sm_rel_r2
 
 ## Question
 
-R2 reports that content-eligible state maps mix several canonical networks (pooled medians across 159 states: top-1 network share 0.25, top-3 share 0.60, 4 networks >= 10%, normalized network entropy 0.81). Every state mean, however, is a vector in the participant's retained PCA subspace, and the PCA basis itself mixes networks. Could the multi-network spread be inherited from the representation, i.e. would an *arbitrary* direction in the same subspace look just as multi-network?
+R2 reports that content-eligible state maps mix several canonical networks (pooled medians across 158 states: top-1 network share 0.25, top-3 share 0.60, 4 networks >= 10%, normalized network entropy 0.81). Every state mean, however, is a vector in the participant's retained PCA subspace, and the PCA basis itself mixes networks. Could the multi-network spread be inherited from the representation, i.e. would an *arbitrary* direction in the same subspace look just as multi-network?
 
 ## Method (as run)
 
-- **Statistic.** The same per-state network-participation metrics as R2 (mean |loading| per network, normalized to shares; top-1 share, top-3 share, count of networks >= 10%, entropy normalized by log of the 13-network total), summarized as the per-participant median over content-eligible states, plus the pooled 159-state median.
-- **Faithfulness gates (hard aborts, before any null draw).** (1) Back-projection: `state_means_pca @ pca.components_[:n_pcs] + pca.mean_` must reproduce `state_means_parcel.npy` to 1e-8 (observed max error <= 3.3e-16 in all six subjects), so the null's subspace-to-parcel map is exactly the pipeline's. (2) Published medians: the pooled content-eligible metrics must reproduce the manuscript's R2 values after rounding (n = 159; 0.25 / 0.60 / 4 / 0.81) — they do.
+- **Statistic.** The same per-state network-participation metrics as R2 (mean |loading| per network, normalized to shares; top-1 share, top-3 share, count of networks >= 10%, entropy normalized by log of the 13-network total), summarized as the per-participant median over content-eligible states, plus the pooled 158-state median.
+- **Faithfulness gates (hard aborts, before any null draw).** (1) Back-projection: `state_means_pca @ pca.components_[:n_pcs] + pca.mean_` must reproduce `state_means_parcel.npy` to 1e-8 (observed max error <= 3.3e-16 in all six subjects), so the null's subspace-to-parcel map is exactly the pipeline's. (2) Published medians: the pooled content-eligible metrics must reproduce the manuscript's R2 values after rounding (n = 158; 0.25 / 0.60 / 4 / 0.81) — they do.
 - **Null draws.** Per subject, 10,000 random directions in the retained PC subspace, back-projected through the same PCA transform. Two variants: **variance-matched** (primary; component i scaled by sqrt(explained_variance_i), i.e. a random pattern with the training data's second-moment structure) and **isotropic** (robustness; all retained components weighted equally).
 - **Inference.** Observed per-participant median vs a null distribution of medians (10,000 groups of K_eligible per-draw values resampled from the subject's null pool). Two-sided empirical p by doubled min-tail with the (count + 1) / (n + 1) correction; floor 0.0002 at 10,000 groups. z is descriptive and reported as JSON null when the null-median distribution is degenerate (possible for the integer-valued n>=10% count). Deterministic purpose-tagged seeds (documented in the module docstring).
 
@@ -24,9 +24,9 @@ Fitted states are **more network-concentrated** than arbitrary directions in the
 | sub-03 | 26 | 0.801 | 0.925 [0.914, 0.935] | -22.6 | 0.957 | -39.7 | 0.243 | 0.171 (+10.4) |
 | sub-04 | 27 | 0.788 | 0.921 [0.910, 0.931] | -25.0 | 0.948 | -42.3 | 0.253 | 0.171 (+11.9) |
 | sub-05 | 29 | 0.825 | 0.933 [0.923, 0.942] | -21.9 | 0.958 | -37.0 | 0.241 | 0.164 (+12.0) |
-| sub-06 | 16 | 0.806 | 0.932 [0.919, 0.944] | -19.3 | 0.956 | -30.2 | 0.230 | 0.164 (+7.8) |
+| sub-06 | 15 | 0.809 | 0.932 [0.918, 0.945] | -17.6 | 0.956 | -27.9 | 0.224 | 0.164 (+6.7) |
 
-All p at the 0.0002 floor (two-sided, 10,000 groups), every subject, both variants, for both entropy and top-1 share. Pooled (159 states): observed entropy 0.807 vs variance-matched null 0.929 [0.924, 0.933], z = -57.2, p = 0.0002.
+All p at the 0.0002 floor (two-sided, 10,000 groups), every subject, both variants, for both entropy and top-1 share. Pooled (158 states): observed entropy 0.807 vs variance-matched null 0.929 [0.924, 0.933], z = -56.9, p = 0.0002.
 
 ## Reading
 
