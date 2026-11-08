@@ -19,13 +19,13 @@ decision 2026-10-22).
 
 | Panel | Content | Chart family | Output |
 |---|---|---|---|
-| 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (16-31 per participant), pooled UMAP, colour = dominant network (05e state_flags, Fig 2C colours), marker = participant (Fig 1C markers); a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
+| 2E | 5 in wide, one scale on both UMAP axes. Content-eligible states (15-31 per participant), pooled UMAP, colour = dominant network (05e state_flags, Fig 2C colours), marker = participant (Fig 1C markers); a line for every Hungarian match between two participants (descriptive; width and opacity grow with the matched r); dark lines are time-locked (family-wise threshold on the within-run circular-shift null) | scatter + segments | fig2/fig2_E_participant_umap |
 | 2E (no lines) | The same embedding without lines (for talks) | scatter | fig2/fig2_E_participant_umap_nolines |
 | S A | As 2E, but for the matches after removing the three largest components of the other four participants' state maps | scatter + segments | si_participant_umap/figS_participant_umap_A_residual_matches |
 | S B | All active states, colour = 05e summary category (Fig 2A colours: content-eligible, low-confidence, run-onset-anchored, drift-anchored, rare; a sub-HRF state that is also run-onset-anchored counts as low-confidence, as in Fig 2A), marker = participant (Fig 1C markers), marker area grows with the square root of fractional occupancy (size 4 + 120 sqrt(FO) pt^2) | scatter | .../figS_participant_umap_B_active_categories |
 | S C | Content-eligible states, colour = recurrence score | scatter | .../figS_participant_umap_C_recurrence |
 | S D | Robustness: UMAP at 3 seeds x n_neighbors 5/15/30, PCA and classical MDS; marker = participant | scatter small multiples | .../figS_participant_umap_D_robustness |
-| S E | Occupancy correlation of every map match (all 353, not only time-locked) at lags of -20..20 TRs of the second participant within each run; thin lines = mean per participant pair, thick line = mean over matches; lag 0 equals 05h's locking r | line | .../figS_participant_umap_E_lagged_locking |
+| S E | Occupancy correlation of every map match (all 348, not only time-locked) at lags of -20..20 TRs of the second participant within each run; thin lines = mean per participant pair, thick line = mean over matches; lag 0 equals 05h's locking r | line | .../figS_participant_umap_E_lagged_locking |
 | legends | 2E participant markers (also for S A, S B, S D) and dominant-network colours (also for S A); category colours (S B); recurrence colorbar (S C) | legend | fig2_E_legend_participants, fig2_E_legend_networks, .../figS_participant_umap_legend_* |
 
 Supplementary panels A-D share one chart family because they show one
@@ -385,7 +385,7 @@ def panel_S_E(PARC, SCRATCH, SUBJECTS, SUPP, VT, full_match_table, json, np, pic
     # lagged occupancy correlation for every map match: Pearson r between one
     # state's on/off sequence and its match's, with the second participant
     # shifted by -20..20 TRs within each run (no wrap), pooled over the runs both
-    # watched (truncated to the shorter run, as in 05h). All 353 matches, not only
+    # watched (truncated to the shorter run, as in 05h). All 348 matches, not only
     # the time-locked ones, so a peak at lag 0 is not built in by the selection.
     TR_S = 1.49
     LAGS = np.arange(-20, 21)
