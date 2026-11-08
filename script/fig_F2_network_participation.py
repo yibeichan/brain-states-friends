@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--expected-states",
         type=int,
-        default=159,
+        default=158,
         help="Set to -1 to disable the content-eligible state-count check.",
     )
     return parser.parse_args()

@@ -688,7 +688,7 @@ def render_supp_negcontrol():
     """1×3 modality small-multiples: D1_main vs neg-control vs confound floor.
 
     Defuses the neg-control: it out-decodes content states (NES_neg > NES_main)
-    purely from a 2–8 vs 16–31 class-count asymmetry, while the apples-to-apples
+    purely from a 2–8 vs 15–31 class-count asymmetry, while the apples-to-apples
     timing floor (NES_conf) is cleared by NES_main in every cell. Same chart for
     all 3 modalities (supplementary is exempt from the variety rule).
     """

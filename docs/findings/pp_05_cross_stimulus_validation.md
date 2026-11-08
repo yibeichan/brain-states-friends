@@ -12,7 +12,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 - PP runs: 18 per subject except sub-06 (16 total; 7 lppFR + 9 lppEN)
 - All other subjects: 9 lppFR + 9 lppEN
 - Active states (Friends recurrence > 0): 46, 46, 44, 47, 42 for sub-01 through sub-06
-- Content-eligible states (05e_a4 state_flags.csv): 31, 30, 26, 29, 16
+- Content-eligible states (05e_a4 state_flags.csv): 31, 30, 26, 29, 15
 - A1: Spearman rho between Friends recurrence score and mean PP FO across all active states; p-values are approximate (FO compositionality + serial dependence inflate rho upward - treat as upper bound)
 - A2: Per-language breakdown (lppFR, lppEN), FDR-corrected across 2 tests per subject
 - A1/A2 eligible: same analyses restricted to content-eligible states (05e_a4)
@@ -44,7 +44,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal audio narra
 | sub-02 | 30 | 0.287 | 0.124 |
 | sub-03 | 26 | 0.178 | 0.384 |
 | sub-05 | 29 | -0.273 | 0.153 |
-| sub-06 | 16 | 0.126 | 0.641 |
+| sub-06 | 15 | 0.093 | 0.742 |
 
 ### A2: Per-Language Recurrence-FO Correlation (full repertoire, FDR across 2 tests)
 

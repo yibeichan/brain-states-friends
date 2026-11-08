@@ -37,19 +37,19 @@ Peak selected by maximum balanced accuracy across lag=1..8 x all layers. Relativ
 | sub-03 | dinov2-large | 22/24 | 0.96 | 3 | 0.122 | 0.038 | 0.087 |
 | sub-04 | dinov2-large | 22/24 | 0.96 | 3 | 0.084 | 0.037 | 0.049 |
 | sub-05 | dinov2-large | 22/24 | 0.96 | 3 | 0.090 | 0.035 | 0.057 |
-| sub-06 | dinov2-large | 21/24 | 0.91 | 3 | 0.117 | 0.063 | 0.058 |
+| sub-06 | dinov2-large | 22/24 | 0.96 | 3 | 0.124 | 0.067 | 0.062 |
 | sub-01 | w2v-bert-2.0 | 11/24 | 0.48 | 3 | 0.124 | 0.032 | 0.095 |
 | sub-02 | w2v-bert-2.0 | 11/24 | 0.48 | 4 | 0.118 | 0.033 | 0.088 |
 | sub-03 | w2v-bert-2.0 | 13/24 | 0.57 | 3 | 0.135 | 0.039 | 0.101 |
 | sub-04 | w2v-bert-2.0 | 12/24 | 0.52 | 4 | 0.096 | 0.037 | 0.061 |
 | sub-05 | w2v-bert-2.0 | 11/24 | 0.48 | 4 | 0.120 | 0.035 | 0.089 |
-| sub-06 | w2v-bert-2.0 | 13/24 | 0.57 | 4 | 0.150 | 0.063 | 0.094 |
+| sub-06 | w2v-bert-2.0 | 13/24 | 0.57 | 4 | 0.159 | 0.067 | 0.099 |
 | sub-01 | llama-3.2-3b | 13/28 | 0.48 | 3 | 0.109 | 0.032 | 0.079 |
 | sub-02 | llama-3.2-3b | 14/28 | 0.52 | 3 | 0.118 | 0.033 | 0.088 |
 | sub-03 | llama-3.2-3b | 17/28 | 0.63 | 3 | 0.111 | 0.039 | 0.075 |
 | sub-04 | llama-3.2-3b | 15/28 | 0.56 | 3 | 0.095 | 0.037 | 0.061 |
 | sub-05 | llama-3.2-3b | 13/28 | 0.48 | 3 | 0.096 | 0.035 | 0.064 |
-| sub-06 | llama-3.2-3b | 16/28 | 0.59 | 3 | 0.154 | 0.063 | 0.098 |
+| sub-06 | llama-3.2-3b | 16/28 | 0.59 | 3 | 0.164 | 0.067 | 0.104 |
 
 ### D1 confound baseline: timing-floor NES and delta (all three models)
 
@@ -62,19 +62,19 @@ delta_conf = NES_main(peak cell) - NES_confound(same lag). Confound baseline: 6 
 | sub-03 | dinov2-large | 3 | 22 | 0.087 | 0.015 | +0.073 |
 | sub-04 | dinov2-large | 3 | 22 | 0.049 | 0.004 | +0.044 |
 | sub-05 | dinov2-large | 3 | 22 | 0.057 | 0.011 | +0.046 |
-| sub-06 | dinov2-large | 3 | 21 | 0.058 | 0.018 | +0.040 |
+| sub-06 | dinov2-large | 3 | 22 | 0.062 | 0.017 | +0.045 |
 | sub-01 | w2v-bert-2.0 | 3 | 11 | 0.095 | 0.011 | +0.084 |
 | sub-02 | w2v-bert-2.0 | 4 | 11 | 0.088 | 0.013 | +0.075 |
 | sub-03 | w2v-bert-2.0 | 3 | 13 | 0.101 | 0.015 | +0.086 |
 | sub-04 | w2v-bert-2.0 | 4 | 12 | 0.061 | 0.004 | +0.058 |
 | sub-05 | w2v-bert-2.0 | 4 | 11 | 0.089 | 0.011 | +0.078 |
-| sub-06 | w2v-bert-2.0 | 4 | 13 | 0.094 | 0.018 | +0.076 |
+| sub-06 | w2v-bert-2.0 | 4 | 13 | 0.099 | 0.016 | +0.083 |
 | sub-01 | llama-3.2-3b | 3 | 13 | 0.079 | 0.011 | +0.068 |
 | sub-02 | llama-3.2-3b | 3 | 14 | 0.088 | 0.012 | +0.076 |
 | sub-03 | llama-3.2-3b | 3 | 17 | 0.075 | 0.015 | +0.060 |
 | sub-04 | llama-3.2-3b | 3 | 15 | 0.061 | 0.004 | +0.057 |
 | sub-05 | llama-3.2-3b | 3 | 13 | 0.064 | 0.011 | +0.053 |
-| sub-06 | llama-3.2-3b | 3 | 16 | 0.098 | 0.018 | +0.080 |
+| sub-06 | llama-3.2-3b | 3 | 16 | 0.104 | 0.017 | +0.088 |
 
 DINOv2: delta_conf range +0.040 to +0.073, median +0.045 (6/6 positive). W2V: delta_conf range +0.058 to +0.086, median +0.077 (6/6 positive). LLaMA: delta_conf range +0.053 to +0.080, median +0.064 (6/6 positive).
 
@@ -89,15 +89,17 @@ neg_control_passed is evaluated at the D1-main peak cell (main vs run_onset_anch
 | sub-03 | dinov2-large | 0.122 | 0.213 | -0.091 | false |
 | sub-04 | dinov2-large | 0.084 | 0.805 | -0.721 | false |
 | sub-05 | dinov2-large | 0.090 | 0.219 | -0.129 | false |
-| sub-06 | dinov2-large | 0.117 | 0.236 | -0.119 | false |
+| sub-06 | dinov2-large | 0.124 | 0.236 | -0.111 | false |
 | sub-01 | w2v-bert-2.0 | 0.124 | 0.370 | -0.246 | false |
 | sub-02 | w2v-bert-2.0 | 0.118 | 0.378 | -0.260 | false |
 | sub-03 | w2v-bert-2.0 | 0.135 | 0.313 | -0.178 | false |
 | sub-04 | w2v-bert-2.0 | 0.096 | 0.901 | -0.805 | false |
 | sub-05 | w2v-bert-2.0 | 0.120 | 0.313 | -0.193 | false |
-| sub-06 | w2v-bert-2.0 | 0.150 | 0.277 | -0.127 | false |
+| sub-06 | w2v-bert-2.0 | 0.159 | 0.277 | -0.117 | false |
 
-Note: neg_control_passed=false reflects n_classes asymmetry (2-8 run-onset-anchored classes vs 16-31 content-eligible classes), not a reversal of the D1 existence claim; D1_confound_baseline is the class-matched comparator.
+The sub-06 rows are computed from `D1_neg_control_run_onset_anchored.json` at the D1-main peak cell with the same rule, because the current code writes the deprecation record in place of the gate file.
+
+Note: neg_control_passed=false reflects n_classes asymmetry (2-8 run-onset-anchored classes vs 15-31 content-eligible classes), not a reversal of the D1 existence claim; D1_confound_baseline is the class-matched comparator.
 
 ### D1-net: network-stratified decoding (DINOv2 only, lag=3)
 
@@ -121,7 +123,7 @@ Only groups passing min-5-states and min-200-TRs gates are shown. sub-06: all gr
 
 ### D2: per-state layer selectivity (selective state counts)
 
-Selectivity criterion: max_minus_median >= threshold across per-state AUC layer profile. Primary threshold = 0.05. Sensitivity at 0.03 and 0.10 also shown. n_states = number of content_eligible states, with no further FO floor. The recorded fractional_occupancy is the share of content-eligible TRs (minimum 1.45%); over all decoded Friends TRs, 3 of the 159 eligible states fall below 1% (minimum 0.78%, sub-06).
+Selectivity criterion: max_minus_median >= threshold across per-state AUC layer profile. Primary threshold = 0.05. Sensitivity at 0.03 and 0.10 also shown. n_states = number of content_eligible states, with no further FO floor. The recorded fractional_occupancy is the share of content-eligible TRs (minimum 1.45%); over all decoded Friends TRs, 3 of the 158 eligible states fall below 1% (minimum 0.78%, sub-06).
 
 | Subject | Model | n_states | n_sel @ 0.03 | n_sel @ 0.05 (primary) | n_sel @ 0.10 | Median peak layer (@ 0.05) |
 |---|---|---|---|---|---|---|
@@ -130,19 +132,19 @@ Selectivity criterion: max_minus_median >= threshold across per-state AUC layer 
 | sub-03 | dinov2-large | 26 | 5 | 2 | 2 | 23.0 |
 | sub-04 | dinov2-large | 27 | 8 | 2 | 0 | 23.0 |
 | sub-05 | dinov2-large | 29 | 4 | 2 | 0 | 22.5 |
-| sub-06 | dinov2-large | 16 | 4 | 2 | 0 | 22.5 |
+| sub-06 | dinov2-large | 15 | 4 | 2 | 0 | 22.5 |
 | sub-01 | w2v-bert-2.0 | 31 | 4 | 0 | 0 | - |
 | sub-02 | w2v-bert-2.0 | 30 | 5 | 0 | 0 | - |
 | sub-03 | w2v-bert-2.0 | 26 | 1 | 0 | 0 | - |
 | sub-04 | w2v-bert-2.0 | 27 | 6 | 0 | 0 | - |
 | sub-05 | w2v-bert-2.0 | 29 | 2 | 0 | 0 | - |
-| sub-06 | w2v-bert-2.0 | 16 | 1 | 0 | 0 | - |
+| sub-06 | w2v-bert-2.0 | 15 | 1 | 0 | 0 | - |
 | sub-01 | llama-3.2-3b | 31 | 0 | 0 | 0 | - |
 | sub-02 | llama-3.2-3b | 30 | 0 | 0 | 0 | - |
 | sub-03 | llama-3.2-3b | 26 | 0 | 0 | 0 | - |
 | sub-04 | llama-3.2-3b | 27 | 0 | 0 | 0 | - |
 | sub-05 | llama-3.2-3b | 29 | 0 | 0 | 0 | - |
-| sub-06 | llama-3.2-3b | 16 | 2 | 0 | 0 | - |
+| sub-06 | llama-3.2-3b | 15 | 2 | 0 | 0 | - |
 
 ### D2: per-state max AUC distribution across all eligible states
 
@@ -155,19 +157,19 @@ Max AUC = best AUC across layers for each state. 10-fold StratifiedGroupKFold, n
 | sub-03 | dinov2-large | 26 | 0.601 | 0.530 | 0.906 |
 | sub-04 | dinov2-large | 27 | 0.556 | 0.519 | 0.757 |
 | sub-05 | dinov2-large | 29 | 0.586 | 0.520 | 0.881 |
-| sub-06 | dinov2-large | 16 | 0.562 | 0.531 | 0.789 |
+| sub-06 | dinov2-large | 15 | 0.556 | 0.534 | 0.790 |
 | sub-01 | w2v-bert-2.0 | 31 | 0.662 | 0.576 | 0.960 |
 | sub-02 | w2v-bert-2.0 | 30 | 0.670 | 0.567 | 0.836 |
 | sub-03 | w2v-bert-2.0 | 26 | 0.637 | 0.511 | 0.954 |
 | sub-04 | w2v-bert-2.0 | 27 | 0.600 | 0.533 | 0.782 |
 | sub-05 | w2v-bert-2.0 | 29 | 0.640 | 0.549 | 0.930 |
-| sub-06 | w2v-bert-2.0 | 16 | 0.615 | 0.556 | 0.809 |
+| sub-06 | w2v-bert-2.0 | 15 | 0.622 | 0.556 | 0.808 |
 | sub-01 | llama-3.2-3b | 31 | 0.637 | 0.545 | 0.845 |
 | sub-02 | llama-3.2-3b | 30 | 0.664 | 0.537 | 0.783 |
 | sub-03 | llama-3.2-3b | 26 | 0.610 | 0.529 | 0.837 |
 | sub-04 | llama-3.2-3b | 27 | 0.590 | 0.517 | 0.747 |
 | sub-05 | llama-3.2-3b | 29 | 0.606 | 0.520 | 0.799 |
-| sub-06 | llama-3.2-3b | 16 | 0.611 | 0.538 | 0.768 |
+| sub-06 | llama-3.2-3b | 15 | 0.615 | 0.541 | 0.768 |
 
 ## Outputs
 

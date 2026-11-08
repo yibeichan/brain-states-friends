@@ -9,7 +9,7 @@ _Tests whether Friends-recurring brain states generalize to unimodal word-by-wor
 - Parcellation: atlas-4S156Parcels; vt=0.95; FO threshold for state presence in an HP run = 0.02 (`ACTIVE_FO_THRESHOLD`, the Friends rule; the A1 active set comes from 05a)
 - Inputs: Friends recurrence scores (05a), HP decoded states and FO (hp_04), PCA transfer diagnostic (hp_03), Movie10 FO (m10_04, for B1/B2)
 - 7 HP runs per subject (consecutive book chapters); n_active_states: sub-01=46, sub-02=46, sub-03=44, sub-05=47, sub-06=42
-- Eligibility filtering: content-eligible states from 05e_a4 state_flags.csv; n_content_eligible: sub-01=31, sub-02=30, sub-03=26, sub-05=29, sub-06=16
+- Eligibility filtering: content-eligible states from 05e_a4 state_flags.csv; n_content_eligible: sub-01=31, sub-02=30, sub-03=26, sub-05=29, sub-06=15
 - A1/A2: Spearman rho between Friends recurrence score and mean HP FO over active states (full repertoire and eligible subset); p-values approximate due to FO compositionality
 - B1: Movie10 A1-equivalent rho recomputed per subject for direct comparison
 - B2: 1000 bootstrap samples of 7 Movie10 runs each; HP rho percentile in that distribution
@@ -39,7 +39,7 @@ Spearman rho between Friends recurrence score and mean HP FO, restricted to acti
 | sub-02  | 30               | 0.343  | 0.063  | No          |
 | sub-03  | 26               | 0.404  | 0.041  | Yes         |
 | sub-05  | 29               | -0.028 | 0.887  | No          |
-| sub-06  | 16               | 0.231  | 0.389  | No          |
+| sub-06  | 15               | 0.191  | 0.495  | No          |
 
 1/5 subjects significant in eligible-subset analysis (sub-03).
 
