@@ -85,6 +85,30 @@ def choose_seed(summary, rule='best_valid'):
     return int(best['seed']), best
 
 
+def state_covars_for_save(covars, covariance_type):
+    """Covariances as the production final/ stores them for this covariance type.
+
+    The JAX model (every production refit) keeps diagonal covariances as
+    (K, D). The numpy WeakLimitHMM (some sweep fits, e.g. nc40/nc80) returns
+    them from its covars_ property expanded to (K, D, D) diagonal matrices.
+    06e reads state_covars.npy and requires (K, D) for a diagonal model, so a
+    (K, D, D) array of a diagonal model is reduced to its diagonals after
+    checking that every off-diagonal entry is exactly zero.
+    """
+    covars = np.asarray(covars)
+    if covariance_type != 'diag' or covars.ndim == 2:
+        return covars
+    if covars.ndim != 3 or covars.shape[1] != covars.shape[2]:
+        raise ValueError(f"unexpected covariance shape {covars.shape}")
+    diag = np.diagonal(covars, axis1=1, axis2=2).copy()
+    off = covars.copy()
+    idx = np.arange(covars.shape[1])
+    off[:, idx, idx] = 0.0
+    if np.any(off != 0):
+        raise ValueError("diag model with nonzero off-diagonal covariances")
+    return diag
+
+
 def resolves_inside(path, protected):
     """True if `path` (existing or not) resolves to `protected` or below it."""
     prot = os.path.realpath(protected)
@@ -152,7 +176,8 @@ def build_final(model, config, config_name, sub_id, parcellation, combined_base,
     np.save(os.path.join(final_dir, 'state_means_pca.npy'), model.means_)
     np.save(os.path.join(final_dir, 'state_means_parcel.npy'), means_parcel)
     np.save(os.path.join(final_dir, 'state_covars_parcel.npy'), covars_parcel)
-    np.save(os.path.join(final_dir, 'state_covars.npy'), model.covars_)
+    np.save(os.path.join(final_dir, 'state_covars.npy'),
+            state_covars_for_save(model.covars_, config['covariance_type']))
 
     lengths_trainval = [len(np.load(os.path.join(projected_dir, sname, f'{r}.npy'),
                                     mmap_mode='r'))

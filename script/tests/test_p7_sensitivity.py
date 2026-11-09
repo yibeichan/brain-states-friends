@@ -135,3 +135,17 @@ def test_published_final_links(tmp_path):
     assert not dst.is_symlink()
     for fn in side.FINAL_FILES:
         assert (dst / fn).is_symlink() and (dst / fn).read_text() == fn
+
+
+def test_state_covars_for_save():
+    import numpy as np
+    d = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    full = np.stack([np.diag(r) for r in d])
+    assert np.array_equal(m04s.state_covars_for_save(full, "diag"), d)
+    assert m04s.state_covars_for_save(d, "diag") is not None
+    assert np.array_equal(m04s.state_covars_for_save(d, "diag"), d)
+    assert m04s.state_covars_for_save(full, "full").shape == (2, 3, 3)
+    bad = full.copy()
+    bad[0, 0, 1] = 1e-12
+    with pytest.raises(ValueError, match="off-diagonal"):
+        m04s.state_covars_for_save(bad, "diag")
