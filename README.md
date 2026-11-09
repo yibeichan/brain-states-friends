@@ -89,6 +89,19 @@ thresholds 0.01–0.05, reports rank stability and category churn, and the
 Spearman correlations among recurrence, stationary occupancy π, and mean FO.
 Findings: `docs/findings/sm_rel_r1_recurrence_robustness.md`.
 
+### FC-transition controls, LOSO module agreement, LOSO map baseline (`rel`)
+
+- `script/sm_rel_r6_fc_transition_controls.py` recomputes the `06b`
+  FC-transition Mantel on mean-removed within-state FC and adds a rank-based
+  partial Mantel controlling for state TR counts and activation-map similarity.
+  Findings: `docs/findings/sm_rel_r6_fc_transition_controls.md`.
+- `script/sm_rel_r7_loso_module_agreement.py` measures ARI between each
+  held-out season's transition-module partition (`06e` LOSO2) and the main
+  partition. Findings: `docs/findings/sm_rel_r7_loso_module_agreement.md`.
+- `script/sm_rel_r8_loso_map_null.py` gives a derangement null and a
+  best-non-match baseline for the `04ra` matched-state map correlations.
+  Findings: `docs/findings/sm_rel_r8_loso_map_null.md`.
+
 ## Running
 
 This branch is a self-contained `uv` project. Set up once with `uv sync`, then
@@ -120,6 +133,8 @@ uv run python script/sm_rel_r5_phase_null.py --sub_id sub-01 --n_null 10000 --st
 bash script/sm_rel_r3_assortativity_null.sh
 # rel / recurrence robustness — needs 04/05a/05e_a4/06b outputs; seconds, runs locally
 bash script/sm_rel_r1_recurrence_robustness.sh
+# rel / R6-R8 — needs 04/04ra/05a/05f/06a/06b/06e outputs; about a minute per subject
+bash script/sm_rel_r6_r8_prereview_checks.sh
 ```
 
 ## Citation
