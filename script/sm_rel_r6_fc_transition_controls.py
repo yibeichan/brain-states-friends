@@ -4,7 +4,7 @@
 06b tests whether state pairs with similar within-state FC transition more
 often (Mantel: Spearman between the 05f RV matrix and the symmetrised
 empirical transition matrix, 5,000 state-label permutations). Raw RV between
-two correlation matrices sits near 1 for every pair (0.94-1.00) because all
+two correlation matrices is high for every pair (0.68-1.00) because all
 states share the same grand-mean FC. This script asks whether the association
 survives once that shared part and three pair-level confounds are removed.
 
