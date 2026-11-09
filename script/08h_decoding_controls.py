@@ -198,8 +198,12 @@ def mirror_tree(src, dst):
             if f == ".lock":
                 continue
             link = os.path.join(dst, rel, f)
-            if not os.path.lexists(link):
+            try:
                 os.symlink(os.path.join(root, f), link)
+            except FileExistsError:
+                # Another job for the same cache got there first, or a PCA
+                # refit already replaced the link with a real file.
+                pass
 
 
 def write_json_atomic(path, payload):
