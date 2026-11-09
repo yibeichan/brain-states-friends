@@ -51,9 +51,9 @@ Across all six participants: min ranges 0.0034–0.0722 and max ranges 0.8166–
 | sub-03 | 1 / 0 | — | 1 / 4 | lost [20,27,36,38] | 3 / 18 | lost [1,3,9,11,12,13,17,18,20,23,26,27,29,33,36,38,39,40] |
 | sub-04 | 1 / 1 | gained [20] | 0 / 1 | lost [38] | 4 / 17 | lost [1,5,7,10,11,16,18,21,23,29,30,31,32,37,38,42,44] |
 | sub-05 | 0 / 0 | — | 1 / 1 | lost [1] | 4 / 14 | lost [0,1,7,13,15,17,20,22,28,30,36,39,40,42] |
-| sub-06 | 1 / 1 | gained [37] | 1 / 2 | lost [26,41] | 1 / 11 | lost [0,4,5,14,17,22,24,25,26,32,41] |
+| sub-06 | 1 / 1 | gained [37] | 1 / 2 | lost [26,41] | 1 / 10 | lost [4,5,14,17,22,24,25,26,32,41] |
 
-`n_eligible_ref` (0.02) per participant: sub-01 31, sub-02 30, sub-03 26, sub-04 27, sub-05 29, sub-06 16.
+`n_eligible_ref` (0.02) per participant: sub-01 31, sub-02 30, sub-03 26, sub-04 27, sub-05 29, sub-06 15.
 
 **Occupancy confound** (`occupancy_confound`):
 
@@ -68,9 +68,9 @@ Across all six participants: min ranges 0.0034–0.0722 and max ranges 0.8166–
 
 ## Interpretation (bounded)
 
-At 0.01 and 0.03, recurrence ranking is stable and category churn is small: Spearman ρ vs. the 0.02 reference is never below 0.9064 (sub-05, at 0.01) and reaches 1.0000 at 0.02 by construction; active-state churn is at most 2 states (sub-02, 0.03) and eligibility churn is at most 4 states (sub-03, 0.03) out of 16–31 reference-eligible states per participant. Both criteria clear the ρ ≥ 0.9 / single-digit-churn bar, so for the 0.01–0.03 range the ranking and the eligible set can be treated as effectively the same as at 0.02 — a one-sentence Methods note to that effect is warranted, bounded to that range and quoting the minimum observed ρ of 0.9064.
+At 0.01 and 0.03, recurrence ranking is stable and category churn is small: Spearman ρ vs. the 0.02 reference is never below 0.9064 (sub-05, at 0.01) and reaches 1.0000 at 0.02 by construction; active-state churn is at most 2 states (sub-02, 0.03) and eligibility churn is at most 4 states (sub-03, 0.03) out of 15–31 reference-eligible states per participant. Both criteria clear the ρ ≥ 0.9 / single-digit-churn bar, so for the 0.01–0.03 range the ranking and the eligible set can be treated as effectively the same as at 0.02, with a minimum observed ρ of 0.9064; the statement holds only within that range.
 
-At 0.05 this breaks down: rank stability falls to 0.7666–0.9138 across participants (below the 0.9 bar in five of six), and eligibility churn becomes substantial — 11 to 20 states change category, with sub-01 losing 20 of its 31 reference-eligible states (65%) at 0.05, the largest churn of any participant. This is a limitation of the 0.10 eligibility cut specifically at the 0.05 threshold (36 s of a 12-min run is a much stricter activity bar than 14 s), not a general statement that the recurrence analysis is insensitive to the activity threshold — it clearly is not, once the threshold reaches 0.05.
+At 0.05 this breaks down: rank stability falls to 0.7666–0.9138 across participants (below the 0.9 bar in five of six), and eligibility churn becomes substantial — 10 to 20 states change category, with sub-01 losing 20 of its 31 reference-eligible states (65%) at 0.05, the largest churn of any participant. This is a limitation of the 0.10 eligibility cut specifically at the 0.05 threshold (36 s of a 12-min run is a much stricter activity bar than 14 s), not a general statement that the recurrence analysis is insensitive to the activity threshold — it clearly is not, once the threshold reaches 0.05.
 
 The occupancy-confound correlations hold regardless of threshold sensitivity: recurrence (at the reference 0.02 threshold) correlates with the fitted model's stationary distribution π at ρ = 0.9670–0.9842 and with mean fractional occupancy at ρ = 0.9727–0.9859 across the six participants; π and mean FO correlate with each other at ρ = 0.9763–0.9966. These are properties of the 0.02-threshold recurrence definition and the fitted model, independent of the threshold-sweep result above.
 
