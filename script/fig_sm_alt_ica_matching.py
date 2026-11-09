@@ -84,8 +84,8 @@ def config(ICA_STATES_DIR, json, os):
             state_cats[_s] = {int(_r["state"]): _r["summary_category"]
                               for _r in _csv.DictReader(_fh)}
 
-    # manuscript 5-category taxonomy palette (CB-safe set, mirrors
-    # fig_F2_recurrence_sources.py TAXONOMY_COLORS on manuscript-prep)
+    # 5-category taxonomy palette (CB-safe set), the same as
+    # TAXONOMY_COLORS in fig_F2_recurrence_sources.py on main
     TAX_ORDER = ["Content-eligible", "Run-onset-anchored", "Low-confidence",
                  "Drift-anchored", "Rare"]
     TAX_COLORS = {
