@@ -35,7 +35,7 @@ FDR-surviving content-eligible matched pairs / total, against the same-subspace 
 | 03 | 42 | 2/15 | 13/25 | 23/26 | 21/26 | 23/26 | 21/26 | 23/26 | 23/26 | 23/26 | 21/26 |
 | 04 | 41 | 8/15 | 12/25 | 15/27 | 20/27 | 19/27 | 21/27 | 19/27 | 19/27 | 22/27 | 17/27 |
 | 05 | 41 | 10/15 | 16/25 | 15/29 | 23/29 | 21/29 | 23/29 | 23/29 | 24/29 | 24/29 | 25/29 |
-| 06 | 37 | 2/15 | 7/16 | 14/16 | 14/16 | 15/16 | 14/16 | 14/16 | 14/16 | 14/16 | 14/16 |
+| 06 | 37 | 0/15 | 8/15 | 12/15 | 14/15 | 14/15 | 13/15 | 13/15 | 13/15 | 11/15 | 13/15 |
 
 Median matched |r| minus the mean of the null draws' medians (content-eligible pairs); * marks a whole-set test p < 0.05:
 
@@ -46,12 +46,12 @@ Median matched |r| minus the mean of the null draws' medians (content-eligible p
 | 03 | 42 | +0.03 | +0.07* | +0.04* | +0.06* | +0.04* | +0.05* | +0.05* | +0.04* | +0.05* | +0.05* |
 | 04 | 41 | +0.05* | +0.02 | +0.07* | +0.07* | +0.05* | +0.07* | +0.07* | +0.09* | +0.07* | +0.06* |
 | 05 | 41 | +0.11* | +0.05* | +0.02* | +0.04* | +0.03* | +0.04* | +0.04* | +0.05* | +0.04* | +0.03* |
-| 06 | 37 | +0.04 | +0.02 | +0.05* | +0.06* | +0.07* | +0.07* | +0.08* | +0.06* | +0.07* | +0.08* |
+| 06 | 37 | +0.05 | +0.03 | +0.05* | +0.05* | +0.07* | +0.07* | +0.07* | +0.07* | +0.07* | +0.09* |
 
-- Most of the raw agreement comes from the subspace the two methods share. Random K-frames spread over all n_pcs PCs reach a mean matched |r| of 0.21–0.28; random rotations of the top-K basis reach 0.46–0.51 at K = 15 and 0.34–0.36 at K = 42. HMM state means lie almost entirely in the leading PCs (`hmm_topk_capture` median 0.93–0.96 at K = 15 and 0.99–1.00 at K = 42), so any map set confined to them matches the HMM well.
-- ICA's rotation matches the HMM better than the same-subspace null in every subject and every K (median excess +0.02 to +0.11). The whole-set test is significant in 56 of 60 subject × K cells. The four exceptions are at low K: sub-03 and sub-06 at K = 15 (p = 0.15 and 0.08), and sub-04 and sub-06 at K = 25 (p = 0.13 and 0.14). From K = 35 upward every cell is significant.
+- Most of the raw agreement comes from the subspace the two methods share. Random K-frames spread over all n_pcs PCs reach a mean matched |r| of 0.21–0.28; random rotations of the top-K basis reach 0.45–0.51 at K = 15 and 0.34–0.36 at K = 42. HMM state means lie almost entirely in the leading PCs (`hmm_topk_capture` median 0.93–0.96 at K = 15 and 0.99–1.00 at K = 42), so any map set confined to them matches the HMM well.
+- ICA's rotation matches the HMM better than the same-subspace null in every subject and every K (median excess +0.02 to +0.11). The whole-set test is significant in 56 of 60 subject × K cells. The four exceptions are at low K: sub-03 and sub-06 at K = 15 (p = 0.15 and 0.051; the sub-06 cell lies at the threshold), and sub-04 and sub-06 at K = 25 (p = 0.13 and 0.10). From K = 35 upward every cell is significant.
 - At K = 15, which is set independently of the HMM, the convergence is significant in four of six subjects.
-- In the median excess the agreement does not grow as K approaches the HMM's state count. Raw |r| and the null both fall with K (median matched |r| 0.50–0.62 at K = 15 and 0.36–0.43 at K = 42), because random maps in a higher-dimensional space correlate less. The per-rank surviving fraction does rise with K in the two subjects with weak low-K convergence (sub-03 from 0.13 at K = 15 to 0.88 at K_used, sub-06 from 0.13 to 0.81).
+- In the median excess the agreement does not grow as K approaches the HMM's state count. Raw |r| and the null both fall with K (median matched |r| 0.50–0.62 at K = 15 and 0.36–0.42 at K = 42), because random maps in a higher-dimensional space correlate less. The per-rank surviving fraction does rise with K in the two subjects with weak low-K convergence (sub-03 from 0.13 at K = 15 to 0.88 at K_used, sub-06 from 0 to 0.87).
 - The surviving counts are per rank: the i-th strongest observed match is compared with the i-th strongest match of each null draw. Neighbouring ranks are correlated, so the counts are not the number of individually validated states; they should be read together with the excess and the per-rank pattern below.
 - Individual maps are not recovered one to one. Per-subject median matched |r| is 0.35–0.62 across K, and single pairs range from near 0 to 0.93.
 - The secondary full-subspace null passes 68–100% of pairs per subject and K. As described under Method, it does not isolate the ICA rotation.
@@ -69,9 +69,9 @@ ICA therefore spends part of its dimensions on focal, near-single-parcel sources
 
 ### Per-category breakdown
 
-Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_used, over the active set): spatial mean r is 0.31–0.42 across subjects for content-eligible states and 0.24–0.42 for low-confidence states; categories with one or two states per subject are descriptive only. Run-onset states match somewhat better than content-eligible states in five of six subjects (mean r 0.40–0.50 vs 0.31–0.42), consistent with high-variance, run-locked patterns sitting in the leading PCs. Because the taxonomy is a *temporal* classification, whether a state's mean map is recoverable in the shared subspace is largely independent of its label.
+Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_used, over the active set): spatial mean r is 0.30–0.42 across subjects for content-eligible states and 0.24–0.42 for low-confidence states; categories with one or two states per subject are descriptive only. Run-onset states match somewhat better than content-eligible states in five of six subjects (mean r 0.40–0.50 vs 0.30–0.42), consistent with high-variance, run-locked patterns sitting in the leading PCs. Because the taxonomy is a *temporal* classification, whether a state's mean map is recoverable in the shared subspace is largely independent of its label.
 
-**Caveat:** matches to low-confidence, unused, or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
+**Caveat:** matches to low-confidence or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
 
 ### Tier 2: temporal correspondence
 

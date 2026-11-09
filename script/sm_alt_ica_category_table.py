@@ -38,12 +38,13 @@ SHORT = {
     # 05e's season_temporal is what the manuscript calls drift-anchored.
     "season_temporal": "Drift-anchored",
     "low_confidence": "Low-confidence",
-    "unused": "Unused",
     "rare": "Rare",
 }
+# Unused states (recurrence = 0) are outside the active set and have no
+# category here; one reaching the table fails the unknown-category check below.
 # Display order: substantive states first, then low-support / timing-confounded.
 CAT_ORDER = ["Content-eligible", "Run-onset", "Drift-anchored",
-             "Low-confidence", "Unused", "Rare"]
+             "Low-confidence", "Rare"]
 
 
 def _arr(x):
@@ -113,7 +114,7 @@ def build_table(parcellation, vt):
             sp_tested = int(np.isfinite(sp_q).sum())
             tp_tested = int(np.isfinite(tp_q).sum())
             # Tier-2 excludes low-occupancy states (min_occ guard), so some
-            # categories (e.g. Unused/Rare) have no temporal test -> report NaN
+            # categories (e.g. Rare) have no temporal test -> report NaN
             # rather than averaging an empty slice. Signed mean (see above).
             t_mean = (round(float(np.nanmean(tp_rho)), 3)
                       if tp_tested > 0 else float("nan"))
@@ -122,7 +123,7 @@ def build_table(parcellation, vt):
                 "K_active": K,
                 "category": c,
                 "n_states": n,
-                # n<3 categories (Season, Rare, often Unused) are point estimates
+                # n<3 categories (Drift-anchored, Rare) are point estimates
                 # over 1-2 states -- descriptive only, not a distribution.
                 "small_n": n < 3,
                 "spatial_mean_r": round(float(np.nanmean(r[sel])), 3),
@@ -153,7 +154,7 @@ def to_markdown(df):
             t_mean = t_sig = "–"  # no Tier-2 test (low-occupancy guard)
         n_disp = f"{x.n_states}†" if x.small_n else f"{x.n_states}"
         cat_disp = (f"{x.category}‡"
-                    if x.category in ("Low-confidence", "Unused", "Rare")
+                    if x.category in ("Low-confidence", "Rare")
                     else x.category)
         lines.append(
             f"| {x.subject} | {x.K_active} | {cat_disp} | {n_disp} | "
@@ -168,7 +169,7 @@ def to_markdown(df):
         "Tier-2 p-values are conditional on the Tier-1 spatial match; "
         "low-occupancy states are excluded from the temporal test (–).",
         "† n<3 states: point estimate over 1-2 states, descriptive only.",
-        "‡ Low-confidence / Unused / Rare are low-support or quality-flagged "
+        "‡ Low-confidence / Rare are low-support or quality-flagged "
         "(sub-HRF / sparse) categories; spatial matches there reflect "
         "recoverability of the state's mean map within the shared PC subspace, "
         "NOT independent biological or content validation -- the state flags "
