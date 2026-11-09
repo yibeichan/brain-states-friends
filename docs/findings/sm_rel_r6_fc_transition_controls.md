@@ -24,7 +24,7 @@
 | sub-03 | 946 | 0.326 | 0.326 (0.0002) | 0.369 (0.0002) | 0.331 (0.0002) |
 | sub-04 | 946 | 0.551 | 0.551 (0.0002) | 0.520 (0.0002) | 0.499 (0.0002) |
 | sub-05 | 990 | 0.393 | 0.393 (0.0002) | 0.390 (0.0002) | 0.325 (0.0002) |
-| sub-06 | 861 | 0.437 | 0.434 (0.0002) | 0.338 (0.0002) | 0.284 (0.0002) |
+| sub-06 | 861 | 0.434 | 0.434 (0.0002) | 0.338 (0.0002) | 0.284 (0.0002) |
 
 **Partial Mantel, controlling for both TR terms and activation-map r** (ρ, p):
 
@@ -58,7 +58,7 @@ TR counts and activation-map similarity each correlate with transition probabili
 
 - The null permutes state labels, as in `06b`. Both FC and transitions come from the same Viterbi assignment, so a shared dependence on segmentation is not removed by any of these controls.
 - The covariates enter as ranks in a linear model. A nonlinear dependence on TR count would be only partly removed.
-- sub-06: the 05f files were regenerated after `06b` ran (shrinkage values changed in the fourth decimal, TR counts unchanged). The published ρ 0.4373 reproduces exactly from the RV matrix `06b` read (passed with `--gate_rv_path`); the current 05f gives 0.4343. All results above use the current 05f files.
+- sub-06: the 05f files were regenerated after the first `06b` run (shrinkage values changed in the fourth decimal, TR counts unchanged), and `06b` was then rerun on them; the published ρ above is from that rerun (0.437 before it). `--gate_rv_path` lets the gate read an older RV file in such a case; it is not used here.
 - p values of 0.0002 are the floor for 5,000 permutations.
 
 ## Connections
