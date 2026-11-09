@@ -66,7 +66,7 @@ Spearman correlation between symmetrized empirical transition probability and RV
 | sub-03 | 0.326 | 0.0002 | 946 |
 | sub-04 | 0.551 | 0.0002 | 946 |
 | sub-05 | 0.393 | 0.0002 | 990 |
-| sub-06 | 0.437 | 0.0002 | 861 |
+| sub-06 | 0.434 | 0.0002 | 861 |
 
 ### A3: Network Homophily
 
@@ -92,7 +92,7 @@ SCC = largest strongly connected component of model transmat_. MFPT-FC: Spearman
 | sub-03 | 44 | 0.622 | 0.0002 |
 | sub-04 | 44 | 0.680 | 0.0002 |
 | sub-05 | 47 | 0.405 | 0.0012 |
-| sub-06 | 42 | 0.431 | 0.0002 |
+| sub-06 | 42 | 0.449 | 0.0002 |
 
 ## Outputs
 
