@@ -62,7 +62,8 @@ def config(ICA_STATES_DIR, json, os):
     # K columns: primary HMM-independent low-dim set | near-K sensitivity grid
     KS = ["15", "25", "35", "41", "42", "43", "44", "45", "46", "47"]
     SEP_AFTER = 2  # divider between column index 2 (K=35) and 3 (K=41)
-    OUT = os.path.join(SCRATCH, "output", "manuscript_figures", "si_ica_convergence")
+    OUT = os.getenv("SM_ICA_FIG_OUT") or os.path.join(
+        SCRATCH, "output", "manuscript_figures", "si_ica_convergence")
     os.makedirs(OUT, exist_ok=True)
 
     def _load(sub):
@@ -86,22 +87,23 @@ def config(ICA_STATES_DIR, json, os):
     # manuscript 5-category taxonomy palette (CB-safe set, mirrors
     # fig_F2_recurrence_sources.py TAXONOMY_COLORS on manuscript-prep)
     TAX_ORDER = ["Content-eligible", "Run-onset-anchored", "Low-confidence",
-                 "Drift-anchored", "Unused + rare"]
+                 "Drift-anchored", "Rare"]
     TAX_COLORS = {
         "Content-eligible":   "#0C7BDC",
         "Run-onset-anchored": "#FFC20A",
         "Low-confidence":     "#5A5A5A",
         "Drift-anchored":     "#D35FB7",
-        "Unused + rare":      "#CCCCCC",
+        "Rare":               "#CCCCCC",
     }
-    # raw summary_category -> manuscript display category (collapses unused+rare)
+    # raw summary_category -> manuscript display category. Unused states
+    # (recurrence = 0) are outside the active repertoire and have no category.
     RAW2DISP = {
         "eligible_for_content_analysis": "Content-eligible",
         "run_onset_anchored":            "Run-onset-anchored",
         "low_confidence":                "Low-confidence",
         "season_temporal":               "Drift-anchored",
-        "unused":                        "Unused + rare",
-        "rare":                          "Unused + rare",
+        "unused":                        None,
+        "rare":                          "Rare",
     }
     return (KS, OUT, RAW2DISP, SEP_AFTER, SUBS, TAX_COLORS, TAX_ORDER,
             ica_summaries, state_cats)
@@ -177,7 +179,7 @@ def panel_B_per_state(OUT, RAW2DISP, SUBS, TAX_COLORS, TAX_ORDER,
     # Shows the full per-subject distribution and category composition, rather
     # than a per-category mean. Median |r| per subject drawn as a short tick.
     _rng = np.random.default_rng(0)
-    _edge = {"Unused + rare": "#888888"}  # darken pale catch-all for visibility
+    _edge = {"Rare": "#888888"}  # darken the pale rare swatch for visibility
     _fig, _ax = plt.subplots(figsize=(5.4, 2.8))
 
     for _si, _s in enumerate(SUBS):
@@ -186,6 +188,8 @@ def panel_B_per_state(OUT, RAW2DISP, SUBS, TAX_COLORS, TAX_ORDER,
         _ids = [int(x) for x in _a["hmm_state_ids"]]
         _rs = np.array(_a["matched_r"], dtype=float)
         _cats = [RAW2DISP[state_cats[_s][_i]] for _i in _ids]
+        if None in _cats:
+            raise ValueError(f"{_s}: unused state among the matched HMM states")
         _cols = [TAX_COLORS[_c] for _c in _cats]
         _x = _si + _rng.uniform(-0.22, 0.22, size=len(_rs))
         _ax.scatter(_x, _rs, s=20, c=_cols, edgecolor="white", linewidth=0.3,

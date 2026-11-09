@@ -71,7 +71,7 @@ ICA therefore spends part of its dimensions on focal, near-single-parcel sources
 
 Per-category breakdown (`category_correspondence_table.{csv,md}`, at each subject's K_used, over the active set): spatial mean r is 0.31–0.42 across subjects for content-eligible states and 0.24–0.42 for low-confidence states; categories with one or two states per subject are descriptive only. Run-onset states match somewhat better than content-eligible states in five of six subjects (mean r 0.40–0.50 vs 0.31–0.42), consistent with high-variance, run-locked patterns sitting in the leading PCs. Because the taxonomy is a *temporal* classification, whether a state's mean map is recoverable in the shared subspace is largely independent of its label.
 
-**Caveat:** matches to low-confidence, unused, or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
+**Caveat:** matches to low-confidence or rare states indicate recoverability of those states' mean maps within the shared subspace, not independent biological or content validation. The state quality flags stand. The convergent-validity signal rests on the content-eligible (and, more weakly, run-onset) repertoire.
 
 ### Tier 2: temporal correspondence
 
