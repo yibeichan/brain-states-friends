@@ -12,10 +12,11 @@ participation *magnitude* and intentionally do not distinguish activation from
 deactivation polarity.
 
 The same metric definitions back both the content-eligible Figure 2C panel and
-the supplementary all-category figure; pass ``summary_categories`` to select the
-state set. The screening categories (``run_onset_anchored``, ``low_confidence``,
-``unused``, ``rare``, ``season_temporal``) are provenance/QC labels and must not
-be interpreted as cognitive or biological state classes.
+the supplementary by-category figure (Figure S11, the five categories of the
+active repertoire); pass ``summary_categories`` to select the state set. The
+screening categories (``run_onset_anchored``, ``low_confidence``,
+``season_temporal``, ``rare``) are provenance/QC labels and must not be
+interpreted as cognitive or biological state classes.
 """
 
 from __future__ import annotations
@@ -120,6 +121,23 @@ def _resolve_categories(
     return set(summary_categories)
 
 
+def assert_known_categories(
+    state_flags: Mapping[str, pd.DataFrame],
+    allowed: Sequence[str],
+) -> None:
+    """Raise if any subject's ``summary_category`` is outside ``allowed``.
+
+    A category filter drops states whose label it does not list, so a renamed
+    or new label would otherwise vanish from a figure without an error.
+    """
+    allowed_set = set(allowed)
+    for subject, flags in state_flags.items():
+        unknown = sorted(set(flags["summary_category"].astype(str)) - allowed_set)
+        if unknown:
+            raise RuntimeError(
+                f"{subject}: summary_category values {unknown} are not in {sorted(allowed_set)}")
+
+
 def compute_network_participation_metrics(
     state_flags: Mapping[str, pd.DataFrame],
     state_means: Mapping[str, np.ndarray],
@@ -135,8 +153,8 @@ def compute_network_participation_metrics(
     summary_categories
         Which ``summary_category`` values to include. The default keeps only
         content-eligible states (Figure 2C). Pass ``None`` to keep every
-        category (supplementary all-category figure), or a custom list to
-        select specific categories.
+        category, unused included, or a list to select specific categories
+        (Figure S11 passes the five active-repertoire categories).
 
     Returns
     -------
@@ -605,7 +623,7 @@ def plot_network_participation_by_category(
     category_labels: Mapping[str, str] | None = None,
     category_order: Sequence[str] | None = None,
 ) -> None:
-    """Render the supplementary all-category network-participation figure.
+    """Render the supplementary by-category network-participation figure (S11).
 
     Four descriptive panels:
       A. state counts by category and subject (stacked bars)
@@ -764,8 +782,10 @@ def plot_network_participation_by_category(
     axD.set_ylim(0, 1.0)
     axD.set_ylabel("Proportion of states", fontsize=11)
     axD.set_title("D  Networks >=10% share by category", fontsize=13, loc="left", pad=6)
+    # Legend outside the axes so it never covers a bar.
     axD.legend(title="Networks >=10%", fontsize=8, title_fontsize=8,
-               ncol=2, frameon=False, loc="upper right")
+               ncol=1, frameon=False, loc="upper left",
+               bbox_to_anchor=(1.01, 1.0))
     axD.tick_params(axis="y", labelsize=9)
     for spine in ("top", "right"):
         axD.spines[spine].set_visible(False)

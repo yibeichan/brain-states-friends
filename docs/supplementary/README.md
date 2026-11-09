@@ -176,7 +176,7 @@ Most of the agreement between the two decompositions comes from the subspace the
 
 ![Network participation profiles for recurring brain states, displayed across cortical and subcortical systems](figures/S11_network_participation.png)
 
-This figure shows how the active states (recurrence > 0; 269 across the six participants) distribute their activation across large-scale cortical and subcortical networks, split by the five state categories of Figure 2A: content-eligible (158), run-onset-anchored (37), low-confidence (59), drift-anchored (6) and rare (9). Unused states (recurrence = 0) are outside the active repertoire and are not shown. The categories are screening labels based on temporal criteria, not classes of cognitive state, so differences between the non-eligible categories should not be read biologically.
+This figure shows how the active states (recurrence > 0; 269 across the six participants) distribute the magnitude of their activation (activation and deactivation alike) across large-scale cortical and subcortical networks, split by the five state categories of Figure 2A: content-eligible (158), run-onset-anchored (37), low-confidence (59), drift-anchored (6) and rare (9). Unused states (recurrence = 0) are outside the active repertoire and are not shown. The categories are screening labels based on temporal criteria, not classes of cognitive state, so differences between the non-eligible categories should not be read biologically.
 
 ---
 

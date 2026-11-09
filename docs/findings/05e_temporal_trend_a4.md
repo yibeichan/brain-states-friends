@@ -10,7 +10,7 @@ _Synthesizes per-state temporal tags from a1, a2, and a3 into a unified eligibil
 - n_states=50 per subject (truncation capacity)
 - Inputs: 05a recurrence scores + eligible_states.json (sub-HRF exclusions), plus a1 temporal_trend_metrics.csv, a2 temporal_position_metrics.csv, a3 habituation_metrics.csv; all three upstream sources available for all 6 subjects
 - Tags are non-exclusive boolean flags. States with recurrence = 0 are tagged `unused`: they lie outside the active repertoire and are not assigned a category in the manuscript (the script still writes `unused` as their summary_category).
-- Each active state gets one of five mutually exclusive categories, by priority: low_confidence (sub-HRF) > run_onset_anchored > season_temporal (shown as drift-anchored) > eligible_for_content_analysis (recurrence ≥ 0.10) > rare (recurrence < 0.10, no other tag)
+- Each active state gets one of five mutually exclusive categories, by priority: low_confidence (sub-HRF) > run_onset_anchored > season_temporal (shown as drift-anchored) > eligible_for_content_analysis (none of the flags above, recurrence ≥ 0.10) > rare (none of the flags above, recurrence < 0.10). Informational session-trend tags do not affect the category
 - Session-trend tags (session_trend_down, session_trend_up) are informational only and do not drive category membership; within-session drift is addressed via detrended FO from a3
 - season_temporal requires co-occurrence of season_structured AND global_trend; season-only variation is not treated as temporal drift
 

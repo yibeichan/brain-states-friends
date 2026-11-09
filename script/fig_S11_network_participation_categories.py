@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Supplementary Figure S11 - all-category canonical-network participation.
+"""Supplementary Figure S11 - canonical-network participation by state category.
 
 Applies the *same* metric definitions as the main content-eligible Figure 2C
-(``fig_F2_network_participation.py``) to every category of the active repertoire
-in ``state_flags.csv`` (unused states, recurrence = 0, are left out). The output is descriptive provenance/context, not a new main
-scientific claim.
+(``fig_F2_network_participation.py``) to every category of the active
+repertoire in ``state_flags.csv``. Unused states (recurrence = 0) are left out.
+The output is descriptive context, not a new main scientific claim.
 
-Scope and framing (see plan
-``docs/supplementary/2026-06-14_network_participation_categories_plan.md``):
+Scope and framing:
   - Canonical networks are an annotation frame for parcel-space fitted state maps.
   - Categories are provenance/screening labels, not cognitive state classes.
   - Do not interpret rare/low-confidence/drift-anchored categories
@@ -31,6 +30,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from utils.network_participation import (  # noqa: E402
+    assert_known_categories,
     compute_network_participation_metrics,
     plot_network_participation_by_category,
     save_network_participation_outputs,
@@ -119,7 +119,9 @@ def main() -> None:
     if parcel_networks is None:
         raise RuntimeError(f"Could not load parcel networks for {args.parcellation}")
 
-    # Keep the five active-repertoire categories; drop unused states.
+    # Keep the five active-repertoire categories and drop unused states. Any
+    # other summary_category (e.g. a renamed label) is an error, not a silent drop.
+    assert_known_categories(state_flags, list(CATEGORY_ORDER) + ["unused"])
     metrics, _ = compute_network_participation_metrics(
         state_flags=state_flags,
         state_means=state_means,

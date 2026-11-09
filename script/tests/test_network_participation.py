@@ -1,15 +1,18 @@
 """Tests for the shared network-participation utility.
 
 The same metric implementation backs the content-eligible Figure 2C and the
-supplementary all-category figure, so these tests pin both the metric math and
+supplementary by-category Figure S11, so these tests pin both the metric math and
 the category-selection behavior.
 """
 
 import numpy as np
 import pandas as pd
 
+import pytest
+
 from utils.network_participation import (
     ELIGIBLE_CATEGORY,
+    assert_known_categories,
     compute_network_participation_metrics,
     network_composition_for_state,
     summarize_network_participation,
@@ -238,3 +241,20 @@ def test_accepts_state_id_column():
     )
     assert len(metrics) == 1
     assert summary["n_states"] == 1
+
+
+def test_assert_known_categories_raises_on_unlisted_label():
+    flags = {
+        "sub-01": pd.DataFrame({"state": [0, 1],
+                                "summary_category": [ELIGIBLE_CATEGORY, "rare"]}),
+        "sub-02": pd.DataFrame({"state": [0, 1],
+                                "summary_category": [ELIGIBLE_CATEGORY, "rare_v2"]}),
+    }
+    with pytest.raises(RuntimeError, match=r"sub-02.*rare_v2"):
+        assert_known_categories(flags, [ELIGIBLE_CATEGORY, "rare"])
+
+
+def test_assert_known_categories_accepts_listed_labels():
+    flags = {"sub-01": pd.DataFrame({"state": [0, 1, 2],
+                                     "summary_category": [ELIGIBLE_CATEGORY, "rare", "unused"]})}
+    assert_known_categories(flags, [ELIGIBLE_CATEGORY, "rare", "unused"])
