@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Supplementary Figure S11 - all-category canonical-network participation.
+"""Supplementary Figure S11 - canonical-network participation by state category.
 
 Applies the *same* metric definitions as the main content-eligible Figure 2C
-(``fig_F2_network_participation.py``) to every recurrence-screening category in
-``state_flags.csv``. The output is descriptive provenance/context, not a new main
-scientific claim.
+(``fig_F2_network_participation.py``) to every category of the active
+repertoire in ``state_flags.csv``. Unused states (recurrence = 0) are left out.
+The output is descriptive context, not a new main scientific claim.
 
-Scope and framing (see plan
-``docs/supplementary/2026-06-14_network_participation_categories_plan.md``):
+Scope and framing:
   - Canonical networks are an annotation frame for parcel-space fitted state maps.
   - Categories are provenance/screening labels, not cognitive state classes.
-  - Do not interpret unused/rare/low-confidence/season-temporal categories
+  - Do not interpret rare/low-confidence/drift-anchored categories
     biologically.
   - Metrics use ``abs(state_mean)`` -> participation magnitude, not polarity.
   - "Entropy" is spread across canonical network labels, not temporal entropy.
@@ -31,6 +30,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from utils.network_participation import (  # noqa: E402
+    assert_known_categories,
     compute_network_participation_metrics,
     plot_network_participation_by_category,
     save_network_participation_outputs,
@@ -44,29 +44,28 @@ from utils.plot_style import (  # noqa: E402
     load_parcel_networks,
 )
 
-# Display the screening categories in a stable, readable order: content-eligible
-# first, then provenance/QC buckets. Labels are descriptive only.
+# The five categories that partition the active repertoire, in the Figure 2A
+# order and with its labels. Unused states (recurrence = 0) are outside the
+# active repertoire and are left out. Labels are descriptive only.
 CATEGORY_ORDER = [
     "eligible_for_content_analysis",
     "run_onset_anchored",
     "low_confidence",
-    "unused",
-    "rare",
     "season_temporal",
+    "rare",
 ]
 CATEGORY_LABELS = {
     "eligible_for_content_analysis": "Content-eligible",
-    "run_onset_anchored": "Run-onset anchored",
-    "low_confidence": "Low confidence",
-    "unused": "Unused",
-    "rare": "Rare",
+    "run_onset_anchored": "Run-onset-anchored",
+    "low_confidence": "Low-confidence",
     "season_temporal": "Drift-anchored",
+    "rare": "Rare",
 }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate the supplementary all-category network-participation figure."
+        description="Generate the supplementary network-participation figure for every active-state category."
     )
     parser.add_argument("--parcellation", default="atlas-4S156Parcels")
     parser.add_argument("--vt", default="vt0.95")
@@ -78,8 +77,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--expected-states",
         type=int,
-        default=300,
-        help="Set to -1 to disable the all-category state-count check.",
+        default=269,
+        help="Expected active states across subjects; -1 disables the check.",
+    )
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=None,
+        help="Output folder (default: the manuscript_figures folder under SCRATCH_DIR).",
     )
     return parser.parse_args()
 
@@ -92,7 +97,7 @@ def main() -> None:
     scratch_dir = Path(os.environ["SCRATCH_DIR"])
     flags_dir = scratch_dir / "output" / "05e_temporal_trend_a4" / args.parcellation
     model_dir = scratch_dir / "output" / "04_combined_hdphmm" / args.parcellation
-    out_dir = (
+    out_dir = args.out_dir or (
         scratch_dir
         / "output"
         / "manuscript_figures"
@@ -114,18 +119,20 @@ def main() -> None:
     if parcel_networks is None:
         raise RuntimeError(f"Could not load parcel networks for {args.parcellation}")
 
-    # summary_categories=None keeps every recurrence-screening category.
+    # Keep the five active-repertoire categories and drop unused states. Any
+    # other summary_category (e.g. a renamed label) is an error, not a silent drop.
+    assert_known_categories(state_flags, list(CATEGORY_ORDER) + ["unused"])
     metrics, _ = compute_network_participation_metrics(
         state_flags=state_flags,
         state_means=state_means,
         subjects=args.subjects,
         parcel_networks=parcel_networks,
         network_order=NETWORK_ORDER,
-        summary_categories=None,
+        summary_categories=CATEGORY_ORDER,
     )
     if args.expected_states >= 0 and len(metrics) != args.expected_states:
         raise RuntimeError(
-            f"Expected {args.expected_states} states across all categories, "
+            f"Expected {args.expected_states} active states, "
             f"found {len(metrics)}"
         )
 
