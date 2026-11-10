@@ -44,19 +44,25 @@ Stages 00 and 02, which define the BOLD content, do not yet write records. Their
 ## Saving with checks
 
 ```bash
-bash script/utils/datalad_save.sh --stage 05f --subject sub-06 --check-code
-sbatch --export=STAGE=05f,SUBJECT_ID=sub-06,CHECK_CODE=1 script/utils/datalad_save.sh
+bash script/utils/datalad_save.sh --stage 05f --subject sub-06
+sbatch --export=STAGE=05f,SUBJECT_ID=sub-06 script/utils/datalad_save.sh
 ```
 
-With `--check-code`, the save fails in any of these cases:
+The code check runs on every save. It takes the save lock first, so it sees exactly what the save will commit. It checks the files the save would commit, the new or modified ones per `git status` under the save path; files already in the dataset are not checked again. It fails the save in any of these cases:
 - `origin/main` cannot be fetched;
 - a record is from a commit not on `origin/main`;
 - a record's commit lacks a floor fix for its stage;
 - a record says the checkout was dirty;
 - a record read a duplicated run from a session other than the pinned one;
-- an output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
+- a new or modified output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
+- the save deletes an output that its record still lists.
 
-Files of stages that write no provenance get a weaker check: the save-time checkout must pass the floor and be clean, and the output says so (`WEAK CHECK`). `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save. The check is off by default while it is being adopted. Until it is turned on, nothing stops a save without it.
+Files of stages that write no provenance get a weaker check, and the output says so (`WEAK CHECK`). The save-time checkout must pass the floor and be clean: no modified tracked files and no untracked `.py` under `script/`.
+
+- **Skipping the check.** Pass `--no-check-code` or set `CHECK_CODE=0`. Do this only for a save that cannot pass it, and give the reason with `--skip-reason "<text>"` (or `SKIP_REASON`). The commit message then ends with `code_check: skipped (<reason>)` and the save prints a warning.
+- **GitHub unreachable.** `--no-fetch` (or `CHECK_CODE_NO_FETCH=1`) checks against the local `origin/main`, and the commit message says it was not fetched. A failed fetch is retried once, since parallel saves race for the ref lock.
+- **Values.** `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save.
+- **The commit message records the code floor from `origin/main`, the one the check enforced.**
 
 `check_code.py` also works on its own:
 
@@ -127,7 +133,7 @@ A record is promoted with every output it lists, and it lists every file the run
 `--execute` refuses to start when `origin/main` cannot be fetched. It then works under a lock (`.git/promote.lock`); if the dataset's HEAD moved after the checks ran, it stops without changing anything. Otherwise it does the following:
 - Reruns every check.
 - Copies each planned file through a temporary file whose md5 must equal the checksum taken when the file was checked; a file that changed since is not promoted.
-- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits up to 20 minutes for the same lock (within its 30-minute job limit) and releases it before pushing, so the two never commit at once.
+- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits up to 20 minutes for the same lock and holds it through its code check and save (its job limit is 60 minutes), releasing it before pushing, so the two never commit at once.
 - Verifies the result:
   - the promotion is one commit directly on the starting HEAD, and the paths it changes are exactly the planned ones;
   - every path is tracked and clean;
