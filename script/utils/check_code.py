@@ -2,7 +2,7 @@
 """Check that outputs come from merged code that contains every required fix.
 
 Used by datalad_save.sh (--check-code) and promote.py before anything enters
-the output dataset. Rules (docs/output_provenance.md):
+the output dataset. Rules (script/utils/output_provenance.md):
 
 1. The code commit is on main. The repo squash-merges, so a commit on a PR
    branch never becomes an ancestor of main: results computed on a branch are

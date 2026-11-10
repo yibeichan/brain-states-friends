@@ -38,7 +38,7 @@ MESSAGE="${MESSAGE:-}"
 # --check-code (or CHECK_CODE=1, which works through sbatch --export): refuse
 # to save outputs whose code is not on origin/main, lacks a code-floor fix, or
 # (for stages that write provenance) has no clean provenance record.
-# Off by default for now; see docs/output_provenance.md.
+# Off by default for now; see script/utils/output_provenance.md.
 CHECK_CODE="${CHECK_CODE:-0}"
 
 while [[ $# -gt 0 ]]; do

@@ -42,7 +42,7 @@ Manifest (TOML):
     expect = "equal"                     # or "differ" (needs min_diff for numeric files)
     why = "05f loader path: sub-06 s02e04b must read ses-006"
 
-See docs/output_provenance.md.
+See script/utils/output_provenance.md.
 """
 from __future__ import annotations
 

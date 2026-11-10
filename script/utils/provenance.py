@@ -5,7 +5,7 @@ to its outputs. The record says which code produced them, from which output
 root, and exactly which input files were read. With it, two versions of an
 output can be told apart without comparing numbers. It is also what
 ``check_code.py`` and ``promote.py`` check before anything enters the output
-dataset (see docs/output_provenance.md).
+dataset (see script/utils/output_provenance.md).
 
 Use:
     from utils import provenance
