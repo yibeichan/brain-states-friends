@@ -32,6 +32,8 @@ def _git(repo, *args):
     ("**/metadata.json", "metadata.json", True),
     ("**/metadata.json", "a/b/metadata.json", True),
     ("a/**/b.npy", "a/b.npy", True),
+    ("a/**/b.npy", "a/x/y/b.npy", True),
+    ("a/**/b.npy", "a/xb.npy", False),                         # ** spans whole segments only
     ("a/?.npy", "a/x.npy", True),
     ("a/?.npy", "a/xy.npy", False),
     ("a/*.npy", "a/b/c.npy", False),
@@ -54,6 +56,8 @@ def test_arrays_within_tolerance_nan_masks_and_dtypes(tmp_path):
     i = _npy(tmp_path / "i.npy", np.array([1, 2]))
     assert not compare_files(i, _npy(tmp_path / "j.npy", np.array([1, 3]))).equal
     assert not compare_files(i, _npy(tmp_path / "k.npy", np.array([True, True]))).equal
+    f = _npy(tmp_path / "f.npy", np.array([1.0, 1.0]))
+    assert not compare_files(f, _npy(tmp_path / "g.npy", np.array([True, True]))).equal
     c = compare_files(a, tmp_path / "c.npy")
     assert c.max_diff == pytest.approx(0.001)
 
