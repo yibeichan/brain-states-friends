@@ -248,8 +248,10 @@ cd "${OUTPUT_DIR}"
 # Wait for any promote.py run on this dataset (it holds the same lock) so the
 # two never commit at the same time.
 exec 9>"$(git rev-parse --absolute-git-dir)/promote.lock"
-if ! flock -w 3600 9; then
-    echo "ERROR: could not take $(git rev-parse --absolute-git-dir)/promote.lock within an hour"
+# Wait at most 20 minutes, inside the job's 30-minute limit.
+if ! flock -w 1200 9; then
+    echo "ERROR: could not take $(git rev-parse --absolute-git-dir)/promote.lock within 20 minutes" \
+         "(a promotion or another save holds it); rerun this save later"
     exit 1
 fi
 echo "Saving ${SAVE_PATH} ..."
@@ -257,6 +259,9 @@ echo "Code: ${CODE_BRANCH}@${CODE_SHORT}"
 
 ${DATALAD} save -m "${COMMIT_MSG}" "${SAVE_PATH}"
 echo "Saved."
+# The commit is made; the push only copies it, so other saves need not wait for it.
+flock -u 9
+exec 9>&-
 
 # --- Push ---
 if [ "$PUSH" = "true" ]; then

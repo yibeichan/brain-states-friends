@@ -367,6 +367,7 @@ class Plan:
     copies: list = field(default_factory=list)       # (action, rel)
     md5: dict = field(default_factory=dict)          # rel -> md5 of the side file as checked
     records: list = field(default_factory=list)      # provenance records promoted
+    head: str = ""                                   # dataset HEAD the checks ran against
     report: Report = field(default_factory=Report)
 
 
@@ -487,6 +488,7 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
         return plan
     if st.stdout.strip():
         rep.fail(f"dataset has uncommitted changes ({len(st.stdout.splitlines())} paths); save or revert them first")
+    plan.head = _head(dataset)
 
     scope = manifest.get("scope", ["**"])
     exclude = DEFAULT_EXCLUDE + list(manifest.get("exclude", []))
@@ -653,6 +655,19 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
             plan.copies.append(("UPDATE" if full in tracked else "NEW", full))
             rep.info(f"copied with its record (equal within tolerance, other bytes): {full}")
 
+    planned_set = {r for _, r in plan.copies}
+    for rec_rel in plan.records:
+        rec, _ = check_code._load_record(side_out / rec_rel)
+        rdir = os.path.dirname(rec_rel)
+        listed = {os.path.normpath(os.path.join(rdir, o)) for o in ((rec or {}).get("outputs") or {})}
+        stg = (rec or {}).get("stage")
+        for r in sorted(tracked):
+            if not _under(r, rdir) or r in planned_set or r in listed or _is_record(r) or r in gone:
+                continue
+            if gated_stage(r) == stg and check_code.nearest_record(side_out / r, stg) == side_out / rec_rel:
+                rep.fail(f"{r}: stays in the dataset under the promoted record {rec_rel} without being "
+                         "listed in it, so it would be uncovered; reproduce it in the side root or remove it")
+
     for r in gone:
         stg = gated_stage(r)
         if stg:
@@ -749,9 +764,13 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_r
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        log(f"another promotion holds {lock_path}; nothing was changed")
+        log(f"another job (a promotion or datalad_save.sh) holds {lock_path}; nothing was changed")
         return 1
     head0 = _head(dataset)
+    if plan.head and head0 != plan.head:
+        log(f"the dataset moved from {plan.head[:10]} to {head0[:10]} after the checks ran; "
+            "nothing was changed. Rerun the promotion so it checks the current dataset.")
+        return 1
     new_files = [r for a_, r in plan.copies if a_ == "NEW"]
     upd_files = [r for a_, r in plan.copies if a_ == "UPDATE"]
 
@@ -815,6 +834,13 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_r
     if _head(dataset) == head0:
         return recovery("datalad save made no commit")
     # verify: one commit on top of head0, every path saved and clean, content as checked
+    committed = {x for x in _run(["git", "diff", "--name-only", "-z", head0, "HEAD"], cwd=dataset)
+                 .stdout.split("\0") if x}
+    if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() == head0 and committed != set(rels):
+        extra_c, missing_c = sorted(committed - set(rels)), sorted(set(rels) - committed)
+        return recovery(f"the commit's paths differ from the plan: {len(extra_c)} unplanned "
+                        f"(e.g. {extra_c[:3]}), {len(missing_c)} planned but not committed "
+                        f"(e.g. {missing_c[:3]})")
     if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() != head0:
         return recovery("the promotion is not a single commit on top of the previous HEAD: another "
                         "job committed while the save ran (datalad_save.sh waits for the same lock; "

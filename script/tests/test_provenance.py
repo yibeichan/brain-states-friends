@@ -156,3 +156,19 @@ def test_unreadable_output_is_recorded_not_fatal(tmp_path, monkeypatch):
     rec = json.loads(provenance.write_provenance(out, "05f", "sub-06", "atlas-X").read_text())
     assert rec["outputs"]["bad.npy"] == {"unreadable": "denied"}
     assert rec["outputs"]["good.npy"]["md5"]
+
+
+def test_file_vanishing_during_the_walk_is_skipped(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "keep.npy").write_bytes(b"k")
+    (out / "gone.npy").write_bytes(b"g")
+    real_stat = os.stat
+
+    def stat(path, *a, **kw):
+        if str(path).endswith("gone.npy"):
+            raise FileNotFoundError(path)
+        return real_stat(path, *a, **kw)
+    monkeypatch.setattr(provenance.os, "stat", stat)
+    rec = json.loads(provenance.write_provenance(out, "05f", "sub-06", "atlas-X").read_text())
+    assert list(rec["outputs"]) == ["keep.npy"]

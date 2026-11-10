@@ -272,13 +272,19 @@ def test_datalad_save_holds_the_promotion_lock_while_saving(tmp_path):
     report = tmp_path / "lock_state"
     (bin_ / "git-annex").write_text("#!/bin/bash\nexit 0\n")
     (bin_ / "uv").write_text(f"""#!/bin/bash
-# stub for: uv run --project X --extra datalad datalad save ...
-if flock -n "{out}/.git/promote.lock" true; then echo free >> "{report}"; else echo held >> "{report}"; fi
+# stub for: uv run --project X --extra datalad datalad save|push ...
+cmd=""; for a in "$@"; do case "$a" in save|push) cmd="$a";; esac; done
+if flock -n "{out}/.git/promote.lock" true; then echo "$cmd:free" >> "{report}"; else echo "$cmd:held" >> "{report}"; fi
 """)
     for f in bin_.iterdir():
         f.chmod(0o755)
     env = dict(os.environ, PATH=f"{bin_}:{os.environ['PATH']}", SLURM_SUBMIT_DIR=str(code), HOME=str(tmp_path))
     p = subprocess.run(["bash", str(SCRIPT_DIR / "utils" / "datalad_save.sh"), "--stage", "06b",
-                        "--subject", "sub-01", "--no-push"], env=env, capture_output=True, text=True)
+                        "--subject", "sub-01"], env=env, capture_output=True, text=True)
     assert p.returncode == 0, p.stdout + p.stderr
-    assert report.read_text().split() == ["held"]
+    # the save runs under the lock; the push after it does not hold it
+    assert report.read_text().split() == ["save:held", "push:free"]
+    script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
+    wait = int(script.split("flock -w ")[1].split()[0])
+    hh, mm, ss = (int(x) for x in script.split("#SBATCH --time=")[1].split()[0].split(":"))
+    assert wait < hh * 3600 + mm * 60 + ss       # the lock wait ends before the job's time limit

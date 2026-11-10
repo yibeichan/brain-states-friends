@@ -724,6 +724,7 @@ def test_output_unlisted_by_the_promoted_record_fails_the_post_save_check(setup,
     np.save(ds / late, np.zeros(2))
     _git(ds, "add", late)
     _git(ds, "commit", "-q", "-m", "late")
+    plan.head = _git(ds, "rev-parse", "HEAD")      # as if the drift check had been passed
     _fake(tmp_path, monkeypatch)
     logs = []
     assert _execute(plan, side, ds, m, logs) == 1
@@ -763,3 +764,58 @@ def test_untracked_leftover_of_a_stage_without_records_is_promoted_as_new(tmp_pa
     logs = []
     assert _execute(plan, tmp_path / "side", ds, m, logs) == 0, logs
     assert B in _git(ds, "ls-files")
+
+
+# ------------------------------------------- adversarial review, round 3
+def test_dataset_change_between_plan_and_execute_is_refused(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    np.save(ds / RV, np.full((3, 3), 42.0))        # a datalad save lands after the checks
+    _git(ds, "commit", "-q", "-am", "save by another job")
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("after the checks ran" in l for l in logs)
+    assert np.all(np.load(ds / RV) == 42.0)
+
+
+def test_unlisted_dataset_file_under_a_promoted_record_is_refused_before_saving(setup, tmp_path):
+    ds, side, pinned = setup
+    outside = "05f_state_fc/atlas-X/sub-06/vt0.95/other_run.npy"   # outside the change set
+    np.save(ds / outside, np.zeros(2))
+    _git(ds, "add", outside)
+    _git(ds, "commit", "-q", "-m", "other")
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any(outside in f and "stays in the dataset under the promoted record" in f for f in fails)
+
+
+def test_file_written_into_a_save_directory_during_the_save_is_caught(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    sneak = "05f_state_fc/atlas-X/sub-06/vt0.95/sneaked.npy"
+    _fake(tmp_path, monkeypatch, FAKE_DATALAD.replace(
+        "git add --", f"printf x > {sneak}; git add --"))
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("commit's paths differ from the plan" in l and "sneaked.npy" in l for l in logs)
+
+
+def test_execute_waits_for_nobody_and_says_who_may_hold_the_lock(setup, tmp_path, monkeypatch):
+    import fcntl
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    held = open(ds / ".git" / "promote.lock", "w")
+    fcntl.flock(held, fcntl.LOCK_EX)
+    try:
+        _fake(tmp_path, monkeypatch)
+        logs = []
+        assert _execute(plan, side, ds, m, logs) == 1
+        assert any("a promotion or datalad_save.sh" in l and "holds" in l for l in logs)
+        assert np.all(np.load(ds / RV) == 2.0)
+    finally:
+        held.close()
