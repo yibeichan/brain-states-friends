@@ -44,11 +44,11 @@ Stages 00 and 02, which define the BOLD content, do not yet write records. Their
 ## Saving with checks
 
 ```bash
-bash script/utils/datalad_save.sh --stage 05f --subject sub-06 --check-code
-sbatch --export=STAGE=05f,SUBJECT_ID=sub-06,CHECK_CODE=1 script/utils/datalad_save.sh
+bash script/utils/datalad_save.sh --stage 05f --subject sub-06
+sbatch --export=STAGE=05f,SUBJECT_ID=sub-06 script/utils/datalad_save.sh
 ```
 
-With `--check-code`, the save fails in any of these cases:
+The code check runs on every save. It fails the save in any of these cases:
 - `origin/main` cannot be fetched;
 - a record is from a commit not on `origin/main`;
 - a record's commit lacks a floor fix for its stage;
@@ -56,7 +56,7 @@ With `--check-code`, the save fails in any of these cases:
 - a record read a duplicated run from a session other than the pinned one;
 - an output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
 
-Files of stages that write no provenance get a weaker check: the save-time checkout must pass the floor and be clean, and the output says so (`WEAK CHECK`). `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save. The check is off by default while it is being adopted. Until it is turned on, nothing stops a save without it.
+Files of stages that write no provenance get a weaker check: the save-time checkout must pass the floor and be clean, and the output says so (`WEAK CHECK`). To skip the check, pass `--no-check-code` or set `CHECK_CODE=0`. Do this only for a save that cannot pass it, and say why in `--message`. `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save.
 
 `check_code.py` also works on its own:
 

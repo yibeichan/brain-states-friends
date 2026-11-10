@@ -338,4 +338,4 @@ cd output && datalad get 04_combined_hdphmm/  # lazy: get only what you need
 
 RIA store and clone locations are site-specific; configure them in `output_dataset.yml`.
 
-Results should enter the dataset only from code on `main` that contains every fix listed in `script/utils/code_floor.txt`. Reruns go to a side root and are promoted with `script/utils/promote.py`, which checks a declared change set, controls and the code. For a direct save, `datalad_save.sh --check-code` applies the code checks; it is opt-in for now, so a save without it is not checked. See [script/utils/output_provenance.md](script/utils/output_provenance.md).
+Results should enter the dataset only from code on `main` that contains every fix listed in `script/utils/code_floor.txt`. Reruns go to a side root and are promoted with `script/utils/promote.py`, which checks a declared change set, controls and the code. `datalad_save.sh` applies the code checks to every direct save unless `--no-check-code` is given. See [script/utils/output_provenance.md](script/utils/output_provenance.md).

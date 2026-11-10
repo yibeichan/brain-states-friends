@@ -254,9 +254,11 @@ def test_datalad_save_accepts_true_and_rejects_unknown_check_code_values():
     assert '1|true|yes|on) CHECK_CODE=1' in script and '*) echo "ERROR: CHECK_CODE=' in script
 
 
-def test_datalad_save_holds_the_promotion_lock_while_saving(tmp_path):
-    """Run datalad_save.sh against stub uv/git-annex in a scratch dataset; the stub
-    datalad reports whether .git/promote.lock is held while it runs."""
+def _run_datalad_save(tmp_path, args=(), env_extra=None):
+    """Run datalad_save.sh against stub uv/git-annex in a scratch dataset.
+
+    The stub uv records each call: "check" for the code check (exit code from
+    STUB_CHECK_RC), and save/push with whether .git/promote.lock is held."""
     code = tmp_path / "code"
     code.mkdir()
     scratch = tmp_path / "scratch"
@@ -267,24 +269,50 @@ def test_datalad_save_holds_the_promotion_lock_while_saving(tmp_path):
     (code / ".env").write_text(f"SCRATCH_DIR='{scratch}'\nDATA_DIR='{tmp_path / 'data'}'\n")
     _git(code, "init", "-q")
     _git(code, "commit", "-q", "--allow-empty", "-m", "c")
+    (code / "script" / "utils").mkdir(parents=True)
+    (code / "script" / "utils" / "code_floor.txt").write_text(
+        "1f391c08e617cf608cb35e4c1a5ea7798d967aae 05f stub\n")
     bin_ = tmp_path / "bin"
     bin_.mkdir()
-    report = tmp_path / "lock_state"
+    report = tmp_path / "calls"
     (bin_ / "git-annex").write_text("#!/bin/bash\nexit 0\n")
     (bin_ / "uv").write_text(f"""#!/bin/bash
-# stub for: uv run --project X --extra datalad datalad save|push ...
+# stub for: uv run --project X [--extra datalad] (python check_code.py ... | datalad save|push ...)
+if [[ " $* " == *check_code.py* ]]; then echo check >> "{report}"; exit "${{STUB_CHECK_RC:-0}}"; fi
 cmd=""; for a in "$@"; do case "$a" in save|push) cmd="$a";; esac; done
 if flock -n "{out}/.git/promote.lock" true; then echo "$cmd:free" >> "{report}"; else echo "$cmd:held" >> "{report}"; fi
 """)
     for f in bin_.iterdir():
         f.chmod(0o755)
     env = dict(os.environ, PATH=f"{bin_}:{os.environ['PATH']}", SLURM_SUBMIT_DIR=str(code), HOME=str(tmp_path))
+    env.pop("CHECK_CODE", None)
+    env.update(env_extra or {})
     p = subprocess.run(["bash", str(SCRIPT_DIR / "utils" / "datalad_save.sh"), "--stage", "06b",
-                        "--subject", "sub-01"], env=env, capture_output=True, text=True)
+                        "--subject", "sub-01", *args], env=env, capture_output=True, text=True)
+    calls = report.read_text().split() if report.exists() else []
+    return p, calls
+
+
+def test_datalad_save_checks_code_by_default_and_holds_the_lock_while_saving(tmp_path):
+    p, calls = _run_datalad_save(tmp_path)
     assert p.returncode == 0, p.stdout + p.stderr
-    # the save runs under the lock; the push after it does not hold it
-    assert report.read_text().split() == ["save:held", "push:free"]
+    # the code check runs first; the save runs under the lock; the push after it does not hold it
+    assert calls == ["check", "save:held", "push:free"]
     script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
     wait = int(script.split("flock -w ")[1].split()[0])
     hh, mm, ss = (int(x) for x in script.split("#SBATCH --time=")[1].split()[0].split(":"))
     assert wait < hh * 3600 + mm * 60 + ss       # the lock wait ends before the job's time limit
+
+
+@pytest.mark.parametrize("args,env", [(["--no-check-code"], {}), ([], {"CHECK_CODE": "0"}),
+                                      ([], {"CHECK_CODE": "no"})])
+def test_datalad_save_skips_the_check_only_when_asked(tmp_path, args, env):
+    p, calls = _run_datalad_save(tmp_path, args, env)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert calls == ["save:held", "push:free"]
+
+
+def test_failed_code_check_stops_the_save(tmp_path):
+    p, calls = _run_datalad_save(tmp_path, env_extra={"STUB_CHECK_RC": "1"})
+    assert p.returncode != 0
+    assert calls == ["check"]                     # nothing saved or pushed

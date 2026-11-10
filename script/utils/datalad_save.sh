@@ -35,11 +35,12 @@ SUBJECT_ID="${SUBJECT_ID:-}"
 PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 PUSH="${PUSH:-true}"
 MESSAGE="${MESSAGE:-}"
-# --check-code (or CHECK_CODE=1, which works through sbatch --export): refuse
-# to save outputs whose code is not on origin/main, lacks a code-floor fix, or
-# (for stages that write provenance) has no clean provenance record.
-# Off by default for now; see script/utils/output_provenance.md.
-CHECK_CODE="${CHECK_CODE:-0}"
+# Code check, on by default: refuse to save outputs whose code is not on
+# origin/main, lacks a code-floor fix, or (for stages that write provenance)
+# has no clean provenance record covering them. --no-check-code or
+# CHECK_CODE=0 (works through sbatch --export) skips it; see
+# script/utils/output_provenance.md.
+CHECK_CODE="${CHECK_CODE:-1}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -50,8 +51,9 @@ while [[ $# -gt 0 ]]; do
         --push) PUSH="true"; shift ;;
         --no-push) PUSH="false"; shift ;;
         --check-code) CHECK_CODE=1; shift ;;
+        --no-check-code) CHECK_CODE=0; shift ;;
         -h|--help)
-            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG] [--check-code]"
+            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG] [--no-check-code]"
             echo ""
             echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 05g, 05h, 06, m10_03, m10_04, hp_04, pp_04, diag"
             echo "Subject: sub-01 through sub-06, or 'all' (stage 05h takes 'all' only)"
@@ -225,10 +227,10 @@ if ! command -v git-annex &> /dev/null; then
     exit 1
 fi
 
-# --- Code check (opt-in) ---
+# --- Code check (on unless CHECK_CODE=0 / --no-check-code) ---
 case "${CHECK_CODE,,}" in
     1|true|yes|on) CHECK_CODE=1 ;;
-    0|false|no|off|"") CHECK_CODE=0 ;;
+    0|false|no|off) CHECK_CODE=0 ;;
     *) echo "ERROR: CHECK_CODE='${CHECK_CODE}' (use 1 or 0)"; exit 1 ;;
 esac
 FLOOR_LINE=""
