@@ -574,15 +574,17 @@ def load_median_fd(sub_id, run_ids, data_dir):
         matches = glob.glob(pattern)
         if not matches:
             missing += 1
+            provenance.record_run(sub_id, run_id, skipped="no confounds file")
             continue
         # Outside the try: a missing pinned copy or an unlisted duplicate must
         # stop the run, not drop it from the FD-controlled partial Spearman.
-        confounds_path = pick_run_session(sub_id, run_id, matches)
+        confounds_path = pick_run_session(sub_id, run_id, matches, kind="confounds")
         try:
             df = pd.read_csv(confounds_path, sep='\t', usecols=['framewise_displacement'])
             fd_dict[run_id] = float(df['framewise_displacement'].median(skipna=True))
         except Exception as e:
             logger.warning("Failed to load FD for %s: %s", run_id, e)
+            provenance.record_run(sub_id, run_id, skipped=f"confounds unreadable: {e}")
             missing += 1
 
     if missing > 0:
@@ -1199,6 +1201,12 @@ def main():
         decoded_states = pickle.load(f)
 
     recurrence_scores = np.load(scores_path)
+    for kind, p in (("fractional_occupancy", fo_path), ("per_season_fo", season_fo_path),
+                    ("recurrence_summary", summary_path), ("recurrence_scores", scores_path),
+                    ("decoded_states", decoded_path), ("best_model", model_path),
+                    ("pca_model", pca_path)):
+        if os.path.exists(p):
+            provenance.record_input(kind, sub_id, p)
     n_states = recurrence_summary['n_states']
     run_ids = sorted(fo_dict.keys(), key=_parse_run_order_key)
 

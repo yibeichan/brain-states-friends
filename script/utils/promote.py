@@ -100,87 +100,116 @@ def matches(rel: str, patterns) -> bool:
 # ------------------------------------------------------------- comparison
 @dataclass
 class Cmp:
+    """Result of comparing a file with its reference.
+
+    ``kind`` is 'numeric' when the two have the same structure and only
+    numeric values were compared (``max_diff`` is then the largest absolute
+    difference over every numeric leaf), 'structural' when shape, dtype, keys,
+    NaN positions, strings or bytes differ, and 'error' when the files could
+    not be read. Only a 'numeric' result can pass a positive control.
+    """
     equal: bool
     detail: str = ""
     max_diff: float = 0.0
+    kind: str = "numeric"
+
+
+def _structural(detail):
+    return Cmp(False, detail, math.inf, "structural")
+
+
+def _num_leaf(a, b, rtol, atol):
+    """(ok, |diff| or None for a structural mismatch) for two numbers."""
+    fa, fb = float(a), float(b)
+    if math.isnan(fa) or math.isnan(fb):
+        return (math.isnan(fa) and math.isnan(fb)), (0.0 if math.isnan(fa) and math.isnan(fb) else None)
+    if math.isinf(fa) or math.isinf(fb):
+        return (fa == fb), (0.0 if fa == fb else None)
+    d = abs(fa - fb)
+    return d <= atol + rtol * abs(fb), d
 
 
 def _close_arrays(a, b, rtol, atol, label=""):
     if a.shape != b.shape:
-        return Cmp(False, f"{label}shape {a.shape} vs {b.shape}", math.inf)
+        return _structural(f"{label}shape {a.shape} vs {b.shape}")
     ka, kb = a.dtype.kind, b.dtype.kind
-    if ka in "fc" or kb in "fc":
-        if not (ka in "biufc" and kb in "biufc"):
-            return Cmp(False, f"{label}dtype {a.dtype} vs {b.dtype}", math.inf)
-        if (ka == "b") != (kb == "b"):
-            return Cmp(False, f"{label}dtype {a.dtype} vs {b.dtype}", math.inf)
-        af, bf = a.astype(np.complex128 if "c" in ka + kb else np.float64), \
-            b.astype(np.complex128 if "c" in ka + kb else np.float64)
-        na, nb = np.isnan(af), np.isnan(bf)
-        if not np.array_equal(na, nb):
-            return Cmp(False, f"{label}NaN positions differ ({int((na != nb).sum())} entries)", math.inf)
-        ia, ib = np.isinf(af), np.isinf(bf)
-        if not np.array_equal(ia, ib) or not np.array_equal(af[ia], bf[ib]):
-            return Cmp(False, f"{label}inf entries differ", math.inf)
-        fin = ~(na | ia)
-        if not fin.any():
-            return Cmp(True)
-        d = np.abs(af[fin] - bf[fin])
-        md = float(d.max())
-        ok = bool(np.all(d <= atol + rtol * np.abs(bf[fin])))
-        return Cmp(ok, f"{label}max |diff| {md:.3g}", md)
-    if ka != kb and not (ka in "iu" and kb in "iu"):
-        return Cmp(False, f"{label}dtype {a.dtype} vs {b.dtype}", math.inf)
-    if ka in "biu":
-        ok = bool(np.array_equal(a, b))
-        md = 0.0 if ok else float(np.abs(a.astype(np.int64) - b.astype(np.int64)).max()) if ka != "b" else 1.0
-        return Cmp(ok, f"{label}integer arrays {'equal' if ok else 'differ'}", md)
-    ok = bool(np.array_equal(a, b))
-    return Cmp(ok, f"{label}{'equal' if ok else 'differ'} ({a.dtype})", 0.0 if ok else math.inf)
+    num = "biufc"
+    if ka not in num or kb not in num:
+        ok = a.dtype == b.dtype and bool(np.array_equal(a, b))
+        return Cmp(True, f"{label}equal ({a.dtype})") if ok else _structural(f"{label}{a.dtype} arrays differ")
+    # bool, integer, float and complex are different kinds of quantity
+    group = lambda k: {"b": "b", "i": "i", "u": "i", "f": "f", "c": "c"}[k]
+    if group(ka) != group(kb):
+        return _structural(f"{label}dtype {a.dtype} vs {b.dtype}")
+    if group(ka) in "bi":
+        if np.array_equal(a, b):
+            return Cmp(True, f"{label}integer arrays equal")
+        md = 1.0 if ka == "b" else float(np.abs(a.astype(np.int64) - b.astype(np.int64)).max())
+        return Cmp(False, f"{label}integer arrays differ (max |diff| {md:g})", md)
+    na, nb = np.isnan(a), np.isnan(b)
+    if not np.array_equal(na, nb):
+        return _structural(f"{label}NaN positions differ ({int((na != nb).sum())} entries)")
+    ia, ib = np.isinf(a), np.isinf(b)
+    if not np.array_equal(ia, ib) or not np.array_equal(a[ia], b[ib]):
+        return _structural(f"{label}inf entries differ")
+    fin = ~(na | ia)
+    if not fin.any():
+        return Cmp(True, f"{label}no finite entries")
+    d = np.abs(a[fin] - b[fin])
+    md = float(d.max())
+    ok = bool(np.all(d <= atol + rtol * np.abs(b[fin])))
+    return Cmp(ok, f"{label}max |diff| {md:.3g}", md)
 
 
 def _is_num(x):
     return isinstance(x, (int, float)) and not isinstance(x, bool)
 
 
-def _close_json(a, b, rtol, atol, ignore, path="$"):
-    """Recursive JSON comparison: dict key sets exact (order ignored), list
-    order kept, bool and str exact, numbers within tolerance."""
+def _json_walk(a, b, rtol, atol, ignore, path, acc):
+    """Visit every leaf; acc collects (structural detail list, max diff, worst failing leaf)."""
     if isinstance(a, dict) and isinstance(b, dict):
-        ka = set(a) - ignore
-        kb = set(b) - ignore
+        ka, kb = set(a) - ignore, set(b) - ignore
         if ka != kb:
-            return Cmp(False, f"{path}: keys differ ({sorted(ka ^ kb)[:5]})", math.inf)
-        worst = Cmp(True)
-        for k in sorted(ka):
-            c = _close_json(a[k], b[k], rtol, atol, ignore, f"{path}.{k}")
-            if not c.equal:
-                return c
-            if c.max_diff > worst.max_diff:
-                worst = c
-        return worst
+            acc["structural"].append(f"{path}: keys differ ({sorted(ka ^ kb)[:5]})")
+        for k in sorted(ka & kb):
+            _json_walk(a[k], b[k], rtol, atol, ignore, f"{path}.{k}", acc)
+        return
     if isinstance(a, list) and isinstance(b, list):
         if len(a) != len(b):
-            return Cmp(False, f"{path}: length {len(a)} vs {len(b)}", math.inf)
-        worst = Cmp(True)
+            acc["structural"].append(f"{path}: length {len(a)} vs {len(b)}")
         for i, (x, y) in enumerate(zip(a, b)):
-            c = _close_json(x, y, rtol, atol, ignore, f"{path}[{i}]")
-            if not c.equal:
-                return c
-            if c.max_diff > worst.max_diff:
-                worst = c
-        return worst
+            _json_walk(x, y, rtol, atol, ignore, f"{path}[{i}]", acc)
+        return
     if _is_num(a) and _is_num(b):
-        if isinstance(a, float) and isinstance(b, float) and math.isnan(a) and math.isnan(b):
-            return Cmp(True)
-        if any(isinstance(v, float) and (math.isnan(v) or math.isinf(v)) for v in (a, b)):
-            return Cmp(a == b, f"{path}: {a} vs {b}", 0.0 if a == b else math.inf)
-        d = abs(a - b)
-        ok = d <= atol + rtol * abs(b)
-        return Cmp(ok, f"{path}: {a} vs {b}" if not ok else f"{path}: |diff| {d:.3g}", float(d))
+        if isinstance(a, int) != isinstance(b, int):
+            acc["structural"].append(f"{path}: {a!r} vs {b!r} (int vs float)")
+            return
+        ok, d = _num_leaf(a, b, rtol, atol)
+        if d is None:
+            acc["structural"].append(f"{path}: {a} vs {b}")
+            return
+        acc["max"] = max(acc["max"], d)
+        if not ok and acc["fail"] is None:
+            acc["fail"] = f"{path}: {a} vs {b}"
+        return
     if type(a) is not type(b) or a != b:
-        return Cmp(False, f"{path}: {str(a)[:40]!r} vs {str(b)[:40]!r}", math.inf)
-    return Cmp(True)
+        acc["structural"].append(f"{path}: {str(a)[:40]!r} vs {str(b)[:40]!r}")
+
+
+def _from_acc(acc):
+    if acc["structural"]:
+        return _structural(f"{acc['structural'][0]} ({len(acc['structural'])} structural difference(s))")
+    if acc["fail"]:
+        return Cmp(False, f"{acc['fail']}; max |diff| {acc['max']:.3g}", acc["max"])
+    return Cmp(True, f"max |diff| {acc['max']:.3g}", acc["max"])
+
+
+def _close_json(a, b, rtol, atol, ignore):
+    """JSON: dict key sets exact (order ignored), list order kept, bool and
+    str exact, int vs float a structural difference, numbers within tolerance."""
+    acc = {"structural": [], "max": 0.0, "fail": None}
+    _json_walk(a, b, rtol, atol, set(ignore), "$", acc)
+    return _from_acc(acc)
 
 
 def _float_or_none(s):
@@ -194,28 +223,30 @@ def _close_table(pa, pb, delim, rtol, atol):
     with open(pa, newline="") as fa, open(pb, newline="") as fb:
         ra, rb = list(csv.reader(fa, delimiter=delim)), list(csv.reader(fb, delimiter=delim))
     if not ra or not rb:
-        return Cmp(ra == rb, "empty table")
+        return Cmp(True, "empty tables") if ra == rb else _structural("one table is empty")
     if ra[0] != rb[0]:
-        return Cmp(False, f"header differs: {ra[0][:6]} vs {rb[0][:6]}", math.inf)
+        return _structural(f"header differs: {ra[0][:6]} vs {rb[0][:6]}")
     if len(ra) != len(rb):
-        return Cmp(False, f"rows {len(ra) - 1} vs {len(rb) - 1}", math.inf)
-    worst = 0.0
+        return _structural(f"rows {len(ra) - 1} vs {len(rb) - 1}")
+    acc = {"structural": [], "max": 0.0, "fail": None}
     for i, (x, y) in enumerate(zip(ra[1:], rb[1:]), 1):
         if len(x) != len(y):
-            return Cmp(False, f"row {i}: {len(x)} vs {len(y)} cells", math.inf)
+            acc["structural"].append(f"row {i}: {len(x)} vs {len(y)} cells")
+            continue
         for col, u, v in zip(ra[0], x, y):
             fu, fv = _float_or_none(u), _float_or_none(v)
             if fu is None or fv is None:
                 if u != v:
-                    return Cmp(False, f"row {i} {col}: {u!r} vs {v!r}", math.inf)
+                    acc["structural"].append(f"row {i} {col}: {u!r} vs {v!r}")
                 continue
-            if math.isnan(fu) and math.isnan(fv):
+            ok, d = _num_leaf(fu, fv, rtol, atol)
+            if d is None:
+                acc["structural"].append(f"row {i} {col}: {u} vs {v}")
                 continue
-            d = abs(fu - fv)
-            if not d <= atol + rtol * abs(fv):
-                return Cmp(False, f"row {i} {col}: {u} vs {v}", d)
-            worst = max(worst, d)
-    return Cmp(True, f"max |diff| {worst:.3g}", worst)
+            acc["max"] = max(acc["max"], d)
+            if not ok and acc["fail"] is None:
+                acc["fail"] = f"row {i} {col}: {u} vs {v}"
+    return _from_acc(acc)
 
 
 def md5(path) -> str:
@@ -236,23 +267,22 @@ def compare_files(a, b, rtol=1e-9, atol=1e-12, ignore_keys=()):
         if ext == ".npz":
             with np.load(a, allow_pickle=False) as za, np.load(b, allow_pickle=False) as zb:
                 if set(za.files) != set(zb.files):
-                    return Cmp(False, f"npz keys differ ({sorted(set(za.files) ^ set(zb.files))})", math.inf)
-                worst = Cmp(True)
-                for k in sorted(za.files):
-                    c = _close_arrays(za[k], zb[k], rtol, atol, label=f"{k}: ")
-                    if not c.equal:
-                        return c
-                    if c.max_diff > worst.max_diff:
-                        worst = c
-                return worst
+                    return _structural(f"npz keys differ ({sorted(set(za.files) ^ set(zb.files))})")
+                results = [_close_arrays(za[k], zb[k], rtol, atol, label=f"{k}: ") for k in sorted(za.files)]
+            bad = [r for r in results if r.kind != "numeric"]
+            if bad:
+                return bad[0]
+            md = max((r.max_diff for r in results), default=0.0)
+            fail = next((r for r in results if not r.equal), None)
+            return Cmp(fail is None, fail.detail if fail else f"max |diff| {md:.3g}", md)
         if ext == ".json":
-            return _close_json(json.loads(a.read_text()), json.loads(b.read_text()), rtol, atol, set(ignore_keys))
+            return _close_json(json.loads(a.read_text()), json.loads(b.read_text()), rtol, atol, ignore_keys)
         if ext in (".csv", ".tsv"):
             return _close_table(a, b, "\t" if ext == ".tsv" else ",", rtol, atol)
     except (ValueError, OSError) as e:
-        return Cmp(False, f"cannot compare: {e}", math.inf)
+        return Cmp(False, f"cannot compare: {e}", math.inf, "error")
     ok = md5(a) == md5(b)
-    return Cmp(ok, "bytes equal" if ok else "bytes differ", 0.0 if ok else math.inf)
+    return Cmp(True, "bytes equal") if ok else _structural("bytes differ")
 
 
 # ------------------------------------------------------- dataset reading
@@ -338,6 +368,9 @@ def _tol(manifest, rel):
         if matches(rel, [o["glob"]]):
             rtol = float(o.get("rtol", rtol))
             atol = float(o.get("atol", atol))
+            if "decimals" in o:
+                # values rounded to d decimals may move by one unit in the last place
+                atol = max(atol, 1.5 * 10.0 ** -int(o["decimals"]))
             ignore += list(o.get("ignore_keys", []))
     return rtol, atol, ignore
 
@@ -521,16 +554,28 @@ def check_controls(manifest, side_out, dataset, files, rep):
             except (FileNotFoundError, RuntimeError, ValueError) as e:
                 rep.fail(f"{tag}: {e}")
                 continue
-            rtol = float(c.get("rtol", 1e-9))
-            atol = float(c.get("atol", c.get("tol", 1e-12)))
-            cmp_ = compare_files(side_out / rel, ref_path, rtol, atol, c.get("ignore_keys", []))
+            rtol, atol, ignore = _tol(manifest, rel)
+            rtol = float(c.get("rtol", rtol))
+            atol = float(c.get("atol", c.get("tol", atol)))
+            ignore = ignore + list(c.get("ignore_keys", []))
+            cmp_ = compare_files(side_out / rel, ref_path, rtol, atol, ignore)
             if expect == "equal":
                 (rep.info if cmp_.equal else rep.fail)(f"{tag}: {'PASS' if cmp_.equal else 'FAIL'} ({cmp_.detail})")
             elif expect == "differ":
-                min_diff = float(c.get("min_diff", 0.0))
-                ok = (not cmp_.equal) and cmp_.max_diff >= min_diff
+                # A positive control passes only on a numeric difference of at
+                # least min_diff with the structure intact: a broken, reshaped
+                # or all-NaN recompute must not count as "the expected change".
+                if "min_diff" not in c:
+                    rep.fail(f"{tag}: min_diff is required for expect = \"differ\"")
+                    continue
+                min_diff = float(c["min_diff"])
+                if min_diff <= atol:
+                    rep.fail(f"{tag}: min_diff {min_diff:g} must exceed atol {atol:g}")
+                    continue
+                ok = cmp_.kind == "numeric" and cmp_.max_diff >= min_diff
+                why_not = "" if ok else (f" [{cmp_.kind} difference, not a numeric one]" if cmp_.kind != "numeric" else "")
                 (rep.info if ok else rep.fail)(
-                    f"{tag}: {'PASS' if ok else 'FAIL'} ({cmp_.detail}; need max |diff| >= {min_diff:g})")
+                    f"{tag}: {'PASS' if ok else 'FAIL'} ({cmp_.detail}; need max |diff| >= {min_diff:g}){why_not}")
             else:
                 rep.fail(f"{tag}: expect must be 'equal' or 'differ'")
 

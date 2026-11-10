@@ -40,7 +40,10 @@ _runs: dict = {}
 
 
 def _git(repo, *args):
-    p = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+    try:
+        p = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+    except OSError as e:                      # no git on this node: record, don't crash the stage
+        return 127, str(e)
     return p.returncode, p.stdout.strip()
 
 
@@ -110,7 +113,10 @@ def file_identity(path) -> dict:
 
 
 def record_input(kind, sub_id, path, run_id=None):
-    """Log one input file read for ``sub_id`` (kind: e.g. 'parcel_ts', 'decoded_states')."""
+    """Log one input file read for ``sub_id`` (kind: e.g. 'parcel_ts', 'decoded_states').
+
+    ``sub_id="*"`` marks an input shared by every participant (an atlas table).
+    """
     key = (sub_id, kind, run_id or Path(path).name)
     _inputs[key] = file_identity(path)
 
@@ -157,7 +163,7 @@ def build_record(stage, sub_id, parcellation, covers=None, extra=None) -> dict:
         },
         "sessions_read": {run: ses for (sub, run), ses in sorted(_sessions.items()) if sub == sub_id},
         "inputs": {f"{kind}:{name}": ident
-                   for (sub, kind, name), ident in sorted(_inputs.items()) if sub == sub_id},
+                   for (sub, kind, name), ident in sorted(_inputs.items()) if sub in (sub_id, "*")},
         "runs": {run: f for (sub, run), f in sorted(_runs.items()) if sub == sub_id},
         "covers": sorted(covers) if covers else None,
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),

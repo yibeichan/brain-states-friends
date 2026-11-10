@@ -47,7 +47,7 @@ def session_from_path(path) -> str | None:
     return m.group(1) if m else None
 
 
-def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
+def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path, kind="run_file"):
     """Return the one candidate to use for (sub_id, run_id).
 
     ``candidates`` are file paths, or any records from which ``session_of``
@@ -55,7 +55,8 @@ def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
     is pinned for this run and the candidate is from another session. Several
     candidates are allowed only for a run listed in DUPLICATE_RUN_SESSIONS;
     an unlisted duplicate raises ValueError, so a new duplicate cannot be
-    resolved silently.
+    resolved silently. ``kind`` labels a chosen file in the provenance input
+    log (e.g. 'parcel_ts', 'confounds').
     """
     candidates = list(candidates)
     if not candidates:
@@ -68,7 +69,7 @@ def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
                 f"{sub_id} {run_id} has {len(candidates)} copies ({', '.join(found)}) "
                 "and none is chosen in DUPLICATE_RUN_SESSIONS"
             )
-        return _record_pick(sub_id, run_id, candidates[0], session_of)
+        return _record_pick(sub_id, run_id, candidates[0], session_of, kind)
     chosen = [c for c in candidates if session_of(c) == pinned]
     if len(chosen) != 1:
         found = sorted(str(session_of(c)) for c in candidates)
@@ -76,16 +77,16 @@ def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
             f"{sub_id} {run_id}: expected exactly one copy from {pinned}, "
             f"found sessions {', '.join(found)}"
         )
-    return _record_pick(sub_id, run_id, chosen[0], session_of)
+    return _record_pick(sub_id, run_id, chosen[0], session_of, kind)
 
 
-def _record_pick(sub_id, run_id, chosen, session_of):
+def _record_pick(sub_id, run_id, chosen, session_of, kind):
     """Log the resolved session (and the file, if a path) for provenance."""
     from utils import provenance
 
     provenance.record_session(sub_id, run_id, session_of(chosen))
     if isinstance(chosen, (str, os.PathLike)):
-        provenance.record_input("run_file", sub_id, chosen, run_id=run_id)
+        provenance.record_input(kind, sub_id, chosen, run_id=run_id)
     return chosen
 
 

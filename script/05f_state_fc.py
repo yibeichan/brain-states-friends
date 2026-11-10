@@ -98,6 +98,7 @@ def load_atlas_metadata(parcellation: str) -> pd.DataFrame:
     """Load atlas TSV with network labels."""
     tsv_path = os.path.join(ATLAS_BASE, parcellation, f"{parcellation}_dseg.tsv")
     df = pd.read_csv(tsv_path, sep="\t")
+    provenance.record_input("atlas_dseg", "*", tsv_path)
     # Cortical parcels: use network_label; subcortical: parse from label
     df["network"] = df["network_label"]
     subcort_mask = df["network_label"].isna() | (df["network_label"] == "n/a")

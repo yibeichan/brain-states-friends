@@ -211,10 +211,12 @@ def load_single_run(subject_id, run_id, data_dir, parcellation):
     matching_files = glob.glob(glob_pattern)
 
     if not matching_files:
+        provenance.record_run(subject_id, run_id, skipped="no parcel time series")
         return None, None
 
-    file_path = pick_run_session(subject_id, run_id, matching_files)
+    file_path = pick_run_session(subject_id, run_id, matching_files, kind="parcel_ts")
     data = np.load(file_path)
+    provenance.record_run(subject_id, run_id, n_ts=int(data.shape[0]))
 
     # Drop background column (column 0)
     original_cols = data.shape[1]
@@ -230,6 +232,7 @@ def load_single_run(subject_id, run_id, data_dir, parcellation):
                 f"Run {run_id}: {n_bad} non-finite values ({pct:.4f}%), replacing with 0"
             )
             data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
+            provenance.record_run(subject_id, run_id, n_nonfinite_set_to_zero=int(n_bad))
         else:
             raise ValueError(
                 f"Run {run_id}: {n_bad} non-finite values ({pct:.2f}%) - too many"
@@ -747,6 +750,7 @@ def main():
 
     episode_file = os.path.join(BASE_DIR, f'{args.sub_id}_episode_ids.txt')
     all_episode_ids = load_episode_ids(episode_file)
+    provenance.record_input("episode_ids", args.sub_id, episode_file)
     season_episodes = group_episodes_by_season(all_episode_ids)
 
     # sub-04: exclude seasons 5 and 6 (no data available beyond season 4)

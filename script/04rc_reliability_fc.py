@@ -66,6 +66,7 @@ def get_n_parcels(parcellation):
     import pandas as pd
     tsv_path = os.path.join(ATLAS_BASE, parcellation, f"{parcellation}_dseg.tsv")
     df = pd.read_csv(tsv_path, sep="\t")
+    provenance.record_input("atlas_dseg", "*", tsv_path)
     return len(df)
 
 
@@ -100,6 +101,7 @@ def compute_fold_fc(sub_id, parcellation, decoded_states_path, results_path,
     # Get K from results JSON
     with open(results_path) as f:
         results = json.load(f)
+    provenance.record_input("fold_results", sub_id, results_path)
     K = results["selected_config"]["n_components"]
 
     # Get atlas parcel count

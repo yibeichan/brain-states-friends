@@ -77,7 +77,7 @@ def load_matched_data(sub_id, parcellation, decoded_states, n_expected_parcels,
         # The folder holds every stimulus, and some task ids repeat across
         # sessions. Resolve only the runs being matched; a run acquired twice
         # uses the copy the decoding used (DUPLICATE_RUN_SESSIONS).
-        ts_path = pick_run_session(sub_id, run_id, files)
+        ts_path = pick_run_session(sub_id, run_id, files, kind="parcel_ts")
 
         ts = np.load(ts_path)
         vit = np.asarray(decoded_states[run_id])

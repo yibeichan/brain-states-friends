@@ -1044,6 +1044,12 @@ def main():
 
     recurrence_scores = np.load(scores_path)
     n_states = recurrence_summary['n_states']
+    for kind, p in (("fractional_occupancy", fo_path), ("recurrence_summary", summary_path),
+                    ("recurrence_scores", scores_path),
+                    ("eligible_states", os.path.join(recurrence_base, 'eligible_states.json')),
+                    ("state_means", os.path.join(hmm_base, 'state_means_parcel.npy'))):
+        if os.path.exists(p):
+            provenance.record_input(kind, sub_id, p)
 
     logger.info("n_states=%d, n_runs=%d", n_states, len(fo_dict))
 
