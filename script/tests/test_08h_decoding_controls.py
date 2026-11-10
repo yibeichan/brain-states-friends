@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 _SCRIPT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_SCRIPT_DIR))
@@ -93,3 +94,18 @@ def test_word_mask_shift_matches_feature_shift():
     for lag in range(0, 9):
         shifted = build_layer_feature_matrix(feats, ["r"], states, lag=lag)[:, 0] > 0
         assert np.array_equal(m08h.lag_shift_bool(x, lag), shifted)
+
+
+def test_select_layers_all_by_default():
+    assert m08h.select_layers(None, 4, 2) == [0, 1, 2, 3]
+
+
+def test_select_layers_best_and_numbers():
+    assert m08h.select_layers("best,0", 28, 17) == [0, 17]
+    assert m08h.select_layers("best, 17", 28, 17) == [17]      # duplicates collapse
+
+
+@pytest.mark.parametrize("spec", ["28", "-1", "best,x", ""])
+def test_select_layers_refuses_bad_specs(spec):
+    with pytest.raises(ValueError):
+        m08h.select_layers(spec, 28, 3)

@@ -255,6 +255,25 @@ def summarise(batch, y_elig):
 # ---------------------------------------------------------------------------
 
 
+def select_layers(spec, n_layers, best_layer):
+    """Layers to evaluate: all of them for spec None, else the comma list in spec.
+
+    Items are layer numbers or "best" (the published best layer at the best lag).
+    """
+    if spec is None:
+        return list(range(n_layers))
+    out = set()
+    for item in spec.split(","):
+        item = item.strip()
+        li = best_layer if item == "best" else int(item)
+        if not 0 <= li < n_layers:
+            raise ValueError(f"layer {li} outside 0..{n_layers - 1}")
+        out.add(li)
+    if not out:
+        raise ValueError("--layers selects no layer")
+    return sorted(out)
+
+
 def _friends_layer(layer_idx, layer_runs, run_ids, decoded_states, lag, mask,
                    y_full, null_y, folds, timing_X=None, timing_null=None):
     """One layer of one Friends condition. Returns (layer_idx, dict | None)."""
@@ -390,7 +409,10 @@ def run_friends(args, parc, out_dir):
         if os.path.exists(p):
             with open(p) as f:
                 results[li] = json.load(f)
-    todo = [li for li in range(n_layers) if li not in results]
+    selected = select_layers(args.layers, n_layers, best_layer)
+    if cond == "gate" and len(selected) != n_layers:
+        raise SystemExit("the gate compares every layer; --layers is not allowed for it")
+    todo = [li for li in selected if li not in results]
     t0 = time.monotonic()
     step = max(args.n_jobs, 1)
     for i in range(0, len(todo), step):
@@ -411,8 +433,10 @@ def run_friends(args, parc, out_dir):
         logger.info("%s: layers %s done (%.0fs)", cond, chunk, time.monotonic() - t0)
 
     order = sorted(results)
+    all_layers = order == list(range(n_layers))
+    # BH across layers is defined over the full layer family; skip it for a subset
     for key, pkey in (("p_fdr", "p_perm"), ("p_delta_fdr", "p_delta")):
-        if order and all(pkey in results[l] for l in order):
+        if all_layers and all(pkey in results[l] for l in order):
             q = benjamini_hochberg(np.array([results[l][pkey] for l in order]))
             for l, v in zip(order, q):
                 results[l][key] = round(float(v), 4)
@@ -435,6 +459,8 @@ def run_friends(args, parc, out_dir):
                "n_permutations": n_perm, **meta,
                "seed": D1_SEED_BASE + lag * D1_SEED_LAG_STRIDE,
                "timing_only": timing, "gate": gate,
+               "layers_requested": args.layers or "all",
+               "all_layers_evaluated": all_layers,
                "per_layer": {str(l): results[l] for l in order},
                "environment": environment()}
     write_json_atomic(os.path.join(out_dir, f"{cond}.json"), payload)
@@ -571,6 +597,11 @@ def main():
     p.add_argument("--vt", default="0.95")
     p.add_argument("--n_permutations", type=int, default=1000)
     p.add_argument("--n_jobs", type=int, default=1)
+    p.add_argument("--layers", default=None,
+                   help="friends only: comma list of layers or 'best' (published best layer "
+                        "at the best lag), e.g. 'best,0'; default all layers. Existing "
+                        "per-layer partials are kept; BH across layers is skipped unless "
+                        "every layer is present")
     p.add_argument("--out_root", required=True,
                    help="side root; must not be $SCRATCH_DIR/output")
     a = p.parse_args()
@@ -585,6 +616,8 @@ def main():
     else:
         if a.stimulus is None:
             raise SystemExit("--stimulus is required for --part transfer")
+        if a.layers is not None:
+            raise SystemExit("--layers applies to --part friends only")
         sub = f"{a.stimulus}_{a.model}"
     out_dir = os.path.join(a.out_root, "08h_decoding_controls", parc, a.sub_id, sub)
     os.makedirs(out_dir, exist_ok=True)

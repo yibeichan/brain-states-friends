@@ -29,6 +29,7 @@ ARGS=(--part "$PART" --sub_id "$SUB" --model "$MODEL" --out_root "$OUT_ROOT"
       --n_permutations "$N_PERMS" --n_jobs "$N_JOBS")
 if [ "$PART" = "friends" ]; then
     ARGS+=(--condition "${COND:?COND required for PART=friends}")
+    [ -n "${LAYERS:-}" ] && ARGS+=(--layers "$LAYERS")
 else
     ARGS+=(--stimulus "${STIM:?STIM required for PART=transfer}")
 fi
