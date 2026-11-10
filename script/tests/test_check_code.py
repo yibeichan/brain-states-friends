@@ -212,6 +212,7 @@ def test_floor_and_pins_are_read_from_main_not_the_running_checkout(repo):
     _git(r, "checkout", "-q", "main")
     (r / "script" / "utils").mkdir(parents=True)
     (r / "script" / "utils" / "code_floor.txt").write_text(f"{s['fix']} 05f the fix\n")
+    (r / "script" / "utils" / "datalad_save.sh").write_text('    ["05f"]="05f_state_fc"\n')
     (r / "script" / "utils" / "common.py").write_text('DUPLICATE_RUN_SESSIONS = {("sub-06", "s02e04b"): "ses-006"}\n')
     _git(r, "add", "script")
     _git(r, "commit", "-q", "-m", "floor line")
@@ -459,3 +460,17 @@ def test_dirty_checkout_names_the_cause(repo):
     (r / "base.txt").write_text("edited")
     why = check_code.checkout_dirt(r)
     assert why[0].startswith("modified tracked files (1") and len(why) == 2
+
+
+def test_missing_stage_map_on_main_fails_closed_and_says_why(repo):
+    r, s, _ = repo
+    _git(r, "checkout", "-q", "main")
+    (r / "script" / "utils").mkdir(parents=True)
+    (r / "script" / "utils" / "code_floor.txt").write_text(f"{s['fix']} 06b a fix\n")   # no datalad_save.sh
+    _git(r, "add", "script")
+    _git(r, "commit", "-q", "-m", "floor without STAGE_MAP")
+    _git(r, "update-ref", "refs/remotes/origin/main", _git(r, "rev-parse", "HEAD"))
+    with pytest.raises(RuntimeError, match=r"cannot read STAGE_MAP from origin/main:script/utils/datalad_save.sh"):
+        check_code.load_floor(repo=r)
+    problems = check_code.check_commit(s["after"], "06b", repo=r)
+    assert problems and problems[0].startswith("cannot read STAGE_MAP from origin/main")

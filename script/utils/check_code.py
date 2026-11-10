@@ -69,10 +69,14 @@ def known_stages(repo=None, main_ref=None):
     With ``main_ref``, the keys come from that ref's datalad_save.sh, the same
     ref the floor is read from, so a stage key added on main is known even to
     an older checkout. Without it, from the datalad_save.sh beside this file.
+    Raises RuntimeError when the ref's datalad_save.sh cannot be read, so the
+    check fails closed and says why.
     """
     if main_ref is not None:
-        rc, text, _ = _git(repo or REPO_DIR, "show", f"{main_ref}:{SAVE_SH_REL}")
-        keys = _stage_map_keys(text) if rc == 0 else set()
+        rc, text, err = _git(repo or REPO_DIR, "show", f"{main_ref}:{SAVE_SH_REL}")
+        if rc != 0:
+            raise RuntimeError(f"cannot read STAGE_MAP from {main_ref}:{SAVE_SH_REL}: {err or rc}")
+        keys = _stage_map_keys(text)
     else:
         sh = Path(__file__).resolve().with_name("datalad_save.sh")
         keys = _stage_map_keys(sh.read_text()) if sh.exists() else set()
