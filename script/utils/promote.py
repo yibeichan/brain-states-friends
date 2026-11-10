@@ -478,7 +478,7 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
     plan = Plan()
     rep = plan.report
     if not side_out.is_dir():
-        rep.fail(f"no output/ under side root {side_root}")
+        rep.fail(side_root_problem(side_root))
         return plan
 
     # dataset must be clean so its working tree is its HEAD
@@ -884,6 +884,21 @@ def save_targets(rels, limit):
     return [d for d in out if not any(o != d and (o == "." or d.startswith(o.rstrip("/") + "/")) for o in out)]
 
 
+def side_root_problem(side_root):
+    """Why ``side_root`` is not a usable run root, or None.
+
+    The side root is the rerun's root directory, the one that holds ``output/``
+    (and receives ``promote/`` plans and logs), not ``output/`` itself.
+    """
+    side = Path(side_root)
+    if (side / "output").is_dir():
+        return None
+    msg = f"no output/ under side root {side}"
+    if side.name == "output":
+        msg += f"; pass the run root that contains it ({side.parent}), not output/ itself"
+    return msg
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--side-root", required=True, help="directory holding the rerun's output/")
@@ -897,6 +912,10 @@ def main(argv=None):
     ap.add_argument("--execute", action="store_true")
     a = ap.parse_args(argv)
 
+    problem = side_root_problem(a.side_root)
+    if problem:
+        print(f"ERROR: {problem}; nothing was written.")
+        return 2
     dataset = a.dataset or _dataset_from_env(a.repo)
     manifest = load_manifest(a.manifest)
     if not a.no_fetch:
