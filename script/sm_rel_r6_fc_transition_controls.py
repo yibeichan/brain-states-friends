@@ -22,8 +22,9 @@ Per participant:
    correlation of the two states' parcel-space activation maps. Partial
    correlation = Pearson between the residuals of the ranked transition and
    ranked FC vectors after regressing both on the ranked covariates. The null
-   permutes the state labels of the residualised FC matrix
-   (double semi-partialling, Dekker et al. 2007).
+   permutes the state labels of the residualised FC matrix and regresses the
+   covariates out of the permuted values again (double semi-partialling,
+   Dekker et al. 2007).
 
 Inputs (frozen, under $SCRATCH_DIR/output):
     06a_state_temp_dynamics/{parc}/{sub}/vt{vt}/transition_probabilities.npy
@@ -106,8 +107,10 @@ def mantel(T, F, covars, n_perm, seed):
     """(Partial) Mantel on the upper triangle; covars is a list of (n, n) matrices or [].
 
     Returns rho (Spearman when covars is empty, partial Spearman otherwise) and a
-    two-sided permutation p from permuting the state labels of the
-    residualised F matrix.
+    two-sided permutation p. The null is double semi-partialling (Dekker et al.
+    2007): the state labels of the residualised F matrix are permuted, and the
+    covariates are regressed out of the permuted values again before they are
+    correlated with the residualised T.
     """
     n = T.shape[0]
     triu = np.triu_indices(n, k=1)
@@ -119,11 +122,19 @@ def mantel(T, F, covars, n_perm, seed):
     RF[triu] = rf
     RF = RF + RF.T
     obs = float(np.corrcoef(rt, rf)[0, 1])
+    # Orthonormal basis of the ranked design [1, rank(X)] for re-residualising.
+    Q = None
+    if X is not None:
+        RX = np.column_stack([np.ones(len(t))] + [sp_stats.rankdata(c) for c in X.T])
+        Q, _ = np.linalg.qr(RX)
     rng = np.random.default_rng(seed)
     null = np.empty(n_perm)
     for i in range(n_perm):
         perm = rng.permutation(n)
-        null[i] = np.corrcoef(rt, RF[np.ix_(perm, perm)][triu])[0, 1]
+        x = RF[np.ix_(perm, perm)][triu]
+        if Q is not None:
+            x = x - Q @ (Q.T @ x)
+        null[i] = np.corrcoef(rt, x)[0, 1]
     p = (1 + np.sum(np.abs(null) >= abs(obs))) / (1 + n_perm)
     return {"rho": obs, "p_value": float(p), "n_pairs": int(len(t)), "n_perm": n_perm,
             "null_median": float(np.median(null)), "null_q975": float(np.quantile(null, 0.975))}
