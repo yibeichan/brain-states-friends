@@ -819,3 +819,16 @@ def test_execute_waits_for_nobody_and_says_who_may_hold_the_lock(setup, tmp_path
         assert np.all(np.load(ds / RV) == 2.0)
     finally:
         held.close()
+
+
+def test_side_root_pointing_at_output_is_refused_without_writing(tmp_path, capsys):
+    run = tmp_path / "rerun"
+    (run / "output").mkdir(parents=True)
+    m = tmp_path / "m.toml"
+    m.write_text(f'message = "x"\ncode_commit = "{MAIN}"\nchange = ["05f_state_fc/x"]\n')
+    rc = promote.main(["--side-root", str(run / "output"), "--manifest", str(m),
+                       "--dataset", str(tmp_path), "--repo", str(REPO_DIR), "--no-fetch"])
+    out = capsys.readouterr().out
+    assert rc == 2 and "pass the run root that contains it" in out and str(run) in out
+    assert not (run / "output" / "promote").exists()
+    assert promote.side_root_problem(run) is None
