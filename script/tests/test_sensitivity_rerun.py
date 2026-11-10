@@ -1,0 +1,295 @@
+"""Unit tests for the hyperparameter-sensitivity rerun helpers.
+
+Claims tested: (a) the seed rule picks the best validation LL among successful
+seeds, and refuses ties, a disagreeing config_summary, and all-failed configs;
+(b) resolves_inside follows symlinks, including for paths that do not exist
+yet; (c) the side-root layout links only read stages, makes regenerated
+stages real directories, aliases vt0.9 <-> vt0.90 for 05e_a4 in the right
+direction, and its check fails when a regenerated stage is a link into the
+published tree. All on synthetic data in tmp_path.
+"""
+import importlib
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+m04s = importlib.import_module("04s_sweep_config_final")
+side = importlib.import_module("sens_side_root")
+
+
+def _summary(vals, best_by_valid, status=None):
+    status = status or ["success"] * len(vals)
+    return {"config_name": "cfg", "best_seed_by_valid": best_by_valid,
+            "seed_results": [{"seed": i, "status": s, "valid_ll_per_sample": v}
+                             for i, (v, s) in enumerate(zip(vals, status))]}
+
+
+def test_choose_seed_best_valid():
+    seed, res = m04s.choose_seed(_summary([-3.0, -1.0, -2.0], 1))
+    assert seed == 1 and res["valid_ll_per_sample"] == -1.0
+
+
+def test_choose_seed_skips_failed():
+    s = _summary([-3.0, None, -2.0], 2, ["success", "failed", "success"])
+    assert m04s.choose_seed(s)[0] == 2
+
+
+def test_choose_seed_failed_seed_with_value_is_ignored():
+    s = _summary([-3.0, -1.0, -2.0], 2, ["success", "failed", "success"])
+    assert m04s.choose_seed(s)[0] == 2
+
+
+def test_choose_seed_rejects_mismatch():
+    with pytest.raises(ValueError, match="best_seed_by_valid"):
+        m04s.choose_seed(_summary([-3.0, -1.0, -2.0], 0))
+
+
+def test_choose_seed_rejects_tie():
+    with pytest.raises(ValueError, match="tied"):
+        m04s.choose_seed(_summary([-1.0, -1.0], 0))
+
+
+def test_choose_seed_rejects_all_failed():
+    with pytest.raises(ValueError, match="no successful"):
+        m04s.choose_seed(_summary([None], 0, ["failed"]))
+
+
+def test_resolves_inside_follows_links(tmp_path):
+    prot = tmp_path / "published"
+    (prot / "stage").mkdir(parents=True)
+    side_out = tmp_path / "side"
+    side_out.mkdir()
+    os.symlink(prot / "stage", side_out / "stage")
+    assert m04s.resolves_inside(side_out / "stage" / "new" / "dir", prot)
+    assert not m04s.resolves_inside(side_out / "real" / "new", prot)
+    assert m04s.resolves_inside(prot, prot)
+    assert not m04s.resolves_inside(tmp_path / "published2" / "x", prot)
+
+
+def _published(tmp_path):
+    pub = tmp_path / "pub" / "output"
+    for st in side.LINKED + ("m10_03_projected",):
+        (pub / st).mkdir(parents=True)
+    return pub
+
+
+def test_setup_layout_vt095(tmp_path):
+    pub = _published(tmp_path)
+    side.setup(str(tmp_path / "root"), "cfg", "0.95", ["sub-01"], str(pub),
+               link_m10_03=True, published_final=False)
+    out = tmp_path / "root" / "cfg" / "output"
+    for st in side.LINKED + ("m10_03_projected",):
+        assert (out / st).is_symlink()
+    for st in side.REGEN:
+        assert (out / st).is_dir() and not (out / st).is_symlink()
+    assert (out / "04_combined_hdphmm" / side.PARC / "sub-01" / "final" / "vt0.95").is_dir()
+    assert not (out / "05a_recurrence_analysis" / side.PARC / "sub-01" / "vt0.9").exists()
+
+
+def test_setup_alias_vt090(tmp_path):
+    pub = _published(tmp_path)
+    side.setup(str(tmp_path / "root"), "cfg", "0.90", ["sub-01"], str(pub),
+               link_m10_03=False, published_final=False)
+    out = tmp_path / "root" / "cfg" / "output"
+    assert (out / "m10_03_projected").is_dir() and not (out / "m10_03_projected").is_symlink()
+    rec = out / "05a_recurrence_analysis" / side.PARC / "sub-01"
+    assert (rec / "vt0.90").is_dir() and not (rec / "vt0.90").is_symlink()
+    assert (rec / "vt0.9").is_symlink() and os.readlink(rec / "vt0.9") == "vt0.90"
+    fin = out / "04_combined_hdphmm" / side.PARC / "sub-01" / "final"
+    assert os.readlink(fin / "vt0.9") == "vt0.90"
+    a4 = out / "05e_temporal_trend_a4" / side.PARC / "sub-01"
+    assert (a4 / "vt0.9").is_dir() and not (a4 / "vt0.9").is_symlink()
+    assert os.readlink(a4 / "vt0.90") == "vt0.9"
+    # a file written by a4 under vt0.9 is visible to readers of vt0.90
+    (a4 / "vt0.9" / "state_flags.csv").write_text("x")
+    assert (a4 / "vt0.90" / "state_flags.csv").read_text() == "x"
+    # rerunning setup is idempotent
+    side.setup(str(tmp_path / "root"), "cfg", "0.90", ["sub-01"], str(pub),
+               link_m10_03=False, published_final=False)
+
+
+def test_check_fails_on_link_into_dataset(tmp_path):
+    pub = _published(tmp_path)
+    (pub / "05a_recurrence_analysis").mkdir()
+    out = tmp_path / "root" / "cfg" / "output"
+    out.mkdir(parents=True)
+    os.symlink(pub / "05a_recurrence_analysis", out / "05a_recurrence_analysis")
+    with pytest.raises(SystemExit, match="resolve into the dataset"):
+        side.check(str(tmp_path / "root"), "cfg", "0.95", ["sub-01"], str(pub), True)
+
+
+def test_published_final_links(tmp_path):
+    pub = _published(tmp_path)
+    fin = pub / "04_combined_hdphmm" / side.PARC / "sub-01" / "final" / "vt0.95"
+    fin.mkdir(parents=True)
+    for fn in side.FINAL_FILES:
+        (fin / fn).write_text(fn)
+    side.setup(str(tmp_path / "root"), "gate", "0.95", ["sub-01"], str(pub),
+               link_m10_03=True, published_final=True)
+    dst = tmp_path / "root" / "gate" / "output" / "04_combined_hdphmm" / side.PARC / \
+        "sub-01" / "final" / "vt0.95"
+    assert not dst.is_symlink()
+    for fn in side.FINAL_FILES:
+        assert (dst / fn).is_symlink() and (dst / fn).read_text() == fn
+
+
+def test_state_covars_for_save():
+    import numpy as np
+    d = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    full = np.stack([np.diag(r) for r in d])
+    assert np.array_equal(m04s.state_covars_for_save(full, "diag"), d)
+    assert m04s.state_covars_for_save(d, "diag") is not None
+    assert np.array_equal(m04s.state_covars_for_save(d, "diag"), d)
+    assert m04s.state_covars_for_save(full, "full").shape == (2, 3, 3)
+    bad = full.copy()
+    bad[0, 0, 1] = 1e-12
+    with pytest.raises(ValueError, match="off-diagonal"):
+        m04s.state_covars_for_save(bad, "diag")
+
+
+# ---------------------------------------------------------------- sens_collect: R5 rows, SI table
+
+collect = importlib.import_module("sens_collect")
+
+
+def _r5(tmp_path, rho=0.5, n_draws=10000, n_finite=10000, stimulus="movie10", old=False):
+    import json
+    import numpy as np
+    s = {"observed": {"rho": rho}, "delta_rho": 0.1, "p_empirical": 1 / 10001,
+         "null": {"n_draws": n_draws, "mean": rho - 0.1}}
+    if not old:
+        s["stimulus"] = stimulus
+        s["null"]["n_finite"] = n_finite
+    else:
+        draws = np.zeros(n_draws)
+        draws[: n_draws - n_finite] = np.nan
+        np.save(tmp_path / "null_draws.npy", draws)
+    path = tmp_path / "r5_phase_null_summary.json"
+    path.write_text(json.dumps(s))
+    return str(path)
+
+
+def test_r5_measures_reads_null_and_delta(tmp_path):
+    m = collect.r5_measures(_r5(tmp_path), 0.5)
+    assert m == {"m10_null_mean": 0.4, "m10_delta_rho": 0.1, "m10_delta_p": 1 / 10001}
+
+
+@pytest.mark.parametrize("kw,m10_rho,match", [
+    ({"stimulus": "harrypotter"}, 0.5, "expected movie10"),
+    ({"n_finite": 9999}, 0.5, "9999 finite"),
+    ({"n_draws": 1000, "n_finite": 1000}, 0.5, "expected 10000"),
+    ({}, 0.5 + 1e-9, "not the m10_05 rho"),
+])
+def test_r5_measures_refuses(tmp_path, kw, m10_rho, match):
+    with pytest.raises(ValueError, match=match):
+        collect.r5_measures(_r5(tmp_path, **kw), m10_rho)
+
+
+def test_r5_measures_older_schema_counts_draws(tmp_path):
+    assert collect.r5_measures(_r5(tmp_path, old=True), 0.5)["m10_delta_rho"] == 0.1
+    with pytest.raises(ValueError, match="9998 finite"):
+        collect.r5_measures(_r5(tmp_path, old=True, n_finite=9998), 0.5)
+
+
+def _tsv(tmp_path, p_mfpt=1 / 5001, missing=False):
+    import pandas as pd
+    vals = {"n_active_states_05a": 46, "cat_eligible_for_content_analysis": 31,
+            "q_excess_N2": 0.2, "p_N2": 1 / 1001, "q_excess_N3": 0.3, "p_N3": 1 / 501,
+            "fc_transition_rho": 0.4, "fc_transition_p": 1 / 5001, "mfpt_fc_rho": 0.5,
+            "mfpt_fc_p": p_mfpt, "m10_rho": 0.6, "m10_delta_rho": 0.1,
+            "m10_delta_p": 1 / 10001}
+    rows = [(c, s, k, v, (v + 1 if k == "n_active_states_05a" else v))
+            for c in collect.ROW_LABELS for s in collect.SUBS for k, v in vals.items()]
+    df = pd.DataFrame(rows, columns=["config", "participant", "measure", "value",
+                                     "published_value"])
+    if missing:
+        df["value"] = df["value"].astype(object)
+        df.loc[0, "value"] = "NA"
+    path = tmp_path / "t.tsv"
+    df.to_csv(path, sep="\t", index=False)
+    return str(path)
+
+
+def test_sitable_prints_p_only_above_the_floor(tmp_path):
+    out = collect.sitable(_tsv(tmp_path))
+    assert "p =" not in out                      # every p at its floor
+    assert "| Published (final model) | 47 / 31 |" in out  # published_value column
+    assert "| Baseline (95%, K<sub>max</sub> 50, γ 1) | 46 / 31 |" in out
+    assert "| 0.400 / 0.500 |" in out
+    out = collect.sitable(_tsv(tmp_path, p_mfpt=0.0569))
+    assert "0.400 / 0.500 (p = 0.057)" in out
+
+
+def test_sitable_refuses_missing_cells(tmp_path):
+    with pytest.raises(ValueError, match="NA values"):
+        collect.sitable(_tsv(tmp_path, missing=True))
+
+
+def test_p_floors_match_the_permutation_counts():
+    assert collect.P_FLOORS == {"p_N2": 1 / 1001, "p_N3": 1 / 501, "fc_transition_p": 1 / 5001,
+                                "mfpt_fc_p": 1 / 5001, "m10_delta_p": 1 / 10001}
+
+
+@pytest.mark.parametrize("p,shown", [(2 / 5001, "(p = 0.00040)"), (0.0012, "(p = 0.0012)"),
+                                     (0.18908, "(p = 0.19)"), (0.00599, "(p = 0.0060)")])
+def test_sitable_shows_p_just_above_the_floor(tmp_path, p, shown):
+    assert "0.400 / 0.500 " + shown in collect.sitable(_tsv(tmp_path, p_mfpt=p))
+
+
+def test_r5_measures_refuses_nan_rho(tmp_path):
+    with pytest.raises(ValueError, match="not the m10_05 rho"):
+        collect.r5_measures(_r5(tmp_path), float("nan"))
+
+
+def test_mkdir_real_refuses_before_creating(tmp_path):
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    with pytest.raises(RuntimeError, match="resolves into the dataset"):
+        side._mkdir_real(str(pub / "stage" / "sub-01"), str(pub))
+    assert not (pub / "stage").exists()
+
+
+def test_setup_refuses_an_output_root_inside_the_dataset(tmp_path):
+    pub = _published(tmp_path)
+    with pytest.raises(RuntimeError, match="resolves into the dataset"):
+        side.setup(str(pub / "root"), "cfg", "0.95", ["sub-01"], str(pub),
+                   link_m10_03=True, published_final=False)
+    assert not (pub / "root").exists()
+
+
+def test_04s_refuses_outputs_that_are_links_or_inside_protect(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    (prot / "final_results.json").write_text("{}")
+    fin = tmp_path / "side" / "final"
+    fin.mkdir(parents=True)
+    m04s.check_outputs_writable(str(fin), str(prot))          # plain directory: fine
+    os.symlink(prot / "final_results.json", fin / "final_results.json")
+    with pytest.raises(RuntimeError, match="symlink"):
+        m04s.check_outputs_writable(str(fin), str(prot))
+    with pytest.raises(RuntimeError, match="symlink"):         # refused without protect too
+        m04s.check_outputs_writable(str(fin))
+    assert set(m04s.FINAL_OUTPUTS) >= {"final_results.json", "pca_model.pkl", "state_covars.npy"}
+
+
+def test_build_final_checks_before_anything_else(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    with pytest.raises(RuntimeError, match="resolves inside"):
+        m04s.build_final(None, None, "cfg", "sub-01", "parc", str(tmp_path / "nowhere"),
+                         str(prot / "final"), {}, protect=str(prot))
+
+
+def test_04s_refuses_a_hard_linked_output(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    (prot / "final_results.json").write_text("{}")
+    fin = tmp_path / "side" / "final"
+    fin.mkdir(parents=True)
+    os.link(prot / "final_results.json", fin / "final_results.json")
+    with pytest.raises(RuntimeError, match="hard links"):
+        m04s.check_outputs_writable(str(fin), str(prot))

@@ -283,6 +283,7 @@ Supplementary tables are numbered separately from supplementary figures.
 | S7 | fMRIPrep release and slice-timing correction of the analysed Friends runs, per participant and season, and state-occupancy contrasts within the seasons that mixed preprocessing | `script/preproc_by_season.py` | main |
 | S8 | Association between within-state FC similarity and transitions after removing the FC shared by all states, and after controlling for state TR counts and activation-map similarity, per participant | [sm_rel_r6_fc_transition_controls.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r6_fc_transition_controls.md) | supplements |
 | S9 | Agreement between each held-out season's transition modules and the main partition, per participant and fold | [sm_rel_r7_loso_module_agreement.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r7_loso_module_agreement.md) | supplements |
+| S10 | Structure results at five other hyperparameter settings (number of states the model may use, top-level concentration, PCA variance), per participant: active and content-eligible states, transition-module Q excess, FC–transition and MFPT–FC ρ, and the Movie10 Δρ | `script/sens_collect.py` | main |
 
 ### Table S1 — Random-direction null for the network-spread index
 
@@ -515,3 +516,63 @@ Adjusted Rand index (ARI) between the transition modules of each held-out season
 Every fold agreed with the main partition above the permutation null (33 of 34 folds at p = 0.0001; sub-02 S1 p = 0.0008), but no fold reproduced it. The main partition comes from the final model, fitted on all seasons (six; four for sub-04), so each held-out season is part of the data the main partition was estimated from; this measures how well one season's transitions recover the main modules, not replication on independent data.
 
 **Provenance.** `script/sm_rel_r7_loso_module_agreement.py` on the orphan `supplements` branch; values from `sm_rel_r7_loso_module_agreement/atlas-4S156Parcels/<sub>/vt0.95/loso_module_agreement_summary.json` (inputs: `06e` `partitions.json` and the LOSO2 and LOSO_ `observed.json` per held-out season, and `04ra` `hungarian_matching.json`).
+
+### Table S10 — Sensitivity of the structure results to the model's hyperparameters
+
+The structure results recomputed at five other hyperparameter settings, each changing one setting of the production configuration: the number of states the model may use (K<sub>max</sub> 40 and 80, against 50), the top-level concentration γ (5, against 1), and the share of variance the PCA keeps (90% and 99%, against 95%; 37–47 and 121–124 components). The stickiness κ stays at 10 and α at 1 throughout. Each configuration reuses the fit saved by the model-selection sweep: per participant, the seed with the best validation log-likelihood of five, fitted on the training episodes alone (70%). The baseline row is the production configuration's own sweep fit. The final model was instead refitted on the training and validation episodes (85%) with ten seeds, and 24 of the 36 sweep fits, the baseline's included, stopped before converging, so each configuration is to be compared with the baseline row; the published row is the final model, for reference. Every downstream stage was rerun on each fit with the production code and settings.
+
+Active states have recurrence above zero; content-eligible states are those in the eligible-for-content-analysis category of the state classification (`05e_a4`). Q excess is the observed directed modularity of the transition graph minus the null mean, computed separately for the N2 null (1,000 draws) and the N3 null (500 draws). FC–transition and MFPT–FC ρ are Mantel correlations with 5,000 state-label permutations. Movie10 Δρ is the observed recurrence–occupancy ρ minus the mean of 10,000 phase-randomized surrogates, as in Table S2. p values are one-sided for Q excess and Δρ and two-sided for the Mantel tests, uncorrected, and shown only where they exceed the permutation floor (0.001 for N2, 0.002 for N3, 0.0002 for the Mantel tests, 0.0001 for Δρ); a p follows the value it belongs to.
+
+**A. Active states / content-eligible states**
+
+| Configuration | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Published (final model) | 46 / 31 | 46 / 30 | 44 / 26 | 44 / 27 | 47 / 29 | 42 / 15 |
+| Baseline (95%, K<sub>max</sub> 50, γ 1) | 46 / 31 | 46 / 29 | 46 / 28 | 42 / 24 | 47 / 30 | 44 / 17 |
+| K<sub>max</sub> 40 | 37 / 26 | 37 / 28 | 40 / 26 | 40 / 24 | 40 / 26 | 39 / 20 |
+| K<sub>max</sub> 80 | 46 / 30 | 42 / 27 | 41 / 26 | 42 / 26 | 42 / 31 | 46 / 16 |
+| γ 5 | 48 / 35 | 50 / 32 | 49 / 27 | 50 / 30 | 50 / 33 | 49 / 16 |
+| 90% variance | 46 / 35 | 45 / 31 | 45 / 26 | 45 / 28 | 46 / 32 | 46 / 18 |
+| 99% variance | 47 / 27 | 45 / 25 | 46 / 28 | 40 / 23 | 46 / 25 | 43 / 13 |
+
+**B. Transition-module Q in excess of the N2 / N3 nulls**
+
+| Configuration | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Published (final model) | 0.242 / 0.307 | 0.209 / 0.260 | 0.267 / 0.281 | 0.262 / 0.275 | 0.294 / 0.344 | 0.382 / 0.413 |
+| Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.089 / 0.229 | 0.292 / 0.324 | 0.214 / 0.237 | 0.265 / 0.306 | 0.257 / 0.285 (p = 0.0040) | 0.351 / 0.330 |
+| K<sub>max</sub> 40 | 0.185 / 0.226 (p = 0.0060) | 0.160 / 0.224 | 0.268 / 0.282 | 0.271 / 0.327 | 0.296 / 0.373 | 0.327 / 0.283 |
+| K<sub>max</sub> 80 | 0.195 / 0.219 | 0.318 / 0.350 | 0.289 / 0.250 | 0.264 / 0.314 | 0.290 / 0.330 | 0.374 / 0.414 |
+| γ 5 | 0.170 / 0.223 | 0.327 / 0.354 | 0.250 / 0.219 | 0.253 / 0.332 | 0.343 / 0.381 | 0.406 / 0.392 |
+| 90% variance | 0.134 / 0.187 | 0.258 / 0.276 | 0.204 / 0.248 | 0.258 / 0.296 | 0.239 / 0.294 | 0.333 / 0.356 |
+| 99% variance | 0.175 / 0.220 (p = 0.0060) | 0.153 / 0.291 | 0.283 / 0.258 | 0.278 / 0.290 | 0.237 / 0.251 (p = 0.0040) | 0.341 / 0.355 |
+
+**C. FC–transition ρ / MFPT–FC ρ**
+
+| Configuration | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Published (final model) | 0.417 / 0.588 | 0.483 / 0.582 | 0.326 / 0.622 | 0.551 / 0.680 | 0.393 / 0.405 (p = 0.0012) | 0.437 / 0.431 |
+| Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.412 / 0.604 | 0.459 / 0.534 | 0.308 / 0.625 | 0.566 / 0.599 | 0.377 / 0.281 (p = 0.017) | 0.435 / 0.516 |
+| K<sub>max</sub> 40 | 0.367 / 0.543 | 0.424 / 0.314 (p = 0.014) | 0.351 / 0.724 | 0.577 / 0.582 | 0.382 / 0.240 (p = 0.069) | 0.461 / 0.528 |
+| K<sub>max</sub> 80 | 0.543 / 0.762 | 0.480 / 0.603 | 0.292 / 0.589 | 0.510 / 0.668 | 0.350 / 0.230 (p = 0.057) | 0.422 / 0.380 (p = 0.00060) |
+| γ 5 | 0.432 / 0.679 | 0.425 / 0.561 | 0.306 / 0.595 | 0.494 / 0.567 | 0.311 / 0.277 (p = 0.014) | 0.364 / 0.399 (p = 0.00040) |
+| 90% variance | 0.391 / 0.684 | 0.314 / 0.326 (p = 0.0054) | 0.329 / 0.705 | 0.520 / 0.588 | 0.307 / 0.207 (p = 0.096) | 0.380 / 0.373 (p = 0.0010) |
+| 99% variance | 0.415 / 0.634 | 0.559 / 0.670 | 0.351 / 0.657 | 0.551 / 0.580 | 0.404 / 0.417 (p = 0.0024) | 0.411 / 0.530 |
+
+**D. Movie10 recurrence–occupancy ρ: observed / Δρ**
+
+| Configuration | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
+|---|---|---|---|---|---|---|
+| Published (final model) | 0.549 / 0.098 | 0.264 / 0.127 | 0.518 / 0.224 | 0.753 / 0.069 | 0.610 / 0.212 | 0.773 / 0.114 |
+| Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.511 / 0.108 | 0.461 / 0.219 | 0.708 / 0.175 | 0.857 / 0.031 (p = 0.0011) | 0.566 / 0.264 | 0.838 / 0.139 |
+| K<sub>max</sub> 40 | 0.524 / 0.195 | 0.283 / 0.241 | 0.430 / 0.147 | 0.772 / 0.011 (p = 0.19) | 0.495 / 0.212 | 0.800 / 0.170 |
+| K<sub>max</sub> 80 | 0.689 / 0.069 | 0.416 / 0.226 | 0.532 / 0.139 | 0.713 / 0.051 | 0.425 / 0.254 | 0.662 / 0.219 |
+| γ 5 | 0.405 / 0.140 | 0.246 / 0.260 | 0.398 / 0.124 | 0.723 / 0.024 (p = 0.0074) | 0.507 / 0.274 | 0.728 / 0.188 |
+| 90% variance | 0.436 / 0.096 | 0.441 / 0.214 | 0.577 / 0.178 | 0.709 / 0.031 (p = 0.0089) | 0.373 / 0.217 | 0.708 / 0.210 |
+| 99% variance | 0.514 / 0.122 | 0.450 / 0.120 | 0.675 / 0.136 | 0.861 / 0.044 | 0.758 / 0.198 | 0.838 / 0.127 |
+
+Across the 36 sweep fits, 37–50 states were active (42–47 in the final models); at K<sub>max</sub> 40, 37–40 of the 40 states were. Transition modularity exceeded both nulls in every fit (p ≤ 0.006), and FC similarity was associated with transitions in every fit (ρ 0.29–0.58, p = 0.0002). MFPT–FC ρ was 0.21–0.76 and p < 0.05 in 33 of 36 fits; the three exceptions are sub-05, the participant with the lowest published value, at K<sub>max</sub> 40, K<sub>max</sub> 80 and 90% variance (p 0.057–0.096). Movie10 Δρ was positive in all 36 fits and p ≤ 0.009 in 35; the exception is sub-04 at K<sub>max</sub> 40 (Δρ 0.011, p = 0.19). sub-04 has the smallest Δρ in every row, published included: the surrogate mean is 91–99% of its observed ρ.
+
+The K<sub>max</sub> 40 and 80 fits come from the NumPy implementation of the model, and these 12 fits converged; the fits of the other configurations, and every final model, come from the JAX implementation. Both implementations estimate diagonal state covariances.
+
+**Provenance.** Fits: `04_combined_hdphmm/atlas-4S156Parcels/<sub>/configs/<config>/seed_<k>_model.pkl` from the model-selection sweep. `script/04s_sweep_config_final.py` builds each fit's `final/` outputs (state means, covariances and decoded states) as the production selection step does; `script/sens_side_root.py` sets up one output root per configuration, with the unchanged inputs linked, and `script/sens_chain.sh` reruns `05a`, `05e_a1`–`a4`, `05f`, `06a`, `06b`, the `06e` N2 and N3 nulls (through `script/sens_06e_q_excess.py`, which calls `06e`'s own functions with its seeds) and `m10_03`–`m10_05`. Δρ: `script/sm_rel_r5_phase_null.py` on the orphan `supplements` branch, run per fit with `--out_dir`; the `final/` pickles `04s` writes for the NumPy fits name `utils.hdphmm.WeakLimitHMM`, the current name of the class the `supplements` branch calls `StickyHDPHMM`. `script/sens_collect.py table` gathers every measure into one long table, checking that each Δρ summary's observed ρ equals the `m10_05` ρ of the same fit, and `script/sens_collect.py sitable` prints the parts above from it. Before the configurations were run, the same chain was run on the published final models of sub-01 and sub-06 and reproduced every measure in parts A–C and the observed Movie10 ρ; the Δρ step reproduced the published Δρ of sub-01. For the NumPy fits, the Δρ step ran through a wrapper that makes the class name available before running the script; the `supplements` branch now provides the name itself.
