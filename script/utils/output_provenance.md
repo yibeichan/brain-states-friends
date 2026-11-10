@@ -72,6 +72,8 @@ python script/utils/promote.py --side-root "$SIDE" --manifest promote.toml      
 python script/utils/promote.py --side-root "$SIDE" --manifest promote.toml --execute
 ```
 
+`--side-root` is the rerun's root directory, the one that holds `output/` and receives the `promote/` plans and logs, not `output/` itself. A side root without `output/` is refused before anything is written.
+
 Example manifest:
 
 ```toml
