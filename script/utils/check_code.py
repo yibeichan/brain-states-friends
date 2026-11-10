@@ -55,11 +55,27 @@ FILES_04RC = frozenset({"state_empirical_corr.npy", "fc_metadata.json"})
 PROVENANCE_STAGES = frozenset(set(STAGE_TOPS.values()) | {"04rc"})
 
 
-def known_stages():
+SAVE_SH_REL = "script/utils/datalad_save.sh"
+
+
+def _stage_map_keys(text):
+    return set(re.findall(r'^\s*\["([^"]+)"\]=', text, re.M))
+
+
+def known_stages(repo=None, main_ref=None):
     """Stage keys a floor line may name: datalad_save.sh's STAGE_MAP keys plus
-    the provenance stages (04rc has no STAGE_MAP key of its own)."""
-    sh = Path(__file__).resolve().with_name("datalad_save.sh")
-    keys = set(re.findall(r'^\s*\["([^"]+)"\]=', sh.read_text(), re.M)) if sh.exists() else set()
+    the provenance stages (04rc has no STAGE_MAP key of its own).
+
+    With ``main_ref``, the keys come from that ref's datalad_save.sh, the same
+    ref the floor is read from, so a stage key added on main is known even to
+    an older checkout. Without it, from the datalad_save.sh beside this file.
+    """
+    if main_ref is not None:
+        rc, text, _ = _git(repo or REPO_DIR, "show", f"{main_ref}:{SAVE_SH_REL}")
+        keys = _stage_map_keys(text) if rc == 0 else set()
+    else:
+        sh = Path(__file__).resolve().with_name("datalad_save.sh")
+        keys = _stage_map_keys(sh.read_text()) if sh.exists() else set()
     return frozenset(keys | PROVENANCE_STAGES)
 _MD5_KEY_RE = re.compile(r"^MD5E?-s(\d+)(?:-m\d+)?--([0-9a-f]{32})")
 
@@ -76,8 +92,10 @@ def _git(repo, *args, timeout=None):
 
 
 # ------------------------------------------------------------ floor and pins
-def parse_floor(text, origin="code_floor.txt"):
-    """List of (sha, stages, reason); stages is a frozenset, {'*'} for all."""
+def parse_floor(text, origin="code_floor.txt", known=None):
+    """List of (sha, stages, reason); stages is a frozenset, {'*'} for all.
+    ``known`` is the set of valid stage keys (default: known_stages())."""
+    known = known_stages() if known is None else known
     entries = []
     for n, line in enumerate(text.splitlines(), 1):
         line = line.strip()
@@ -87,7 +105,7 @@ def parse_floor(text, origin="code_floor.txt"):
         if len(parts) < 3 or len(parts[0]) != 40:
             raise ValueError(f"{origin}:{n}: expected '<40-char sha> <stages> <reason>'")
         stages = frozenset(parts[1].split(","))
-        unknown = sorted(stages - known_stages() - {"*"})
+        unknown = sorted(stages - known - {"*"})
         if unknown:
             raise ValueError(f"{origin}:{n}: unknown stage key(s) {unknown}; use keys from "
                              "datalad_save.sh STAGE_MAP, 04rc, or *")
@@ -102,7 +120,7 @@ def load_floor(path=None, repo=REPO_DIR, main_ref="origin/main"):
     rc, text, err = _git(repo, "show", f"{main_ref}:{FLOOR_REL}")
     if rc != 0:
         raise RuntimeError(f"cannot read {FLOOR_REL} from {main_ref}: {err or rc}")
-    return parse_floor(text, f"{main_ref}:{FLOOR_REL}")
+    return parse_floor(text, f"{main_ref}:{FLOOR_REL}", known=known_stages(repo, main_ref))
 
 
 def parse_pins(source):
@@ -304,28 +322,38 @@ def find_records(path):
     return sorted(path.rglob("provenance_*.json"))
 
 
-def code_is_clean(repo):
-    """No modified tracked files and no untracked .py under script/ (the same
-    rule provenance records apply to the code that ran)."""
+def checkout_dirt(repo):
+    """Why a checkout is not clean (empty list if it is): modified tracked files
+    or untracked .py under script/, the rule provenance records apply."""
     _, tracked, _ = _git(repo, "status", "--porcelain", "--untracked-files=no")
     _, untracked, _ = _git(repo, "ls-files", "--others", "--exclude-standard", "--", "script")
-    return not tracked and not any(f.endswith(".py") for f in untracked.splitlines())
+    why = []
+    if tracked:
+        why.append(f"modified tracked files ({len(tracked.splitlines())}, e.g. {tracked.splitlines()[0].strip()})")
+    py = [f for f in untracked.splitlines() if f.endswith(".py")]
+    if py:
+        why.append(f"untracked .py under script/ ({py[:3]})")
+    return why
+
+
+def code_is_clean(repo):
+    return not checkout_dirt(repo)
 
 
 def changed_files(path):
     """Files under ``path`` that a save would commit: new, modified or type-changed
-    per ``git status`` in the repository holding ``path`` (deletions excluded).
-    Returns (files, error)."""
+    per ``git status`` in the repository holding ``path``.
+    Returns (files, deleted files, error)."""
     path = Path(path)
     rc, root, err = _git(path if path.is_dir() else path.parent, "rev-parse", "--show-toplevel")
     if rc != 0:
-        return [], f"{path} is not inside a git repository ({err or rc})"
+        return [], [], f"{path} is not inside a git repository ({err or rc})"
     rel = os.path.relpath(path, root)
     p = subprocess.run(["git", "-C", root, "status", "--porcelain", "--untracked-files=all", "-z", "--", rel],
                        capture_output=True, text=True)
     if p.returncode != 0:
-        return [], f"git status failed under {path}: {p.stderr.strip()}"
-    out, tokens, i = [], p.stdout.split("\0"), 0
+        return [], [], f"git status failed under {path}: {p.stderr.strip()}"
+    out, deleted, tokens, i = [], [], p.stdout.split("\0"), 0
     while i < len(tokens):
         t = tokens[i]
         i += 1
@@ -335,9 +363,10 @@ def changed_files(path):
         if "R" in xy or "C" in xy:
             i += 1                                 # skip the rename source
         if "D" in xy:
+            deleted.append(Path(root) / name)
             continue
         out.append(Path(root) / name)
-    return sorted(out), None
+    return sorted(out), sorted(deleted), None
 
 
 def _files_under(path):
@@ -381,11 +410,20 @@ def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
     uncovered, weak = [], 0
     records = set()
     if changed_only:
-        files, err = changed_files(path)
+        files, deleted, err = changed_files(path)
         if err:
             return [err], notes
         records |= {f for f in files if f.name.startswith("provenance_") and f.name.endswith(".json")}
         files = [f for f in files if f not in records]
+        # deleting an output its record still lists would leave the record wrong
+        for f in deleted:
+            st = gated_stage(f)
+            rp = nearest_record(f, st) if st else None
+            if rp is not None:
+                rec, err = _load_record(rp)
+                if not err and os.path.relpath(f, rp.parent) in (rec.get("outputs") or {}):
+                    uncovered.append(f"{f}: deleted, but {rp.name} still lists it; rerun the stage "
+                                     "or remove its record too")
         notes.append(f"{len(files)} new or modified file(s) under {path} checked")
     else:
         files = _files_under(path)
@@ -419,8 +457,8 @@ def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
         if fallback_commit:
             problems += [f"save-time checkout: {p}" for p in
                          check_commit(fallback_commit, stage, repo=repo, main_ref=main_ref, floor=floor)]
-            if not code_is_clean(repo):
-                problems.append(f"save-time checkout {repo} has modified tracked files")
+            for why in checkout_dirt(repo):
+                problems.append(f"save-time checkout {repo} has {why}")
     if not records and not weak and not uncovered:
         if changed_only:
             notes.append(f"nothing new or modified under {path}")

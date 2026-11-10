@@ -3,7 +3,7 @@
 #SBATCH --partition=ou_bcs_normal,pi_satra
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --time=00:30:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=4G
 #SBATCH --cpus-per-task=1
 #SBATCH --mail-type=FAIL
@@ -234,6 +234,10 @@ if ! command -v git-annex &> /dev/null; then
     exit 1
 fi
 
+# One line in the commit message: a newline in the reason could forge a
+# "code_check: passed" line.
+SKIP_REASON="${SKIP_REASON//$'\n'/ }"
+SKIP_REASON="${SKIP_REASON//$'\r'/ }"
 case "${CHECK_CODE,,}" in
     1|true|yes|on) CHECK_CODE=1 ;;
     0|false|no|off) CHECK_CODE=0 ;;
@@ -245,7 +249,9 @@ cd "${OUTPUT_DIR}"
 # Wait for any promote.py run or other save on this dataset (they hold the same
 # lock), so the check sees exactly what the save will commit.
 exec 9>"$(git rev-parse --absolute-git-dir)/promote.lock"
-# Wait at most 20 minutes, inside the job's 30-minute limit.
+# Wait at most 20 minutes. The lock is then held through the code check (a fetch
+# of up to ~2 min with its retry, checksums of the changed files) and the save, so
+# the job's 60-minute limit leaves room for both.
 if ! flock -w 1200 9; then
     echo "ERROR: could not take $(git rev-parse --absolute-git-dir)/promote.lock within 20 minutes" \
          "(a promotion or another save holds it); rerun this save later"

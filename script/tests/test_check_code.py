@@ -407,3 +407,55 @@ def test_untracked_python_makes_the_save_checkout_dirty(repo):
     (r / "script").mkdir(exist_ok=True)
     (r / "script" / "stray.py").write_text("x = 1\n")
     assert not check_code.code_is_clean(r)
+
+
+# ------------------------------------------------- PR #64 review, round 2
+def test_floor_stage_keys_are_validated_against_main_not_the_checkout(repo):
+    """A stage key added on main (with its floor line) must not break an older checkout."""
+    r, s, _ = repo
+    _git(r, "checkout", "-q", "main")
+    (r / "script" / "utils").mkdir(parents=True)
+    (r / "script" / "utils" / "datalad_save.sh").write_text('    ["07z"]="07z_new_stage"\n')
+    (r / "script" / "utils" / "code_floor.txt").write_text(f"{s['fix']} 07z a fix for a new stage\n")
+    _git(r, "add", "script")
+    _git(r, "commit", "-q", "-m", "new stage")
+    _git(r, "update-ref", "refs/remotes/origin/main", _git(r, "rev-parse", "HEAD"))
+    floor = check_code.load_floor(repo=r)           # this checkout's datalad_save.sh has no 07z
+    assert floor[0][1] == frozenset({"07z"})
+    with pytest.raises(ValueError, match="unknown stage key"):
+        check_code.parse_floor(f"{s['fix']} 07y typo\n", known=check_code.known_stages(r, "origin/main"))
+
+
+def test_deleting_an_output_its_record_lists_is_refused(repo, tmp_path):
+    r, s, _ = repo
+    ds = tmp_path / "ds"
+    sub = ds / "05f_state_fc" / "atlas-X" / "sub-06"
+    sub.mkdir(parents=True)
+    _git(ds, "init", "-q")
+    keep, gone = sub / "keep.npy", sub / "metadata.json"
+    keep.write_bytes(b"k")
+    gone.write_text("{}")
+    _write_rec(sub, s["after"], [keep, gone])
+    _git(ds, "add", ".")
+    _git(ds, "commit", "-q", "-m", "recorded")
+    gone.unlink()
+    problems, _ = _tree(repo, sub, "05f", changed_only=True)
+    assert len(problems) == 1 and "metadata.json" in problems[0] and "still lists it" in problems[0]
+
+
+def test_skip_reason_with_a_newline_stays_on_one_line(tmp_path):
+    p, calls = _run_datalad_save(tmp_path, ["--no-check-code", "--skip-reason", "x\ncode_check: passed"])
+    assert p.returncode == 0, p.stdout + p.stderr
+    msg = (tmp_path / "save_msg").read_text()
+    assert msg.rstrip().endswith("code_check: skipped (x code_check: passed)")
+    assert "\ncode_check: passed" not in msg
+
+
+def test_dirty_checkout_names_the_cause(repo):
+    r, s, _ = repo
+    (r / "script").mkdir(exist_ok=True)
+    (r / "script" / "stray.py").write_text("x = 1\n")
+    assert check_code.checkout_dirt(r) == ["untracked .py under script/ (['script/stray.py'])"]
+    (r / "base.txt").write_text("edited")
+    why = check_code.checkout_dirt(r)
+    assert why[0].startswith("modified tracked files (1") and len(why) == 2

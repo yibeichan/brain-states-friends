@@ -55,6 +55,7 @@ The code check runs on every save. It takes the save lock first, so it sees exac
 - a record says the checkout was dirty;
 - a record read a duplicated run from a session other than the pinned one;
 - a new or modified output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
+- the save deletes an output that its record still lists.
 
 Files of stages that write no provenance get a weaker check, and the output says so (`WEAK CHECK`). The save-time checkout must pass the floor and be clean: no modified tracked files and no untracked `.py` under `script/`.
 
@@ -132,7 +133,7 @@ A record is promoted with every output it lists, and it lists every file the run
 `--execute` refuses to start when `origin/main` cannot be fetched. It then works under a lock (`.git/promote.lock`); if the dataset's HEAD moved after the checks ran, it stops without changing anything. Otherwise it does the following:
 - Reruns every check.
 - Copies each planned file through a temporary file whose md5 must equal the checksum taken when the file was checked; a file that changed since is not promoted.
-- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits up to 20 minutes for the same lock (within its 30-minute job limit) and releases it before pushing, so the two never commit at once.
+- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits up to 20 minutes for the same lock and holds it through its code check and save (its job limit is 60 minutes), releasing it before pushing, so the two never commit at once.
 - Verifies the result:
   - the promotion is one commit directly on the starting HEAD, and the paths it changes are exactly the planned ones;
   - every path is tracked and clean;
