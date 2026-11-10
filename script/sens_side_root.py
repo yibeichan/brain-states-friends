@@ -64,6 +64,8 @@ def float_vt_alias(vt):
 
 
 def _mkdir_real(path, published_out):
+    if os.path.islink(path) or inside(path, published_out):  # before creating anything
+        raise RuntimeError(f"{path} is a link or resolves into the dataset")
     os.makedirs(path, exist_ok=True)
     if os.path.islink(path) or inside(path, published_out):
         raise RuntimeError(f"{path} is a link or resolves into the dataset")
@@ -71,6 +73,8 @@ def _mkdir_real(path, published_out):
 
 def setup(root, name, vt, subs, published_out, link_m10_03, published_final):
     out = os.path.join(root, name, "output")
+    if inside(out, published_out):  # before creating anything
+        raise RuntimeError(f"{out} resolves into the dataset")
     os.makedirs(out, exist_ok=True)
     if inside(out, published_out):
         raise RuntimeError(f"{out} resolves into the dataset")

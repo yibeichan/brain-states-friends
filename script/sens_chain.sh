@@ -12,16 +12,18 @@
 #   SUB_ID   subject; or SUBS (space-separated) with SLURM_ARRAY_TASK_ID
 #   VT       variance threshold string ("0.95", "0.90", "0.99")
 #   CONFIG   sweep config name for stage 04s (unset: skip 04s)
-#   STAGES   space-separated subset/order (default: all of DEFAULT_STAGES)
+#   STAGES   space-separated subset/order (default: all of DEFAULT_STAGES). The 06e
+#            stages (06e_N2, 06e_N3, then 06e_sum) are not in the default and are run
+#            as separate jobs after it; sens_collect.py table needs all three.
 #   PUBLISHED_SCRATCH  published SCRATCH root (for 04s inputs and --protect;
 #            default: SCRATCH_DIR from .env)
-#   PYTHON   interpreter of the project environment (default: python on PATH)
+#   PYTHON   interpreter of the project environment (required)
 # A stage writes status/<sub>/<stage>.done on success and is skipped when the
 # marker exists, so a rerun resumes after the last finished stage.
 set -euo pipefail
 
 CODE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-PY="${PYTHON:-python}"
+PY="${PYTHON:?set PYTHON to the project environment's python}"
 PARC=atlas-4S156Parcels
 
 if [ -n "${SUBS:-}" ]; then
@@ -47,7 +49,6 @@ export MPLBACKEND=Agg
 DEFAULT_STAGES="04s 05a a1 a2 a3 a4 05f 06a 06b m10_03 m10_04 m10_05"
 STAGES="${STAGES:-$DEFAULT_STAGES}"
 STATUS="${SCRATCH_DIR}/status/${SUB_ID}"
-mkdir -p "${STATUS}"
 
 echo "code   $(git -C "${CODE_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
 echo "root   ${SCRATCH_DIR}  sub ${SUB_ID}  vt ${VT}  config ${CONFIG:-<none>}"
@@ -57,6 +58,7 @@ echo "stages ${STAGES}"
 "${PY}" "${CODE_DIR}/script/sens_side_root.py" check --root "${ROOT}" --name "${NAME}" \
     --vt "${VT}" --subs "${SUB_ID}" --published_out "${PUBLISHED_SCRATCH}/output" \
     $([ -L "${SCRATCH_DIR}/output/m10_03_projected" ] && echo --link_m10_03)
+mkdir -p "${STATUS}"  # only after the check
 
 S="${CODE_DIR}/script"
 run_stage() {

@@ -122,6 +122,28 @@ def resolves_inside(path, protected):
     return real == prot or real.startswith(prot.rstrip('/') + '/')
 
 
+FINAL_OUTPUTS = ('pca_model.pkl', 'best_model.pkl', 'decoded_states.pkl',
+                 'state_means_pca.npy', 'state_means_parcel.npy', 'state_covars_parcel.npy',
+                 'state_covars.npy', 'final_results.json')
+
+
+def check_outputs_writable(final_dir, protect=None):
+    """Refuse to write final/ if the directory or any output file would land in `protect`.
+
+    Each output file is checked, not only the directory: a final/ directory that is a real
+    directory holding symlinks to the published files (a gate root) would otherwise be
+    written through. Any existing symlink among the outputs is refused, protect or not.
+    """
+    if protect and resolves_inside(final_dir, protect):
+        raise RuntimeError(f"refusing to write {final_dir}: resolves inside {protect}")
+    for name in FINAL_OUTPUTS:
+        path = os.path.join(final_dir, name)
+        if os.path.islink(path):
+            raise RuntimeError(f"refusing to write {path}: it is a symlink")
+        if protect and resolves_inside(path, protect):
+            raise RuntimeError(f"refusing to write {path}: resolves inside {protect}")
+
+
 def final_dir_for(scratch_dir, parcellation, sub_id, vt):
     return os.path.join(scratch_dir, 'output', '04_combined_hdphmm', parcellation,
                         sub_id, 'final', f'vt{vt:.2f}')
@@ -132,8 +154,7 @@ def build_final(model, config, config_name, sub_id, parcellation, combined_base,
     """Write select_finalize's final/ files for `model` into `final_dir`."""
     from utils.hdphmm import infer_n_active_states
 
-    if protect and resolves_inside(final_dir, protect):
-        raise RuntimeError(f"refusing to write {final_dir}: resolves inside {protect}")
+    check_outputs_writable(final_dir, protect)
     n_pcs_lookup = load_n_pcs_lookup(combined_base)
     n_pcs = n_pcs_lookup[f"{config['variance_threshold']:.2f}"]
     if model.means_.shape[1] != n_pcs:
@@ -164,9 +185,8 @@ def build_final(model, config, config_name, sub_id, parcellation, combined_base,
         pca = pickle.load(f)
     means_parcel, covars_parcel = back_project_states(model, pca, n_pcs)
 
+    check_outputs_writable(final_dir, protect)  # again: the tree may have changed meanwhile
     os.makedirs(final_dir, exist_ok=True)
-    if protect and resolves_inside(final_dir, protect):
-        raise RuntimeError(f"refusing to write {final_dir}: resolves inside {protect}")
     with open(os.path.join(final_dir, 'pca_model.pkl'), 'wb') as f:
         pickle.dump(pca, f, protocol=4)
     with open(os.path.join(final_dir, 'best_model.pkl'), 'wb') as f:

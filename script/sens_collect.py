@@ -112,7 +112,7 @@ def r5_measures(path, m10_rho):
     if n["n_draws"] != R5_N_DRAWS or n_finite != n["n_draws"]:
         raise ValueError(f"{path}: {n_finite} finite of {n['n_draws']} draws, "
                          f"expected {R5_N_DRAWS}")
-    if abs(s["observed"]["rho"] - m10_rho) > R5_TOL:
+    if not (np.isfinite(m10_rho) and abs(s["observed"]["rho"] - m10_rho) <= R5_TOL):
         raise ValueError(f"{path}: observed rho {s['observed']['rho']!r} is not the "
                          f"m10_05 rho {m10_rho!r}")
     return {"m10_null_mean": n["mean"], "m10_delta_rho": s["delta_rho"],
@@ -279,7 +279,7 @@ PARTS = [  # (title, [(value measure, p measure or None, value format)])
 
 
 def _fmt_p(p):
-    return f"{p:.3f}" if p >= 0.001 else f"{p:.4f}"
+    return f"{p:.2g}"  # two significant figures
 
 
 def _cell(sel, col, spec):

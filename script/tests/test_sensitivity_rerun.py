@@ -202,8 +202,8 @@ def _tsv(tmp_path, p_mfpt=1 / 5001, missing=False):
             "fc_transition_rho": 0.4, "fc_transition_p": 1 / 5001, "mfpt_fc_rho": 0.5,
             "mfpt_fc_p": p_mfpt, "m10_rho": 0.6, "m10_delta_rho": 0.1,
             "m10_delta_p": 1 / 10001}
-    rows = [(c, s, k, v, v) for c in collect.ROW_LABELS for s in collect.SUBS
-            for k, v in vals.items()]
+    rows = [(c, s, k, v, (v + 1 if k == "n_active_states_05a" else v))
+            for c in collect.ROW_LABELS for s in collect.SUBS for k, v in vals.items()]
     df = pd.DataFrame(rows, columns=["config", "participant", "measure", "value",
                                      "published_value"])
     if missing:
@@ -217,7 +217,8 @@ def _tsv(tmp_path, p_mfpt=1 / 5001, missing=False):
 def test_sitable_prints_p_only_above_the_floor(tmp_path):
     out = collect.sitable(_tsv(tmp_path))
     assert "p =" not in out                      # every p at its floor
-    assert "| Published (final model) | 46 / 31 |" in out
+    assert "| Published (final model) | 47 / 31 |" in out  # published_value column
+    assert "| Baseline (95%, K<sub>max</sub> 50, γ 1) | 46 / 31 |" in out
     assert "| 0.400 / 0.500 |" in out
     out = collect.sitable(_tsv(tmp_path, p_mfpt=0.0569))
     assert "0.400 / 0.500 (p = 0.057)" in out
@@ -226,3 +227,58 @@ def test_sitable_prints_p_only_above_the_floor(tmp_path):
 def test_sitable_refuses_missing_cells(tmp_path):
     with pytest.raises(ValueError, match="NA values"):
         collect.sitable(_tsv(tmp_path, missing=True))
+
+
+def test_p_floors_match_the_permutation_counts():
+    assert collect.P_FLOORS == {"p_N2": 1 / 1001, "p_N3": 1 / 501, "fc_transition_p": 1 / 5001,
+                                "mfpt_fc_p": 1 / 5001, "m10_delta_p": 1 / 10001}
+
+
+@pytest.mark.parametrize("p,shown", [(2 / 5001, "(p = 0.0004)"), (0.0012, "(p = 0.0012)"),
+                                     (0.18908, "(p = 0.19)")])
+def test_sitable_shows_p_just_above_the_floor(tmp_path, p, shown):
+    assert "0.400 / 0.500 " + shown in collect.sitable(_tsv(tmp_path, p_mfpt=p))
+
+
+def test_r5_measures_refuses_nan_rho(tmp_path):
+    with pytest.raises(ValueError, match="not the m10_05 rho"):
+        collect.r5_measures(_r5(tmp_path), float("nan"))
+
+
+def test_mkdir_real_refuses_before_creating(tmp_path):
+    pub = tmp_path / "pub"
+    pub.mkdir()
+    with pytest.raises(RuntimeError, match="resolves into the dataset"):
+        side._mkdir_real(str(pub / "stage" / "sub-01"), str(pub))
+    assert not (pub / "stage").exists()
+
+
+def test_setup_refuses_an_output_root_inside_the_dataset(tmp_path):
+    pub = _published(tmp_path)
+    with pytest.raises(RuntimeError, match="resolves into the dataset"):
+        side.setup(str(pub / "root"), "cfg", "0.95", ["sub-01"], str(pub),
+                   link_m10_03=True, published_final=False)
+    assert not (pub / "root").exists()
+
+
+def test_04s_refuses_outputs_that_are_links_or_inside_protect(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    (prot / "final_results.json").write_text("{}")
+    fin = tmp_path / "side" / "final"
+    fin.mkdir(parents=True)
+    m04s.check_outputs_writable(str(fin), str(prot))          # plain directory: fine
+    os.symlink(prot / "final_results.json", fin / "final_results.json")
+    with pytest.raises(RuntimeError, match="symlink"):
+        m04s.check_outputs_writable(str(fin), str(prot))
+    with pytest.raises(RuntimeError, match="symlink"):         # refused without protect too
+        m04s.check_outputs_writable(str(fin))
+    assert set(m04s.FINAL_OUTPUTS) >= {"final_results.json", "pca_model.pkl", "state_covars.npy"}
+
+
+def test_build_final_checks_before_anything_else(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    with pytest.raises(RuntimeError, match="resolves inside"):
+        m04s.build_final(None, None, "cfg", "sub-01", "parc", str(tmp_path / "nowhere"),
+                         str(prot / "final"), {}, protect=str(prot))
