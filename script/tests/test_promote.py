@@ -387,3 +387,10 @@ def test_large_promotions_save_in_chunks_into_one_commit(setup, tmp_path, monkey
     assert rc == 0
     assert int(_git(ds, "rev-list", "--count", "HEAD")) == before + 1
     assert _git(ds, "status", "--porcelain", "--untracked-files=no") == ""
+
+
+def test_structural_change_does_not_pass_a_positive_control(setup, tmp_path):
+    ds, side, pinned = setup
+    np.save(side / "output" / RV, np.full((4, 4), 1.0))   # reshaped: a broken recompute
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any("expect differ" in f and "structural difference" in f for f in fails)

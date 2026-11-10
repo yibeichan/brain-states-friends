@@ -163,3 +163,12 @@ def test_record_that_is_not_an_object_fails(repo, tmp_path):
 def test_datalad_save_accepts_true_and_rejects_unknown_check_code_values():
     script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
     assert '1|true|yes|on) CHECK_CODE=1' in script and '*) echo "ERROR: CHECK_CODE=' in script
+
+
+def test_record_of_another_stage_does_not_satisfy_a_provenance_stage(repo, tmp_path):
+    r, s, floor = repo
+    d = tmp_path / "05f_state_fc" / "atlas-X" / "sub-06"
+    d.mkdir(parents=True)
+    (d / "provenance_04rc.json").write_text(json.dumps(_record(s["after"], stage="04rc")))
+    problems, _ = check_code.check_tree(d, "05f", repo=r, floor=floor)
+    assert any("writes provenance, but none" in p for p in problems)
