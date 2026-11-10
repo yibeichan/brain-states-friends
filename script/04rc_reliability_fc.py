@@ -38,6 +38,7 @@ import numpy as np
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.common import normalize_parcellation_name
 from utils.state_fc import (
     load_matched_data,
@@ -89,10 +90,12 @@ def compute_fold_fc(sub_id, parcellation, decoded_states_path, results_path,
         return
 
     os.makedirs(output_dir, exist_ok=True)
+    provenance.reset()  # one record per fold: do not carry the previous fold's inputs
 
     # Load decoded states
     with open(decoded_states_path, "rb") as f:
         decoded_states = pickle.load(f)
+    provenance.record_input("decoded_states", sub_id, decoded_states_path)
 
     # Get K from results JSON
     with open(results_path) as f:
@@ -133,6 +136,10 @@ def compute_fold_fc(sub_id, parcellation, decoded_states_path, results_path,
     }
     with open(meta_path, "w") as f:
         json.dump(metadata, f, indent=2)
+    provenance.write_provenance(
+        output_dir, "04rc", sub_id, parcellation,
+        covers=[os.path.basename(corr_path), os.path.basename(meta_path)],
+    )
 
     logger.info("Saved FC (%d, %d, %d) to %s", *corr_parcel.shape, corr_path)
 

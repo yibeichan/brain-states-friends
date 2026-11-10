@@ -21,6 +21,7 @@ archive/
 logs/
 bash_monitor/
 *.txt
+!script/utils/code_floor.txt
 # Episode-ID lists are part of the pipeline inputs (tracked despite *.txt).
 !*episode_ids.txt
 # C extensions

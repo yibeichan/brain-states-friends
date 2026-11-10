@@ -66,6 +66,7 @@ from scipy.stats import spearmanr
 from statsmodels.regression.mixed_linear_model import MixedLM
 
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.stats import benjamini_hochberg, fdr_with_nan as _fdr_with_nan
 from utils.plot_style import (
     recurrence_color, make_recurrence_colorbar, apply_publication_style,
@@ -1129,6 +1130,8 @@ def main():
     plot_summary(results, recurrence_scores, q_values, is_eligible,
                  sub_id, out_dir, n_states,
                  mean_fo=mean_fo, dominant_networks=dominant_networks)
+
+    provenance.write_provenance(out_dir, '05e_a3', sub_id, parc)
 
     # ── Summary ──────────────────────────────────────────────────────────
     logger.info("=" * 60)

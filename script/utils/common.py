@@ -68,7 +68,7 @@ def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
                 f"{sub_id} {run_id} has {len(candidates)} copies ({', '.join(found)}) "
                 "and none is chosen in DUPLICATE_RUN_SESSIONS"
             )
-        return candidates[0]
+        return _record_pick(sub_id, run_id, candidates[0], session_of)
     chosen = [c for c in candidates if session_of(c) == pinned]
     if len(chosen) != 1:
         found = sorted(str(session_of(c)) for c in candidates)
@@ -76,7 +76,17 @@ def pick_run_session(sub_id, run_id, candidates, session_of=session_from_path):
             f"{sub_id} {run_id}: expected exactly one copy from {pinned}, "
             f"found sessions {', '.join(found)}"
         )
-    return chosen[0]
+    return _record_pick(sub_id, run_id, chosen[0], session_of)
+
+
+def _record_pick(sub_id, run_id, chosen, session_of):
+    """Log the resolved session (and the file, if a path) for provenance."""
+    from utils import provenance
+
+    provenance.record_session(sub_id, run_id, session_of(chosen))
+    if isinstance(chosen, (str, os.PathLike)):
+        provenance.record_input("run_file", sub_id, chosen, run_id=run_id)
+    return chosen
 
 
 def read_run_acquisition_times(sub_id, csv_path):
@@ -91,6 +101,9 @@ def read_run_acquisition_times(sub_id, csv_path):
     """
     import csv
 
+    from utils import provenance
+
+    provenance.record_input("acq_times", sub_id, csv_path)
     rows_by_run = {}
     with open(csv_path, 'r') as f:
         reader = csv.DictReader(f)

@@ -68,6 +68,7 @@ from scipy.stats import spearmanr, kendalltau
 from sklearn.linear_model import LinearRegression
 
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.stats import benjamini_hochberg, fdr_with_nan as _fdr_with_nan
 from utils.plot_style import recurrence_color, make_recurrence_colorbar, apply_publication_style
 from utils.common import (
@@ -1564,6 +1565,8 @@ def main():
 
     plot_motion_diagnostic(motion_results, recurrence_scores, sub_id, out_dir, n_states)
     plot_state_pairs(pair_results, recurrence_scores, sub_id, out_dir)
+
+    provenance.write_provenance(out_dir, '05e_a1', sub_id, parc)
 
     # ── Summary ───────────────────────────────────────────────────────────────
     logger.info("=" * 60)

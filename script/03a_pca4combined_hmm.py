@@ -72,6 +72,7 @@ from sklearn.decomposition import PCA
 
 # Add script directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.common import normalize_parcellation_name, pick_run_session
 
 from dotenv import load_dotenv
@@ -1016,6 +1017,7 @@ def main():
     summary_path = os.path.join(output_base, 'summary.json')
     with open(summary_path, 'w') as f:
         json.dump(summary, f, indent=2)
+    provenance.write_provenance(output_base, '03a', args.sub_id, parcellation)
 
     logger.info("=" * 70)
     logger.info(f"COMPLETED: PCA preparation for {args.sub_id}")

@@ -35,6 +35,11 @@ SUBJECT_ID="${SUBJECT_ID:-}"
 PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 PUSH="${PUSH:-true}"
 MESSAGE="${MESSAGE:-}"
+# --check-code (or CHECK_CODE=1, which works through sbatch --export): refuse
+# to save outputs whose code is not on origin/main, lacks a code-floor fix, or
+# (for stages that write provenance) has no clean provenance record.
+# Off by default for now; see docs/output_provenance.md.
+CHECK_CODE="${CHECK_CODE:-0}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -44,8 +49,9 @@ while [[ $# -gt 0 ]]; do
         --message) MESSAGE="$2"; shift 2 ;;
         --push) PUSH="true"; shift ;;
         --no-push) PUSH="false"; shift ;;
+        --check-code) CHECK_CODE=1; shift ;;
         -h|--help)
-            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG]"
+            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG] [--check-code]"
             echo ""
             echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 05g, 05h, 06, m10_03, m10_04, hp_04, pp_04, diag"
             echo "Subject: sub-01 through sub-06, or 'all' (stage 05h takes 'all' only)"
@@ -217,6 +223,19 @@ if ! command -v git-annex &> /dev/null; then
     echo "    git-annex -m datalad/git-annex:release --install-dir ~/.local"
     echo "  source ~/.local/share/git-annex-env.sh   # or add its PATH line to ~/.bashrc"
     exit 1
+fi
+
+# --- Code check (opt-in) ---
+FLOOR_LINE=""
+if [ "$CHECK_CODE" = "1" ]; then
+    echo "Checking code provenance for ${SAVE_PATH} ..."
+    uv run --project "${CODE_DIR}" python "${CODE_DIR}/script/utils/check_code.py" \
+        --repo "${CODE_DIR}" tree "${OUTPUT_DIR}/${SAVE_PATH}" \
+        --stage "${STAGE}" --fallback-commit "${CODE_COMMIT}"
+    FLOOR_LINE="code_floor: $(grep -v '^#' "${CODE_DIR}/script/utils/code_floor.txt" | awk 'NF {print substr($1,1,10)}' | paste -sd, -)"
+    COMMIT_MSG="${COMMIT_MSG}
+${FLOOR_LINE}
+code_check: passed"
 fi
 
 # --- Save ---

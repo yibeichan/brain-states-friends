@@ -100,6 +100,9 @@ def load_state_flags(
         return None
 
     df = pd.read_csv(csv_path)
+    from utils import provenance
+
+    provenance.record_input("state_flags", sub_id, csv_path)
     if "summary_category" not in df.columns:
         logger.warning("state_flags.csv missing 'summary_category' column.")
         return None

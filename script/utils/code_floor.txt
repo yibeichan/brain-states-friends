@@ -1,0 +1,10 @@
+# Code floor: correctness fixes that every saved or promoted output must include.
+#
+# One fix per line: <full commit sha> <stages> <reason>
+#   stages: comma-separated stage keys (as in datalad_save.sh STAGE_MAP and the
+#           provenance "stage" field) whose code path the fix changes, or * for all.
+#
+# check_code.py refuses outputs of a listed stage whose code commit does not
+# contain the fix. Add a line in the same PR that merges a fix which changes
+# results; see docs/output_provenance.md.
+1f391c08e617cf608cb35e4c1a5ea7798d967aae 03a,04rc,05e_a1,05e_a3,05f one pinned copy of each duplicated run in every loader (#50)
