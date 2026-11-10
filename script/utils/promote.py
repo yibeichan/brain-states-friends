@@ -75,7 +75,7 @@ from utils import check_code  # noqa: E402
 csv.field_size_limit(sys.maxsize)   # whole-row fields of any length
 FIGURE_EXT = {".png", ".pdf", ".svg", ".jpg", ".jpeg"}
 DEFAULT_EXCLUDE = ["logs/**", "**/__pycache__/**", "**/.nfs*"]
-SAVE_CHUNK = 500   # paths per datalad save call
+SAVE_CHUNK = 500   # most directories passed to the one datalad save call
 
 
 # ------------------------------------------------------------------ globs
@@ -366,6 +366,7 @@ class Report:
 class Plan:
     copies: list = field(default_factory=list)       # (action, rel)
     md5: dict = field(default_factory=dict)          # rel -> md5 of the side file as checked
+    records: list = field(default_factory=list)      # provenance records promoted
     report: Report = field(default_factory=Report)
 
 
@@ -513,6 +514,7 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
     # dataset files in the change set that the side root no longer produces
     side_set = set(files)
     ls = _run(["git", "ls-files", "-z"], cwd=dataset)
+    tracked = {r for r in ls.stdout.split("\0") if r}
     gone = [r for r in ls.stdout.split("\0") if r and matches(r, change)
             and matches(r, scope) and not matches(r, exclude) and r not in side_set]
     for r in gone[:20]:
@@ -534,6 +536,14 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
         in_change = matches(rel, change)
         if in_change:
             plan.md5[rel] = md5(src)                 # the content the gates below judge
+        if os.path.lexists(dst) and rel not in tracked:
+            # an untracked file in the dataset (a crashed promotion leaves these):
+            # never trust it as the dataset's version
+            if in_change:
+                plan.copies.append(("NEW", rel))
+            else:
+                rep.fail(f"untracked file in the dataset outside the change set: {rel}; remove it")
+            continue
         if not os.path.lexists(dst):
             if in_change:
                 plan.copies.append(("NEW", rel))
@@ -617,7 +627,40 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
                     rep.fail(f"{rel}: input {k} differs from the dataset's record "
                              "(waive it with allow_input_changes = {\"<pattern>\" = \"<reason>\"})")
         plan.md5[rel] = md5(side_out / rel)
-        plan.copies.append(("UPDATE" if os.path.lexists(dataset / rel) else "NEW", rel))
+        plan.copies.append(("UPDATE" if rel in tracked else "NEW", rel))
+        plan.records.append(rel)
+        # A record is promoted with every output it lists: a listed file left at
+        # the dataset's version (equal within tolerance, but other bytes) would
+        # not match the record's checksum afterwards.
+        rdir = os.path.dirname(rel)
+        planned_now = {r for _, r in plan.copies}
+        for out_rel in sorted((rec.get("outputs") or {})):
+            full = os.path.normpath(os.path.join(rdir, out_rel))
+            if full in planned_now:
+                continue
+            if not (side_out / full).is_file():
+                rep.fail(f"{rel} lists {full}, which the side root does not hold")
+                continue
+            side_md5 = md5(side_out / full)
+            dst_id = check_code.content_id(dataset / full) if full in tracked else None
+            if dst_id is not None and dst_id[1] == side_md5:
+                continue                                  # same bytes: the record already matches
+            if not matches(full, change):
+                rep.fail(f"{rel} lists {full}, which differs from the dataset's bytes and is outside "
+                         "the change set; a record is promoted with all its outputs, so declare it")
+                continue
+            plan.md5[full] = side_md5
+            plan.copies.append(("UPDATE" if full in tracked else "NEW", full))
+            rep.info(f"copied with its record (equal within tolerance, other bytes): {full}")
+
+    for r in gone:
+        stg = gated_stage(r)
+        if stg:
+            rp = check_code.nearest_record(side_out / r, stg)
+            if rp is not None and os.path.relpath(rp, side_out) in plan.records:
+                rep.fail(f"{r}: kept in the dataset but not listed in the promoted record "
+                         f"{os.path.relpath(rp, side_out)}, so it would be uncovered; remove it or "
+                         "reproduce it in the side root")
 
     # files the dataset's .gitignore matches would be copied but never saved
     rels_all = [r for _, r in plan.copies]
@@ -715,9 +758,12 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_r
     def recovery(reason):
         log(f"PROMOTION FAILED: {reason}")
         log(f"  dataset HEAD before: {head0}; now: {_head(dataset)}")
-        log("  to undo by hand: remove the NEW files and restore the UPDATE files with "
-            "'git checkout HEAD -- <path>' (lists below); if HEAD moved, inspect the commits "
-            f"after {head0[:10]} with 'git log {head0[:10]}..HEAD' before deciding.")
+        moved = _head(dataset) != head0
+        log("  state: " + ("HEAD moved, so a commit was made; inspect "
+                           f"'git log {head0[:10]}..HEAD' before undoing anything."
+                           if moved else "no commit was made; the copies below are unsaved."))
+        log("  to undo the copies by hand: remove the NEW files and restore the UPDATE files with "
+            "'git checkout HEAD -- <path>' (lists below).")
         for r in new_files:
             log(f"  NEW {r}")
         for r in upd_files:
@@ -747,32 +793,32 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_r
            f"side_root: {side_root}\n"
            f"manifest_sha256: {hashlib.sha256(Path(manifest_path).read_bytes()).hexdigest()}\n"
            f"promote_check: passed")
-    # One commit: save in chunks, amending the promotion's own commit after the
-    # first (keeps the command line far below ARG_MAX). Before each amend, HEAD
-    # must still be that commit, or another job committed in between.
-    expected = head0
-    for i in range(0, len(rels), SAVE_CHUNK):
-        part = rels[i:i + SAVE_CHUNK]
-        if i and _head(dataset) != expected:
-            return recovery("HEAD moved during the save (another job committed); not amending its commit")
-        cmd = datalad_cmd(repo) + ["save", "-m", msg] + (["--amend"] if i else []) + ["--"] + part
-        try:
-            p = _run(cmd, cwd=dataset)
-        except OSError as e:
-            return recovery(f"datalad save failed to start: {e}")
-        log(p.stdout + p.stderr)
-        if p.returncode != 0:
-            return recovery(f"datalad save failed (rc {p.returncode}) on paths {i}..{i + len(part) - 1}")
-        expected = _head(dataset)
-        if expected == head0:
-            return recovery("datalad save made no commit")
-        # the promotion's commit must sit directly on head0; anything else means
-        # another job committed while this save ran
-        if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() != head0:
-            return recovery("HEAD moved during the save (another job committed); not amending its commit")
+    # One `datalad save`, no --amend: the save targets are the planned files'
+    # parent directories (collapsed upward until there are at most SAVE_CHUNK,
+    # so the command line stays short), and nothing but planned paths may be
+    # modified or untracked under them, or the save would take other changes.
+    targets = save_targets(rels, SAVE_CHUNK)
+    st = _run(["git", "status", "--porcelain", "--untracked-files=all", "-z", "--"] + targets, cwd=dataset)
+    pending = {e[3:] for e in st.stdout.split("\0") if len(e) > 3}
+    extra = sorted(pending - set(rels))
+    if extra:
+        return recovery(f"{len(extra)} other changed or untracked path(s) under the save targets, e.g. "
+                        f"{extra[:3]}; a save would take them too")
+    cmd = datalad_cmd(repo) + ["save", "-m", msg, "--"] + targets
+    try:
+        p = _run(cmd, cwd=dataset)
+    except OSError as e:
+        return recovery(f"datalad save failed to start: {e}")
+    log(p.stdout + p.stderr)
+    if p.returncode != 0:
+        return recovery(f"datalad save failed (rc {p.returncode})")
+    if _head(dataset) == head0:
+        return recovery("datalad save made no commit")
     # verify: one commit on top of head0, every path saved and clean, content as checked
     if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() != head0:
-        return recovery("the promotion is not a single commit on top of the previous HEAD")
+        return recovery("the promotion is not a single commit on top of the previous HEAD: another "
+                        "job committed while the save ran (datalad_save.sh waits for the same lock; "
+                        "a hand-made commit does not)")
     tops = sorted({Path(r).parts[0] for r in rels})
     st = _run(["git", "status", "--porcelain", "--untracked-files=all", "-z", "--"] + tops, cwd=dataset)
     left = {e[3:] for e in st.stdout.split("\0") if len(e) > 3}
@@ -785,11 +831,31 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_r
         log(f"VERIFY FAIL: not saved: {r}")
     for r in bad:
         log(f"VERIFY FAIL: saved content differs from the checked side-root file: {r}")
+    uncovered = []
+    cache = {}
+    for rec_rel in plan.records:
+        for f in check_code._files_under(dataset / os.path.dirname(rec_rel)):
+            stg = gated_stage(f)
+            why = check_code.coverage_problem(f, stg, cache) if stg else None
+            if why:
+                uncovered.append(f"{os.path.relpath(f, dataset)}: {why}")
+    for u in uncovered[:20]:
+        log(f"VERIFY FAIL: not covered after the save: {u}")
     head = _run(["git", "log", "-1", "--format=%h %s"], cwd=dataset).stdout.strip()
     log(f"output dataset HEAD: {head}")
-    if unsaved or bad:
+    if unsaved or bad or uncovered:
         return recovery("verification failed")
     return 0
+
+
+def save_targets(rels, limit):
+    """Parent directories of ``rels``, moved up until there are at most ``limit``."""
+    dirs = {os.path.dirname(r) or "." for r in rels}
+    while len(dirs) > limit:
+        dirs = {os.path.dirname(d) or "." for d in dirs}
+    # drop directories inside another target
+    out = sorted(dirs)
+    return [d for d in out if not any(o != d and (o == "." or d.startswith(o.rstrip("/") + "/")) for o in out)]
 
 
 def main(argv=None):

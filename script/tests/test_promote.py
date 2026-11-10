@@ -12,7 +12,7 @@ import pytest
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from utils import promote  # noqa: E402
+from utils import check_code, promote  # noqa: E402
 from utils.promote import compare_files, glob_to_regex  # noqa: E402
 
 MAIN = subprocess.run(["git", "-C", str(REPO_DIR), "rev-parse", "origin/main"],
@@ -520,9 +520,12 @@ if [ ! -e "{flag}" ]; then touch "{flag}"; mkdir -p 06a_other && echo x > 06a_ot
     monkeypatch.setattr(promote, "SAVE_CHUNK", 2)
     logs = []
     assert _execute(plan, side, ds, m, logs) == 1
-    assert any("HEAD moved during the save" in l for l in logs)
-    assert _git(ds, "log", "-1", "--format=%s") == "foreign save"   # not rewritten
-    assert any(l.startswith("  NEW ") or l.startswith("  UPDATE ") for l in logs)
+    assert any("not a single commit" in l and "another job committed" in l for l in logs)
+    subjects = _git(ds, "log", "-3", "--format=%s").splitlines()
+    assert subjects[0] == "foreign save"                     # its commit is intact, not amended
+    assert subjects[1].startswith("sub-06 05f")              # the promotion is one commit below it
+    assert "06a_other/f.txt" not in _git(ds, "show", "--name-only", "--format=", "HEAD^")
+    assert any("HEAD moved, so a commit was made" in l for l in logs)
 
 
 def test_save_that_commits_nothing_fails(setup, tmp_path, monkeypatch):
@@ -612,3 +615,101 @@ def test_execute_refuses_when_main_cannot_be_fetched(tmp_path, capsys):
     rc = promote.main(["--side-root", str(tmp_path / "side"), "--manifest", str(m), "--dataset",
                        str(lone), "--repo", str(lone), "--execute"])
     assert rc == 1 and "NOT EXECUTING" in capsys.readouterr().out
+
+
+# ------------------------------------------- adversarial review, round 2
+def test_one_save_call_on_directories_without_amend(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    so = side / "output"
+    for d in ("a", "b", "c"):
+        (so / f"05f_state_fc/atlas-X/sub-06/vt0.95/figures/{d}").mkdir(parents=True)
+        np.save(so / f"05f_state_fc/atlas-X/sub-06/vt0.95/figures/{d}/x.npy", np.zeros(2))
+    _write_rec(so)
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/**"]'))
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    calls = tmp_path / "calls"
+    _fake(tmp_path, monkeypatch, f'#!/bin/bash\necho "CALL $([[ " $* " == *" --amend "* ]] && echo amend)" >> "{calls}"\n'
+          + FAKE_DATALAD.split("\n", 1)[1])
+    monkeypatch.setattr(promote, "SAVE_CHUNK", 2)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 0, logs
+    lines = calls.read_text().splitlines()
+    assert lines == ["CALL "]
+    assert _git(ds, "status", "--porcelain", "--untracked-files=all") == ""
+
+
+def test_other_untracked_file_under_a_save_target_stops_the_save(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    (ds / "05f_state_fc/atlas-X/sub-06/vt0.95/someone_elses.npy").write_bytes(b"x")
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("other changed or untracked path" in l for l in logs)
+    assert _git(ds, "log", "-1", "--format=%s") == "wrong"
+
+
+def test_record_is_promoted_with_every_output_it_lists(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    so = side / "output"
+    np.save(so / OTHER, np.zeros((3, 3)) + 1e-14)              # equal within tolerance, other bytes
+    _write_rec(so)
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/*.npy"]'))
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    assert ("UPDATE", OTHER) in plan.copies
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 0, logs
+    problems, _ = check_code.check_tree(ds / "05f_state_fc", "05f", repo=REPO_DIR, main_ref=MAIN_REF)
+    assert problems == [], problems
+
+
+def test_record_listing_a_file_outside_the_change_set_is_refused(setup, tmp_path):
+    ds, side, pinned = setup
+    np.save(side / "output" / OTHER, np.zeros((3, 3)) + 1e-14)
+    _write_rec(side / "output")
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any(OTHER in f and "outside the change set" in f and "lists" in f for f in fails)
+
+
+def test_kept_file_under_a_promoted_record_is_refused(setup, tmp_path):
+    ds, side, pinned = setup
+    stale = "05f_state_fc/atlas-X/sub-06/vt0.95/stale.npy"
+    np.save(ds / stale, np.zeros(2))
+    _git(ds, "add", stale)
+    _git(ds, "commit", "-q", "-m", "stale")
+    m = _manifest(tmp_path, pinned)
+    body = m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/*.npy"]')
+    m.write_text('keep_unreproduced = "test"\n' + body)
+    fails = _plan(ds, side, m).report.fails
+    assert any(stale in f and "would be uncovered" in f for f in fails)
+
+
+def test_untracked_leftover_in_the_dataset_is_promoted_as_new(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    so = side / "output"
+    extra = "05f_state_fc/atlas-X/sub-06/vt0.95/extra.npy"
+    np.save(so / extra, np.ones(2))
+    _write_rec(so)
+    (ds / extra).write_bytes((so / extra).read_bytes())       # left by a crashed promotion, untracked
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/*.npy"]'))
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == [] and ("NEW", extra) in plan.copies
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 0, logs
+    assert extra in _git(ds, "ls-files")

@@ -252,3 +252,9 @@ def test_failed_fetch_is_a_failure_unless_no_fetch(repo, capsys):
 def test_datalad_save_accepts_true_and_rejects_unknown_check_code_values():
     script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
     assert '1|true|yes|on) CHECK_CODE=1' in script and '*) echo "ERROR: CHECK_CODE=' in script
+
+
+def test_datalad_save_waits_for_the_promotion_lock():
+    script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
+    lock = script.index("promote.lock")
+    assert lock < script.index("${DATALAD} save") and "flock -w" in script

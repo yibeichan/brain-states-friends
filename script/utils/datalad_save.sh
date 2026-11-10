@@ -245,6 +245,13 @@ fi
 
 # --- Save ---
 cd "${OUTPUT_DIR}"
+# Wait for any promote.py run on this dataset (it holds the same lock) so the
+# two never commit at the same time.
+exec 9>"$(git rev-parse --absolute-git-dir)/promote.lock"
+if ! flock -w 3600 9; then
+    echo "ERROR: could not take $(git rev-parse --absolute-git-dir)/promote.lock within an hour"
+    exit 1
+fi
 echo "Saving ${SAVE_PATH} ..."
 echo "Code: ${CODE_BRANCH}@${CODE_SHORT}"
 

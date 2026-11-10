@@ -211,12 +211,23 @@ def collect_outputs(out_dir, covers=None, since=None) -> dict:
                 full = os.path.join(root, n)
                 if _is_record_name(n) or os.path.islink(full):
                     continue
-                if os.stat(full).st_mtime >= t0:
+                try:
+                    recent = os.stat(full).st_mtime >= t0
+                except OSError:                       # vanished while walking
+                    continue
+                if recent:
                     rels.append(os.path.relpath(full, out_dir))
     outputs = {}
     for rel in sorted(rels):
-        size, md5 = content_id(out_dir / rel)
-        outputs[rel] = {"size": size, "md5": md5}
+        # An unreadable output is recorded as such (no checksum, so it is never
+        # covered) instead of failing a stage that has already written everything.
+        try:
+            cid = content_id(out_dir / rel)
+        except OSError as e:
+            cid, err = None, str(e)
+        else:
+            err = "unreadable"
+        outputs[rel] = {"size": cid[0], "md5": cid[1]} if cid else {"unreadable": err}
     return outputs
 
 

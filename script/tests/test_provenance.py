@@ -139,3 +139,20 @@ def test_dirty_at_import_stays_dirty_after_the_edit_is_reverted(monkeypatch):
     assert rec["code"]["dirty"] is True and rec["code"]["dirty_at_import"] is True
     assert rec["code"]["dirty_at_write"] is False
     assert rec["code"]["modified_at_import"] == [" M script/05f_state_fc.py"]
+
+
+def test_unreadable_output_is_recorded_not_fatal(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "good.npy").write_bytes(b"g")
+    (out / "bad.npy").write_bytes(b"b")
+    real = provenance.content_id
+
+    def flaky(path):
+        if Path(path).name == "bad.npy":
+            raise PermissionError("denied")
+        return real(path)
+    monkeypatch.setattr(provenance, "content_id", flaky)
+    rec = json.loads(provenance.write_provenance(out, "05f", "sub-06", "atlas-X").read_text())
+    assert rec["outputs"]["bad.npy"] == {"unreadable": "denied"}
+    assert rec["outputs"]["good.npy"]["md5"]
