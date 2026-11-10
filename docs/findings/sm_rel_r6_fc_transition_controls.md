@@ -24,7 +24,7 @@
 | sub-03 | 946 | 0.326 | 0.326 (0.0002) | 0.369 (0.0002) | 0.331 (0.0002) |
 | sub-04 | 946 | 0.551 | 0.551 (0.0002) | 0.520 (0.0002) | 0.499 (0.0002) |
 | sub-05 | 990 | 0.393 | 0.393 (0.0002) | 0.390 (0.0002) | 0.325 (0.0002) |
-| sub-06 | 861 | 0.434 | 0.434 (0.0002) | 0.338 (0.0002) | 0.284 (0.0002) |
+| sub-06 | 861 | 0.437 | 0.437 (0.0002) | 0.338 (0.0002) | 0.283 (0.0002) |
 
 **Partial Mantel, controlling for both TR terms and activation-map r** (ρ, p):
 
@@ -35,7 +35,7 @@
 | sub-03 | 0.136 (0.0020) | 0.255 (0.0002) | 0.265 (0.0002) |
 | sub-04 | 0.403 (0.0002) | 0.415 (0.0002) | 0.438 (0.0002) |
 | sub-05 | 0.188 (0.0004) | 0.271 (0.0002) | 0.264 (0.0002) |
-| sub-06 | 0.331 (0.0002) | 0.287 (0.0002) | 0.268 (0.0002) |
+| sub-06 | 0.337 (0.0002) | 0.286 (0.0002) | 0.267 (0.0002) |
 
 **Transitions vs each covariate** (Spearman ρ) and the residual FC similarity range:
 
@@ -46,19 +46,19 @@
 | sub-03 | 0.23 | 0.27 | 0.33 | -0.76 to 0.87 |
 | sub-04 | 0.35 | 0.41 | 0.25 | -0.92 to 0.94 |
 | sub-05 | 0.33 | 0.38 | 0.31 | -0.94 to 0.93 |
-| sub-06 | 0.27 | 0.28 | 0.33 | -0.90 to 0.88 |
+| sub-06 | 0.27 | 0.28 | 0.33 | -0.90 to 0.87 |
 
 ## Interpretation (bounded)
 
 Removing the shared FC backbone does not remove the association: the residual ρ is 0.30–0.52 (0.20–0.50 with the occupancy-weighted mean), p at the permutation floor in all six participants. Residual FC similarity spans about -0.9 to 0.9, against 0.68–1.00 for raw RV, so the test now has a usable range.
 
-TR counts and activation-map similarity each correlate with transition probability (ρ 0.23–0.42) and account for a large share of the raw association. With all three controls, the residual FC ρ is 0.16–0.42 (p = 0.0002 in all six), 38–78% of each participant's published ρ (sub-01 0.38, sub-02 0.47, sub-06 0.66, sub-05 0.69, sub-04 0.75, sub-03 0.78). Pairs with more similar state-specific FC transition more often than their TR counts and activation-map similarity predict.
+TR counts and activation-map similarity each correlate with transition probability (ρ 0.23–0.42) and account for a large share of the raw association. With all three controls, the residual FC ρ is 0.16–0.42 (p = 0.0002 in all six), 38–78% of each participant's published ρ (sub-01 0.38, sub-02 0.47, sub-06 0.65, sub-05 0.69, sub-04 0.75, sub-03 0.78). Pairs with more similar state-specific FC transition more often than their TR counts and activation-map similarity predict.
 
 ## Caveats and audit notes
 
 - The null permutes state labels, as in `06b`. Both FC and transitions come from the same Viterbi assignment, so a shared dependence on segmentation is not removed by any of these controls.
 - The covariates enter as ranks in a linear model. A nonlinear dependence on TR count would be only partly removed.
-- sub-06: the 05f files were regenerated after the first `06b` run (shrinkage values changed in the fourth decimal, TR counts unchanged), and `06b` was then rerun on them; the published ρ above is from that rerun (0.437 before it). `--gate_rv_path` lets the gate read an older RV file in such a case; it is not used here.
+- `--gate_rv_path` lets the gate read an older RV file when 05f has been rewritten after `06b` ran. It is not used here: the published ρ reproduces from the current 05f in all six participants.
 - p values of 0.0002 are the floor for 5,000 permutations.
 
 ## Connections
