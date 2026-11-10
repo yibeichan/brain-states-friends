@@ -14,12 +14,18 @@ Measures, per (side root, subject), read from the files the production scripts w
     mfpt_fc_rho (+_p)          06b mfpt_fc_correlation.json rho / p_value
     m10_rho                    m10_05 cross_stimulus_summary.json
                                A1_recurrence_correlation.spearman_rho
+    m10_null_mean, m10_delta_rho, m10_delta_p
+                               (with --r5_root) sm_rel_r5_phase_null's
+                               r5_phase_null_summary.json: null mean, observed rho minus
+                               null mean, one-sided empirical p. Its observed rho must
+                               equal m10_rho.
 
 Published values come from the published 06e transition_modules_summary.json
 (tests.N2_E / tests.N3_E) and the other published JSONs at vt0.95.
 
 Modes:
     table   write the long TSV (config, participant, measure, value, published_value)
+    sitable print the supplementary table (Markdown) from that TSV
     gate    compare one side root's outputs with the published files: measures, plus
             exact array/CSV equality for the files listed in GATE_FILES
 """
@@ -82,7 +88,43 @@ def measures(out, sub, vt, published=False):
     return m
 
 
-def table(root, published_out, out_tsv, configs):
+R5_N_DRAWS = 10000
+R5_TOL = 1e-12
+
+
+def r5_measures(path, m10_rho):
+    """Phase-randomized null measures from one r5_phase_null_summary.json.
+
+    Refuses a summary for another stimulus, with failed draws or a different draw count,
+    or whose observed rho is not the m10_05 rho of the same fit.
+    The published summaries predate the `stimulus` and `n_finite` fields: a missing
+    stimulus is accepted (the rho check ties the file to the Movie10 fit), and a missing
+    n_finite is counted from the null_draws.npy beside the summary.
+    """
+    s = _j(path)
+    if s.get("stimulus", "movie10") != "movie10":
+        raise ValueError(f"{path}: stimulus {s['stimulus']!r}, expected movie10")
+    n = s["null"]
+    n_finite = n.get("n_finite")
+    if n_finite is None:
+        draws = np.load(os.path.join(os.path.dirname(path), "null_draws.npy"))
+        n_finite = int(np.isfinite(draws).sum()) if draws.size == n["n_draws"] else -1
+    if n["n_draws"] != R5_N_DRAWS or n_finite != n["n_draws"]:
+        raise ValueError(f"{path}: {n_finite} finite of {n['n_draws']} draws, "
+                         f"expected {R5_N_DRAWS}")
+    if abs(s["observed"]["rho"] - m10_rho) > R5_TOL:
+        raise ValueError(f"{path}: observed rho {s['observed']['rho']!r} is not the "
+                         f"m10_05 rho {m10_rho!r}")
+    return {"m10_null_mean": n["mean"], "m10_delta_rho": s["delta_rho"],
+            "m10_delta_p": s["p_empirical"]}
+
+
+def r5_published(published_out, sub):
+    return os.path.join(published_out, "sm_rel_r5_phase_null", PARC, sub, "vt0.95",
+                        "r5_phase_null_summary.json")
+
+
+def table(root, published_out, out_tsv, configs, r5_root=None):
     rows = []
     for cfg in configs:
         vt = CONFIGS[cfg]
@@ -93,6 +135,12 @@ def table(root, published_out, out_tsv, configs):
             except FileNotFoundError as e:
                 print(f"MISSING {cfg} {sub}: {e}", file=sys.stderr)
                 mine = {}
+            if r5_root:
+                pub.update(r5_measures(r5_published(published_out, sub), pub["m10_rho"]))
+                if mine:
+                    mine.update(r5_measures(
+                        os.path.join(r5_root, cfg, sub, "r5_phase_null_summary.json"),
+                        mine["m10_rho"]))
             for k in pub:
                 rows.append((cfg, sub, k, mine.get(k, "NA"), pub[k]))
     df = pd.DataFrame(rows, columns=["config", "participant", "measure", "value",
@@ -203,18 +251,87 @@ def gate(side_out, published_out, subs, vt="0.95", final_only=False):
     return n_bad
 
 
+ROW_LABELS = {  # config -> row label, in table order
+    "vt0.95_covdiag_nc50_g1": "Baseline (95%, K<sub>max</sub> 50, γ 1)",
+    "vt0.95_covdiag_nc40_g1": "K<sub>max</sub> 40",
+    "vt0.95_covdiag_nc80_g1": "K<sub>max</sub> 80",
+    "vt0.95_covdiag_nc50_g5": "γ 5",
+    "vt0.90_covdiag_nc50_g1": "90% variance",
+    "vt0.99_covdiag_nc50_g1": "99% variance",
+}
+PUBLISHED_LABEL = "Published (final model)"
+P_FLOORS = {  # p measure -> 1 / (permutations + 1)
+    "p_N2": 1 / 1001, "p_N3": 1 / 501, "fc_transition_p": 1 / 5001, "mfpt_fc_p": 1 / 5001,
+    "m10_delta_p": 1 / 10001,
+}
+PARTS = [  # (title, [(value measure, p measure or None, value format)])
+    ("A. Active states / content-eligible states",
+     [("n_active_states_05a", None, "{:.0f}"),
+      ("cat_eligible_for_content_analysis", None, "{:.0f}")]),
+    ("B. Transition-module Q in excess of the N2 / N3 nulls",
+     [("q_excess_N2", "p_N2", "{:.3f}"), ("q_excess_N3", "p_N3", "{:.3f}")]),
+    ("C. FC–transition ρ / MFPT–FC ρ",
+     [("fc_transition_rho", "fc_transition_p", "{:.3f}"),
+      ("mfpt_fc_rho", "mfpt_fc_p", "{:.3f}")]),
+    ("D. Movie10 recurrence–occupancy ρ: observed / Δρ",
+     [("m10_rho", None, "{:.3f}"), ("m10_delta_rho", "m10_delta_p", "{:.3f}")]),
+]
+
+
+def _fmt_p(p):
+    return f"{p:.3f}" if p >= 0.001 else f"{p:.4f}"
+
+
+def _cell(sel, col, spec):
+    out = []
+    for key, pkey, fmt in spec:
+        s = fmt.format(float(sel.loc[key, col]))
+        if pkey is not None:
+            p = float(sel.loc[pkey, col])
+            if p > P_FLOORS[pkey] * (1 + 1e-9):  # show p only above the permutation floor
+                s += f" (p = {_fmt_p(p)})"
+        out.append(s)
+    return " / ".join(out)
+
+
+def sitable(tsv):
+    """Markdown tables, one per PARTS entry: published row, then one row per config.
+
+    A p value is printed only when it is above its permutation floor (P_FLOORS).
+    """
+    df = pd.read_csv(tsv, sep="\t")
+    if df[["value", "published_value"]].isna().any().any():  # read_csv turns "NA" into NaN
+        raise ValueError(f"{tsv}: NA values; every cell must be present")
+    lines = []
+    for title, spec in PARTS:
+        lines += [f"**{title}**", "",
+                  "| Configuration | " + " | ".join(SUBS) + " |",
+                  "|---|" + "---|" * len(SUBS)]
+        sources = [(PUBLISHED_LABEL, list(ROW_LABELS)[0], "published_value")] + \
+            [(lab, cfg, "value") for cfg, lab in ROW_LABELS.items()]
+        for label, cfg, col in sources:
+            cells = [_cell(df[(df.config == cfg) & (df.participant == sub)].set_index("measure"),
+                           col, spec) for sub in SUBS]
+            lines.append(f"| {label} | " + " | ".join(cells) + " |")
+        lines.append("")
+    return "\n".join(lines)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("mode", choices=["table", "gate"])
-    ap.add_argument("--root", required=True, help="P7 root (table) or side output/ (gate)")
-    ap.add_argument("--published_out", required=True)
-    ap.add_argument("--out_tsv")
+    ap.add_argument("mode", choices=["table", "gate", "sitable"])
+    ap.add_argument("--root", help="P7 root (table) or side output/ (gate)")
+    ap.add_argument("--published_out")
+    ap.add_argument("--out_tsv", help="TSV to write (table) or read (sitable)")
+    ap.add_argument("--r5_root", help="per-config R5 null outputs: <r5_root>/<config>/<sub>/")
     ap.add_argument("--subs", nargs="+", default=SUBS)
     ap.add_argument("--final_only", action="store_true")
     ap.add_argument("--configs", nargs="+", default=list(CONFIGS))
     a = ap.parse_args()
-    if a.mode == "table":
-        table(a.root, a.published_out, a.out_tsv, a.configs)
+    if a.mode == "sitable":
+        print(sitable(a.out_tsv))
+    elif a.mode == "table":
+        table(a.root, a.published_out, a.out_tsv, a.configs, a.r5_root)
     else:
         sys.exit(1 if gate(a.root, a.published_out, a.subs, final_only=a.final_only) else 0)
 

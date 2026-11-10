@@ -149,3 +149,80 @@ def test_state_covars_for_save():
     bad[0, 0, 1] = 1e-12
     with pytest.raises(ValueError, match="off-diagonal"):
         m04s.state_covars_for_save(bad, "diag")
+
+
+# ---------------------------------------------------------------- p7_collect: R5 rows, SI table
+
+collect = importlib.import_module("p7_collect")
+
+
+def _r5(tmp_path, rho=0.5, n_draws=10000, n_finite=10000, stimulus="movie10", old=False):
+    import json
+    import numpy as np
+    s = {"observed": {"rho": rho}, "delta_rho": 0.1, "p_empirical": 1 / 10001,
+         "null": {"n_draws": n_draws, "mean": rho - 0.1}}
+    if not old:
+        s["stimulus"] = stimulus
+        s["null"]["n_finite"] = n_finite
+    else:
+        draws = np.zeros(n_draws)
+        draws[: n_draws - n_finite] = np.nan
+        np.save(tmp_path / "null_draws.npy", draws)
+    path = tmp_path / "r5_phase_null_summary.json"
+    path.write_text(json.dumps(s))
+    return str(path)
+
+
+def test_r5_measures_reads_null_and_delta(tmp_path):
+    m = collect.r5_measures(_r5(tmp_path), 0.5)
+    assert m == {"m10_null_mean": 0.4, "m10_delta_rho": 0.1, "m10_delta_p": 1 / 10001}
+
+
+@pytest.mark.parametrize("kw,m10_rho,match", [
+    ({"stimulus": "harrypotter"}, 0.5, "expected movie10"),
+    ({"n_finite": 9999}, 0.5, "9999 finite"),
+    ({"n_draws": 1000, "n_finite": 1000}, 0.5, "expected 10000"),
+    ({}, 0.5 + 1e-9, "not the m10_05 rho"),
+])
+def test_r5_measures_refuses(tmp_path, kw, m10_rho, match):
+    with pytest.raises(ValueError, match=match):
+        collect.r5_measures(_r5(tmp_path, **kw), m10_rho)
+
+
+def test_r5_measures_older_schema_counts_draws(tmp_path):
+    assert collect.r5_measures(_r5(tmp_path, old=True), 0.5)["m10_delta_rho"] == 0.1
+    with pytest.raises(ValueError, match="9998 finite"):
+        collect.r5_measures(_r5(tmp_path, old=True, n_finite=9998), 0.5)
+
+
+def _tsv(tmp_path, p_mfpt=1 / 5001, missing=False):
+    import pandas as pd
+    vals = {"n_active_states_05a": 46, "cat_eligible_for_content_analysis": 31,
+            "q_excess_N2": 0.2, "p_N2": 1 / 1001, "q_excess_N3": 0.3, "p_N3": 1 / 501,
+            "fc_transition_rho": 0.4, "fc_transition_p": 1 / 5001, "mfpt_fc_rho": 0.5,
+            "mfpt_fc_p": p_mfpt, "m10_rho": 0.6, "m10_delta_rho": 0.1,
+            "m10_delta_p": 1 / 10001}
+    rows = [(c, s, k, v, v) for c in collect.ROW_LABELS for s in collect.SUBS
+            for k, v in vals.items()]
+    df = pd.DataFrame(rows, columns=["config", "participant", "measure", "value",
+                                     "published_value"])
+    if missing:
+        df["value"] = df["value"].astype(object)
+        df.loc[0, "value"] = "NA"
+    path = tmp_path / "t.tsv"
+    df.to_csv(path, sep="\t", index=False)
+    return str(path)
+
+
+def test_sitable_prints_p_only_above_the_floor(tmp_path):
+    out = collect.sitable(_tsv(tmp_path))
+    assert "p =" not in out                      # every p at its floor
+    assert "| Published (final model) | 46 / 31 |" in out
+    assert "| 0.400 / 0.500 |" in out
+    out = collect.sitable(_tsv(tmp_path, p_mfpt=0.0569))
+    assert "0.400 / 0.500 (p = 0.057)" in out
+
+
+def test_sitable_refuses_missing_cells(tmp_path):
+    with pytest.raises(ValueError, match="NA values"):
+        collect.sitable(_tsv(tmp_path, missing=True))
