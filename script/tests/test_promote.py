@@ -93,11 +93,28 @@ FLAGS = "05e_temporal_trend_a4/atlas-X/sub-06/vt0.95/state_flags.csv"
 REC = "05f_state_fc/atlas-X/sub-06/vt0.95/provenance_05f.json"
 
 
-def _record(sessions=None, commit=MAIN):
-    return {"stage": "05f", "sub_id": "sub-06", "parcellation": "atlas-X",
+# Tests treat the branch head as "main": the code floor reaches origin/main
+# only when this change merges.
+MAIN_REF = "HEAD"
+K1 = {"name": "x", "size": 10, "md5": "1" * 32}
+
+
+def _record(sessions=None, commit=MAIN, outputs=None, inputs=None):
+    return {"schema": 2, "stage": "05f", "sub_id": "sub-06", "parcellation": "atlas-X",
             "code": {"commit": commit, "dirty": False, "head_changed": False},
             "sessions_read": sessions or {"s02e04b": "ses-006"},
-            "inputs": {"run_file:s02e04b": {"name": "x", "annex_key": "K1"}}}
+            "inputs": inputs or {"parcel_ts:s02e04b": K1},
+            "outputs": outputs or {}}
+
+
+def _write_rec(so, **kw):
+    """Record in vt0.95/ listing every non-record file there with its current md5."""
+    d = (so / REC).parent
+    outputs = {}
+    for f in sorted(d.rglob("*")):
+        if f.is_file() and not f.name.startswith("provenance_"):
+            outputs[str(f.relative_to(d))] = {"size": f.stat().st_size, "md5": promote.md5(f)}
+    (so / REC).write_text(json.dumps(_record(outputs=outputs, **kw)))
 
 
 @pytest.fixture
@@ -122,7 +139,7 @@ def setup(tmp_path):
         (so / rel).parent.mkdir(parents=True, exist_ok=True)
     np.save(so / RV, np.full((3, 3), 1.0))
     np.save(so / OTHER, np.zeros((3, 3)))
-    (so / REC).write_text(json.dumps(_record()))
+    _write_rec(so)
     # an input linked in from the dataset is not a recomputed output
     (so / "05e_temporal_trend_a4").mkdir()
     os.symlink(ds / "05e_temporal_trend_a4" / "atlas-X", so / "05e_temporal_trend_a4" / "atlas-X")
@@ -159,7 +176,7 @@ git add -- "$@" && git -c user.email=a@b -c user.name=a commit -q $amend -m "$ms
 
 
 def _plan(ds, side, mpath):
-    return promote.build_plan(side, ds, promote.load_manifest(mpath), repo=REPO_DIR)
+    return promote.build_plan(side, ds, promote.load_manifest(mpath), repo=REPO_DIR, main_ref=MAIN_REF)
 
 
 def test_good_promotion_is_ready_and_executes(setup, tmp_path, monkeypatch):
@@ -173,7 +190,7 @@ def test_good_promotion_is_ready_and_executes(setup, tmp_path, monkeypatch):
     fake.chmod(0o755)
     monkeypatch.setenv("PROMOTE_DATALAD", str(fake))
     rc = promote.main(["--side-root", str(side), "--manifest", str(m), "--dataset", str(ds),
-                       "--repo", str(REPO_DIR), "--no-fetch", "--execute"])
+                       "--repo", str(REPO_DIR), "--main-ref", MAIN_REF, "--no-fetch", "--execute"])
     assert rc == 0
     assert np.all(np.load(ds / RV) == 1.0)
     msg = _git(ds, "log", "-1", "--format=%B")
@@ -212,6 +229,7 @@ def test_control_outside_the_change_set_or_not_recomputed_blocks(setup, tmp_path
 def test_control_against_the_pinned_version_fails_on_the_wrong_fc(setup, tmp_path):
     ds, side, pinned = setup
     np.save(side / "output" / RV, np.full((3, 3), 2.0))     # the side root reproduced the wrong FC
+    _write_rec(side / "output")
     fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
     assert any(f"control {RV} vs {pinned}" in f and "FAIL" in f for f in fails)
     assert any("expect differ" in f and "FAIL" in f for f in fails)
@@ -234,11 +252,11 @@ def test_missing_positive_control_blocks(setup, tmp_path):
 
 def test_record_with_wrong_session_or_branch_code_blocks(setup, tmp_path):
     ds, side, pinned = setup
-    (side / "output" / REC).write_text(json.dumps(_record(sessions={"s02e04b": "ses-041"})))
+    _write_rec(side / "output", sessions={"s02e04b": "ses-041"})
     fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
     assert any("read from ses-041" in f for f in fails)
     first = _git(REPO_DIR, "rev-list", "--max-parents=0", "origin/main").splitlines()[0]
-    (side / "output" / REC).write_text(json.dumps(_record(commit=first)))
+    _write_rec(side / "output", commit=first)
     fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
     assert any("lacks floor fix" in f for f in fails)
 
@@ -247,30 +265,36 @@ def test_missing_record_for_a_provenance_stage_blocks(setup, tmp_path):
     ds, side, pinned = setup
     (side / "output" / REC).unlink()
     fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
-    assert any("writes provenance, but the side root has no record" in f for f in fails)
+    assert any(RV in f and "no provenance_05f.json in its directory or above" in f for f in fails)
 
 
 def test_input_log_differs_from_dataset_record(setup, tmp_path):
     ds, side, pinned = setup
-    old = _record()
-    old["inputs"] = {"run_file:s02e04b": {"name": "x", "annex_key": "K0"}}
+    old = _record(inputs={"parcel_ts:s02e04b": {"name": "x", "size": 10, "md5": "0" * 32}})
     (ds / REC).write_text(json.dumps(old))
     _git(ds, "add", REC)
     _git(ds, "commit", "-q", "-m", "record")
     m = _manifest(tmp_path, pinned)
-    assert any("inputs differ" in f for f in _plan(ds, side, m).report.fails)
-    m2 = _manifest(tmp_path, pinned, 'allow_input_changes = "02 rerun"\n')
-    # TOML keys after a table belong to it; put the key at the top instead
-    m2.write_text('allow_input_changes = "02 rerun"\n' + _manifest(tmp_path, pinned).read_text())
-    plan = _plan(ds, side, m2)
-    assert not any("inputs differ" in f for f in plan.report.fails)
-    assert any("inputs differ" in w for w in plan.report.warns)
+    assert any("input parcel_ts:s02e04b differs" in f for f in _plan(ds, side, m).report.fails)
+    # a waiver applies to the keys its pattern names, not to every input
+    body = _manifest(tmp_path, pinned).read_text()
+    m.write_text('allow_input_changes = {"atlas_dseg:*" = "atlas fix"}\n' + body)
+    assert any("input parcel_ts:s02e04b differs" in f for f in _plan(ds, side, m).report.fails)
+    m.write_text('allow_input_changes = {"parcel_ts:*" = "02 rerun"}\n' + body)
+    plan = _plan(ds, side, m)
+    assert not any("differs" in f for f in plan.report.fails)
+    assert any("parcel_ts:s02e04b differs" in w and "02 rerun" in w for w in plan.report.warns)
+    # a blanket string waiver is refused
+    m.write_text('allow_input_changes = "anything"\n' + body)
+    with pytest.raises(ValueError, match="table of input-key patterns"):
+        promote.load_manifest(m)
 
 
-def test_broad_change_glob_is_refused(tmp_path):
+@pytest.mark.parametrize("glob", ["**", "**/**", "*/**", "**/*.npy", "05*/x.npy", "?5f/x.npy"])
+def test_broad_change_glob_is_refused(tmp_path, glob):
     m = tmp_path / "m.toml"
-    m.write_text(f'message = "x"\ncode_commit = "{MAIN}"\nchange = ["**"]\n')
-    with pytest.raises(ValueError, match="declares everything"):
+    m.write_text(f'message = "x"\ncode_commit = "{MAIN}"\nchange = ["{glob}"]\n')
+    with pytest.raises(ValueError, match="must start with a literal stage directory"):
         promote.load_manifest(m)
 
 
@@ -371,6 +395,7 @@ def test_large_promotions_save_in_chunks_into_one_commit(setup, tmp_path, monkey
     so = side / "output"
     for i in range(5):
         np.save(so / f"05f_state_fc/atlas-X/sub-06/vt0.95/extra_{i}.npy", np.zeros(2))
+    _write_rec(so)
     m = _manifest(tmp_path, pinned)
     m.write_text(m.read_text().replace(
         'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
@@ -383,7 +408,7 @@ def test_large_promotions_save_in_chunks_into_one_commit(setup, tmp_path, monkey
     monkeypatch.setattr(promote, "SAVE_CHUNK", 2)
     before = int(_git(ds, "rev-list", "--count", "HEAD"))
     rc = promote.main(["--side-root", str(side), "--manifest", str(m), "--dataset", str(ds),
-                       "--repo", str(REPO_DIR), "--no-fetch", "--execute"])
+                       "--repo", str(REPO_DIR), "--main-ref", MAIN_REF, "--no-fetch", "--execute"])
     assert rc == 0
     assert int(_git(ds, "rev-list", "--count", "HEAD")) == before + 1
     assert _git(ds, "status", "--porcelain", "--untracked-files=no") == ""
@@ -410,3 +435,180 @@ def test_reference_found_in_the_object_store_without_git_annex(tmp_path, monkeyp
     _git(ds, "commit", "-q", "-m", "annexed")
     monkeypatch.setattr(promote.shutil, "which", lambda name: None)
     assert np.array_equal(np.load(promote.reference_file(ds, "HEAD", "f.npy", tmp_path)), np.arange(3.0))
+
+
+# ------------------------------------------- adversarial review, round 1
+def _fake(tmp_path, monkeypatch, body=None, name="fake_datalad"):
+    fake = tmp_path / name
+    fake.write_text(body or FAKE_DATALAD)
+    fake.chmod(0o755)
+    monkeypatch.setenv("PROMOTE_DATALAD", str(fake))
+    return fake
+
+
+def _execute(plan, side, ds, m, logs):
+    return promote.execute(plan, side, ds, promote.load_manifest(m), m, REPO_DIR, logs.append,
+                           main_ref=MAIN_REF)
+
+
+def test_record_in_an_ancestor_directory_covers_only_the_files_it_lists(setup, tmp_path):
+    ds, side, pinned = setup
+    so = side / "output"
+    rec = json.loads((so / REC).read_text())
+    (so / REC).unlink()
+    rec["outputs"] = {}                                  # written by a run that produced other files
+    (so / "05f_state_fc/atlas-X/sub-06/provenance_05f.json").write_text(json.dumps(rec))
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any(RV in f and "not listed" in f for f in fails)
+
+
+def test_side_file_rewritten_after_its_record_is_refused(setup, tmp_path):
+    ds, side, pinned = setup
+    np.save(side / "output" / RV, np.full((3, 3), 1.5))  # partial rerun after the record was written
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any(RV in f and "checksum differs" in f for f in fails)
+
+
+def test_file_changed_between_check_and_copy_is_not_promoted(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    np.save(side / "output" / RV, np.full((3, 3), np.nan))   # a job still writing
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("changed in the side root after it was checked" in l for l in logs)
+    assert np.all(np.load(ds / RV) == 2.0)                   # dataset keeps its version
+
+
+def test_gitignored_new_file_is_refused_before_copying(setup, tmp_path):
+    ds, side, pinned = setup
+    (ds / ".gitignore").write_text("**/partial_layers/\n")
+    _git(ds, "add", ".gitignore")
+    _git(ds, "commit", "-q", "-m", "ignore")
+    part = side / "output/05f_state_fc/atlas-X/sub-06/vt0.95/partial_layers"
+    part.mkdir()
+    np.save(part / "layer3.npy", np.ones(2))
+    _write_rec(side / "output")
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/**"]'))
+    fails = _plan(ds, side, m).report.fails
+    assert any("partial_layers/layer3.npy" in f and ".gitignore matches it" in f for f in fails)
+
+
+def test_save_does_not_amend_a_commit_another_job_made(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    so = side / "output"
+    for i in range(3):
+        np.save(so / f"05f_state_fc/atlas-X/sub-06/vt0.95/extra_{i}.npy", np.zeros(2))
+    _write_rec(so)
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy", '
+        '"05f_state_fc/atlas-X/sub-06/vt0.95/extra_*.npy"]'))
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    flag = tmp_path / "foreign_done"
+    _fake(tmp_path, monkeypatch, FAKE_DATALAD + f"""
+if [ ! -e "{flag}" ]; then touch "{flag}"; mkdir -p 06a_other && echo x > 06a_other/f.txt
+  git add 06a_other && git -c user.email=a@b -c user.name=a commit -q -m "foreign save"; fi
+""")
+    monkeypatch.setattr(promote, "SAVE_CHUNK", 2)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("HEAD moved during the save" in l for l in logs)
+    assert _git(ds, "log", "-1", "--format=%s") == "foreign save"   # not rewritten
+    assert any(l.startswith("  NEW ") or l.startswith("  UPDATE ") for l in logs)
+
+
+def test_save_that_commits_nothing_fails(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    _fake(tmp_path, monkeypatch, "#!/bin/bash\nexit 0\n")
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("made no commit" in l for l in logs)
+
+
+def test_stage_without_provenance_needs_a_weak_stages_reason(tmp_path):
+    A = "06a_state_temp_dynamics/atlas-X/sub-06/dwell.npy"
+    ds = tmp_path / "ds"
+    (ds / A).parent.mkdir(parents=True)
+    _git(ds, "init", "-q")
+    np.save(ds / A, np.full(3, 2.0))
+    _git(ds, "add", ".")
+    _git(ds, "commit", "-q", "-m", "x")
+    so = tmp_path / "side/output"
+    (so / A).parent.mkdir(parents=True)
+    np.save(so / A, np.full(3, 9.0))
+    body = textwrap.dedent(f"""
+        message = "x"
+        code_commit = "{MAIN}"
+        change = ["06a_state_temp_dynamics/atlas-X/sub-06/**"]
+        [[control]]
+        path = "{A}"
+        reference = "HEAD"
+        expect = "differ"
+        min_diff = 0.5
+        why = "x"
+    """)
+    m = tmp_path / "m.toml"
+    m.write_text(body)
+    fails = _plan(ds, tmp_path / "side", m).report.fails
+    assert any("06a_state_temp_dynamics" in f and "weak_stages" in f for f in fails)
+    m.write_text('weak_stages = "06a reads only decoded states"\n' + body)
+    plan = _plan(ds, tmp_path / "side", m)
+    assert plan.report.fails == [] and any("weak_stages" in w for w in plan.report.warns)
+
+
+def test_inputs_compare_by_content_across_storage_forms():
+    import hashlib
+    md = hashlib.md5(b"x" * 128).hexdigest()
+    annexed = {"inputs": {"parcel_ts:s01e01a": {"name": "f", "annex_key": f"MD5E-s128--{md}.npy"}}}
+    plain = {"inputs": {"parcel_ts:s01e01a": {"name": "f", "size": 128, "md5": md}}}
+    assert promote.input_differences(annexed, plain) == []
+    other = {"inputs": {"parcel_ts:s01e01a": {"name": "f", "size": 128, "md5": "0" * 32}}}
+    assert promote.input_differences(plain, other) == ["parcel_ts:s01e01a"]
+    assert promote.input_differences({"sessions_read": {"r": "ses-1"}},
+                                     {"sessions_read": {"r": "ses-2"}}) == ["session:r"]
+
+
+def test_positive_control_cannot_pass_on_a_difference_the_equality_rule_calls_equal(setup, tmp_path):
+    ds, side, pinned = setup
+    np.save(ds / RV, np.full((3, 3), 1e7))
+    _git(ds, "commit", "-q", "-am", "big")
+    np.save(side / "output" / RV, np.full((3, 3), 1e7 + 1e-3))   # within rtol 1e-9 of 1e7
+    _write_rec(side / "output")
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace("min_diff = 0.5", "min_diff = 1e-4"))
+    fails = _plan(ds, side, m).report.fails
+    assert any("expect differ" in f and "FAIL" in f for f in fails)
+
+
+def test_unparseable_files_fall_back_to_bytes(tmp_path):
+    a = tmp_path / "a.npy"
+    np.save(a, np.array([np.zeros(2), np.zeros(3)], dtype=object), allow_pickle=True)
+    b = tmp_path / "b.npy"
+    b.write_bytes(a.read_bytes())
+    assert compare_files(a, b).equal
+    big = "x" * 200000
+    (tmp_path / "a.csv").write_text(f"h\n{big}\n")
+    (tmp_path / "b.csv").write_text(f"h\n{big}\n")
+    assert compare_files(tmp_path / "a.csv", tmp_path / "b.csv").equal
+
+
+def test_execute_refuses_when_main_cannot_be_fetched(tmp_path, capsys):
+    lone = tmp_path / "lone"
+    lone.mkdir()
+    _git(lone, "init", "-q")
+    m = tmp_path / "m.toml"
+    m.write_text(f'message = "x"\ncode_commit = "{MAIN}"\nchange = ["05f_state_fc/x"]\n')
+    (tmp_path / "side" / "output").mkdir(parents=True)
+    rc = promote.main(["--side-root", str(tmp_path / "side"), "--manifest", str(m), "--dataset",
+                       str(lone), "--repo", str(lone), "--execute"])
+    assert rc == 1 and "NOT EXECUTING" in capsys.readouterr().out

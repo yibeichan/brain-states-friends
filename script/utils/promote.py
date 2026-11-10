@@ -48,6 +48,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import fcntl
+import fnmatch
 import datetime
 import hashlib
 import json
@@ -70,9 +72,9 @@ REPO_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from utils import check_code  # noqa: E402
 
+csv.field_size_limit(sys.maxsize)   # whole-row fields of any length
 FIGURE_EXT = {".png", ".pdf", ".svg", ".jpg", ".jpeg"}
 DEFAULT_EXCLUDE = ["logs/**", "**/__pycache__/**", "**/.nfs*"]
-BROAD_GLOBS = {"**", "**/*", "*"}
 SAVE_CHUNK = 500   # paths per datalad save call
 
 
@@ -280,7 +282,15 @@ def compare_files(a, b, rtol=1e-9, atol=1e-12, ignore_keys=()):
             return _close_json(json.loads(a.read_text()), json.loads(b.read_text()), rtol, atol, ignore_keys)
         if ext in (".csv", ".tsv"):
             return _close_table(a, b, "\t" if ext == ".tsv" else ",", rtol, atol)
-    except (ValueError, OSError) as e:
+    except (ValueError, csv.Error) as e:
+        # object arrays, malformed tables: fall back to comparing bytes
+        try:
+            ok = md5(a) == md5(b)
+        except OSError as e2:
+            return Cmp(False, f"cannot compare: {e2}", math.inf, "error")
+        return (Cmp(True, f"bytes equal (not parsed: {e})") if ok
+                else _structural(f"bytes differ (not parsed: {e})"))
+    except OSError as e:
         return Cmp(False, f"cannot compare: {e}", math.inf, "error")
     ok = md5(a) == md5(b)
     return Cmp(True, "bytes equal") if ok else _structural("bytes differ")
@@ -355,7 +365,12 @@ class Report:
 @dataclass
 class Plan:
     copies: list = field(default_factory=list)       # (action, rel)
+    md5: dict = field(default_factory=dict)          # rel -> md5 of the side file as checked
     report: Report = field(default_factory=Report)
+
+
+def _has_wildcard(seg):
+    return any(ch in seg for ch in "*?[")
 
 
 def load_manifest(path):
@@ -365,8 +380,16 @@ def load_manifest(path):
         if not m.get(k):
             raise ValueError(f"manifest {path}: '{k}' is required")
     for g in m["change"]:
-        if g.strip("/") in BROAD_GLOBS:
-            raise ValueError(f"manifest {path}: change glob {g!r} declares everything; list the paths")
+        # Breadth is judged by what a glob can match: it must name the stage
+        # directory literally, so no glob can declare several stages at once.
+        first = g.strip("/").split("/")[0]
+        if not first or _has_wildcard(first):
+            raise ValueError(f"manifest {path}: change glob {g!r} must start with a literal stage "
+                             "directory (e.g. '05f_state_fc/...'); list the paths")
+    aic = m.get("allow_input_changes")
+    if aic is not None and not (isinstance(aic, dict) and all(isinstance(v, str) and v for v in aic.values())):
+        raise ValueError(f"manifest {path}: allow_input_changes must be a table of input-key "
+                         "patterns to reasons, e.g. {\"parcel_ts:s02e04b\" = \"02 rerun\"}")
     return m
 
 
@@ -418,24 +441,32 @@ def _under(rel, d):
     return d == "" or rel == d or rel.startswith(d.rstrip("/") + "/")
 
 
-# Output top directories of the stages that write provenance (check_code.PROVENANCE_STAGES).
-_STAGE_TOPS = {
-    "03a_pca4combined_hmm": "03a",
-    "05e_temporal_trend_a1": "05e_a1",
-    "05e_temporal_trend_a3": "05e_a3",
-    "05f_state_fc": "05f",
-}
-_04RC_FILES = {"state_empirical_corr.npy", "fc_metadata.json"}
+gated_stage = check_code.gated_stage
 
 
-def gated_stage(rel):
-    """Stage whose provenance must accompany ``rel``, or None."""
-    parts = Path(rel).parts
-    if parts and parts[0] in _STAGE_TOPS:
-        return _STAGE_TOPS[parts[0]]
-    if parts and parts[0] == "04_combined_hdphmm" and parts[-1] in _04RC_FILES:
-        return "04rc"
-    return None
+def _norm_ident(ident):
+    """Content identity of an input-log entry, comparable across storage forms."""
+    if not isinstance(ident, dict):
+        return ("?", repr(ident))
+    if ident.get("md5"):
+        return ("md5", ident.get("size"), ident["md5"])
+    key = ident.get("annex_key")                          # schema-1 records
+    m = check_code._MD5_KEY_RE.match(key or "")
+    if m:
+        return ("md5", int(m.group(1)), m.group(2))
+    if ident.get("sha256"):
+        return ("sha256", ident.get("size"), ident["sha256"])
+    return ("?", repr(sorted(ident.items())))
+
+
+def input_differences(prev, rec):
+    """Input-log keys whose content differs between two records (sessions as 'session:<run>')."""
+    a_ = {k: _norm_ident(v) for k, v in (prev.get("inputs") or {}).items()}
+    b_ = {k: _norm_ident(v) for k, v in (rec.get("inputs") or {}).items()}
+    diff = [k for k in set(a_) | set(b_) if a_.get(k) != b_.get(k)]
+    sa, sb = prev.get("sessions_read") or {}, rec.get("sessions_read") or {}
+    diff += [f"session:{r}" for r in set(sa) | set(sb) if sa.get(r) != sb.get(r)]
+    return sorted(diff)
 
 
 def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/main",
@@ -501,6 +532,8 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
             continue
         src, dst = side_out / rel, dataset / rel
         in_change = matches(rel, change)
+        if in_change:
+            plan.md5[rel] = md5(src)                 # the content the gates below judge
         if not os.path.lexists(dst):
             if in_change:
                 plan.copies.append(("NEW", rel))
@@ -531,12 +564,34 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
     code_full = rc.stdout.strip() if rc.returncode == 0 else None
     for p in check_code.check_commit(manifest["code_commit"], None, repo=repo, main_ref=main_ref):
         rep.fail(f"code_commit: {p}")
-    allow_inputs = manifest.get("allow_input_changes", "")
-    for rel in records:
-        rdir = os.path.dirname(rel)
-        if not any(_under(r, rdir) for r in planned):
-            rep.info(f"provenance record left out (nothing planned under its directory): {rel}")
+
+    # coverage: each planned output of a provenance stage must be listed, with
+    # the checksum it has now, in its nearest record in the side root
+    cache, needed, weak_tops = {}, set(), set()
+    for rel in planned:
+        stage = gated_stage(rel)
+        if stage is None:
+            weak_tops.add(Path(rel).parts[0])
             continue
+        why = check_code.coverage_problem(side_out / rel, stage, cache)
+        if why:
+            rep.fail(f"{rel}: {why}")
+        rp = check_code.nearest_record(side_out / rel, stage)
+        if rp is not None:
+            needed.add(os.path.relpath(rp, side_out))
+    for rel in records:
+        if rel not in needed:
+            rep.info(f"provenance record left out (no planned output relies on it): {rel}")
+    if weak_tops:
+        msg = (f"stages without provenance records, accepted on the manifest's code_commit only: "
+               f"{sorted(weak_tops)}")
+        if manifest.get("weak_stages"):
+            rep.warn(msg + f" [weak_stages: {manifest['weak_stages']}]")
+        else:
+            rep.fail(msg + "; set weak_stages = \"<reason>\" to accept this")
+
+    allow_inputs = manifest.get("allow_input_changes") or {}
+    for rel in sorted(needed):
         rec, err = check_code._load_record(side_out / rel)
         if err:
             rep.fail(f"{rel}: {err}")
@@ -554,21 +609,23 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
             if err:
                 rep.fail(f"{rel} in the dataset: {err}")
                 prev = {}
-            for k in ("inputs", "sessions_read"):
-                if prev.get(k) != rec.get(k):
-                    a_, b_ = prev.get(k) or {}, rec.get(k) or {}
-                    diff = sorted(x for x in set(a_) | set(b_) if a_.get(x) != b_.get(x))
-                    msg = f"{rel}: {k} differ from the dataset's record ({len(diff)} entries, e.g. {diff[:3]})"
-                    if allow_inputs:
-                        rep.warn(msg + f" [allowed: {allow_inputs}]")
-                    else:
-                        rep.fail(msg)
+            for k in input_differences(prev, rec):
+                why = next((r for pat, r in allow_inputs.items() if fnmatch.fnmatchcase(k, pat)), None)
+                if why:
+                    rep.warn(f"{rel}: input {k} differs from the dataset's record [allowed: {why}]")
+                else:
+                    rep.fail(f"{rel}: input {k} differs from the dataset's record "
+                             "(waive it with allow_input_changes = {\"<pattern>\" = \"<reason>\"})")
+        plan.md5[rel] = md5(side_out / rel)
         plan.copies.append(("UPDATE" if os.path.lexists(dataset / rel) else "NEW", rel))
-    for rel in planned:
-        stage = gated_stage(rel)
-        if stage and not any(os.path.basename(r) == f"provenance_{stage}.json"
-                             and _under(rel, os.path.dirname(r)) for r in records):
-            rep.fail(f"{rel}: stage {stage} writes provenance, but the side root has no record for it")
+
+    # files the dataset's .gitignore matches would be copied but never saved
+    rels_all = [r for _, r in plan.copies]
+    if rels_all:
+        ci = subprocess.run(["git", "check-ignore", "--stdin", "-z"], cwd=dataset,
+                            input="\0".join(rels_all) + "\0", capture_output=True, text=True)
+        for r in [x for x in ci.stdout.split("\0") if x][:20]:
+            rep.fail(f"{r}: the dataset's .gitignore matches it, so it would be copied but not saved")
 
     check_controls(manifest, side_out, dataset, files, rep)
     return plan
@@ -620,7 +677,7 @@ def check_controls(manifest, side_out, dataset, files, rep):
                 if min_diff <= atol:
                     rep.fail(f"{tag}: min_diff {min_diff:g} must exceed atol {atol:g}")
                     continue
-                ok = cmp_.kind == "numeric" and cmp_.max_diff >= min_diff
+                ok = (not cmp_.equal) and cmp_.kind == "numeric" and cmp_.max_diff >= min_diff
                 why_not = "" if ok else (f" [{cmp_.kind} difference, not a numeric one]" if cmp_.kind != "numeric" else "")
                 (rep.info if ok else rep.fail)(
                     f"{tag}: {'PASS' if ok else 'FAIL'} ({cmp_.detail}; need max |diff| >= {min_diff:g}){why_not}")
@@ -636,52 +693,103 @@ def datalad_cmd(repo):
     return ["uv", "run", "--project", str(repo), "--extra", "datalad", "datalad"]
 
 
-def execute(plan, side_root, dataset, manifest, manifest_path, repo, log):
+def _head(dataset):
+    return _run(["git", "rev-parse", "HEAD"], cwd=dataset).stdout.strip()
+
+
+def execute(plan, side_root, dataset, manifest, manifest_path, repo, log, main_ref="origin/main"):
     side_out = Path(side_root) / "output"
     dataset = Path(dataset)
     rels = [r for _, r in plan.copies]
-    dirty_hint = ("the dataset now has unsaved copies; inspect with 'git status', then revert "
-                  "with 'git checkout -- <paths>' or save them by hand")
+    lock_path = Path(_run(["git", "rev-parse", "--absolute-git-dir"], cwd=dataset).stdout.strip()) / "promote.lock"
+    lock = open(lock_path, "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        log(f"another promotion holds {lock_path}; nothing was changed")
+        return 1
+    head0 = _head(dataset)
+    new_files = [r for a_, r in plan.copies if a_ == "NEW"]
+    upd_files = [r for a_, r in plan.copies if a_ == "UPDATE"]
+
+    def recovery(reason):
+        log(f"PROMOTION FAILED: {reason}")
+        log(f"  dataset HEAD before: {head0}; now: {_head(dataset)}")
+        log("  to undo by hand: remove the NEW files and restore the UPDATE files with "
+            "'git checkout HEAD -- <path>' (lists below); if HEAD moved, inspect the commits "
+            f"after {head0[:10]} with 'git log {head0[:10]}..HEAD' before deciding.")
+        for r in new_files:
+            log(f"  NEW {r}")
+        for r in upd_files:
+            log(f"  UPDATE {r}")
+        return 1
+
     try:
         for act, rel in plan.copies:
             src, dst = side_out / rel, dataset / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
+            tmp = dst.parent / f".promote-{os.getpid()}-{dst.name}"
+            shutil.copy2(src, tmp)
+            if md5(tmp) != plan.md5.get(rel):
+                tmp.unlink()
+                return recovery(f"{rel} changed in the side root after it was checked")
+            os.chmod(tmp, os.stat(tmp).st_mode | 0o200)
             if os.path.lexists(dst):
                 os.remove(dst)                      # annex symlink or plain file
-            shutil.copy2(src, dst)
-            os.chmod(dst, os.stat(dst).st_mode | 0o200)
+            os.replace(tmp, dst)
             log(f"{act} {rel}")
     except OSError as e:
-        log(f"COPY FAILED: {e}; {dirty_hint}")
-        return 1
-    floor = ",".join(s[:10] for s, _, _ in check_code.load_floor())
+        return recovery(f"copy failed: {e}")
+    floor = ",".join(sh[:10] for sh, _, _ in check_code.load_floor(repo=repo, main_ref=main_ref))
     msg = (f"{manifest['message']}\n\n"
            f"code_commit: {manifest['code_commit']}\n"
            f"code_floor: {floor}\n"
            f"side_root: {side_root}\n"
            f"manifest_sha256: {hashlib.sha256(Path(manifest_path).read_bytes()).hexdigest()}\n"
            f"promote_check: passed")
-    # One commit, so save in chunks with --amend after the first (keeps the
-    # command line far below ARG_MAX for large promotions).
-    chunk = SAVE_CHUNK
-    for i in range(0, len(rels), chunk):
-        part = rels[i:i + chunk]
+    # One commit: save in chunks, amending the promotion's own commit after the
+    # first (keeps the command line far below ARG_MAX). Before each amend, HEAD
+    # must still be that commit, or another job committed in between.
+    expected = head0
+    for i in range(0, len(rels), SAVE_CHUNK):
+        part = rels[i:i + SAVE_CHUNK]
+        if i and _head(dataset) != expected:
+            return recovery("HEAD moved during the save (another job committed); not amending its commit")
         cmd = datalad_cmd(repo) + ["save", "-m", msg] + (["--amend"] if i else []) + ["--"] + part
         try:
             p = _run(cmd, cwd=dataset)
         except OSError as e:
-            log(f"datalad save failed to start: {e}; {dirty_hint}")
-            return 1
+            return recovery(f"datalad save failed to start: {e}")
         log(p.stdout + p.stderr)
         if p.returncode != 0:
-            log(f"datalad save failed (rc {p.returncode}) on paths {i}..{i + len(part) - 1}; {dirty_hint}")
-            return p.returncode
-    bad = [r for r in rels if not (dataset / r).exists() or md5(dataset / r) != md5(side_out / r)]
+            return recovery(f"datalad save failed (rc {p.returncode}) on paths {i}..{i + len(part) - 1}")
+        expected = _head(dataset)
+        if expected == head0:
+            return recovery("datalad save made no commit")
+        # the promotion's commit must sit directly on head0; anything else means
+        # another job committed while this save ran
+        if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() != head0:
+            return recovery("HEAD moved during the save (another job committed); not amending its commit")
+    # verify: one commit on top of head0, every path saved and clean, content as checked
+    if _run(["git", "rev-parse", "HEAD^"], cwd=dataset).stdout.strip() != head0:
+        return recovery("the promotion is not a single commit on top of the previous HEAD")
+    tops = sorted({Path(r).parts[0] for r in rels})
+    st = _run(["git", "status", "--porcelain", "--untracked-files=all", "-z", "--"] + tops, cwd=dataset)
+    left = {e[3:] for e in st.stdout.split("\0") if len(e) > 3}
+    unsaved = [r for r in rels if r in left]
+    ls = _run(["git", "ls-files", "-z", "--"] + tops, cwd=dataset)
+    tracked = set(ls.stdout.split("\0"))
+    unsaved += [r for r in rels if r not in tracked and r not in unsaved]
+    bad = [r for r in rels if (check_code.content_id(dataset / r) or (None, None))[1] != plan.md5.get(r)]
+    for r in unsaved:
+        log(f"VERIFY FAIL: not saved: {r}")
     for r in bad:
-        log(f"VERIFY FAIL: saved content differs from side root: {r}")
+        log(f"VERIFY FAIL: saved content differs from the checked side-root file: {r}")
     head = _run(["git", "log", "-1", "--format=%h %s"], cwd=dataset).stdout.strip()
     log(f"output dataset HEAD: {head}")
-    return 1 if bad else 0
+    if unsaved or bad:
+        return recovery("verification failed")
+    return 0
 
 
 def main(argv=None):
@@ -700,7 +808,11 @@ def main(argv=None):
     dataset = a.dataset or _dataset_from_env(a.repo)
     manifest = load_manifest(a.manifest)
     if not a.no_fetch:
-        print(check_code.fetch_main(a.repo))
+        ok, note = check_code.fetch_main(a.repo)
+        print(note)
+        if not ok and a.execute:
+            print(f"NOT EXECUTING: {a.main_ref} could not be fetched, so the code floor may be stale.")
+            return 1
     plan = build_plan(a.side_root, dataset, manifest, repo=a.repo, main_ref=a.main_ref,
                       strict_figures=a.strict_figures)
     rep = plan.report
@@ -721,7 +833,7 @@ def main(argv=None):
     plan_path = pdir / f"plan_{ts}.tsv"
     with open(plan_path, "w") as fh:
         for act, rel in plan.copies:
-            fh.write(f"{act}\t{md5(Path(a.side_root) / 'output' / rel)}\t{rel}\n")
+            fh.write(f"{act}\t{plan.md5.get(rel, '')}\t{rel}\n")
     print(f"plan written: {plan_path}")
 
     if rep.fails:
@@ -738,7 +850,7 @@ def main(argv=None):
             print(m)
             logf.write(m + "\n")
             logf.flush()
-        return execute(plan, a.side_root, dataset, manifest, a.manifest, a.repo, log)
+        return execute(plan, a.side_root, dataset, manifest, a.manifest, a.repo, log, main_ref=a.main_ref)
 
 
 def _dataset_from_env(repo):

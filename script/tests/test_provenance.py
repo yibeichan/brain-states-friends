@@ -42,7 +42,7 @@ def test_pick_records_session_for_pinned_and_unpinned_runs(tmp_path):
     assert rec["sessions_read"] == {"s02e04b": "ses-006", "s02e05a": "ses-007"}
     assert rec["duplicate_run_sessions_pinned"] == {"s02e04b": "ses-006", "s05e03a": "ses-028"}
     assert rec["inputs"]["run_file:s02e04b"]["name"] == a.name
-    assert "sha256" in rec["inputs"]["run_file:s02e04b"]
+    assert len(rec["inputs"]["run_file:s02e04b"]["md5"]) == 32
 
 
 def test_record_is_per_subject(tmp_path):
@@ -56,14 +56,21 @@ def test_record_is_per_subject(tmp_path):
     assert len(rec["inputs"]) == 1
 
 
-def test_annex_key_is_taken_from_the_symlink_target(tmp_path):
-    key = "MD5E-s20128--86e7cc3ce5b95676377fc680016ce4c7.npy"
-    obj = tmp_path / "objects" / key
-    obj.parent.mkdir()
-    obj.write_bytes(b"x")
-    link = tmp_path / "f.npy"
+def test_same_bytes_get_the_same_identity_annexed_or_plain(tmp_path):
+    import hashlib
+    content = b"\0" * 128
+    key = f"MD5E-s128--{hashlib.md5(content).hexdigest()}.npy"
+    obj = tmp_path / "objects" / "Xx" / "Yy" / key / key
+    obj.parent.mkdir(parents=True)
+    obj.write_bytes(content)
+    link = tmp_path / "linked.npy"
     os.symlink(obj, link)
-    assert provenance.file_identity(link) == {"name": "f.npy", "annex_key": key}
+    plain = tmp_path / "plain.npy"
+    plain.write_bytes(content)
+    li, pi = provenance.file_identity(link), provenance.file_identity(plain)
+    assert (li["size"], li["md5"]) == (pi["size"], pi["md5"]) == (128, hashlib.md5(content).hexdigest())
+    os.remove(obj)                                   # annexed content not present: the key still identifies it
+    assert provenance.file_identity(link)["md5"] == li["md5"]
 
 
 def test_loader_logs_sessions_lengths_and_skips(tmp_path):
@@ -82,12 +89,17 @@ def test_loader_logs_sessions_lengths_and_skips(tmp_path):
 def test_write_provenance(tmp_path, monkeypatch):
     monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))
     monkeypatch.setenv("SLURM_JOB_ID", "123")
-    p = provenance.write_provenance(tmp_path / "out", "04rc", "sub-01", "atlas-X",
-                                    covers=["b.npy", "a.json"])
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "a.json").write_text("{}")
+    (out / "b.npy").write_bytes(b"b")
+    (out / "stage04.pkl").write_bytes(b"not 04rc's")
+    p = provenance.write_provenance(out, "04rc", "sub-01", "atlas-X", covers=["b.npy", "a.json"])
     assert p.name == "provenance_04rc.json"
     rec = json.loads(p.read_text())
-    assert rec["schema"] == 1 and rec["stage"] == "04rc" and rec["slurm_job_id"] == "123"
-    assert rec["covers"] == ["a.json", "b.npy"]
+    assert rec["schema"] == 2 and rec["stage"] == "04rc" and rec["slurm_job_id"] == "123"
+    assert sorted(rec["outputs"]) == ["a.json", "b.npy"]
+    assert rec["outputs"]["b.npy"] == {"size": 1, "md5": "92eb5ffee6ae2fec3ad71c777531578f"}
     assert rec["scratch_dir"] == str(tmp_path)
     assert len(rec["code"]["commit"]) == 40
     assert rec["code"]["head_changed"] is False
@@ -102,3 +114,28 @@ def test_code_state_flags_untracked_python(tmp_path):
     (repo / "script" / "new_stage.py").write_text("x = 1\n")
     st = provenance.code_state(repo)
     assert st["dirty"] is True and st["untracked_py"] == ["script/new_stage.py"]
+
+
+def test_default_record_lists_only_files_written_by_this_run(tmp_path, monkeypatch):
+    out = tmp_path / "out"
+    (out / "figures").mkdir(parents=True)
+    old = out / "left_from_an_earlier_run.npy"
+    old.write_bytes(b"old")
+    os.utime(old, (provenance._T0 - 3600, provenance._T0 - 3600))
+    (out / "new.npy").write_bytes(b"new")
+    (out / "figures" / "f.png").write_bytes(b"png")
+    (out / "provenance_05e_a1.json").write_text("{}")           # another stage's record
+    rec = json.loads(provenance.write_provenance(out, "05f", "sub-06", "atlas-X").read_text())
+    assert sorted(rec["outputs"]) == ["figures/f.png", "new.npy"]
+
+
+def test_dirty_at_import_stays_dirty_after_the_edit_is_reverted(monkeypatch):
+    monkeypatch.setitem(provenance._CODE_AT_IMPORT, "dirty", True)
+    monkeypatch.setitem(provenance._CODE_AT_IMPORT, "modified", [" M script/05f_state_fc.py"])
+    monkeypatch.setattr(provenance, "code_state", lambda repo_dir=None: {
+        "commit": provenance._CODE_AT_IMPORT["commit"], "branch": "main", "dirty": False,
+        "modified": [], "untracked_py": []})
+    rec = provenance.build_record("05f", "sub-06", "atlas-X")
+    assert rec["code"]["dirty"] is True and rec["code"]["dirty_at_import"] is True
+    assert rec["code"]["dirty_at_write"] is False
+    assert rec["code"]["modified_at_import"] == [" M script/05f_state_fc.py"]

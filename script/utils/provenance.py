@@ -10,28 +10,32 @@ dataset (see script/utils/output_provenance.md).
 Use:
     from utils import provenance
     ...                                    # load inputs through the loaders
-    provenance.write_provenance(out_dir, "05f", sub_id, parcellation,
-                                covers=["fc_similarity_corr_rv.npy", ...])
+    provenance.write_provenance(out_dir, "05f", sub_id, parcellation)
 
 Loaders that resolve a run to a file call ``record_input``; ``pick_run_session``
 records every resolution. Call ``write_provenance`` only after the outputs
 were recomputed, never on a checkpoint skip, or old files get a new stamp.
+
+The record lists every output it describes with its size and md5
+(``outputs``): by default every file under ``out_dir`` written since this
+process started, or the files named in ``covers``. A file not listed, or
+listed with another checksum (a crashed or partial rerun), is not covered,
+so the checks refuse it. md5 is used because the output dataset's annex keys
+(MD5E) carry it, so dataset files can be checked without reading them.
 """
 from __future__ import annotations
 
 import datetime
-import hashlib
 import json
 import os
-import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 _REPO_DIR = Path(__file__).resolve().parents[2]
-_ANNEX_KEY_RE = re.compile(r"^[A-Z0-9]+E?-s\d+(--|-m\d+--)\S+$")
-_SHA256_MAX_BYTES = 64 * 1024 * 1024
+_T0 = time.time()          # process start: outputs written after it belong to this run
 
 # Per-process logs, reset by reset() (tests) and read by write_provenance().
 _inputs: dict = {}
@@ -82,33 +86,27 @@ def reset():
     _runs.clear()
 
 
-def file_identity(path) -> dict:
-    """Identity of an input file without reading it when possible.
+def content_id(path):
+    """(size, md5) of a file's content, or None if it cannot be determined.
 
-    An annexed file's real path ends in its annex key, which contains its
-    checksum, so the key identifies the content for free. A plain file up to
-    64 MB is hashed; a larger one is identified by size and mtime only.
+    An annexed file (a symlink into the object store, present or not) is
+    identified from its MD5E key without reading it; any other file is hashed.
+    The same bytes therefore get the same identity whether they are annexed,
+    linked in from the dataset, or a plain copy. Shared with check_code.py.
     """
-    p = Path(path)
-    real = Path(os.path.realpath(p))
-    ident = {"name": p.name}
-    if _ANNEX_KEY_RE.match(real.name):
-        ident["annex_key"] = real.name
-        return ident
-    try:
-        st = real.stat()
-    except OSError:
+    from utils.check_code import content_id as _cid
+
+    return _cid(path)
+
+
+def file_identity(path) -> dict:
+    """Identity of an input file: its name plus content size and md5."""
+    ident = {"name": Path(path).name}
+    cid = content_id(path)
+    if cid is None:
         ident["missing"] = True
-        return ident
-    ident["size"] = st.st_size
-    if st.st_size <= _SHA256_MAX_BYTES:
-        h = hashlib.sha256()
-        with open(real, "rb") as fh:
-            for chunk in iter(lambda: fh.read(1 << 20), b""):
-                h.update(chunk)
-        ident["sha256"] = h.hexdigest()
     else:
-        ident["mtime"] = st.st_mtime
+        ident["size"], ident["md5"] = cid
     return ident
 
 
@@ -141,7 +139,7 @@ def _dataset_head(scratch_dir):
     return head if rc == 0 else None
 
 
-def build_record(stage, sub_id, parcellation, covers=None, extra=None) -> dict:
+def build_record(stage, sub_id, parcellation, outputs=None, extra=None) -> dict:
     """The provenance record for ``sub_id`` as of now (see write_provenance)."""
     from utils.common import DUPLICATE_RUN_SESSIONS
 
@@ -150,6 +148,13 @@ def build_record(stage, sub_id, parcellation, covers=None, extra=None) -> dict:
     code = dict(now)
     code["commit_at_import"] = _CODE_AT_IMPORT.get("commit")
     code["head_changed"] = _CODE_AT_IMPORT.get("commit") != now.get("commit")
+    # The code that ran was loaded at import: a tree dirty then is dirty, even
+    # if the edit was reverted before the record was written.
+    code["dirty_at_import"] = bool(_CODE_AT_IMPORT.get("dirty"))
+    code["dirty_at_write"] = bool(now.get("dirty"))
+    code["dirty"] = code["dirty_at_import"] or code["dirty_at_write"]
+    code["modified_at_import"] = _CODE_AT_IMPORT.get("modified", [])
+    code["untracked_py_at_import"] = _CODE_AT_IMPORT.get("untracked_py", [])
     record = {
         "schema": SCHEMA_VERSION,
         "stage": stage,
@@ -165,7 +170,7 @@ def build_record(stage, sub_id, parcellation, covers=None, extra=None) -> dict:
         "inputs": {f"{kind}:{name}": ident
                    for (sub, kind, name), ident in sorted(_inputs.items()) if sub in (sub_id, "*")},
         "runs": {run: f for (sub, run), f in sorted(_runs.items()) if sub == sub_id},
-        "covers": sorted(covers) if covers else None,
+        "outputs": outputs if outputs is not None else {},
         "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
         "created_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         "argv": list(sys.argv),
@@ -179,13 +184,51 @@ def provenance_name(stage) -> str:
     return f"provenance_{stage}.json"
 
 
+def _is_record_name(name):
+    return name.startswith("provenance_") and name.endswith(".json")
+
+
+def collect_outputs(out_dir, covers=None, since=None) -> dict:
+    """{relative path: {"size", "md5"}} for the files a record describes.
+
+    ``covers`` names them explicitly (relative to out_dir; each must exist).
+    Otherwise every regular file under out_dir modified at or after ``since``
+    (default: process start) is taken, so files left from an earlier run are
+    not covered by this run's record.
+    """
+    out_dir = Path(out_dir)
+    if covers is not None:
+        rels = list(covers)
+        missing = [r for r in rels if not (out_dir / r).is_file()]
+        if missing:
+            raise FileNotFoundError(f"covers names files that do not exist: {missing}")
+    else:
+        t0 = (_T0 if since is None else since) - 1.0     # filesystem mtime granularity
+        rels = []
+        for root, dirs, names in os.walk(out_dir):
+            dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(root, d))]
+            for n in names:
+                full = os.path.join(root, n)
+                if _is_record_name(n) or os.path.islink(full):
+                    continue
+                if os.stat(full).st_mtime >= t0:
+                    rels.append(os.path.relpath(full, out_dir))
+    outputs = {}
+    for rel in sorted(rels):
+        size, md5 = content_id(out_dir / rel)
+        outputs[rel] = {"size": size, "md5": md5}
+    return outputs
+
+
 def write_provenance(out_dir, stage, sub_id, parcellation, covers=None, extra=None) -> Path:
     """Write ``out_dir/provenance_<stage>.json`` and return its path.
 
     ``covers`` lists the files (relative to out_dir) this record describes;
-    pass it whenever the directory also holds another stage's files.
+    pass it whenever the directory also holds another stage's files. Without
+    it, the files under out_dir written since the process started are listed.
     """
-    record = build_record(stage, sub_id, parcellation, covers=covers, extra=extra)
+    outputs = collect_outputs(out_dir, covers=covers)
+    record = build_record(stage, sub_id, parcellation, outputs=outputs, extra=extra)
     path = Path(out_dir) / provenance_name(stage)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as fh:
