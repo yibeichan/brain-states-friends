@@ -27,8 +27,9 @@ vectors over all states. Nulls, all within one participant and season:
       sessions is enumerated; p = share of assignments with L1 >= observed,
       floor = 1 / number of assignments.
   N3  order-preserving: every contiguous block of k runs (k = size of group A),
-      in acquisition order, inside the same participant's season groups with
-      uniform preprocessing and at least 2k runs; the share of blocks whose
+      in acquisition order, inside each of the same participant's
+      (season, preprocessing label) groups with at least 2k runs, including
+      single-label parts of mixed seasons; the share of blocks whose
       block-versus-rest L1 >= observed.
 
 Inputs:
@@ -160,6 +161,57 @@ def write_tsv(rows, path):
             fh.write("\t".join(str(r[k]) for k in keys) + "\n")
 
 
+def validate_rows(rows):
+    """Raise unless every run has a known release and a decided slice-timing status."""
+    bad = sorted({(r["sub"], r["run"], r["version"], r["stc"]) for r in rows
+                  if r["version"] is None or r["stc"] not in ("STC", "noSTC")})
+    if bad:
+        raise RuntimeError(f"{len(bad)} run(s) without a release or a decided slice-timing status, "
+                           f"e.g. {bad[:3]}")
+
+
+def validate_contrasts(rows, contrasts):
+    """Raise unless the contrast list covers exactly the seasons that mix preprocessing.
+
+    Every mixed (participant, season) needs at least one contrast, and each
+    contrast's two labels must both occur in that season.
+    """
+    labels = collections.defaultdict(set)
+    for r in rows:
+        labels[(r["sub"], r["season"])].add(f"{r['version']}/{r['stc']}")
+    mixed = {k for k, v in labels.items() if len(v) > 1}
+    listed = {(s, se) for s, se, *_ in contrasts}
+    problems = [f"{s} S{se}: mixed but no contrast" for s, se in sorted(mixed - listed)]
+    for s, se, la, lb, _ in contrasts:
+        missing = {la, lb} - labels.get((s, se), set())
+        if missing:
+            problems.append(f"{s} S{se}: contrast label(s) {sorted(missing)} not in that season")
+    if problems:
+        raise RuntimeError("contrast list does not match the run table: " + "; ".join(problems))
+
+
+def check_sessions_uniform(rr, units):
+    """Raise if any session unit holds runs with different preprocessing labels."""
+    labs = collections.defaultdict(set)
+    for r, u in zip(rr, units):
+        labs[u].add(r["lab"])
+    mixed = sorted(u for u, v in labs.items() if len(v) > 1)
+    if mixed:
+        raise RuntimeError(f"preprocessing varies within session(s) {mixed}")
+    return labs
+
+
+def check_specificity(F, seasons, reference, sub="", tol=1e-12):
+    """Raise unless the 05a season-specificity index is reproduced from these occupancies."""
+    active = (F > FO_THRESHOLD).astype(float)
+    sea = np.asarray(seasons)
+    rec = np.stack([active[sea == k].mean(0) for k in sorted(set(sea))])
+    diff = float(np.abs((rec.max(0) - rec.min(0)) - np.asarray(reference)).max())
+    if diff > tol:
+        raise RuntimeError(f"{sub}: occupancy does not reproduce the 05a specificity index ({diff:.2e})")
+    return diff
+
+
 # ---------------------------------------------------------------- statistics
 
 def l1_from_mask(F, mask):
@@ -233,14 +285,8 @@ def run_contrasts(rows, output_dir, rng):
                     key=lambda r: (r["ses"], r["season"], r["episode"], r["part"]))
         F = fractional_occupancy(decoded, [r["run"] for r in rr])
         data[sub] = dict(rows=rr, F=F)
-        # Check: the 05a season-specificity index recomputed from these occupancies.
-        active = (F > FO_THRESHOLD).astype(float)
-        sea = np.array([r["season"] for r in rr])
-        rec = np.stack([active[sea == k].mean(0) for k in sorted(set(sea))])
-        diff = float(np.abs((rec.max(0) - rec.min(0)) - np.array(summary["specificity_index"])).max())
+        diff = check_specificity(F, [r["season"] for r in rr], summary["specificity_index"], sub)
         print(f"[check] {sub}: max |specificity - 05a| = {diff:.2e}")
-        if diff > 1e-12:
-            raise RuntimeError(f"{sub}: occupancy does not reproduce the 05a specificity index ({diff:.2e})")
 
     results = []
     for sub, season, la, lb, kind in CONTRASTS:
@@ -253,11 +299,7 @@ def run_contrasts(rows, output_dir, rng):
         null1 = l1_batch(F, np.stack([rng.permutation(mask) for _ in range(N_PERM)]))
         p1 = (np.sum(null1 >= obs - 1e-12) + 1) / (N_PERM + 1)
         units = [(r["season"], r["ses"]) for r in rr]
-        labs_by_unit = collections.defaultdict(set)
-        for r, u in zip(rr, units):
-            labs_by_unit[u].add(r["lab"])
-        if any(len(v) > 1 for v in labs_by_unit.values()):
-            raise RuntimeError(f"{sub} S{season}: preprocessing varies within a session")
+        labs_by_unit = check_sessions_uniform(rr, units)
         null2, n2 = session_null(F, units, {u: la in v for u, v in labs_by_unit.items()})
         p2 = float(np.mean(null2 >= obs - 1e-12))
         k = int(mask.sum())
@@ -314,10 +356,8 @@ def main(argv=None):
     os.makedirs(a.out_dir, exist_ok=True)
 
     rows = build_run_table(fmriprep_dir, output_dir)
-    bad = sorted({r["stc"] for r in rows} - {"STC", "noSTC"})
-    if bad:
-        raise RuntimeError(f"undecided slice-timing status for some runs: {bad}")
-    write_tsv(rows, os.path.join(a.out_dir, "runs.tsv"))
+    validate_rows(rows)
+    validate_contrasts(rows, CONTRASTS)
     tally = collections.Counter((r["version"], r["stc"]) for r in rows)
     print(f"{len(rows)} runs: " + ", ".join(f"{v}/{s} {n}" for (v, s), n in sorted(tally.items())))
 
@@ -325,13 +365,17 @@ def main(argv=None):
         r["lab"] = f"{r['version']}/{r['stc']}"
     rng = np.random.default_rng(SEED)
     data, results = run_contrasts(rows, output_dir, rng)
+    calibration = calibrate_n1(data, rng)
+    # Write only after every check has passed.
+    write_tsv([{k: v for k, v in r.items() if k != "lab"} for r in rows], os.path.join(a.out_dir, "runs.tsv"))
     with open(os.path.join(a.out_dir, "contrasts.json"), "w") as fh:
         json.dump(results, fh, indent=1, default=float)
     with open(os.path.join(a.out_dir, "calibration.json"), "w") as fh:
-        json.dump(calibrate_n1(data, rng), fh, indent=1)
+        json.dump(calibration, fh, indent=1)
     for c in results:
+        n3 = "n/a" if c["p3"] is None else f"{c['p3']:.3f}"
         print(f"{c['sub']} S{c['season']} {c['A']} vs {c['B']}: L1 {c['L1']:.3f}, "
-              f"N2 p {c['p2']:.3f} (floor {c['floor2']:.3g}), N3 {c['p3']:.3f} ({c['n3']})")
+              f"N2 p {c['p2']:.3f} (floor {c['floor2']:.3g}), N3 {n3} ({c['n3']})")
 
 
 if __name__ == "__main__":

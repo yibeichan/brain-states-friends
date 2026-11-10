@@ -77,6 +77,7 @@ same MAIN tier.)
 | `05e_temporal_trend_a2.py` | Within-run position anchoring | SUPP | Supp |
 | `05e_temporal_trend_a3.py` | Within-session FO habituation (LME) | SUPP | Supp |
 | `05f_state_fc.py` | Per-state functional connectivity | SUPP | Supp |
+| `preproc_by_season.py` | fMRIPrep release and slice-timing status of every analysed Friends run by season, and state-occupancy contrasts within seasons that mixed preprocessing | SUPP | Supp (Table S7) |
 | `05g_excluded_state_check.py` | Whether each excluded state is an interruption of a neighbouring state, or a blend of the two states it sits between (neighbours and partners drawn from all active states) | SUPP | Supp (Table S#); also a prerequisite of MAIN `05h` |
 | `06c_higher_order_transitions.py` | Higher-order transition adequacy (entropy, BIC) | SUPP | Supp |
 | `06d_preserved_chains.py` | Preserved transition chains | SUPP | Supp |
