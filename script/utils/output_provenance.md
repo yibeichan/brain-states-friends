@@ -120,10 +120,16 @@ A reference version at a past dataset commit is read from git: plain files from 
 
 A planned file that the dataset's `.gitignore` matches is refused, since it would be copied but never saved.
 
+A record is promoted with every output it lists. A listed file that equals the dataset's copy within tolerance but differs in bytes is copied too, so the dataset matches the record's checksums. Such a file outside the change set is refused. A dataset file that would remain under a promoted record without being listed in it is refused even with `keep_unreproduced`. An untracked file in the dataset, as a crashed promotion leaves, is never taken as the dataset's version: inside the change set it is promoted as NEW, outside it the promotion stops.
+
 `--execute` refuses to start when `origin/main` cannot be fetched. It then works under a lock (`.git/promote.lock`) and does the following:
 - Reruns every check.
 - Copies each planned file through a temporary file whose md5 must equal the checksum taken when the file was checked; a file that changed since is not promoted.
-- Runs `datalad save` on exactly those paths, 500 per call. After the first call it amends the promotion's own commit, and only while that commit still sits directly on the starting HEAD; if another job committed meanwhile, the save stops.
-- Verifies that the promotion is one commit, that every path is tracked and clean, and that the saved content equals the checked content.
+- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits for the same lock, so the two never commit at once.
+- Verifies the result:
+  - the promotion is one commit directly on the starting HEAD;
+  - every path is tracked and clean;
+  - the saved content equals the checked content;
+  - every output under each promoted record's directory is covered by its record.
 
 If any step fails, the log lists the NEW and UPDATE files and the starting HEAD for recovery. It does not push. The save runs `uv run --extra datalad datalad`; where git-annex comes from another environment, set `PROMOTE_DATALAD` to the datalad command, for example `PROMOTE_DATALAD="micromamba run -n <env> datalad"`. The commit message records the code commit, the code floor, the side root and the manifest's sha256. Plans and logs are written to `<side root>/promote/`.
