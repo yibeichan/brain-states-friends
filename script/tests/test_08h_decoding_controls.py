@@ -8,7 +8,9 @@ indicator is lag-shifted the way build_layer_feature_matrix shifts features;
 """
 from __future__ import annotations
 
+import argparse
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -109,3 +111,157 @@ def test_select_layers_best_and_numbers():
 def test_select_layers_refuses_bad_specs(spec):
     with pytest.raises(ValueError):
         m08h.select_layers(spec, 28, 3)
+
+
+@pytest.mark.parametrize("spec", ["1,,2", "best,", " "])
+def test_parse_layers_spec_refuses_empty_items(spec):
+    with pytest.raises(ValueError):
+        m08h.parse_layers_spec(spec)
+
+
+def test_folds_without_every_class_are_counted():
+    y = np.array([0, 0, 1, 1, 2, 2])
+    ok = [(np.array([0, 2, 4]), np.array([1, 3, 5]))]
+    bad = [(np.array([0, 1, 2, 3]), np.array([4, 5]))]   # class 2 only in test
+    assert m08h.n_folds_without_every_class(y, ok) == 0
+    assert m08h.n_folds_without_every_class(y, ok + bad) == 1
+
+
+# ---------------------------------------------------------------------------
+# run_friends end to end on synthetic inputs (loaders stubbed)
+# ---------------------------------------------------------------------------
+
+_E2E_RUNS = [f"s01e0{e}{h}" for e in range(1, 5) for h in "ab"]
+_T, _K, _NL = 150, 6, 2
+
+
+def _synthetic():
+    rng = np.random.default_rng(0)
+    states = {r: np.repeat(rng.integers(0, 3, size=_T // 10), 10) for r in _E2E_RUNS}
+    proto = rng.normal(size=(_NL, 3, _K))
+    feats = {L: {r: (proto[L][states[r]] * (0.4 + 0.4 * L)
+                     + rng.normal(size=(_T, _K))).astype(np.float32)
+                 for r in _E2E_RUNS} for L in range(_NL)}
+    return states, feats
+
+
+@pytest.fixture
+def e2e(tmp_path, monkeypatch):
+    """Stub run_friends' loaders; returns run(cond, n_perm, layers) -> payload."""
+    states, feats = _synthetic()
+    d1_path = tmp_path / "D1_depth_profile.json"
+
+    def write_d1(best_lag):
+        res = {f"lag_{g}": {str(L): {"balanced_accuracy": 0.5 + 0.01 * L
+                                     + (0.1 if g == best_lag else 0.0), "p_perm": 0.01}
+                            for L in range(_NL)} for g in range(4)}
+        d1_path.write_text(json.dumps({"results": res}))
+
+    write_d1(1)
+    pca_info = {L: {"K": _K, "n_train_samples": _T * len(_E2E_RUNS)} for L in range(_NL)}
+    monkeypatch.setattr(m08h, "SCRATCH_DIR", str(tmp_path))
+    monkeypatch.setattr(m08h, "friends_d1_path", lambda *a, **k: str(d1_path))
+    monkeypatch.setattr(m08h, "load_content_eligibility",
+                        lambda *a, **k: {"content_eligible": [0, 1, 2]})
+    monkeypatch.setattr(m08h, "d1_eligibility_problems", lambda *a, **k: [])
+    monkeypatch.setattr(m08h.d08, "_load_decoded_states_friends",
+                        lambda sub, parc: ({r: states[r].copy() for r in _E2E_RUNS}, None))
+    monkeypatch.setattr(m08h, "load_training_split", lambda *a, **k: {"train": _E2E_RUNS})
+    monkeypatch.setattr(m08h.d08, "_pca_cache_dir", lambda *a, **k: str(tmp_path / "pub"))
+    monkeypatch.setattr(m08h, "mirror_tree", lambda src, dst: None)
+    monkeypatch.setattr(m08h.d08, "_pca_split_hash_and_path", lambda *a, **k: ("h", "p"))
+    monkeypatch.setattr(m08h, "load_or_fit_pca_cache", lambda *a, **k: (
+        feats, pca_info, None, {r: _T for r in _E2E_RUNS}, {}))
+    monkeypatch.setattr(m08h.e08, "feature_file_paths", lambda *a, **k: [])
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+
+    def run(cond, n_perm, layers=None):
+        args = argparse.Namespace(sub_id="sub-99", model="dinov2-large", condition=cond,
+                                  n_permutations=n_perm, n_jobs=1, layers=layers,
+                                  vt="0.95", out_root=str(tmp_path))
+        m08h.run_friends(args, "P", str(out_dir))
+        return json.loads((out_dir / f"{cond}.json").read_text())
+
+    run.write_d1 = write_d1
+    run.out_dir = out_dir
+    return run
+
+
+def test_partial_from_other_permutation_count_is_recomputed(e2e):
+    e2e("loeo", 5, layers="0")
+    full = e2e("loeo", 12)
+    assert {v["n_permutations"] for v in full["per_layer"].values()} == {12}
+
+
+def test_partial_from_other_lag_is_recomputed(e2e):
+    first = e2e("opening", 5)
+    e2e.write_d1(best_lag=2)
+    rerun = e2e("opening", 5)
+    fresh_fp = {v["fingerprint"] for v in rerun["per_layer"].values()}
+    assert rerun["best_lag"] == 2 and rerun["opening_cutoff_trs"] == 35
+    assert fresh_fp.isdisjoint(v["fingerprint"] for v in first["per_layer"].values())
+    assert rerun["n_trs_used"] < first["n_trs_used"]
+
+
+def test_partial_without_fingerprint_is_recomputed(e2e):
+    e2e("loeo", 5)
+    p = e2e.out_dir / "partials" / "loeo_layer00.json"
+    legacy = json.loads(p.read_text())
+    legacy.pop("fingerprint")
+    legacy["balanced_accuracy"] = -1.0
+    p.write_text(json.dumps(legacy))
+    again = e2e("loeo", 5)
+    assert again["per_layer"]["0"]["balanced_accuracy"] != -1.0
+    assert "fingerprint" in json.loads(p.read_text())
+
+
+def test_final_json_includes_layers_another_job_finished(e2e):
+    one = e2e("loeo", 5, layers="0")
+    assert list(one["per_layer"]) == ["0"]
+    assert not one["all_layers_evaluated"]
+    assert "p_fdr" not in one["per_layer"]["0"]
+    assert one["fdr_family"].startswith("none")
+    both = e2e("loeo", 5, layers="1")
+    assert list(both["per_layer"]) == ["0", "1"]
+    assert both["all_layers_evaluated"]
+    assert all("p_fdr" in v for v in both["per_layer"].values())
+    assert both["fdr_family"] == "layers at the best lag"
+
+
+def test_timing_delta_is_against_the_timing_only_decoder(e2e):
+    out = e2e("timing", 20)
+    t_acc = out["timing_only"]["balanced_accuracy"]
+    for v in out["per_layer"].values():
+        assert v["delta_vs_timing"] == pytest.approx(v["balanced_accuracy"] - t_acc, abs=2e-4)
+        assert 0 <= v["p_delta"] <= 1
+        assert v["n_permutations"] == 20
+
+
+def test_main_refuses_layers_for_the_gate(tmp_path, monkeypatch):
+    called = []
+    monkeypatch.setattr(m08h, "run_friends", lambda *a: called.append(a))
+    monkeypatch.setattr(sys, "argv", [
+        "08h", "--part", "friends", "--sub_id", "sub-01", "--model", "dinov2-large",
+        "--condition", "gate", "--layers", "0", "--out_root", str(tmp_path / "side")])
+    with pytest.raises(SystemExit, match="gate"):
+        m08h.main()
+    assert not called and not (tmp_path / "side").exists()
+
+
+def test_word_tr_mask_reads_rows_from_the_run_start(tmp_path, monkeypatch):
+    raw = np.zeros((9, 3), dtype=np.float32)
+    raw[[1, 2, 5], 0] = 1.0                       # words at TRs 1, 2, 5
+    raw[7:, 1] = 1.0                              # trailing rows beyond the run
+    f = tmp_path / "feat.npy"
+    np.save(f, raw)
+    seen = []
+    monkeypatch.setattr(m08h, "transformer_feature_path",
+                        lambda scratch, stim, model, layer, stem: seen.append(stem) or str(f))
+    decoded = {"r1": np.zeros(7, dtype=int)}
+    mask, frac = m08h.word_tr_mask("movie10", "llama-3.2-3b", ["r1"], decoded, lag=2,
+                                   feature_key_fn=lambda r: f"key-{r}")
+    has = np.array([0, 1, 1, 0, 0, 1, 0], dtype=bool)
+    assert np.array_equal(mask, m08h.lag_shift_bool(has, 2))
+    assert frac["r1"] == pytest.approx(3 / 7)
+    assert seen == ["key-r1"]

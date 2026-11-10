@@ -8,7 +8,7 @@ transformer-state decoders, at each participant's best within-Friends lag.
 on another stimulus. This script reruns the same decoders (same features,
 PCA, labels, RidgeClassifier, circular-shift null and seeds) with one change
 at a time, at the lag where the participant's Friends D1 peaked (lag 0
-excluded), over every layer:
+excluded), over every layer unless --layers selects some:
 
 Friends (``--part friends``, one condition per invocation):
 
@@ -19,10 +19,12 @@ Friends (``--part friends``, one condition per invocation):
     loeo      Leave-one-episode-out folds: the a/b (and c/d) runs of one
               episode are held out together, so no part of the test episode
               is in training. Null unchanged (circular shift within run).
-    opening   LORO with the opening of each a-run removed: brain TRs
-              t < 33 + lag (the 33-TR theme / credits window of
-              findings_05e_temporal_trend_a2, plus the lag so that no
-              feature row comes from inside the window either).
+    opening   LORO with the first 33 + lag brain TRs of each a-run removed
+              (the fixed 33-TR window of 05e_temporal_trend_a2, plus the
+              lag so that no feature row comes from inside it either).
+              05e uses this window as an approximate lower bound on the
+              theme position: the cold open comes first, so in most a-runs
+              the theme song starts after TR 33 and is not removed here.
     word_trs  Text model only. LORO on TRs whose lagged feature row holds at
               least one word. 08c gives TRs with no transcript tokens a zero
               vector, which after within-run z-scoring is a constant row, so
@@ -31,6 +33,14 @@ Friends (``--part friends``, one condition per invocation):
               timing regressors alone. Statistic: delta = acc(features +
               timing) - acc(timing). Null: the same circular-shifted label
               sequences are fit by both decoders and delta recomputed.
+              timing_only.p_perm uses this D1-seed null, not the null of
+              the published confound baseline.
+
+Per-layer partials make a cell resumable. Each one carries a fingerprint
+of the inputs, settings and code that produced it, and is reused only when
+the current run's fingerprint matches. p_fdr is Benjamini-Hochberg across
+the layers at the best lag (08d's p_fdr is across lags x layers), and is
+left out unless every layer is present.
 
 Transfer (``--part transfer``): 08e D3a at the Friends best lag for chosen
 layers, (a) unchanged, observed only, as a gate against the published
@@ -102,6 +112,21 @@ FRIENDS_CONDITIONS = ("gate", "loeo", "opening", "word_trs", "timing")
 D1_SEED_BASE = 10_000          # 08d D1 main
 D1_SEED_LAG_STRIDE = 100003    # 08d: perm_seed_base + lag * 100003
 ACC_TOL = 5e-5                 # published accuracies are rounded to 4 dp
+
+#: Source files whose contents enter each per-layer partial's fingerprint:
+#: this script, the 08d helpers it calls, and the shared decoding utilities.
+#: Whole files are hashed, as in 08e, so any edit to them recomputes every
+#: layer instead of reusing a partial computed by other code.
+_UTILS_DIR = SCRIPT_DIR / "utils"
+CODE_IDENTITY_FILES = (
+    Path(__file__).resolve(),
+    SCRIPT_DIR / "08d_transformer_depth.py",
+    _UTILS_DIR / "transformer_analysis.py",
+    _UTILS_DIR / "stats.py",
+    _UTILS_DIR / "transformer_io.py",
+)
+#: Hash taken at import, i.e. of the code this process runs.
+CODE_SHA256 = e08.code_identity(CODE_IDENTITY_FILES)
 
 
 # ---------------------------------------------------------------------------
@@ -255,23 +280,70 @@ def summarise(batch, y_elig):
 # ---------------------------------------------------------------------------
 
 
+def parse_layers_spec(spec):
+    """Check the syntax of a --layers value; returns its items, or None.
+
+    Items are layer numbers or "best". Run in main(), before any data is
+    loaded, so a typo fails at once rather than after the PCA load.
+    """
+    if spec is None:
+        return None
+    items = [item.strip() for item in spec.split(",")]
+    for item in items:
+        if item != "best" and not item.isdigit():
+            raise ValueError(f"--layers item {item!r} is not a layer number or 'best'")
+    return items
+
+
 def select_layers(spec, n_layers, best_layer):
     """Layers to evaluate: all of them for spec None, else the comma list in spec.
 
     Items are layer numbers or "best" (the published best layer at the best lag).
     """
-    if spec is None:
+    items = parse_layers_spec(spec)
+    if items is None:
         return list(range(n_layers))
     out = set()
-    for item in spec.split(","):
-        item = item.strip()
+    for item in items:
         li = best_layer if item == "best" else int(item)
         if not 0 <= li < n_layers:
             raise ValueError(f"layer {li} outside 0..{n_layers - 1}")
         out.add(li)
-    if not out:
-        raise ValueError("--layers selects no layer")
     return sorted(out)
+
+
+def n_folds_without_every_class(y, folds):
+    """Folds whose training labels lack a class present in ``y``.
+
+    batch_loro_ridge_classify skips such a fold without saying so, and its
+    fast-path null then divides by every class while the observed accuracy
+    averages over the classes predicted, which biases p. Counted so that
+    run_friends can refuse the cell.
+    """
+    classes = np.unique(y)
+    return sum(1 for train, _test in folds
+               if len(np.unique(y[train])) < len(classes))
+
+
+def load_matching_partials(partial_dir, cond, n_layers, fingerprints):
+    """Per-layer partials on disk whose fingerprint matches this run's.
+
+    A partial written by other code, another lag, permutation count, mask or
+    input (or one with no fingerprint, as written before fingerprints were
+    added) is ignored, so its layer is recomputed and the file overwritten.
+    """
+    results, stale = {}, []
+    for li in range(n_layers):
+        p = os.path.join(partial_dir, f"{cond}_layer{li:02d}.json")
+        if not os.path.exists(p):
+            continue
+        with open(p) as f:
+            res = json.load(f)
+        if res.get("fingerprint") == fingerprints[li]:
+            results[li] = res
+        else:
+            stale.append(li)
+    return results, stale
 
 
 def _friends_layer(layer_idx, layer_runs, run_ids, decoded_states, lag, mask,
@@ -373,6 +445,10 @@ def run_friends(args, parc, out_dir):
     meta["n_folds"] = len(folds)
     meta["n_trs_used"] = int(mask.sum())
     meta["n_classes_used"] = int(len(np.unique(y_full[mask])))
+    n_bad = n_folds_without_every_class(y_full[mask], folds)
+    if n_bad:
+        raise SystemExit(f"{sub_id} {model_key} {cond}: {n_bad} of {len(folds)} folds lack "
+                         "a class in training; the decoder would skip them and bias p")
 
     if n_perm == 0:
         null_y = np.empty((0, int(mask.sum())), dtype=np.int8)
@@ -401,17 +477,41 @@ def run_friends(args, parc, out_dir):
             timing_X = T
         logger.info("timing-only acc %.4f", tb["observed"]["balanced_accuracy"])
 
-    partial_dir = os.path.join(out_dir, "partials")
-    os.makedirs(partial_dir, exist_ok=True)
-    results = {}
-    for li in range(n_layers):
-        p = os.path.join(partial_dir, f"{cond}_layer{li:02d}.json")
-        if os.path.exists(p):
-            with open(p) as f:
-                results[li] = json.load(f)
     selected = select_layers(args.layers, n_layers, best_layer)
     if cond == "gate" and len(selected) != n_layers:
         raise SystemExit("the gate compares every layer; --layers is not allowed for it")
+
+    # A partial is reused only when it was computed from the same inputs,
+    # settings and code (cf. 08e). Feature files are identified by stat, the
+    # PCA by its integer summary only (explained variance differs in the last
+    # bits across CPU types).
+    run_fp = {
+        "sub_id": sub_id, "parcellation": parc, "model": model_key,
+        "condition": cond, "vt": args.vt, "lag": lag, "n_permutations": n_perm,
+        "seed": D1_SEED_BASE + lag * D1_SEED_LAG_STRIDE,
+        "pca_variance_threshold": d08.PCA_VARIANCE_THRESHOLD,
+        "run_ids": run_ids,
+        "states_mask_sha256": e08.array_identity(
+            y_full.astype(np.int64), mask, np.asarray(bounds, dtype=np.int64)),
+        "content_eligible": sorted(elig_set),
+        "pca_split_hash": split_hash,
+        "pca_layers_k_n_train": {str(k): [int(v["K"]), int(v["n_train_samples"])]
+                                 for k, v in sorted(pca_info.items())},
+        "features_stat_sha256": e08.file_stat_identity(
+            e08.feature_file_paths(SCRATCH_DIR, "friends", model_key, run_ids),
+            SCRATCH_DIR),
+        "published_d1_sha256": e08.layer_fingerprint(d1["results"]),
+        "code_sha256": CODE_SHA256,
+    }
+    fingerprints = {li: e08.layer_fingerprint({**run_fp, "layer": li})
+                    for li in range(n_layers)}
+
+    partial_dir = os.path.join(out_dir, "partials")
+    os.makedirs(partial_dir, exist_ok=True)
+    results, stale = load_matching_partials(partial_dir, cond, n_layers, fingerprints)
+    if stale:
+        logger.warning("%s: recomputing layers %s, whose partials came from another "
+                       "run (fingerprint differs or missing)", cond, stale)
     todo = [li for li in selected if li not in results]
     t0 = time.monotonic()
     step = max(args.n_jobs, 1)
@@ -428,13 +528,20 @@ def run_friends(args, parc, out_dir):
             pub = published_at_lag.get(li, {})
             res["published_loro_balanced_accuracy"] = pub.get("balanced_accuracy")
             res["published_loro_p_perm"] = pub.get("p_perm")
-            results[li] = res
+            res["fingerprint"] = fingerprints[li]
             write_json_atomic(os.path.join(partial_dir, f"{cond}_layer{li:02d}.json"), res)
         logger.info("%s: layers %s done (%.0fs)", cond, chunk, time.monotonic() - t0)
 
+    # Re-read every matching partial, not only the ones this job started with
+    # or computed: another job may have finished layers of this cell meanwhile.
+    results, _ = load_matching_partials(partial_dir, cond, n_layers, fingerprints)
+    missing = [li for li in selected if li not in results]
+    if missing:
+        raise RuntimeError(f"{cond}: layers {missing} were not computed")
     order = sorted(results)
     all_layers = order == list(range(n_layers))
-    # BH across layers is defined over the full layer family; skip it for a subset
+    # BH across the layers at the best lag (not 08d's lags x layers family);
+    # defined over every layer, so skipped when only a subset is present.
     for key, pkey in (("p_fdr", "p_perm"), ("p_delta_fdr", "p_delta")):
         if all_layers and all(pkey in results[l] for l in order):
             q = benjamini_hochberg(np.array([results[l][pkey] for l in order]))
@@ -461,6 +568,9 @@ def run_friends(args, parc, out_dir):
                "timing_only": timing, "gate": gate,
                "layers_requested": args.layers or "all",
                "all_layers_evaluated": all_layers,
+               "fdr_family": ("layers at the best lag" if all_layers
+                              else "none (not every layer present)"),
+               "code_sha256": CODE_SHA256,
                "per_layer": {str(l): results[l] for l in order},
                "environment": environment()}
     write_json_atomic(os.path.join(out_dir, f"{cond}.json"), payload)
@@ -599,12 +709,18 @@ def main():
     p.add_argument("--n_jobs", type=int, default=1)
     p.add_argument("--layers", default=None,
                    help="friends only: comma list of layers or 'best' (published best layer "
-                        "at the best lag), e.g. 'best,0'; default all layers. Existing "
-                        "per-layer partials are kept; BH across layers is skipped unless "
-                        "every layer is present")
+                        "at the best lag), e.g. 'best,0'; default all layers. Per-layer "
+                        "partials with a matching fingerprint are reused; BH across layers "
+                        "is skipped unless every layer is present")
     p.add_argument("--out_root", required=True,
                    help="side root; must not be $SCRATCH_DIR/output")
     a = p.parse_args()
+    try:
+        parse_layers_spec(a.layers)
+    except ValueError as exc:
+        raise SystemExit(str(exc))
+    if a.condition == "gate" and a.layers is not None:
+        raise SystemExit("the gate compares every layer; --layers is not allowed for it")
     if os.path.realpath(a.out_root).startswith(
             os.path.realpath(os.path.join(SCRATCH_DIR, "output"))):
         raise SystemExit("--out_root must be outside $SCRATCH_DIR/output")
