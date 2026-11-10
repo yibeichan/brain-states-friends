@@ -21,7 +21,7 @@ acquired twice uses the session the analysis used (utils.common.pick_run_session
 Statistic: L1 distance between the two groups' mean fractional-occupancy
 vectors over all states. Nulls, all within one participant and season:
   N1  run-label permutation (10,000 draws). Ignores session structure, so it is
-      reported with a calibration on uniform seasons and is not used for inference.
+      reported with a calibration on single-label season groups and is not used for inference.
   N2  exact session-label permutation: preprocessing is constant within a
       session, so every assignment of the A label to the same number of
       sessions is enumerated; p = share of assignments with L1 >= observed,
@@ -41,7 +41,7 @@ Inputs:
 Outputs (--out_dir):
     runs.tsv        one row per analysed run
     contrasts.json  one entry per within-season contrast
-    calibration.json  N1 on first-12-runs vs rest of uniform seasons
+    calibration.json  N1 on first-12-runs vs rest of single-label season groups
 
 Usage:
     python script/preproc_by_season.py --out_dir <dir>
@@ -249,7 +249,7 @@ def session_null(F, units, is_a_unit):
 
 
 def block_reference(F_all, groups, k):
-    """N3 reference: L1 of every contiguous k-run block vs the rest of each uniform group of >= 2k runs.
+    """N3 reference: L1 of every contiguous k-run block vs the rest of each single-label (season, preprocessing) group of >= 2k runs.
 
     groups: {key: list of row indices in acquisition order}. Returns (values, first-block values by key).
     """
@@ -321,7 +321,7 @@ def run_contrasts(rows, output_dir, rng):
 
 
 def calibrate_n1(data, rng, k=12, n_perm=2000, min_runs=40):
-    """N1 on the first k runs vs the rest of each uniform season group (no preprocessing contrast)."""
+    """N1 on the first k runs vs the rest of each single-label season group (no preprocessing contrast)."""
     out = {}
     for sub in sorted(data):
         d = data[sub]

@@ -117,12 +117,16 @@ def test_unlisted_duplicate_run_is_refused(tmp_path, monkeypatch):
 def test_missing_sidecar_or_report_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(pbs, "SUBJECTS", ["sub-02"])
     fp, out = _tree(tmp_path, {"ses-040": ("20.2.5", 0, 0)},           # no sidecar for this run
-                    {"s05e10a": ["ses-040"], "s05e11a": ["ses-041"]})  # and no report for ses-041
+                    {"s05e10a": ["ses-040"], "s05e11a": ["ses-041"]},  # and no report for ses-041,
+                    sidecars={("ses-041", "s05e11a"): False})        # whose sidecar alone looks fine
     rows = {r["run"]: r for r in pbs.build_run_table(fp, out)}
     assert rows["s05e10a"]["stc"] == "nofile"
     assert rows["s05e11a"]["version"] is None
+    assert rows["s05e11a"]["stc"] == "noSTC"
     with pytest.raises(RuntimeError, match="2 run"):
         pbs.validate_rows(list(rows.values()))
+    with pytest.raises(RuntimeError, match="1 run"):  # the release check alone refuses the report-less run
+        pbs.validate_rows([rows["s05e11a"]])
 
 
 def _rows(spec):
@@ -156,12 +160,22 @@ def test_specificity_check_fails_on_a_mismatch():
         pbs.check_specificity(F, seasons, [0.5, 0.9, 0.5])
 
 
-def test_nothing_is_written_when_a_check_fails(tmp_path, monkeypatch):
+def _row(version, stc, season=1, run="s01e01a"):
+    return dict(sub="sub-01", run=run, season=season, episode=1, part="a", ses=1, version=version, stc=stc, n_tr=5)
+
+
+@pytest.mark.parametrize("rows,contrasts,match", [
+    # only validate_rows can refuse this: the contrast list matches (no mixed season, no contrast)
+    ([_row(None, "noSTC")], [], "without a release"),
+    # only validate_contrasts can refuse this: every row is valid, but a mixed season has no contrast
+    ([_row("20.2.3", "STC"), _row("20.2.5", "noSTC", run="s01e02a")], [], "mixed but no contrast"),
+])
+def test_main_runs_each_check_and_writes_nothing_on_failure(tmp_path, monkeypatch, rows, contrasts, match):
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     monkeypatch.setenv("SCRATCH_DIR", str(tmp_path))
-    monkeypatch.setattr(pbs, "build_run_table", lambda *a: [dict(sub="sub-01", run="s01e01a", season=1, episode=1,
-                                                                part="a", ses=1, version=None, stc="noSTC", n_tr=5)])
+    monkeypatch.setattr(pbs, "build_run_table", lambda *a: [dict(r) for r in rows])
+    monkeypatch.setattr(pbs, "CONTRASTS", contrasts)
     out = tmp_path / "out"
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=match):
         pbs.main(["--out_dir", str(out)])
     assert not any(out.iterdir())
