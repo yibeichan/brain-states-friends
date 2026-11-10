@@ -279,7 +279,7 @@ PARTS = [  # (title, [(value measure, p measure or None, value format)])
 
 
 def _fmt_p(p):
-    return f"{p:.2g}"  # two significant figures
+    return f"{p:#.2g}"  # two significant figures, trailing zeros kept
 
 
 def _cell(sel, col, spec):

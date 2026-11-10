@@ -540,12 +540,12 @@ Active states have recurrence above zero; content-eligible states are those in t
 | Configuration | sub-01 | sub-02 | sub-03 | sub-04 | sub-05 | sub-06 |
 |---|---|---|---|---|---|---|
 | Published (final model) | 0.242 / 0.307 | 0.209 / 0.260 | 0.267 / 0.281 | 0.262 / 0.275 | 0.294 / 0.344 | 0.382 / 0.413 |
-| Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.089 / 0.229 | 0.292 / 0.324 | 0.214 / 0.237 | 0.265 / 0.306 | 0.257 / 0.285 (p = 0.004) | 0.351 / 0.330 |
-| K<sub>max</sub> 40 | 0.185 / 0.226 (p = 0.006) | 0.160 / 0.224 | 0.268 / 0.282 | 0.271 / 0.327 | 0.296 / 0.373 | 0.327 / 0.283 |
+| Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.089 / 0.229 | 0.292 / 0.324 | 0.214 / 0.237 | 0.265 / 0.306 | 0.257 / 0.285 (p = 0.0040) | 0.351 / 0.330 |
+| K<sub>max</sub> 40 | 0.185 / 0.226 (p = 0.0060) | 0.160 / 0.224 | 0.268 / 0.282 | 0.271 / 0.327 | 0.296 / 0.373 | 0.327 / 0.283 |
 | K<sub>max</sub> 80 | 0.195 / 0.219 | 0.318 / 0.350 | 0.289 / 0.250 | 0.264 / 0.314 | 0.290 / 0.330 | 0.374 / 0.414 |
 | γ 5 | 0.170 / 0.223 | 0.327 / 0.354 | 0.250 / 0.219 | 0.253 / 0.332 | 0.343 / 0.381 | 0.406 / 0.392 |
 | 90% variance | 0.134 / 0.187 | 0.258 / 0.276 | 0.204 / 0.248 | 0.258 / 0.296 | 0.239 / 0.294 | 0.333 / 0.356 |
-| 99% variance | 0.175 / 0.220 (p = 0.006) | 0.153 / 0.291 | 0.283 / 0.258 | 0.278 / 0.290 | 0.237 / 0.251 (p = 0.004) | 0.341 / 0.355 |
+| 99% variance | 0.175 / 0.220 (p = 0.0060) | 0.153 / 0.291 | 0.283 / 0.258 | 0.278 / 0.290 | 0.237 / 0.251 (p = 0.0040) | 0.341 / 0.355 |
 
 **C. FC–transition ρ / MFPT–FC ρ**
 
@@ -554,9 +554,9 @@ Active states have recurrence above zero; content-eligible states are those in t
 | Published (final model) | 0.417 / 0.588 | 0.483 / 0.582 | 0.326 / 0.622 | 0.551 / 0.680 | 0.393 / 0.405 (p = 0.0012) | 0.437 / 0.431 |
 | Baseline (95%, K<sub>max</sub> 50, γ 1) | 0.412 / 0.604 | 0.459 / 0.534 | 0.308 / 0.625 | 0.566 / 0.599 | 0.377 / 0.281 (p = 0.017) | 0.435 / 0.516 |
 | K<sub>max</sub> 40 | 0.367 / 0.543 | 0.424 / 0.314 (p = 0.014) | 0.351 / 0.724 | 0.577 / 0.582 | 0.382 / 0.240 (p = 0.069) | 0.461 / 0.528 |
-| K<sub>max</sub> 80 | 0.543 / 0.762 | 0.480 / 0.603 | 0.292 / 0.589 | 0.510 / 0.668 | 0.350 / 0.230 (p = 0.057) | 0.422 / 0.380 (p = 0.0006) |
-| γ 5 | 0.432 / 0.679 | 0.425 / 0.561 | 0.306 / 0.595 | 0.494 / 0.567 | 0.311 / 0.277 (p = 0.014) | 0.364 / 0.399 (p = 0.0004) |
-| 90% variance | 0.391 / 0.684 | 0.314 / 0.326 (p = 0.0054) | 0.329 / 0.705 | 0.520 / 0.588 | 0.307 / 0.207 (p = 0.096) | 0.380 / 0.373 (p = 0.001) |
+| K<sub>max</sub> 80 | 0.543 / 0.762 | 0.480 / 0.603 | 0.292 / 0.589 | 0.510 / 0.668 | 0.350 / 0.230 (p = 0.057) | 0.422 / 0.380 (p = 0.00060) |
+| γ 5 | 0.432 / 0.679 | 0.425 / 0.561 | 0.306 / 0.595 | 0.494 / 0.567 | 0.311 / 0.277 (p = 0.014) | 0.364 / 0.399 (p = 0.00040) |
+| 90% variance | 0.391 / 0.684 | 0.314 / 0.326 (p = 0.0054) | 0.329 / 0.705 | 0.520 / 0.588 | 0.307 / 0.207 (p = 0.096) | 0.380 / 0.373 (p = 0.0010) |
 | 99% variance | 0.415 / 0.634 | 0.559 / 0.670 | 0.351 / 0.657 | 0.551 / 0.580 | 0.404 / 0.417 (p = 0.0024) | 0.411 / 0.530 |
 
 **D. Movie10 recurrence–occupancy ρ: observed / Δρ**
@@ -575,4 +575,4 @@ Across the 36 sweep fits, 37–50 states were active (42–47 in the final model
 
 The K<sub>max</sub> 40 and 80 fits come from the NumPy implementation of the model, and these 12 fits converged; the fits of the other configurations, and every final model, come from the JAX implementation. Both implementations estimate diagonal state covariances.
 
-**Provenance.** Fits: `04_combined_hdphmm/atlas-4S156Parcels/<sub>/configs/<config>/seed_<k>_model.pkl` from the model-selection sweep. `script/04s_sweep_config_final.py` builds each fit's `final/` outputs (state means, covariances and decoded states) as the production selection step does; `script/sens_side_root.py` sets up one output root per configuration, with the unchanged inputs linked, and `script/sens_chain.sh` reruns `05a`, `05e_a1`–`a4`, `05f`, `06a`, `06b`, the `06e` N2 and N3 nulls (through `script/sens_06e_q_excess.py`, which calls `06e`'s own functions with its seeds) and `m10_03`–`m10_05`. Δρ: `script/sm_rel_r5_phase_null.py` on the orphan `supplements` branch, run per fit with `--out_dir`; the NumPy fits are pickles of `utils.hdphmm.WeakLimitHMM`, the current name of the class the `supplements` branch calls `StickyHDPHMM`. `script/sens_collect.py table` gathers every measure into one long table, checking that each Δρ summary's observed ρ equals the `m10_05` ρ of the same fit, and `script/sens_collect.py sitable` prints the parts above from it. Before the configurations were run, the same chain was run on the published final models of sub-01 and sub-06 and reproduced every measure in parts A–C and the observed Movie10 ρ; the Δρ step reproduced the published Δρ of sub-01. For the NumPy fits, the Δρ step ran through a wrapper that makes the class name available before running the script; the `supplements` branch now provides the name itself.
+**Provenance.** Fits: `04_combined_hdphmm/atlas-4S156Parcels/<sub>/configs/<config>/seed_<k>_model.pkl` from the model-selection sweep. `script/04s_sweep_config_final.py` builds each fit's `final/` outputs (state means, covariances and decoded states) as the production selection step does; `script/sens_side_root.py` sets up one output root per configuration, with the unchanged inputs linked, and `script/sens_chain.sh` reruns `05a`, `05e_a1`–`a4`, `05f`, `06a`, `06b`, the `06e` N2 and N3 nulls (through `script/sens_06e_q_excess.py`, which calls `06e`'s own functions with its seeds) and `m10_03`–`m10_05`. Δρ: `script/sm_rel_r5_phase_null.py` on the orphan `supplements` branch, run per fit with `--out_dir`; the `final/` pickles `04s` writes for the NumPy fits name `utils.hdphmm.WeakLimitHMM`, the current name of the class the `supplements` branch calls `StickyHDPHMM`. `script/sens_collect.py table` gathers every measure into one long table, checking that each Δρ summary's observed ρ equals the `m10_05` ρ of the same fit, and `script/sens_collect.py sitable` prints the parts above from it. Before the configurations were run, the same chain was run on the published final models of sub-01 and sub-06 and reproduced every measure in parts A–C and the observed Movie10 ρ; the Δρ step reproduced the published Δρ of sub-01. For the NumPy fits, the Δρ step ran through a wrapper that makes the class name available before running the script; the `supplements` branch now provides the name itself.

@@ -132,14 +132,17 @@ def check_outputs_writable(final_dir, protect=None):
 
     Each output file is checked, not only the directory: a final/ directory that is a real
     directory holding symlinks to the published files (a gate root) would otherwise be
-    written through. Any existing symlink among the outputs is refused, protect or not.
+    written through. Any existing symlink or multiply hard-linked file among the outputs is
+    refused, protect or not.
     """
     if protect and resolves_inside(final_dir, protect):
         raise RuntimeError(f"refusing to write {final_dir}: resolves inside {protect}")
     for name in FINAL_OUTPUTS:
         path = os.path.join(final_dir, name)
-        if os.path.islink(path):  # the only way a file resolves outside final_dir
+        if os.path.islink(path):  # the only way a file's path leaves final_dir
             raise RuntimeError(f"refusing to write {path}: it is a symlink")
+        if os.path.exists(path) and os.stat(path).st_nlink > 1:  # shares its data with another path
+            raise RuntimeError(f"refusing to write {path}: it has {os.stat(path).st_nlink} hard links")
 
 
 def final_dir_for(scratch_dir, parcellation, sub_id, vt):

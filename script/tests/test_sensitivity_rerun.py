@@ -234,8 +234,8 @@ def test_p_floors_match_the_permutation_counts():
                                 "mfpt_fc_p": 1 / 5001, "m10_delta_p": 1 / 10001}
 
 
-@pytest.mark.parametrize("p,shown", [(2 / 5001, "(p = 0.0004)"), (0.0012, "(p = 0.0012)"),
-                                     (0.18908, "(p = 0.19)")])
+@pytest.mark.parametrize("p,shown", [(2 / 5001, "(p = 0.00040)"), (0.0012, "(p = 0.0012)"),
+                                     (0.18908, "(p = 0.19)"), (0.00599, "(p = 0.0060)")])
 def test_sitable_shows_p_just_above_the_floor(tmp_path, p, shown):
     assert "0.400 / 0.500 " + shown in collect.sitable(_tsv(tmp_path, p_mfpt=p))
 
@@ -282,3 +282,14 @@ def test_build_final_checks_before_anything_else(tmp_path):
     with pytest.raises(RuntimeError, match="resolves inside"):
         m04s.build_final(None, None, "cfg", "sub-01", "parc", str(tmp_path / "nowhere"),
                          str(prot / "final"), {}, protect=str(prot))
+
+
+def test_04s_refuses_a_hard_linked_output(tmp_path):
+    prot = tmp_path / "published"
+    prot.mkdir()
+    (prot / "final_results.json").write_text("{}")
+    fin = tmp_path / "side" / "final"
+    fin.mkdir(parents=True)
+    os.link(prot / "final_results.json", fin / "final_results.json")
+    with pytest.raises(RuntimeError, match="hard links"):
+        m04s.check_outputs_writable(str(fin), str(prot))
