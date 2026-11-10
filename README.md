@@ -11,13 +11,13 @@ This project maps the repertoire of brain states that recur during longitudinal 
 ## Supplementary material
 
 The supplement lives in **[docs/supplementary/](docs/supplementary/README.md)**. It
-indexes Figures S1–S15 and Tables S1–S3, and for each one gives the caption, the
+indexes Figures S1–S15 and Tables S1–S9, and for each one gives the caption, the
 generating script, and the source outputs the reported values were read from.
 
 | | |
 |---|---|
 | [Figures S1–S15](docs/supplementary/README.md) | Rendered panels with captions, in Methods reading order |
-| [Tables S1–S3](docs/supplementary/README.md#supplementary-tables) | Random-direction null for the network-spread index; phase-randomized null for the Movie10 recurrence–occupancy correlation; cross-stimulus correlation on the full repertoire versus content-eligible states |
+| [Tables S1–S9](docs/supplementary/README.md#supplementary-tables) | Nulls and per-participant values behind the main-text statistics: network spread, the Movie10 phase-randomized null, cross-stimulus correlations, matching between participants, module co-membership and modularity, preprocessing by season, FC–transition controls, and held-out-season modules |
 | [figures/](docs/supplementary/figures/) | Committed PNG and PDF panel files |
 
 Two supplementary analyses (Figures S10 and S12, the ICA convergence check and its
