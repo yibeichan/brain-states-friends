@@ -1666,9 +1666,14 @@ class StickyHDPHMM(hmm.GaussianHMM):
              return -np.inf, dummy_post, dummy_frame, dummy_fwd, dummy_bwd
 
 
+# The class's name on main. Fits saved there pickle it under this name.
+WeakLimitHMM = StickyHDPHMM
+
+
 # =============================================================================
 # Model inspection utilities
 # =============================================================================
+
 
 def infer_n_active_states(model, min_state_usage=0.01):
     """Infer count of active states from model usage history.
