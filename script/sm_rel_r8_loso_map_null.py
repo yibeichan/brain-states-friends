@@ -4,9 +4,10 @@
 04ra matches each leave-one-season-out (LOSO) fold's states to the primary
 model's states (Hungarian on 1 - Pearson r of parcel-space state means) and
 reports the matched-pair r (pooled median 0.952-0.987 per participant). Each
-fold shares five of six seasons with the primary fit, and states share a
-common activation backbone, so a high r needs a baseline. Two are computed
-from the saved state means:
+fold shares five of six seasons with the primary fit, so a high r needs a
+baseline. Two are computed from the saved state means (the derangement null
+sits near 0 because the state means are close to centred across states; the
+best non-match is the informative comparison):
 
 1. Derangement null: within each fold, the matched primary partners are
    permuted with no fixed points (each fold state paired with a different
@@ -52,6 +53,8 @@ def corr_rows(a, b):
 
 
 def derangement(n, rng):
+    if n < 2:
+        raise ValueError(f"no derangement of {n} item(s)")
     while True:
         p = rng.permutation(n)
         if not np.any(p == np.arange(n)):
@@ -93,7 +96,7 @@ def run_subject(sub_id, parc, vt, out_dir, n_draws, seed):
         fold_R.append(R)
         folds[fold] = {"n_matched": int(len(fs)), "median_matched": float(np.median(r_match)),
                        "median_best_non_match": float(np.median(best_other)),
-                       "n_matched_below_best_non_match": int(np.sum(r_match <= best_other))}
+                       "n_matched_below_best_non_match": int(np.sum(r_match <= best_other))}  # counts ties (<=)
     if max_gate > 1e-5:
         raise RuntimeError(f"{sub_id}: recomputed matched r deviates from saved by {max_gate:.2e}")
 

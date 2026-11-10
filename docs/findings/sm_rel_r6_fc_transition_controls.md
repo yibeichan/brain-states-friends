@@ -58,7 +58,7 @@ TR counts and activation-map similarity each correlate with transition probabili
 
 - The null permutes state labels, as in `06b`. Both FC and transitions come from the same Viterbi assignment, so a shared dependence on segmentation is not removed by any of these controls.
 - The covariates enter as ranks in a linear model. A nonlinear dependence on TR count would be only partly removed.
-- `--gate_rv_path` lets the gate read an older RV file when 05f has been rewritten after `06b` ran. It is not used here: the published ρ reproduces from the current 05f in all six participants.
+- The gate reproduces the published `06b` ρ from the same 05f files the analysis uses, in all six participants.
 - p values of 0.0002 are the floor for 5,000 permutations.
 
 ## Connections

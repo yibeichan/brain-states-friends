@@ -2,7 +2,7 @@
 
 ## Question
 
-`04ra` matches each leave-one-season-out fold's states to the primary model's states and reports the matched-pair Pearson r of parcel-space state means (pooled median 0.952–0.987 per participant). Each fold shares five of six seasons with the primary fit, and states share a common activation backbone. How high is r for pairs that are not matched?
+`04ra` matches each leave-one-season-out fold's states to the primary model's states and reports the matched-pair Pearson r of parcel-space state means (pooled median 0.952–0.987 per participant). Each fold shares five of six seasons with the primary fit. How high is r for pairs that are not matched?
 
 ## Method (as run)
 
@@ -25,9 +25,9 @@ Derangement p = 0.0001 (floor) in all six. "Median gap" is the median over pairs
 
 ## Interpretation (bounded)
 
-A random pairing of matched states gives a median r near zero (null maximum ≤ 0.089), so the shared backbone does not by itself produce high map correlations: the median matched r of 0.95–0.99 reflects state-specific maps. The nearest competing primary state is much closer than the random pairing (median 0.62–0.72), so for a typical fold state the matched partner exceeds the runner-up by 0.20–0.32 in r.
+A random pairing of matched states gives a median r near zero (null maximum ≤ 0.089). This is expected: the state means are close to centred across states (mean off-diagonal r −0.017 to −0.021, against −1/(K−1) = −0.022 to −0.024), so this null mainly confirms that the maps carry no large common component. The informative baseline is the nearest competing primary state, which is much closer (median 0.62–0.72): for a typical fold state the matched partner exceeds the runner-up by 0.20–0.32 in r, so the median matched r of 0.95–0.99 reflects state-specific maps.
 
-In 25–48 pairs per participant (10–19% of pooled pairs), the Hungarian partner is not the fold state's highest-r primary state. The one-to-one assignment sends these fold states to a lower-r partner because their best primary state is taken by another fold state. They are the low-r tail of the matched distribution (their median r 0.48–0.66; 216 of 228 lie below the participant's 25th percentile of matched r), which is why the pooled mean (0.872–0.922) sits below the median.
+In 25–48 pairs per participant (12–19% of pooled pairs), the Hungarian partner is not the fold state's highest-r primary state. The one-to-one assignment sends these fold states to a lower-r partner because their best primary state is taken by another fold state. They are the low-r tail of the matched distribution (their median r 0.48–0.66; 216 of 228 lie below the participant's 25th percentile of matched r), which is why the pooled mean (0.872–0.922) sits below the median.
 
 ## Caveats and audit notes
 

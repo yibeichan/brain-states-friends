@@ -129,7 +129,7 @@ def mantel(T, F, covars, n_perm, seed):
             "null_median": float(np.median(null)), "null_q975": float(np.quantile(null, 0.975))}
 
 
-def run_subject(sub_id, parc, vt, out_dir, n_perm, seed, gate_rv_path=None):
+def run_subject(sub_id, parc, vt, out_dir, n_perm, seed):
     base = os.path.join(SCRATCH_DIR, "output")
     sd = lambda stage: os.path.join(base, stage, parc, sub_id, f"vt{vt}")
     P_emp = np.load(os.path.join(sd("06a_state_temp_dynamics"), "transition_probabilities.npy"))
@@ -148,11 +148,9 @@ def run_subject(sub_id, parc, vt, out_dir, n_perm, seed, gate_rv_path=None):
     with open(os.path.join(sd("06b_transition_structure"), "fc_transition_correlation.json")) as f:
         pub = json.load(f)
 
-    # Gate: reproduce the published raw-RV Mantel. gate_rv_path names the RV file
-    # 06b actually read when 05f was rewritten after 06b ran (sub-06, 2026-11-07);
-    # the analysis below always uses the current 05f files.
-    rv_gate = np.load(gate_rv_path) if gate_rv_path else rv
-    rho_g, p_g, npairs_g = published_mantel(P_emp, rv_gate, active)
+    # Gate: reproduce the published raw-RV Mantel from the same 05f files the
+    # analysis below uses.
+    rho_g, p_g, npairs_g = published_mantel(P_emp, rv, active)
     rho_current = published_mantel(P_emp, rv, active, n_perm=1)[0]
     if abs(rho_g - pub["rho"]) > 1e-12 or npairs_g != pub["n_pairs"]:
         raise RuntimeError(f"{sub_id}: gate failed, rho {rho_g} vs published {pub['rho']}, "
@@ -191,7 +189,7 @@ def run_subject(sub_id, parc, vt, out_dir, n_perm, seed, gate_rv_path=None):
         "sub_id": sub_id, "parcellation": parc, "vt": float(vt),
         "gate": {"published_rho": pub["rho"], "reproduced_rho": rho_g,
                  "published_p": pub["p_value"], "reproduced_p": p_g, "n_pairs": npairs_g,
-                 "gate_rv_path": gate_rv_path, "raw_rho_on_current_05f": rho_current},
+                 "raw_rho_on_current_05f": rho_current},
         "n_active": len(active), "n_reliable_active": int(len(rel)),
         "reliable_active_states": rel.tolist(),
         "fc_similarity_range": fc_range,
@@ -221,13 +219,11 @@ def main():
     p.add_argument("--n_perm", type=int, default=5000)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out_dir", default=None)
-    p.add_argument("--gate_rv_path", default=None,
-                   help="RV matrix 06b read, if 05f was rewritten after 06b ran")
     a = p.parse_args()
     vt = f"{float(a.vt):.2f}"
     out_dir = a.out_dir or os.path.join(SCRATCH_DIR, "output", "sm_rel_r6_fc_transition_controls",
                                         a.parcellation, a.sub_id, f"vt{vt}")
-    run_subject(a.sub_id, a.parcellation, vt, out_dir, a.n_perm, a.seed, a.gate_rv_path)
+    run_subject(a.sub_id, a.parcellation, vt, out_dir, a.n_perm, a.seed)
 
 
 if __name__ == "__main__":

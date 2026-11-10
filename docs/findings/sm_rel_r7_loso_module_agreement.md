@@ -33,6 +33,7 @@ Held-out seasons recover the main module structure well above chance in every fo
 
 ## Caveats and audit notes
 
+- The main partition M comes from the final model's transition matrix, which was fitted on all six seasons. Each held-out season is therefore one sixth of the data M was estimated from, so this measures how well one season's transitions recover M, not replication on independent data, and the shared data inflate the ARI.
 - Louvain partitions depend on the seed. Seed variability in either partition is part of the measured disagreement.
 - States not well matched, or absent from either partition, are left out (0–5 per fold), so ARI is over a slightly reduced set.
 - The label-permutation null tests agreement against no relation. It is not a test against a specific alternative partition.

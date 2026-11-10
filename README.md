@@ -134,7 +134,7 @@ bash script/sm_rel_r3_assortativity_null.sh
 # rel / recurrence robustness — needs 04/05a/05e_a4/06b outputs; seconds, runs locally
 bash script/sm_rel_r1_recurrence_robustness.sh
 # rel / R6-R8 — needs 04/04ra/05a/05f/06a/06b/06e outputs; about a minute per subject
-bash script/sm_rel_r6_r8_prereview_checks.sh
+bash script/sm_rel_r6_r8_checks.sh
 ```
 
 ## Citation
