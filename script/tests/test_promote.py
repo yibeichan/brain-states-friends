@@ -149,6 +149,15 @@ def _manifest(tmp_path, pinned, extra=""):
     return p
 
 
+FAKE_DATALAD = """#!/bin/bash
+# fake 'datalad save -m MSG [--amend] -- paths': git add + commit
+shift; msg=""; amend=""
+while [ "$1" != "--" ]; do case "$1" in -m) msg="$2"; shift 2;; --amend) amend=--amend; shift;; esac; done
+shift
+git add -- "$@" && git -c user.email=a@b -c user.name=a commit -q $amend -m "$msg"
+"""
+
+
 def _plan(ds, side, mpath):
     return promote.build_plan(side, ds, promote.load_manifest(mpath), repo=REPO_DIR)
 
@@ -160,8 +169,7 @@ def test_good_promotion_is_ready_and_executes(setup, tmp_path, monkeypatch):
     assert plan.report.fails == [], plan.report.fails
     assert sorted(r for _, r in plan.copies) == [RV, REC]
     fake = tmp_path / "fake_datalad"
-    fake.write_text('#!/bin/bash\n# usage: save -m MSG -- paths\nmsg="$3"; shift 4\n'
-                    'git add -- "$@" && git -c user.email=a@b -c user.name=a commit -q -m "$msg"\n')
+    fake.write_text(FAKE_DATALAD)
     fake.chmod(0o755)
     monkeypatch.setenv("PROMOTE_DATALAD", str(fake))
     rc = promote.main(["--side-root", str(side), "--manifest", str(m), "--dataset", str(ds),
@@ -275,3 +283,107 @@ def test_reference_missing_annex_content_is_reported(tmp_path):
     _git(ds, "commit", "-q", "-m", "annexed")
     with pytest.raises(FileNotFoundError, match="not present"):
         promote.reference_file(ds, "HEAD", "f.npy", tmp_path)
+
+
+# ------------------------------------------------- review follow-ups
+def test_positive_control_needs_a_numeric_difference(tmp_path):
+    a = _npy(tmp_path / "a.npy", np.full(3, 1.0))
+    reshaped = compare_files(a, _npy(tmp_path / "b.npy", np.full(4, 1.0)))
+    nan = compare_files(a, _npy(tmp_path / "c.npy", np.array([1.0, np.nan, 1.0])))
+    moved = compare_files(a, _npy(tmp_path / "d.npy", np.full(3, 1.5)))
+    assert reshaped.kind == nan.kind == "structural"
+    assert moved.kind == "numeric" and moved.max_diff == pytest.approx(0.5)
+    j = compare_files(_json(tmp_path / "j.json", {"sha": "a", "rho": 0.4}),
+                      _json(tmp_path / "k.json", {"sha": "b", "rho": 0.5}))
+    assert j.kind == "structural"          # a string difference is not a numeric change
+    j2 = compare_files(_json(tmp_path / "l.json", {"a": 0.4, "b": 0.1}),
+                       _json(tmp_path / "m.json", {"a": 0.4001, "b": 0.3}))
+    assert j2.max_diff == pytest.approx(0.2)   # max over every leaf, not the first failing one
+
+
+def test_differ_control_rules(setup, tmp_path):
+    ds, side, pinned = setup
+    def manifest(differ):
+        m = tmp_path / "md.toml"
+        m.write_text(textwrap.dedent(f"""
+            message = "x"
+            code_commit = "{MAIN}"
+            change = ["{RV}"]
+            [[control]]
+            path = "{RV}"
+            reference = "{pinned}"
+            why = "05f loader"
+            [[control]]
+            why = "positive"
+            expect = "differ"
+        """) + differ)
+        return m
+    no_min = _plan(ds, side, manifest(f'path = "{RV}"\nreference = "HEAD"\n')).report.fails
+    assert any("min_diff is required" in f for f in no_min)
+    too_big = _plan(ds, side, manifest(f'path = "{RV}"\nreference = "HEAD"\nmin_diff = 5.0\n')).report.fails
+    assert any("expect differ" in f and "FAIL" in f for f in too_big)
+    outside = _plan(ds, side, manifest(f'path = "{OTHER}"\nreference = "HEAD"\nmin_diff = 0.1\n')).report.fails
+    assert any("no positive control" in f and "inside the change set" in f for f in outside)
+
+
+def test_csv_equal_infinities_and_decimals_override(tmp_path):
+    (tmp_path / "a.csv").write_text("x\ninf\n-inf\n")
+    (tmp_path / "b.csv").write_text("x\ninf\n-inf\n")
+    assert compare_files(tmp_path / "a.csv", tmp_path / "b.csv").equal
+    m = {"override": [{"glob": "**/metadata.json", "decimals": 4}]}
+    rtol, atol, _ = promote._tol(m, "05f/x/metadata.json")
+    assert compare_files(_json(tmp_path / "r1.json", {"a": 0.1235}), _json(tmp_path / "r2.json", {"a": 0.1234}),
+                         rtol, atol).equal
+    assert not compare_files(_json(tmp_path / "r3.json", {"a": 0.1237}), _json(tmp_path / "r4.json", {"a": 0.1234}),
+                             rtol, atol).equal
+
+
+def test_dataset_file_in_change_set_not_reproduced_blocks(setup, tmp_path):
+    ds, side, pinned = setup
+    extra = "05f_state_fc/atlas-X/sub-06/vt0.95/stale.npy"
+    np.save(ds / extra, np.zeros(2))
+    _git(ds, "add", extra)
+    _git(ds, "commit", "-q", "-m", "stale")
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/*.npy"]'))
+    fails = _plan(ds, side, m).report.fails
+    assert any("not reproduced by the side root" in f and extra in f for f in fails)
+
+
+def test_write_through_a_linked_input_directory_blocks(setup, tmp_path):
+    ds, side, pinned = setup
+    (ds / "05e_temporal_trend_a4" / "atlas-X" / "sub-06" / "vt0.95" / "new.json").write_text("{}")
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any("wrote through the link" in f for f in fails)
+
+
+def test_record_that_is_not_an_object_is_reported(setup, tmp_path):
+    ds, side, pinned = setup
+    (side / "output" / REC).write_text("[1, 2]")
+    fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
+    assert any("not a JSON object" in f for f in fails)
+
+
+def test_large_promotions_save_in_chunks_into_one_commit(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    so = side / "output"
+    for i in range(5):
+        np.save(so / f"05f_state_fc/atlas-X/sub-06/vt0.95/extra_{i}.npy", np.zeros(2))
+    m = _manifest(tmp_path, pinned)
+    m.write_text(m.read_text().replace(
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy"]',
+        'change = ["05f_state_fc/atlas-X/sub-06/vt0.95/fc_similarity_corr_rv.npy", '
+        '"05f_state_fc/atlas-X/sub-06/vt0.95/extra_*.npy"]'))
+    fake = tmp_path / "fake_datalad"
+    fake.write_text(FAKE_DATALAD)
+    fake.chmod(0o755)
+    monkeypatch.setenv("PROMOTE_DATALAD", str(fake))
+    monkeypatch.setattr(promote, "SAVE_CHUNK", 2)
+    before = int(_git(ds, "rev-list", "--count", "HEAD"))
+    rc = promote.main(["--side-root", str(side), "--manifest", str(m), "--dataset", str(ds),
+                       "--repo", str(REPO_DIR), "--no-fetch", "--execute"])
+    assert rc == 0
+    assert int(_git(ds, "rev-list", "--count", "HEAD")) == before + 1
+    assert _git(ds, "status", "--porcelain", "--untracked-files=no") == ""

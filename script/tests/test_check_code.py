@@ -127,3 +127,39 @@ def test_floor_line_needs_a_full_sha(tmp_path):
     p.write_text("1f391c0 05f short sha\n")
     with pytest.raises(ValueError):
         check_code.load_floor(p)
+
+
+def test_tree_needs_a_record_of_the_saved_stage_in_every_subject(repo, tmp_path):
+    r, s, floor = repo
+    root = tmp_path / "05f_state_fc" / "atlas-X"
+    for sub in ("sub-01", "sub-06"):
+        (root / sub).mkdir(parents=True)
+    (root / "sub-06" / "provenance_05f.json").write_text(json.dumps(_record(s["after"])))
+    problems, _ = check_code.check_tree(root, "05f", repo=r, floor=floor)
+    assert len(problems) == 1 and "sub-01" in problems[0]
+
+
+def test_records_of_another_stage_do_not_cover_the_saved_stage(repo, tmp_path):
+    r, s, floor = repo
+    fold = tmp_path / "04" / "sub-01" / "loso" / "season_1"
+    fold.mkdir(parents=True)
+    rec = _record(s["after"], stage="04rc", sub_id="sub-01")
+    (fold / "provenance_04rc.json").write_text(json.dumps(rec))
+    problems, notes = check_code.check_tree(tmp_path / "04" / "sub-01", "04", repo=r, floor=floor,
+                                            fallback_commit=s["branch"])
+    assert any("save-time checkout" in p and "not on origin/main" in p for p in problems)
+    assert any("WEAK CHECK" in n for n in notes)
+
+
+def test_record_that_is_not_an_object_fails(repo, tmp_path):
+    r, _, floor = repo
+    d = tmp_path / "x"
+    d.mkdir()
+    (d / "provenance_05f.json").write_text("[]")
+    problems, _ = check_code.check_tree(d, "05f", repo=r, floor=floor)
+    assert any("not a JSON object" in p for p in problems)
+
+
+def test_datalad_save_accepts_true_and_rejects_unknown_check_code_values():
+    script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
+    assert '1|true|yes|on) CHECK_CODE=1' in script and '*) echo "ERROR: CHECK_CODE=' in script

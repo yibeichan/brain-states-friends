@@ -107,7 +107,7 @@ def check_record(record, repo=REPO_DIR, main_ref="origin/main", floor=None, pinn
         sys.path.insert(0, str(SCRIPT_DIR))
         from utils.common import DUPLICATE_RUN_SESSIONS as pinned
     stage = record.get("stage")
-    code = record.get("code") or {}
+    code = record.get("code") if isinstance(record.get("code"), dict) else {}
     commit = code.get("commit")
     problems = []
     if not commit:
@@ -139,24 +139,55 @@ def code_is_clean(repo):
     return not tracked
 
 
+def _load_record(rp):
+    try:
+        rec = json.loads(Path(rp).read_text())
+    except (OSError, ValueError) as e:
+        return None, f"unreadable provenance ({e})"
+    if not isinstance(rec, dict):
+        return None, "provenance is not a JSON object"
+    return rec, None
+
+
+def _units(path):
+    """Directories that each need their own record: the sub-* children of a
+    --subject all save path, else the path itself."""
+    path = Path(path)
+    if path.is_dir() and not path.name.startswith("sub-"):
+        subs = sorted(d for d in path.iterdir() if d.is_dir() and d.name.startswith("sub-"))
+        if subs:
+            return subs
+    return [path]
+
+
 def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
                fallback_commit=None):
-    """Check every provenance record under ``path``; returns (problems, notes)."""
+    """Check every provenance record under ``path``; returns (problems, notes).
+
+    Every record found is checked, whatever its stage (a stage-04 save path
+    holds 04rc records). For a stage that writes provenance, every subject
+    directory must hold a record of that stage. For any other stage the
+    save-time checkout is checked as well, and the notes say the check is weak.
+    """
     problems, notes = [], []
     records = find_records(path)
+    own = 0
     for rp in records:
-        try:
-            rec = json.loads(rp.read_text())
-        except (OSError, ValueError) as e:
-            problems.append(f"{rp}: unreadable provenance ({e})")
+        rec, err = _load_record(rp)
+        if err:
+            problems.append(f"{rp}: {err}")
             continue
+        if rec.get("stage") == stage:
+            own += 1
         for p in check_record(rec, repo=repo, main_ref=main_ref, floor=floor):
             problems.append(f"{rp}: {p}")
     if records:
-        notes.append(f"{len(records)} provenance record(s) checked under {path}")
-    elif stage in PROVENANCE_STAGES:
-        problems.append(f"stage {stage} writes provenance, but none is under {path}: "
-                        "rerun the stage on current code")
+        notes.append(f"{len(records)} provenance record(s) checked under {path} ({own} of stage {stage})")
+    if stage in PROVENANCE_STAGES:
+        for unit in _units(path):
+            if not any(r.name == f"provenance_{stage}.json" for r in find_records(unit)):
+                problems.append(f"stage {stage} writes provenance, but none is under {unit}: "
+                                "rerun the stage on current code")
     else:
         notes.append(f"WEAK CHECK: stage {stage} writes no provenance; only the save-time "
                      "checkout is checked, not the code that produced the files")

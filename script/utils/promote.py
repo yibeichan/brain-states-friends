@@ -73,6 +73,7 @@ from utils import check_code  # noqa: E402
 FIGURE_EXT = {".png", ".pdf", ".svg", ".jpg", ".jpeg"}
 DEFAULT_EXCLUDE = ["logs/**", "**/__pycache__/**", "**/.nfs*"]
 BROAD_GLOBS = {"**", "**/*", "*"}
+SAVE_CHUNK = 500   # paths per datalad save call
 
 
 # ------------------------------------------------------------------ globs
@@ -376,13 +377,16 @@ def _tol(manifest, rel):
 
 
 def side_files(side_out, scope, exclude):
-    """Recomputed side-root files (symlinks are inputs linked in, not outputs)."""
-    files, linked = [], 0
+    """Recomputed side-root files (symlinks are inputs linked in, not outputs).
+
+    Returns (files, number of symlinks skipped, symlinked directories)."""
+    files, linked, linked_dirs = [], 0, []
     for root, dirs, names in os.walk(side_out):
         keep = []
         for d in dirs:
             if os.path.islink(os.path.join(root, d)):
                 linked += 1
+                linked_dirs.append(os.path.relpath(os.path.join(root, d), side_out))
             else:
                 keep.append(d)
         dirs[:] = keep
@@ -394,7 +398,7 @@ def side_files(side_out, scope, exclude):
                 continue
             if matches(rel, scope) and not matches(rel, exclude):
                 files.append(rel)
-    return sorted(files), linked
+    return sorted(files), linked, linked_dirs
 
 
 def _is_record(rel):
@@ -447,14 +451,40 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
     scope = manifest.get("scope", ["**"])
     exclude = DEFAULT_EXCLUDE + list(manifest.get("exclude", []))
     change = manifest["change"]
-    files, linked = side_files(side_out, scope, exclude)
+    files, linked, linked_dirs = side_files(side_out, scope, exclude)
     rep.info(f"{len(files)} recomputed side-root files in scope ({linked} symlinked inputs skipped)")
+    # A stage run in the side root can write through a linked input directory
+    # straight into the dataset (04rc writes next to its inputs).
+    ds_real = os.path.realpath(dataset)
+    for d in linked_dirs:
+        real = os.path.realpath(side_out / d)
+        if real == ds_real or real.startswith(ds_real + os.sep):
+            st = _run(["git", "status", "--porcelain", "--", os.path.relpath(real, ds_real)], cwd=dataset)
+            if st.stdout.strip():
+                rep.fail(f"linked input directory {d} has uncommitted or new files in the dataset: "
+                         "a stage wrote through the link; link files, not directories, for stages "
+                         "that write next to their inputs")
 
     for g in change:
         n = sum(1 for r in files if matches(r, [g]))
         rep.info(f"change glob {g!r}: {n} file(s)")
         if n == 0:
             rep.fail(f"change glob {g!r} matches no recomputed file")
+
+    # dataset files in the change set that the side root no longer produces
+    side_set = set(files)
+    ls = _run(["git", "ls-files", "-z"], cwd=dataset)
+    gone = [r for r in ls.stdout.split("\0") if r and matches(r, change)
+            and matches(r, scope) and not matches(r, exclude) and r not in side_set]
+    for r in gone[:20]:
+        msg = f"in the change set but not reproduced by the side root: {r}"
+        if manifest.get("keep_unreproduced"):
+            rep.warn(msg + f" [kept: {manifest['keep_unreproduced']}]")
+        else:
+            rep.fail(msg)
+    if len(gone) > 20:
+        (rep.warn if manifest.get("keep_unreproduced") else rep.fail)(
+            f"... and {len(gone) - 20} more dataset files in the change set not reproduced")
 
     records = []
     for rel in files:
@@ -499,15 +529,23 @@ def build_plan(side_root, dataset, manifest, repo=REPO_DIR, main_ref="origin/mai
         if not any(_under(r, rdir) for r in planned):
             rep.info(f"provenance record left out (nothing planned under its directory): {rel}")
             continue
-        rec = json.loads((side_out / rel).read_text())
+        rec, err = check_code._load_record(side_out / rel)
+        if err:
+            rep.fail(f"{rel}: {err}")
+            continue
         for p in check_code.check_record(rec, repo=repo, main_ref=main_ref):
             rep.fail(f"{rel}: {p}")
         if code_full and (rec.get("code") or {}).get("commit") != code_full:
             rep.fail(f"{rel}: record names code {str((rec.get('code') or {}).get('commit'))[:10]}, "
                      f"manifest code_commit is {code_full[:10]}")
         old = dataset / rel
-        if old.exists():
-            prev = json.loads(old.read_text())
+        if os.path.lexists(old) and not old.exists():
+            rep.fail(f"{rel}: the dataset's record is not present locally; datalad get it first")
+        elif old.exists():
+            prev, err = check_code._load_record(old)
+            if err:
+                rep.fail(f"{rel} in the dataset: {err}")
+                prev = {}
             for k in ("inputs", "sessions_read"):
                 if prev.get(k) != rec.get(k):
                     a_, b_ = prev.get(k) or {}, rec.get(k) or {}
@@ -537,8 +575,10 @@ def check_controls(manifest, side_out, dataset, files, rep):
     change = manifest["change"]
     if not any(matches(c.get("path", ""), change) for c in controls):
         rep.fail("no control lies inside the change set; a control outside it cannot detect a wrong change")
-    if not any(c.get("expect", "equal") == "differ" for c in controls) and not manifest.get("no_positive_control"):
-        rep.fail("no positive control (expect = \"differ\"); add one or set no_positive_control = \"<reason>\"")
+    if not any(c.get("expect", "equal") == "differ" and matches(c.get("path", ""), change)
+               for c in controls) and not manifest.get("no_positive_control"):
+        rep.fail("no positive control (expect = \"differ\") inside the change set; "
+                 "add one or set no_positive_control = \"<reason>\"")
     with tempfile.TemporaryDirectory() as tmp:
         for c in controls:
             rel, ref = c.get("path", ""), c.get("reference", "HEAD")
@@ -591,14 +631,21 @@ def datalad_cmd(repo):
 def execute(plan, side_root, dataset, manifest, manifest_path, repo, log):
     side_out = Path(side_root) / "output"
     dataset = Path(dataset)
-    for act, rel in plan.copies:
-        src, dst = side_out / rel, dataset / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        if os.path.lexists(dst):
-            os.remove(dst)                      # annex symlink or plain file
-        shutil.copy2(src, dst)
-        os.chmod(dst, os.stat(dst).st_mode | 0o200)
-        log(f"{act} {rel}")
+    rels = [r for _, r in plan.copies]
+    dirty_hint = ("the dataset now has unsaved copies; inspect with 'git status', then revert "
+                  "with 'git checkout -- <paths>' or save them by hand")
+    try:
+        for act, rel in plan.copies:
+            src, dst = side_out / rel, dataset / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if os.path.lexists(dst):
+                os.remove(dst)                      # annex symlink or plain file
+            shutil.copy2(src, dst)
+            os.chmod(dst, os.stat(dst).st_mode | 0o200)
+            log(f"{act} {rel}")
+    except OSError as e:
+        log(f"COPY FAILED: {e}; {dirty_hint}")
+        return 1
     floor = ",".join(s[:10] for s, _, _ in check_code.load_floor())
     msg = (f"{manifest['message']}\n\n"
            f"code_commit: {manifest['code_commit']}\n"
@@ -606,12 +653,21 @@ def execute(plan, side_root, dataset, manifest, manifest_path, repo, log):
            f"side_root: {side_root}\n"
            f"manifest_sha256: {hashlib.sha256(Path(manifest_path).read_bytes()).hexdigest()}\n"
            f"promote_check: passed")
-    rels = [r for _, r in plan.copies]
-    p = _run(datalad_cmd(repo) + ["save", "-m", msg, "--"] + rels, cwd=dataset)
-    log(p.stdout + p.stderr)
-    if p.returncode != 0:
-        log(f"datalad save failed (rc {p.returncode})")
-        return p.returncode
+    # One commit, so save in chunks with --amend after the first (keeps the
+    # command line far below ARG_MAX for large promotions).
+    chunk = SAVE_CHUNK
+    for i in range(0, len(rels), chunk):
+        part = rels[i:i + chunk]
+        cmd = datalad_cmd(repo) + ["save", "-m", msg] + (["--amend"] if i else []) + ["--"] + part
+        try:
+            p = _run(cmd, cwd=dataset)
+        except OSError as e:
+            log(f"datalad save failed to start: {e}; {dirty_hint}")
+            return 1
+        log(p.stdout + p.stderr)
+        if p.returncode != 0:
+            log(f"datalad save failed (rc {p.returncode}) on paths {i}..{i + len(part) - 1}; {dirty_hint}")
+            return p.returncode
     bad = [r for r in rels if not (dataset / r).exists() or md5(dataset / r) != md5(side_out / r)]
     for r in bad:
         log(f"VERIFY FAIL: saved content differs from side root: {r}")

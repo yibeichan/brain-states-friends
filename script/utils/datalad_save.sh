@@ -226,13 +226,18 @@ if ! command -v git-annex &> /dev/null; then
 fi
 
 # --- Code check (opt-in) ---
+case "${CHECK_CODE,,}" in
+    1|true|yes|on) CHECK_CODE=1 ;;
+    0|false|no|off|"") CHECK_CODE=0 ;;
+    *) echo "ERROR: CHECK_CODE='${CHECK_CODE}' (use 1 or 0)"; exit 1 ;;
+esac
 FLOOR_LINE=""
 if [ "$CHECK_CODE" = "1" ]; then
     echo "Checking code provenance for ${SAVE_PATH} ..."
     uv run --project "${CODE_DIR}" python "${CODE_DIR}/script/utils/check_code.py" \
         --repo "${CODE_DIR}" tree "${OUTPUT_DIR}/${SAVE_PATH}" \
         --stage "${STAGE}" --fallback-commit "${CODE_COMMIT}"
-    FLOOR_LINE="code_floor: $(grep -v '^#' "${CODE_DIR}/script/utils/code_floor.txt" | awk 'NF {print substr($1,1,10)}' | paste -sd, -)"
+    FLOOR_LINE="code_floor: $({ grep -v '^#' "${CODE_DIR}/script/utils/code_floor.txt" || true; } | awk 'NF {print substr($1,1,10)}' | paste -sd, -)"
     COMMIT_MSG="${COMMIT_MSG}
 ${FLOOR_LINE}
 code_check: passed"
