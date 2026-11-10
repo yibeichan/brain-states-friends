@@ -48,15 +48,20 @@ bash script/utils/datalad_save.sh --stage 05f --subject sub-06
 sbatch --export=STAGE=05f,SUBJECT_ID=sub-06 script/utils/datalad_save.sh
 ```
 
-The code check runs on every save. It fails the save in any of these cases:
+The code check runs on every save. It takes the save lock first, so it sees exactly what the save will commit. It checks the files the save would commit, the new or modified ones per `git status` under the save path; files already in the dataset are not checked again. It fails the save in any of these cases:
 - `origin/main` cannot be fetched;
 - a record is from a commit not on `origin/main`;
 - a record's commit lacks a floor fix for its stage;
 - a record says the checkout was dirty;
 - a record read a duplicated run from a session other than the pinned one;
-- an output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
+- a new or modified output of a provenance stage is not covered by its nearest record. This includes 04rc's files inside a stage-04 save.
 
-Files of stages that write no provenance get a weaker check: the save-time checkout must pass the floor and be clean, and the output says so (`WEAK CHECK`). To skip the check, pass `--no-check-code` or set `CHECK_CODE=0`. Do this only for a save that cannot pass it, and say why in `--message`. `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save.
+Files of stages that write no provenance get a weaker check, and the output says so (`WEAK CHECK`). The save-time checkout must pass the floor and be clean: no modified tracked files and no untracked `.py` under `script/`.
+
+- **Skipping the check.** Pass `--no-check-code` or set `CHECK_CODE=0`. Do this only for a save that cannot pass it, and give the reason with `--skip-reason "<text>"` (or `SKIP_REASON`). The commit message then ends with `code_check: skipped (<reason>)` and the save prints a warning.
+- **GitHub unreachable.** `--no-fetch` (or `CHECK_CODE_NO_FETCH=1`) checks against the local `origin/main`, and the commit message says it was not fetched. A failed fetch is retried once, since parallel saves race for the ref lock.
+- **Values.** `CHECK_CODE` accepts 1/true/yes and 0/false/no; any other value stops the save.
+- **The commit message records the code floor from `origin/main`, the one the check enforced.**
 
 `check_code.py` also works on its own:
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check that outputs come from merged code that contains every required fix.
 
-Used by datalad_save.sh (--check-code) and promote.py before anything enters
-the output dataset. Rules (script/utils/output_provenance.md):
+Used by datalad_save.sh (on every save unless --no-check-code) and promote.py
+before anything enters the output dataset. Rules (script/utils/output_provenance.md):
 
 1. The code commit is on main. The repo squash-merges, so a commit on a PR
    branch never becomes an ancestor of main: results computed on a branch are
@@ -22,7 +22,7 @@ the output dataset. Rules (script/utils/output_provenance.md):
 
 CLI:
     check_code.py commit <sha> [--stage S]
-    check_code.py tree <path> --stage S [--fallback-commit SHA]
+    check_code.py tree <path> --stage S [--changed-only] [--fallback-commit SHA]
 Exit status 0 when every check passes, 1 otherwise. A failed fetch of main is
 a failure unless --no-fetch is given.
 """
@@ -35,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
@@ -52,6 +53,14 @@ STAGE_TOPS = {
 # 04rc writes these two files into stage 04's LOSO and split-half fold directories.
 FILES_04RC = frozenset({"state_empirical_corr.npy", "fc_metadata.json"})
 PROVENANCE_STAGES = frozenset(set(STAGE_TOPS.values()) | {"04rc"})
+
+
+def known_stages():
+    """Stage keys a floor line may name: datalad_save.sh's STAGE_MAP keys plus
+    the provenance stages (04rc has no STAGE_MAP key of its own)."""
+    sh = Path(__file__).resolve().with_name("datalad_save.sh")
+    keys = set(re.findall(r'^\s*\["([^"]+)"\]=', sh.read_text(), re.M)) if sh.exists() else set()
+    return frozenset(keys | PROVENANCE_STAGES)
 _MD5_KEY_RE = re.compile(r"^MD5E?-s(\d+)(?:-m\d+)?--([0-9a-f]{32})")
 
 
@@ -77,7 +86,12 @@ def parse_floor(text, origin="code_floor.txt"):
         parts = line.split(None, 2)
         if len(parts) < 3 or len(parts[0]) != 40:
             raise ValueError(f"{origin}:{n}: expected '<40-char sha> <stages> <reason>'")
-        entries.append((parts[0], frozenset(parts[1].split(",")), parts[2]))
+        stages = frozenset(parts[1].split(","))
+        unknown = sorted(stages - known_stages() - {"*"})
+        if unknown:
+            raise ValueError(f"{origin}:{n}: unknown stage key(s) {unknown}; use keys from "
+                             "datalad_save.sh STAGE_MAP, 04rc, or *")
+        entries.append((parts[0], stages, parts[2]))
     return entries
 
 
@@ -112,9 +126,15 @@ def floor_for(stage, floor):
     return [e for e in floor if stage is None or "*" in e[1] or stage in e[1]]
 
 
-def fetch_main(repo=REPO_DIR, remote="origin", branch="main"):
-    """Fetch main; returns (ok, one-line note)."""
+def fetch_main(repo=REPO_DIR, remote="origin", branch="main", retries=1, wait=5.0):
+    """Fetch main; returns (ok, one-line note). A failed fetch is retried once:
+    parallel saves fetching the same checkout race for the ref lock."""
     rc, _, err = _git(repo, "fetch", "-q", remote, branch, timeout=60)
+    for _ in range(retries):
+        if rc == 0:
+            break
+        time.sleep(wait)
+        rc, _, err = _git(repo, "fetch", "-q", remote, branch, timeout=60)
     _, date, _ = _git(repo, "log", "-1", "--format=%ci", f"{remote}/{branch}")
     if rc != 0:
         return False, (f"git fetch {remote} {branch} failed ({err or rc}); "
@@ -285,8 +305,39 @@ def find_records(path):
 
 
 def code_is_clean(repo):
+    """No modified tracked files and no untracked .py under script/ (the same
+    rule provenance records apply to the code that ran)."""
     _, tracked, _ = _git(repo, "status", "--porcelain", "--untracked-files=no")
-    return not tracked
+    _, untracked, _ = _git(repo, "ls-files", "--others", "--exclude-standard", "--", "script")
+    return not tracked and not any(f.endswith(".py") for f in untracked.splitlines())
+
+
+def changed_files(path):
+    """Files under ``path`` that a save would commit: new, modified or type-changed
+    per ``git status`` in the repository holding ``path`` (deletions excluded).
+    Returns (files, error)."""
+    path = Path(path)
+    rc, root, err = _git(path if path.is_dir() else path.parent, "rev-parse", "--show-toplevel")
+    if rc != 0:
+        return [], f"{path} is not inside a git repository ({err or rc})"
+    rel = os.path.relpath(path, root)
+    p = subprocess.run(["git", "-C", root, "status", "--porcelain", "--untracked-files=all", "-z", "--", rel],
+                       capture_output=True, text=True)
+    if p.returncode != 0:
+        return [], f"git status failed under {path}: {p.stderr.strip()}"
+    out, tokens, i = [], p.stdout.split("\0"), 0
+    while i < len(tokens):
+        t = tokens[i]
+        i += 1
+        if len(t) < 4:
+            continue
+        xy, name = t[:2], t[3:]
+        if "R" in xy or "C" in xy:
+            i += 1                                 # skip the rename source
+        if "D" in xy:
+            continue
+        out.append(Path(root) / name)
+    return sorted(out), None
 
 
 def _files_under(path):
@@ -303,13 +354,17 @@ def _files_under(path):
 
 
 def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
-               fallback_commit=None, pinned=None):
+               fallback_commit=None, pinned=None, changed_only=False):
     """Check the outputs under ``path``; returns (problems, notes).
 
     Every record under ``path``, or nearest to a file under it, is checked.
     Every file of a provenance stage (including 04rc's files inside a stage-04
     save) must be covered by its nearest record. Files of other stages get the
     weak check: the save-time checkout must pass the floor and be clean.
+
+    With ``changed_only``, only the files a save would commit (new or modified
+    per git status) are checked, so files already in the dataset are not
+    re-certified by every later save.
     """
     problems, notes = [], []
     if floor is None:
@@ -324,8 +379,18 @@ def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
             return [str(e)], notes
     cache = {}
     uncovered, weak = [], 0
-    records = set(find_records(path))
-    for f in _files_under(path):
+    records = set()
+    if changed_only:
+        files, err = changed_files(path)
+        if err:
+            return [err], notes
+        records |= {f for f in files if f.name.startswith("provenance_") and f.name.endswith(".json")}
+        files = [f for f in files if f not in records]
+        notes.append(f"{len(files)} new or modified file(s) under {path} checked")
+    else:
+        files = _files_under(path)
+        records = set(find_records(path))
+    for f in files:
         st = gated_stage(f)
         if st is None:
             weak += 1
@@ -357,7 +422,10 @@ def check_tree(path, stage, repo=REPO_DIR, main_ref="origin/main", floor=None,
             if not code_is_clean(repo):
                 problems.append(f"save-time checkout {repo} has modified tracked files")
     if not records and not weak and not uncovered:
-        problems.append(f"nothing to check under {path}")
+        if changed_only:
+            notes.append(f"nothing new or modified under {path}")
+        else:
+            problems.append(f"nothing to check under {path}")
     return problems, notes
 
 
@@ -375,6 +443,8 @@ def main(argv=None):
     t.add_argument("path")
     t.add_argument("--stage", required=True)
     t.add_argument("--fallback-commit")
+    t.add_argument("--changed-only", action="store_true",
+                   help="check only files git status reports as new or modified (what a save commits)")
     a = ap.parse_args(argv)
 
     problems, notes = [], []
@@ -387,7 +457,7 @@ def main(argv=None):
         problems += check_commit(a.sha, a.stage, repo=a.repo, main_ref=a.main_ref)
     else:
         p, notes = check_tree(a.path, a.stage, repo=a.repo, main_ref=a.main_ref,
-                              fallback_commit=a.fallback_commit)
+                              fallback_commit=a.fallback_commit, changed_only=a.changed_only)
         problems += p
     for n in notes:
         print(n)

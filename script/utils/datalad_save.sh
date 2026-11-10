@@ -35,12 +35,17 @@ SUBJECT_ID="${SUBJECT_ID:-}"
 PARCELLATION="${PARCELLATION:-atlas-4S156Parcels}"
 PUSH="${PUSH:-true}"
 MESSAGE="${MESSAGE:-}"
-# Code check, on by default: refuse to save outputs whose code is not on
-# origin/main, lacks a code-floor fix, or (for stages that write provenance)
+# Code check, on by default, run under the save lock on the files this save
+# would commit (new or modified under SAVE_PATH): refuse when their code is not
+# on origin/main, lacks a code-floor fix, or (for stages that write provenance)
 # has no clean provenance record covering them. --no-check-code or
-# CHECK_CODE=0 (works through sbatch --export) skips it; see
-# script/utils/output_provenance.md.
+# CHECK_CODE=0 (works through sbatch --export) skips it; give the reason with
+# --skip-reason / SKIP_REASON, which goes into the commit message. --no-fetch /
+# CHECK_CODE_NO_FETCH=1 checks against the local origin/main when GitHub is
+# unreachable. See script/utils/output_provenance.md.
 CHECK_CODE="${CHECK_CODE:-1}"
+SKIP_REASON="${SKIP_REASON:-}"
+CHECK_CODE_NO_FETCH="${CHECK_CODE_NO_FETCH:-0}"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -52,8 +57,10 @@ while [[ $# -gt 0 ]]; do
         --no-push) PUSH="false"; shift ;;
         --check-code) CHECK_CODE=1; shift ;;
         --no-check-code) CHECK_CODE=0; shift ;;
+        --skip-reason) SKIP_REASON="$2"; shift 2 ;;
+        --no-fetch) CHECK_CODE_NO_FETCH=1; shift ;;
         -h|--help)
-            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG] [--no-check-code]"
+            echo "Usage: datalad_save.sh --stage STAGE --subject SUBJECT_ID [--parcellation PARC] [--no-push] [--message MSG] [--no-check-code --skip-reason TEXT] [--no-fetch]"
             echo ""
             echo "Stages: 00, 02, 03a, 03b, 04, 05a, 05b, 05c, 05d, 05e_a1, 05e_a2, 05g, 05h, 06, m10_03, m10_04, hp_04, pp_04, diag"
             echo "Subject: sub-01 through sub-06, or 'all' (stage 05h takes 'all' only)"
@@ -227,28 +234,16 @@ if ! command -v git-annex &> /dev/null; then
     exit 1
 fi
 
-# --- Code check (on unless CHECK_CODE=0 / --no-check-code) ---
 case "${CHECK_CODE,,}" in
     1|true|yes|on) CHECK_CODE=1 ;;
     0|false|no|off) CHECK_CODE=0 ;;
     *) echo "ERROR: CHECK_CODE='${CHECK_CODE}' (use 1 or 0)"; exit 1 ;;
 esac
-FLOOR_LINE=""
-if [ "$CHECK_CODE" = "1" ]; then
-    echo "Checking code provenance for ${SAVE_PATH} ..."
-    uv run --project "${CODE_DIR}" python "${CODE_DIR}/script/utils/check_code.py" \
-        --repo "${CODE_DIR}" tree "${OUTPUT_DIR}/${SAVE_PATH}" \
-        --stage "${STAGE}" --fallback-commit "${CODE_COMMIT}"
-    FLOOR_LINE="code_floor: $({ grep -v '^#' "${CODE_DIR}/script/utils/code_floor.txt" || true; } | awk 'NF {print substr($1,1,10)}' | paste -sd, -)"
-    COMMIT_MSG="${COMMIT_MSG}
-${FLOOR_LINE}
-code_check: passed"
-fi
 
-# --- Save ---
+# --- Lock, then check, then save ---
 cd "${OUTPUT_DIR}"
-# Wait for any promote.py run on this dataset (it holds the same lock) so the
-# two never commit at the same time.
+# Wait for any promote.py run or other save on this dataset (they hold the same
+# lock), so the check sees exactly what the save will commit.
 exec 9>"$(git rev-parse --absolute-git-dir)/promote.lock"
 # Wait at most 20 minutes, inside the job's 30-minute limit.
 if ! flock -w 1200 9; then
@@ -256,6 +251,29 @@ if ! flock -w 1200 9; then
          "(a promotion or another save holds it); rerun this save later"
     exit 1
 fi
+
+if [ "$CHECK_CODE" = "1" ]; then
+    echo "Checking code provenance for the changed files under ${SAVE_PATH} ..."
+    FETCH_ARGS=()
+    FETCH_NOTE=""
+    if [ "$CHECK_CODE_NO_FETCH" = "1" ]; then
+        FETCH_ARGS=(--no-fetch)
+        FETCH_NOTE=" against the local origin/main, not fetched"
+    fi
+    uv run --project "${CODE_DIR}" python "${CODE_DIR}/script/utils/check_code.py" \
+        --repo "${CODE_DIR}" "${FETCH_ARGS[@]}" tree "${OUTPUT_DIR}/${SAVE_PATH}" \
+        --stage "${STAGE}" --changed-only --fallback-commit "${CODE_COMMIT}"
+    # the floor the check enforced: origin/main's, not this checkout's
+    FLOOR_LINE="code_floor: $({ git -C "${CODE_DIR}" show origin/main:script/utils/code_floor.txt 2>/dev/null | grep -v '^#' || true; } | awk 'NF {print substr($1,1,10)}' | paste -sd, -)"
+    COMMIT_MSG="${COMMIT_MSG}
+${FLOOR_LINE}
+code_check: passed${FETCH_NOTE}"
+else
+    echo "WARNING: code check skipped (${SKIP_REASON:-no reason given}); the commit message records this"
+    COMMIT_MSG="${COMMIT_MSG}
+code_check: skipped (${SKIP_REASON:-no reason given})"
+fi
+
 echo "Saving ${SAVE_PATH} ..."
 echo "Code: ${CODE_BRANCH}@${CODE_SHORT}"
 
