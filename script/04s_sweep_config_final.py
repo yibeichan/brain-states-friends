@@ -138,10 +138,8 @@ def check_outputs_writable(final_dir, protect=None):
         raise RuntimeError(f"refusing to write {final_dir}: resolves inside {protect}")
     for name in FINAL_OUTPUTS:
         path = os.path.join(final_dir, name)
-        if os.path.islink(path):
+        if os.path.islink(path):  # the only way a file resolves outside final_dir
             raise RuntimeError(f"refusing to write {path}: it is a symlink")
-        if protect and resolves_inside(path, protect):
-            raise RuntimeError(f"refusing to write {path}: resolves inside {protect}")
 
 
 def final_dir_for(scratch_dir, parcellation, sub_id, vt):
