@@ -11,7 +11,7 @@
 - Residual FC similarity: each state's Ledoit-Wolf correlation matrix minus the unweighted mean over those states, compared by unclipped matrix cosine (as the residual RV in `fig_S04_reliability.py`). A second version subtracts the 05f occupancy-weighted grand mean (`state_delta_fc.npy`).
 - Covariates per pair: log(TR_i · TR_j), log(min(TR_i, TR_j)) (TR counts from 05f `metadata.json`), and Pearson r between the two states' parcel-space activation maps.
 - Mantel: Spearman ρ, two-sided p from 5,000 state-label permutations (floor 0.0002).
-- Partial Mantel: ranks of the transition and FC vectors are each regressed on the ranked covariates; ρ is the Pearson correlation of the residuals. The null permutes the state labels of the residualised FC matrix (double semi-partialling), 5,000 permutations.
+- Partial Mantel: ranks of the transition and FC vectors are each regressed on the ranked covariates; ρ is the Pearson correlation of the residuals. The null permutes the state labels of the residualised FC matrix and regresses the covariates out of the permuted values again before correlating (double semi-partialling, Dekker et al. 2007), 5,000 permutations.
 
 ## Results
 
@@ -32,7 +32,7 @@
 |---|---|---|---|
 | sub-01 | 0.156 (0.0002) | 0.160 (0.0002) | 0.135 (0.0002) |
 | sub-02 | 0.245 (0.0002) | 0.229 (0.0002) | 0.236 (0.0002) |
-| sub-03 | 0.136 (0.0020) | 0.255 (0.0002) | 0.265 (0.0002) |
+| sub-03 | 0.136 (0.0022) | 0.255 (0.0002) | 0.265 (0.0002) |
 | sub-04 | 0.403 (0.0002) | 0.415 (0.0002) | 0.438 (0.0002) |
 | sub-05 | 0.188 (0.0004) | 0.271 (0.0002) | 0.264 (0.0002) |
 | sub-06 | 0.337 (0.0002) | 0.286 (0.0002) | 0.267 (0.0002) |
