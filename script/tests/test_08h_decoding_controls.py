@@ -173,10 +173,10 @@ def e2e(tmp_path, monkeypatch):
     monkeypatch.setattr(m08h, "load_or_fit_pca_cache", lambda *a, **k: (
         feats, pca_info, None, {r: _T for r in _E2E_RUNS}, {}))
     monkeypatch.setattr(m08h.e08, "feature_file_paths", lambda *a, **k: [])
-    out_dir = tmp_path / "out"
-    out_dir.mkdir()
 
-    def run(cond, n_perm, layers=None):
+    def run(cond, n_perm, layers=None, out="out"):
+        out_dir = tmp_path / out
+        out_dir.mkdir(exist_ok=True)
         args = argparse.Namespace(sub_id="sub-99", model="dinov2-large", condition=cond,
                                   n_permutations=n_perm, n_jobs=1, layers=layers,
                                   vt="0.95", out_root=str(tmp_path))
@@ -184,7 +184,7 @@ def e2e(tmp_path, monkeypatch):
         return json.loads((out_dir / f"{cond}.json").read_text())
 
     run.write_d1 = write_d1
-    run.out_dir = out_dir
+    run.out_dir = tmp_path / "out"
     return run
 
 
@@ -195,13 +195,15 @@ def test_partial_from_other_permutation_count_is_recomputed(e2e):
 
 
 def test_partial_from_other_lag_is_recomputed(e2e):
+    def accs(d):
+        return {k: (v["balanced_accuracy"], v.get("p_perm")) for k, v in d["per_layer"].items()}
     first = e2e("opening", 5)
     e2e.write_d1(best_lag=2)
     rerun = e2e("opening", 5)
-    fresh_fp = {v["fingerprint"] for v in rerun["per_layer"].values()}
+    fresh = e2e("opening", 5, out="fresh")
     assert rerun["best_lag"] == 2 and rerun["opening_cutoff_trs"] == 35
-    assert fresh_fp.isdisjoint(v["fingerprint"] for v in first["per_layer"].values())
-    assert rerun["n_trs_used"] < first["n_trs_used"]
+    assert accs(first) != accs(fresh)          # the lag changes the result...
+    assert accs(rerun) == accs(fresh)          # ...and the rerun is not the stale one
 
 
 def test_partial_without_fingerprint_is_recomputed(e2e):
