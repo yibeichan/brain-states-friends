@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""p7_06e_q_excess.py - observed modularity of graph E and its N2/N3 excess for one subject.
+"""sens_06e_q_excess.py - observed modularity of graph E and its N2/N3 excess for one subject.
 
 06e_transition_modules.py fixes VT = "0.95", loops over all six subjects, and
 its task table and aggregate step need every variant, including LOSO folds
@@ -16,9 +16,9 @@ Modes:
     summarise  write q_excess_summary.json from the finished chunks
 
 Usage:
-    SCRATCH_DIR=<root> python script/p7_06e_q_excess.py --sub_id sub-06 --vt 0.95 \\
+    SCRATCH_DIR=<root> python script/sens_06e_q_excess.py --sub_id sub-06 --vt 0.95 \\
         --mode run --variant N2_E
-    SCRATCH_DIR=<root> python script/p7_06e_q_excess.py --sub_id sub-06 --vt 0.95 \\
+    SCRATCH_DIR=<root> python script/sens_06e_q_excess.py --sub_id sub-06 --vt 0.95 \\
         --mode summarise
 """
 import argparse

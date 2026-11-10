@@ -1,26 +1,27 @@
 #!/bin/bash
-# p7_chain.sh - run the downstream chain for one (side root, subject, vt).
+# sens_chain.sh - run the downstream chain for one (side root, subject, vt).
 #
 # Runs the production scripts unchanged, with SCRATCH_DIR pointed at a side
-# root laid out by p7_side_root.py. Arguments mirror the stage wrappers'
+# root laid out by sens_side_root.py. Arguments mirror the stage wrappers'
 # defaults (05e_a2 --n_permutations 2000, 05e_a3 primary run --n_perm 5000,
 # everything else the script default).
 #
 # Environment:
-#   ROOT     side-root parent (.../rerun-2026-11-09-p7-sensitivity)
+#   ROOT     side-root parent (one subdirectory per configuration)
 #   NAME     side-root name (config name, or gate_*)
 #   SUB_ID   subject; or SUBS (space-separated) with SLURM_ARRAY_TASK_ID
 #   VT       variance threshold string ("0.95", "0.90", "0.99")
 #   CONFIG   sweep config name for stage 04s (unset: skip 04s)
 #   STAGES   space-separated subset/order (default: all of DEFAULT_STAGES)
-#   PUBLISHED_SCRATCH  published SCRATCH root (for 04s inputs and --protect)
+#   PUBLISHED_SCRATCH  published SCRATCH root (for 04s inputs and --protect;
+#            default: SCRATCH_DIR from .env)
+#   PYTHON   interpreter of the project environment (default: python on PATH)
 # A stage writes status/<sub>/<stage>.done on success and is skipped when the
 # marker exists, so a rerun resumes after the last finished stage.
 set -euo pipefail
 
 CODE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-PY=/orcd/scratch/bcs/002/yibei/venvs/bsf-06b-jax/bin/python
-PUBLISHED_SCRATCH="${PUBLISHED_SCRATCH:-/orcd/scratch/bcs/002/yibei/brain-states-friends}"
+PY="${PYTHON:-python}"
 PARC=atlas-4S156Parcels
 
 if [ -n "${SUBS:-}" ]; then
@@ -33,6 +34,7 @@ set -a
 # shellcheck disable=SC1091
 source "${CODE_DIR}/.env"
 set +a
+PUBLISHED_SCRATCH="${PUBLISHED_SCRATCH:-${SCRATCH_DIR:?SCRATCH_DIR unset in .env}}"
 export SCRATCH_DIR="${ROOT}/${NAME}"
 export JAX_PLATFORMS=cpu
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
@@ -52,7 +54,7 @@ echo "root   ${SCRATCH_DIR}  sub ${SUB_ID}  vt ${VT}  config ${CONFIG:-<none>}"
 echo "stages ${STAGES}"
 
 # refuse to start unless every regenerated path is outside the dataset
-"${PY}" "${CODE_DIR}/script/p7_side_root.py" check --root "${ROOT}" --name "${NAME}" \
+"${PY}" "${CODE_DIR}/script/sens_side_root.py" check --root "${ROOT}" --name "${NAME}" \
     --vt "${VT}" --subs "${SUB_ID}" --published_out "${PUBLISHED_SCRATCH}/output" \
     $([ -L "${SCRATCH_DIR}/output/m10_03_projected" ] && echo --link_m10_03)
 
@@ -86,9 +88,9 @@ run_stage() {
             fi ;;
         m10_04) "${PY}" "${S}/m10_04_score_and_decode.py" --sub_id "${SUB_ID}" --parcellation "${PARC}" --vt "${VT}" ;;
         m10_05) "${PY}" "${S}/m10_05_cross_stimulus_validation.py" --sub_id "${SUB_ID}" --parcellation "${PARC}" --vt "${VT}" ;;
-        06e_N2) "${PY}" "${S}/p7_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode run --variant N2_E ;;
-        06e_N3) "${PY}" "${S}/p7_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode run --variant N3_E ;;
-        06e_sum) "${PY}" "${S}/p7_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode summarise ;;
+        06e_N2) "${PY}" "${S}/sens_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode run --variant N2_E ;;
+        06e_N3) "${PY}" "${S}/sens_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode run --variant N3_E ;;
+        06e_sum) "${PY}" "${S}/sens_06e_q_excess.py" --sub_id "${SUB_ID}" --vt "${VT}" --mode summarise ;;
         *) echo "unknown stage ${st}" >&2; return 2 ;;
     esac
     touch "${STATUS}/${st}.done"

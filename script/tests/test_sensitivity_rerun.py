@@ -1,4 +1,4 @@
-"""Unit tests for the P7 sensitivity helpers.
+"""Unit tests for the hyperparameter-sensitivity rerun helpers.
 
 Claims tested: (a) the seed rule picks the best validation LL among successful
 seeds, and refuses ties, a disagreeing config_summary, and all-failed configs;
@@ -18,7 +18,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 m04s = importlib.import_module("04s_sweep_config_final")
-side = importlib.import_module("p7_side_root")
+side = importlib.import_module("sens_side_root")
 
 
 def _summary(vals, best_by_valid, status=None):
@@ -151,9 +151,9 @@ def test_state_covars_for_save():
         m04s.state_covars_for_save(bad, "diag")
 
 
-# ---------------------------------------------------------------- p7_collect: R5 rows, SI table
+# ---------------------------------------------------------------- sens_collect: R5 rows, SI table
 
-collect = importlib.import_module("p7_collect")
+collect = importlib.import_module("sens_collect")
 
 
 def _r5(tmp_path, rho=0.5, n_draws=10000, n_finite=10000, stimulus="movie10", old=False):

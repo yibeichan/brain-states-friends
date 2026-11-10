@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""p7_side_root.py - lay out and check a side output root for a downstream rerun.
+"""sens_side_root.py - lay out and check a side output root for a downstream rerun.
 
 A side root is <root>/<name>/output/. Stages the rerun only reads are
 symlinks to the published dataset's top-level stage directories; stages it

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""p7_collect.py - gather the P7 sensitivity measures and compare against the published outputs.
+"""sens_collect.py - gather the hyperparameter-sensitivity measures and compare against the published outputs.
 
 Measures, per (side root, subject), read from the files the production scripts write:
 
@@ -320,7 +320,7 @@ def sitable(tsv):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("mode", choices=["table", "gate", "sitable"])
-    ap.add_argument("--root", help="P7 root (table) or side output/ (gate)")
+    ap.add_argument("--root", help="sensitivity root (table) or side output/ (gate)")
     ap.add_argument("--published_out")
     ap.add_argument("--out_tsv", help="TSV to write (table) or read (sitable)")
     ap.add_argument("--r5_root", help="per-config R5 null outputs: <r5_root>/<config>/<sub>/")
