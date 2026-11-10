@@ -260,8 +260,7 @@ echo "Code: ${CODE_BRANCH}@${CODE_SHORT}"
 ${DATALAD} save -m "${COMMIT_MSG}" "${SAVE_PATH}"
 echo "Saved."
 # The commit is made; the push only copies it, so other saves need not wait for it.
-flock -u 9
-exec 9>&-
+exec 9>&-   # closing the descriptor releases the lock
 
 # --- Push ---
 if [ "$PUSH" = "true" ]; then
