@@ -394,3 +394,19 @@ def test_structural_change_does_not_pass_a_positive_control(setup, tmp_path):
     np.save(side / "output" / RV, np.full((4, 4), 1.0))   # reshaped: a broken recompute
     fails = _plan(ds, side, _manifest(tmp_path, pinned)).report.fails
     assert any("expect differ" in f and "structural difference" in f for f in fails)
+
+
+def test_reference_found_in_the_object_store_without_git_annex(tmp_path, monkeypatch):
+    ds = tmp_path / "ds"
+    ds.mkdir()
+    _git(ds, "init", "-q")
+    key = "MD5E-s128--0123456789abcdef0123456789abcdef.npy"
+    obj = ds / ".git" / "annex" / "objects" / "wF" / "xz" / key / key
+    obj.parent.mkdir(parents=True)
+    np.save(obj.with_suffix(""), np.arange(3.0))
+    obj.with_suffix("").with_suffix(".npy").rename(obj)
+    os.symlink(f".git/annex/objects/wF/xz/{key}/{key}", ds / "f.npy")
+    _git(ds, "add", "f.npy")
+    _git(ds, "commit", "-q", "-m", "annexed")
+    monkeypatch.setattr(promote.shutil, "which", lambda name: None)
+    assert np.array_equal(np.load(promote.reference_file(ds, "HEAD", "f.npy", tmp_path)), np.arange(3.0))

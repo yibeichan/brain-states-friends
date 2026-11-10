@@ -295,11 +295,19 @@ def _run(cmd, cwd=None, check=False, text=True):
 
 
 def annex_key_location(dataset, key):
-    p = _run(["git", "annex", "contentlocation", key], cwd=dataset)
-    if p.returncode != 0 or not p.stdout.strip():
-        return None
-    loc = Path(dataset) / p.stdout.strip()
-    return loc if loc.exists() else None
+    """Local path of annexed content ``key``, or None when it is not present.
+
+    Asks git-annex when it is on PATH; otherwise looks in the object store,
+    whose two hash directory levels hold <key>/<key> in every hashing layout.
+    """
+    if shutil.which("git-annex"):
+        p = _run(["git", "annex", "contentlocation", key], cwd=dataset)
+        if p.returncode == 0 and p.stdout.strip():
+            loc = Path(dataset) / p.stdout.strip()
+            return loc if loc.exists() else None
+    git_dir = _run(["git", "rev-parse", "--absolute-git-dir"], cwd=dataset).stdout.strip()
+    hits = sorted(Path(git_dir, "annex", "objects").glob(f"*/*/{key}/{key}")) if git_dir else []
+    return hits[0] if hits else None
 
 
 def reference_file(dataset, commit, rel, tmpdir):
