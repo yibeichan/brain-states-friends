@@ -229,12 +229,7 @@ def nearest_record(path, stage):
 
 def content_id(path):
     """(size, md5) of a file, from its MD5E annex key when it is annexed."""
-    p = Path(path)
-    if os.path.islink(p):
-        m = _MD5_KEY_RE.match(os.path.basename(os.readlink(p)))
-        if m:
-            return int(m.group(1)), m.group(2)
-    real = Path(os.path.realpath(p))
+    real = Path(os.path.realpath(path))       # resolves even when the annexed content is absent
     m = _MD5_KEY_RE.match(real.name)
     if m:
         return int(m.group(1)), m.group(2)
