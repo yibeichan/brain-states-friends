@@ -120,14 +120,14 @@ A reference version at a past dataset commit is read from git: plain files from 
 
 A planned file that the dataset's `.gitignore` matches is refused, since it would be copied but never saved.
 
-A record is promoted with every output it lists. A listed file that equals the dataset's copy within tolerance but differs in bytes is copied too, so the dataset matches the record's checksums. Such a file outside the change set is refused. A dataset file that would remain under a promoted record without being listed in it is refused even with `keep_unreproduced`. An untracked file in the dataset, as a crashed promotion leaves, is never taken as the dataset's version: inside the change set it is promoted as NEW, outside it the promotion stops.
+A record is promoted with every output it lists, and it lists every file the run wrote, figures included, whose bytes change on every render. Declare the record's whole directory in `change` (for example `05f_state_fc/atlas-4S156Parcels/sub-06/**`); naming only the files you meant to change fails. A listed file that equals the dataset's copy within tolerance but differs in bytes is copied too, so the dataset matches the record's checksums. Such a file outside the change set is refused. A dataset file that would remain under a promoted record without being listed in it is refused before anything is saved, inside or outside the change set, and even with `keep_unreproduced`. An untracked file in the dataset, as a crashed promotion leaves, is never taken as the dataset's version: inside the change set it is promoted as NEW, outside it the promotion stops.
 
-`--execute` refuses to start when `origin/main` cannot be fetched. It then works under a lock (`.git/promote.lock`) and does the following:
+`--execute` refuses to start when `origin/main` cannot be fetched. It then works under a lock (`.git/promote.lock`); if the dataset's HEAD moved after the checks ran, it stops without changing anything. Otherwise it does the following:
 - Reruns every check.
 - Copies each planned file through a temporary file whose md5 must equal the checksum taken when the file was checked; a file that changed since is not promoted.
-- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits for the same lock, so the two never commit at once.
+- Runs one `datalad save`, without `--amend`, on the planned files' parent directories, moved up until there are at most 500. Before it runs, nothing but planned paths may be modified or untracked under those directories. `datalad_save.sh` waits up to 20 minutes for the same lock (within its 30-minute job limit) and releases it before pushing, so the two never commit at once.
 - Verifies the result:
-  - the promotion is one commit directly on the starting HEAD;
+  - the promotion is one commit directly on the starting HEAD, and the paths it changes are exactly the planned ones;
   - every path is tracked and clean;
   - the saved content equals the checked content;
   - every output under each promoted record's directory is covered by its record.
