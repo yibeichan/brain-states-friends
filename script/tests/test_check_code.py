@@ -254,7 +254,31 @@ def test_datalad_save_accepts_true_and_rejects_unknown_check_code_values():
     assert '1|true|yes|on) CHECK_CODE=1' in script and '*) echo "ERROR: CHECK_CODE=' in script
 
 
-def test_datalad_save_waits_for_the_promotion_lock():
-    script = (SCRIPT_DIR / "utils" / "datalad_save.sh").read_text()
-    lock = script.index("promote.lock")
-    assert lock < script.index("${DATALAD} save") and "flock -w" in script
+def test_datalad_save_holds_the_promotion_lock_while_saving(tmp_path):
+    """Run datalad_save.sh against stub uv/git-annex in a scratch dataset; the stub
+    datalad reports whether .git/promote.lock is held while it runs."""
+    code = tmp_path / "code"
+    code.mkdir()
+    scratch = tmp_path / "scratch"
+    out = scratch / "output"
+    (out / ".datalad").mkdir(parents=True)
+    (out / "06b_transition_structure" / "atlas-4S156Parcels" / "sub-01").mkdir(parents=True)
+    _git(out, "init", "-q")
+    (code / ".env").write_text(f"SCRATCH_DIR='{scratch}'\nDATA_DIR='{tmp_path / 'data'}'\n")
+    _git(code, "init", "-q")
+    _git(code, "commit", "-q", "--allow-empty", "-m", "c")
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    report = tmp_path / "lock_state"
+    (bin_ / "git-annex").write_text("#!/bin/bash\nexit 0\n")
+    (bin_ / "uv").write_text(f"""#!/bin/bash
+# stub for: uv run --project X --extra datalad datalad save ...
+if flock -n "{out}/.git/promote.lock" true; then echo free >> "{report}"; else echo held >> "{report}"; fi
+""")
+    for f in bin_.iterdir():
+        f.chmod(0o755)
+    env = dict(os.environ, PATH=f"{bin_}:{os.environ['PATH']}", SLURM_SUBMIT_DIR=str(code), HOME=str(tmp_path))
+    p = subprocess.run(["bash", str(SCRIPT_DIR / "utils" / "datalad_save.sh"), "--stage", "06b",
+                        "--subject", "sub-01", "--no-push"], env=env, capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    assert report.read_text().split() == ["held"]

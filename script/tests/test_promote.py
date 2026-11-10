@@ -713,3 +713,53 @@ def test_untracked_leftover_in_the_dataset_is_promoted_as_new(setup, tmp_path, m
     logs = []
     assert _execute(plan, side, ds, m, logs) == 0, logs
     assert extra in _git(ds, "ls-files")
+
+
+def test_output_unlisted_by_the_promoted_record_fails_the_post_save_check(setup, tmp_path, monkeypatch):
+    ds, side, pinned = setup
+    m = _manifest(tmp_path, pinned)
+    plan = _plan(ds, side, m)
+    assert plan.report.fails == []
+    late = "05f_state_fc/atlas-X/sub-06/vt0.95/late.npy"         # committed by hand after the plan
+    np.save(ds / late, np.zeros(2))
+    _git(ds, "add", late)
+    _git(ds, "commit", "-q", "-m", "late")
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, side, ds, m, logs) == 1
+    assert any("not covered after the save" in l and "late.npy" in l for l in logs)
+
+
+def test_untracked_leftover_of_a_stage_without_records_is_promoted_as_new(tmp_path, monkeypatch):
+    A = "06a_state_temp_dynamics/atlas-X/sub-06/dwell.npy"
+    B = "06a_state_temp_dynamics/atlas-X/sub-06/left.npy"
+    ds = tmp_path / "ds"
+    (ds / A).parent.mkdir(parents=True)
+    _git(ds, "init", "-q")
+    np.save(ds / A, np.full(3, 2.0))
+    _git(ds, "add", ".")
+    _git(ds, "commit", "-q", "-m", "x")
+    so = tmp_path / "side/output"
+    (so / A).parent.mkdir(parents=True)
+    np.save(so / A, np.full(3, 9.0))
+    np.save(so / B, np.ones(2))
+    (ds / B).write_bytes((so / B).read_bytes())                 # untracked leftover, same bytes
+    m = tmp_path / "m.toml"
+    m.write_text(textwrap.dedent(f"""
+        message = "x"
+        code_commit = "{MAIN}"
+        weak_stages = "test"
+        change = ["06a_state_temp_dynamics/atlas-X/sub-06/**"]
+        [[control]]
+        path = "{A}"
+        reference = "HEAD"
+        expect = "differ"
+        min_diff = 0.5
+        why = "x"
+    """))
+    plan = _plan(ds, tmp_path / "side", m)
+    assert plan.report.fails == [] and ("NEW", B) in plan.copies
+    _fake(tmp_path, monkeypatch)
+    logs = []
+    assert _execute(plan, tmp_path / "side", ds, m, logs) == 0, logs
+    assert B in _git(ds, "ls-files")
