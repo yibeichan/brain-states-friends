@@ -47,6 +47,7 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.common import normalize_parcellation_name
 from utils.stats import compute_rv_coefficient
 from utils.state_fc import (
@@ -97,6 +98,7 @@ def load_atlas_metadata(parcellation: str) -> pd.DataFrame:
     """Load atlas TSV with network labels."""
     tsv_path = os.path.join(ATLAS_BASE, parcellation, f"{parcellation}_dseg.tsv")
     df = pd.read_csv(tsv_path, sep="\t")
+    provenance.record_input("atlas_dseg", "*", tsv_path)
     # Cortical parcels: use network_label; subcortical: parse from label
     df["network"] = df["network_label"]
     subcort_mask = df["network_label"].isna() | (df["network_label"] == "n/a")
@@ -341,9 +343,11 @@ def main():
     # ── Load inputs ───────────────────────────────────────────────────────
     with open(ds_path, "rb") as f:
         decoded_states = pickle.load(f)
+    provenance.record_input("decoded_states", sub_id, ds_path)
 
     with open(results_path) as f:
         final_results = json.load(f)
+    provenance.record_input("final_results", sub_id, results_path)
     K = final_results["model_info"]["n_states"]
 
     # ── State flags from 05e_a4 (optional) ────────────────────────────────
@@ -433,6 +437,8 @@ def main():
     # ── Plots ─────────────────────────────────────────────────────────────
     plot_network_delta_fc(net_delta_fc, network_names, active_states, output_dir)
     plot_fc_similarity_heatmap(rv_mat, active_states, state_flags, output_dir)
+
+    provenance.write_provenance(output_dir, "05f", sub_id, parc)
 
     logger.info("=" * 70)
     logger.info("Done. Output: %s", output_dir)

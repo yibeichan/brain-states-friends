@@ -66,6 +66,7 @@ from scipy.stats import spearmanr
 from statsmodels.regression.mixed_linear_model import MixedLM
 
 sys.path.insert(0, str(Path(__file__).parent))
+from utils import provenance
 from utils.stats import benjamini_hochberg, fdr_with_nan as _fdr_with_nan
 from utils.plot_style import (
     recurrence_color, make_recurrence_colorbar, apply_publication_style,
@@ -1043,6 +1044,12 @@ def main():
 
     recurrence_scores = np.load(scores_path)
     n_states = recurrence_summary['n_states']
+    for kind, p in (("fractional_occupancy", fo_path), ("recurrence_summary", summary_path),
+                    ("recurrence_scores", scores_path),
+                    ("eligible_states", os.path.join(recurrence_base, 'eligible_states.json')),
+                    ("state_means", os.path.join(hmm_base, 'state_means_parcel.npy'))):
+        if os.path.exists(p):
+            provenance.record_input(kind, sub_id, p)
 
     logger.info("n_states=%d, n_runs=%d", n_states, len(fo_dict))
 
@@ -1129,6 +1136,8 @@ def main():
     plot_summary(results, recurrence_scores, q_values, is_eligible,
                  sub_id, out_dir, n_states,
                  mean_fo=mean_fo, dominant_networks=dominant_networks)
+
+    provenance.write_provenance(out_dir, '05e_a3', sub_id, parc)
 
     # ── Summary ──────────────────────────────────────────────────────────
     logger.info("=" * 60)
