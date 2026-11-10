@@ -280,6 +280,9 @@ Supplementary tables are numbered separately from supplementary figures.
 | S4 | Matching of content-eligible states between participants, per pair: matched map correlation against the state-mixing null, the same after removing network means or the components shared with the other participants, and moment-to-moment time-locking of matched states | [05h_participant_state_matching.md](../findings/05h_participant_state_matching.md) | main |
 | S5 | Module co-membership, per participant: joint MRQAP coefficients for seven pairwise relations between states, and within-module minus between-module means | [06e_transition_modules.md](../findings/06e_transition_modules.md) | main |
 | S6 | Transition modularity for every participant, graph variant and null, with the decision rule, held-out-season folds and the further criteria | [06e_transition_modules.md](../findings/06e_transition_modules.md) | main |
+| S7 | fMRIPrep release and slice-timing correction of the analysed Friends runs, per participant and season, and state-occupancy contrasts within the seasons that mixed preprocessing | this document (provenance below) | main |
+| S8 | Association between within-state FC similarity and transitions after removing the FC shared by all states, and after controlling for state TR counts and activation-map similarity, per participant | [sm_rel_r6_fc_transition_controls.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r6_fc_transition_controls.md) | supplements |
+| S9 | Agreement between each held-out season's transition modules and the main partition, per participant and fold | [sm_rel_r7_loso_module_agreement.md](https://github.com/yibeichan/brain-states-friends/blob/supplements/docs/findings/sm_rel_r7_loso_module_agreement.md) | supplements |
 
 ### Table S1 — Random-direction null for the network-spread index
 
@@ -414,3 +417,101 @@ Co-occurrence across runs was the strongest predictor of sharing a module in eve
 All participants, graph variants and nulls for the transition-module analysis are tabulated in [06e_transition_modules.md](../findings/06e_transition_modules.md): calibration of each null on simulated chains, the decision rule on the counted transitions (directed modularity Q against the shuffled-order and non-modular-chain nulls, run-bootstrap stability, held-out-season folds), the further criteria (the similarity-predicted null, module dwell and cross-participant locking), the threshold and sensitivity variants of the learned matrix, and partition agreement between graphs. Every participant met the decision rule; none exceeded the similarity-predicted null (p = 0.06–0.97).
 
 **Provenance.** `script/06e_transition_modules.py` (`--mode run` for the null draws, then `--mode aggregate`); values from `transition_modules_summary.json` per participant and `r3_mapping.json` in `$SCRATCH_DIR/output/06e_transition_modules/atlas-4S156Parcels/`.
+
+### Table S7 — fMRIPrep release and slice-timing correction by participant and season
+
+fMRIPrep release and slice-timing correction (STC) of the 1,650 analysed *Friends* runs, and state-occupancy contrasts within the seasons that mixed preprocessing. Only runs processed with fMRIPrep 20.2.3 received slice-timing correction. Runs acquired twice are counted once, in the session used for the analysis. sub-04 watched four seasons.
+
+**A. Analysed runs per participant and season, by fMRIPrep release** ("20.2.3 STC" = 20.2.3 with slice-timing correction; "20.2.3" alone = without)
+
+| | S1 | S2 | S3 | S4 | S5 | S6 | Runs |
+|---|---|---|---|---|---|---|---|
+| sub-01 | 20.2.3: 44; 20.2.5: 4 | 20.2.3: 36; 20.2.5: 12 | 20.2.3 STC: 6; 20.2.3: 38; 20.2.5: 6 | 20.2.3 STC: 22; 20.2.5: 26 | 20.2.5: 48 | 20.2.5: 40; 20.2.6: 10 | 292 |
+| sub-02 | 20.2.3 STC: 48 | 20.2.3 STC: 48 | 20.2.3 STC: 50 | 20.2.3 STC: 48 | 20.2.3 STC: 12; 20.2.5: 36 | 20.2.5: 50 | 292 |
+| sub-03 | 20.2.3 STC: 48 | 20.2.3 STC: 48 | 20.2.3 STC: 50 | 20.2.3 STC: 48 | 20.2.3 STC: 16; 20.2.5: 27; 20.2.6: 4 | 20.2.5: 45; 20.2.6: 5 | 291 |
+| sub-04 | 20.2.3 STC: 48 | 20.2.3 STC: 48 | 20.2.3 STC: 50 | 20.2.3 STC: 48 | — | — | 194 |
+| sub-05 | 20.2.3 STC: 48 | 20.2.3 STC: 48 | 20.2.3 STC: 10; 20.2.5: 40 | 20.2.5: 45 | 20.2.5: 28; 20.2.6: 20 | 20.2.5: 28; 20.2.6: 22 | 289 |
+| sub-06 | 20.2.3 STC: 48 | 20.2.3 STC: 48 | 20.2.3 STC: 50 | 20.2.3 STC: 48 | 20.2.5: 48 | 20.2.5: 46; 20.2.6: 4 | 292 |
+
+Totals: 20.2.3 with STC 938 runs; 20.2.3 without STC 118 (all sub-01); 20.2.5 529; 20.2.6 65.
+
+**B. Occupancy contrasts within mixed seasons.** L1 distance between the two run groups' mean state-occupancy vectors (all 50 states). N2 reassigns the group labels among whole sessions, because preprocessing was constant within a session; it enumerates every assignment, so its smallest attainable p (floor) is one over the number of assignments. N3 keeps acquisition order: the share of contiguous blocks with the same number of runs, drawn from the same participant's seasons with uniform preprocessing, whose block-versus-rest L1 is at least the observed value.
+
+| Participant, season | Contrast (A vs B) | A runs (sessions) | B runs (sessions) | L1 | N2 p (floor) | N3 share (reference blocks) |
+|---|---|---|---|---|---|---|
+| sub-01, S3 | 20.2.3 STC vs 20.2.3 | 6 (1) | 38 (7) | 0.319 | 0.250 (0.125) | 0.062 (226) |
+| sub-01, S4 | 20.2.3 STC vs 20.2.5 | 22 (3) | 26 (6) | 0.191 | 0.631 (0.012) | 0.56 (50) |
+| sub-02, S5 | 20.2.3 STC vs 20.2.5 | 12 (2) | 36 (8) | 0.295 | 0.133 (0.022) | 0.014 (214) |
+| sub-03, S5 | 20.2.3 STC vs 20.2.5 | 16 (4) | 27 (9) | 0.164 | 0.705 (0.0014) | 0.84 (164) |
+| sub-05, S3 | 20.2.3 STC vs 20.2.5 | 10 (1) | 40 (6) | 0.195 | 1.000 (0.143) | 0.86 (207) |
+| sub-01, S1 | 20.2.5 vs 20.2.3 | 4 (1) | 44 (9) | 0.341 | 0.200 (0.100) | 0.18 (249) |
+| sub-01, S2 | 20.2.5 vs 20.2.3 | 12 (2) | 36 (7) | 0.209 | 0.389 (0.028) | 0.55 (166) |
+| sub-01, S3 | 20.2.5 vs 20.2.3 | 6 (1) | 38 (7) | 0.272 | 0.625 (0.125) | 0.35 (226) |
+| sub-01, S6 | 20.2.6 vs 20.2.5 | 10 (3) | 40 (12) | 0.168 | 0.829 (0.0022) | 0.96 (191) |
+| sub-03, S5 | 20.2.6 vs 20.2.5 | 4 (1) | 27 (9) | 0.381 | 0.400 (0.100) | 0.069 (261) |
+| sub-03, S6 | 20.2.6 vs 20.2.5 | 5 (1) | 45 (12) | 0.260 | 0.923 (0.077) | 0.55 (254) |
+| sub-05, S5 | 20.2.6 vs 20.2.5 | 20 (4) | 28 (4) | 0.322 | 0.200 (0.014) | 0 of 105 |
+| sub-05, S6 | 20.2.6 vs 20.2.5 | 22 (5) | 28 (5) | 0.227 | 0.127 (0.0040) | 0.077 (78) |
+| sub-06, S6 | 20.2.6 vs 20.2.5 | 4 (1) | 46 (13) | 0.418 | 0.214 (0.071) | 0.067 (270) |
+
+No contrast reached p < 0.05 under N2 (all p ≥ 0.12); in 7 of the 14 contrasts the N2 floor is above 0.05. Under N3, two contrasts lie at the edge of the reference range (sub-02 S5 and sub-05 S5). sub-03 S5 has three run groups and contributes two contrasts. sub-04 has uniform preprocessing, and sub-06's change from 20.2.3 with STC to 20.2.5 falls at the boundary between seasons 4 and 5, so neither has a within-season STC contrast. A run-level permutation null, which ignores session structure, rejected too often in seasons with uniform preprocessing and is not shown.
+
+**Provenance.** fMRIPrep release from each session's fMRIPrep report; slice-timing status from the session reports for 20.2.3 ("Slice timing correction: Applied / Not applied") and from each run's `SliceTimingCorrected` sidecar field for 20.2.5 and 20.2.6, in the CNeuroMod `cneuromod.processed/fmriprep/friends` derivatives. Analysed runs and their sessions are the keys of `04_combined_hdphmm/atlas-4S156Parcels/<sub>/final/vt0.95/decoded_states.pkl` and the parcel time series 03a read. State occupancy per run is computed from the same decoded states; as a check, the 05a season-specificity index recomputed from it equals `05a_recurrence_analysis` exactly in all six participants. N2 enumerates all assignments; N3 blocks are drawn in acquisition (session) order.
+
+### Table S8 — FC similarity and transitions, controlled for shared FC, state size and map similarity
+
+Within-state FC similarity against the symmetrised empirical transition matrix, per participant (Mantel tests over the state pairs with defined FC; Spearman ρ, two-sided permutation p from 5,000 state-label permutations, floor 0.0002). Raw RV between two states' correlation matrices is 0.68–1.00 for every pair, because all states share the grand-mean FC. The residual versions subtract the mean FC across states (unweighted, or weighted by occupancy) and compare the residual matrices by unclipped cosine. The partial Mantel regresses the ranked transition and FC vectors on the ranked covariates (log of the product of the two states' TR counts, log of the smaller TR count, and the Pearson r of their activation maps) and correlates the residuals; its null permutes the state labels of the residualised FC matrix and regresses the covariates out of the permuted values again (double semi-partialling, Dekker et al., 2007).
+
+**A. Mantel, no covariates** (ρ, p)
+
+| Participant | Pairs | Raw RV | Residual | Residual, occupancy-weighted |
+|---|---|---|---|---|
+| sub-01 | 990 | 0.417 (0.0002) | 0.297 (0.0002) | 0.196 (0.0002) |
+| sub-02 | 990 | 0.483 (0.0002) | 0.304 (0.0002) | 0.268 (0.0002) |
+| sub-03 | 946 | 0.326 (0.0002) | 0.369 (0.0002) | 0.331 (0.0002) |
+| sub-04 | 946 | 0.551 (0.0002) | 0.520 (0.0002) | 0.499 (0.0002) |
+| sub-05 | 990 | 0.393 (0.0002) | 0.390 (0.0002) | 0.325 (0.0002) |
+| sub-06 | 861 | 0.437 (0.0002) | 0.338 (0.0002) | 0.283 (0.0002) |
+
+**B. Partial Mantel, controlling for both TR terms and activation-map r** (ρ, p)
+
+| Participant | Raw RV | Residual | Residual, occupancy-weighted |
+|---|---|---|---|
+| sub-01 | 0.156 (0.0002) | 0.160 (0.0002) | 0.135 (0.0002) |
+| sub-02 | 0.245 (0.0002) | 0.229 (0.0002) | 0.236 (0.0002) |
+| sub-03 | 0.136 (0.0022) | 0.255 (0.0002) | 0.265 (0.0002) |
+| sub-04 | 0.403 (0.0002) | 0.415 (0.0002) | 0.438 (0.0002) |
+| sub-05 | 0.188 (0.0004) | 0.271 (0.0002) | 0.264 (0.0002) |
+| sub-06 | 0.337 (0.0002) | 0.286 (0.0002) | 0.267 (0.0002) |
+
+**C. Transitions against each covariate** (Spearman ρ) and the range of residual FC similarity
+
+| Participant | Log TR product | Log smaller TR count | Activation-map r | Residual FC range |
+|---|---|---|---|---|
+| sub-01 | 0.34 | 0.39 | 0.39 | -0.82 to 0.87 |
+| sub-02 | 0.39 | 0.42 | 0.39 | -0.93 to 0.94 |
+| sub-03 | 0.23 | 0.27 | 0.33 | -0.76 to 0.87 |
+| sub-04 | 0.35 | 0.41 | 0.25 | -0.92 to 0.94 |
+| sub-05 | 0.33 | 0.38 | 0.31 | -0.94 to 0.93 |
+| sub-06 | 0.27 | 0.28 | 0.33 | -0.90 to 0.87 |
+
+With the shared FC removed and all three covariates controlled, ρ stays positive in every participant (0.16–0.42), 38–78% of each participant's raw ρ. The raw-RV column of part A reproduces the `06b` FC–transition ρ exactly. The permutation null keeps state labels exchangeable, as in `06b`; FC and transitions come from the same state assignment, so a shared dependence on segmentation is not removed by these controls.
+
+**Provenance.** `script/sm_rel_r6_fc_transition_controls.py` on the orphan `supplements` branch; values from `sm_rel_r6_fc_transition_controls/atlas-4S156Parcels/<sub>/vt0.95/fc_transition_controls_summary.json` (inputs: `06a` transition probabilities, `05a` recurrence summary, `05f` state FC, FC similarity and metadata, `04` parcel-space state means; the gate reads `06b` `fc_transition_correlation.json`).
+
+### Table S9 — Held-out-season transition modules against the main partition
+
+Adjusted Rand index (ARI) between the transition modules of each held-out season and the main partition, per participant and fold. Each fold's held-out season was decoded by the model fitted without it and re-partitioned (`06e` LOSO2); fold states were mapped to primary states through the `04ra` matches with r ≥ 0.3, and the ARI was computed over states present in both partitions (38–44 per fold, in parentheses). The second value is the ARI of the partition of the fold model's own transition matrix, fitted on the five training seasons (`06e` LOSO_). p from 10,000 permutations of the fold labels (floor 0.0001).
+
+| Participant | Main modules | S1 | S2 | S3 | S4 | S5 | S6 | Held-out median |
+|---|---|---|---|---|---|---|---|---|
+| sub-01 | 4 | 0.74 / 0.75 (43) | 0.62 / 0.56 (41) | 0.57 / 0.84 (39) | 0.52 / 1.00 (43) | 0.36 / 0.47 (42) | 0.71 / 0.79 (41) | 0.59 |
+| sub-02 | 4 | 0.22 / 0.38 (41) | 0.52 / 0.86 (39) | 0.36 / 0.44 (40) | 0.28 / 0.59 (40) | 0.36 / 0.62 (40) | 0.34 / 0.80 (38) | 0.35 |
+| sub-03 | 6 | 0.43 / 0.82 (44) | 0.45 / 0.50 (43) | 0.49 / 0.37 (44) | 0.23 / 0.59 (44) | 0.39 / 0.42 (43) | 0.42 / 0.42 (44) | 0.43 |
+| sub-04 | 4 | 0.50 / 0.50 (40) | 0.69 / 0.60 (40) | 0.57 / 0.48 (41) | 0.46 / 0.49 (40) | — | — | 0.53 |
+| sub-05 | 5 | 0.51 / 0.50 (42) | 0.41 / 0.44 (41) | 0.43 / 0.43 (42) | 0.28 / 0.36 (43) | 0.85 / 0.85 (43) | 0.33 / 0.54 (41) | 0.42 |
+| sub-06 | 4 | 0.69 / 0.48 (39) | 0.68 / 0.74 (39) | 0.56 / 0.56 (40) | 0.55 / 0.84 (39) | 0.70 / 0.51 (41) | 0.30 / 0.63 (38) | 0.62 |
+
+Every fold agreed with the main partition above the permutation null (33 of 34 folds at p = 0.0001; sub-02 S1 p = 0.0008), but no fold reproduced it. The main partition comes from the final model, fitted on all six seasons, so each held-out season is part of the data the main partition was estimated from; this measures how well one season's transitions recover the main modules, not replication on independent data.
+
+**Provenance.** `script/sm_rel_r7_loso_module_agreement.py` on the orphan `supplements` branch; values from `sm_rel_r7_loso_module_agreement/atlas-4S156Parcels/<sub>/vt0.95/loso_module_agreement_summary.json` (inputs: `06e` `partitions.json` and the LOSO2 and LOSO_ `observed.json` per held-out season, and `04ra` `hungarian_matching.json`).
