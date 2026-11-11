@@ -232,7 +232,7 @@ def mirror_tree(src, dst):
 
 
 def write_json_atomic(path, payload):
-    tmp = f"{path}.tmp{os.getpid()}"
+    tmp = f"{path}.tmp{platform.node()}.{os.getpid()}"
     with open(tmp, "w") as f:
         json.dump(payload, f, indent=2, allow_nan=False)
     os.replace(tmp, path)
@@ -315,9 +315,10 @@ def select_layers(spec, n_layers, best_layer):
 def n_folds_without_every_class(y, folds):
     """Folds whose training labels lack a class present in ``y``.
 
-    batch_loro_ridge_classify skips such a fold without saying so, and its
-    fast-path null then divides by every class while the observed accuracy
-    averages over the classes predicted, which biases p. Counted so that
+    batch_loro_ridge_classify skips such a fold without saying so: its TRs
+    get no prediction, and the fast-path null then averages recall over
+    every class while the observed (sklearn) accuracy averages over the
+    classes left in the evaluated TRs, which biases p. Counted so that
     run_friends can refuse the cell.
     """
     classes = np.unique(y)
@@ -509,10 +510,11 @@ def run_friends(args, parc, out_dir):
     partial_dir = os.path.join(out_dir, "partials")
     os.makedirs(partial_dir, exist_ok=True)
     results, stale = load_matching_partials(partial_dir, cond, n_layers, fingerprints)
-    if stale:
-        logger.warning("%s: recomputing layers %s, whose partials came from another "
-                       "run (fingerprint differs or missing)", cond, stale)
     todo = [li for li in selected if li not in results]
+    stale_todo = [li for li in stale if li in todo]
+    if stale_todo:
+        logger.warning("%s: recomputing layers %s, whose partials came from another "
+                       "run (fingerprint differs or missing)", cond, stale_todo)
     t0 = time.monotonic()
     step = max(args.n_jobs, 1)
     for i in range(0, len(todo), step):
@@ -537,7 +539,10 @@ def run_friends(args, parc, out_dir):
     results, _ = load_matching_partials(partial_dir, cond, n_layers, fingerprints)
     missing = [li for li in selected if li not in results]
     if missing:
-        raise RuntimeError(f"{cond}: layers {missing} were not computed")
+        raise RuntimeError(
+            f"{cond}: layers {missing} have no partial matching this run's fingerprint: "
+            "not computed, or overwritten by another job with other code or settings "
+            "writing to the same --out_root")
     order = sorted(results)
     all_layers = order == list(range(n_layers))
     # BH across the layers at the best lag (not 08d's lags x layers family);

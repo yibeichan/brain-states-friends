@@ -9,8 +9,10 @@
 #
 # Per-layer partials make a Friends cell resumable, so a preempted job can be
 # requeued and continues from the last finished layer (a partial is reused
-# only when its fingerprint matches the run). Hence the preemptable partition
-# and append mode, which keeps the log of every attempt.
+# only when its fingerprint matches the run). A transfer job has no partials
+# and restarts from the beginning, which is safe because it writes its one
+# JSON atomically at the end. Hence the preemptable partition and append
+# mode, which keeps the log of every attempt.
 #SBATCH --job-name=08h_ctrl
 #SBATCH --partition=mit_preemptable,pi_satra
 #SBATCH --time=24:00:00

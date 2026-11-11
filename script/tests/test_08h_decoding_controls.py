@@ -267,3 +267,43 @@ def test_word_tr_mask_reads_rows_from_the_run_start(tmp_path, monkeypatch):
     assert np.array_equal(mask, m08h.lag_shift_bool(has, 2))
     assert frac["r1"] == pytest.approx(3 / 7)
     assert seen == ["key-r1"]
+
+
+def test_run_friends_refuses_a_fold_missing_a_class(e2e, monkeypatch):
+    states, _ = _synthetic()
+    states["s01e01a"][:20] = 3                     # class 3 only in episode s01e01
+    monkeypatch.setattr(m08h.d08, "_load_decoded_states_friends",
+                        lambda sub, parc: ({r: states[r].copy() for r in _E2E_RUNS}, None))
+    monkeypatch.setattr(m08h, "load_content_eligibility",
+                        lambda *a, **k: {"content_eligible": [0, 1, 2, 3]})
+    with pytest.raises(SystemExit, match="lack a class"):
+        e2e("loeo", 5)
+
+
+def test_partial_from_other_code_is_recomputed(e2e, monkeypatch):
+    e2e("loeo", 5)
+    p = e2e.out_dir / "partials" / "loeo_layer00.json"
+    doctored = json.loads(p.read_text())
+    doctored["balanced_accuracy"] = -1.0
+    p.write_text(json.dumps(doctored))
+    monkeypatch.setattr(m08h, "CODE_SHA256", "other-code")
+    again = e2e("loeo", 5)
+    assert again["per_layer"]["0"]["balanced_accuracy"] != -1.0
+
+
+def test_a_layer_left_uncomputed_is_an_error(e2e, monkeypatch):
+    monkeypatch.setattr(m08h, "_friends_layer", lambda li, *a, **k: (li, None))
+    with pytest.raises(RuntimeError, match="no partial matching"):
+        e2e("loeo", 5)
+    assert not (e2e.out_dir / "loeo.json").exists()
+
+
+def test_main_checks_layers_before_loading_data(tmp_path, monkeypatch):
+    called = []
+    monkeypatch.setattr(m08h, "run_friends", lambda *a: called.append(a))
+    monkeypatch.setattr(sys, "argv", [
+        "08h", "--part", "friends", "--sub_id", "sub-01", "--model", "dinov2-large",
+        "--condition", "loeo", "--layers", "best,x", "--out_root", str(tmp_path / "side")])
+    with pytest.raises(SystemExit, match="not a layer number"):
+        m08h.main()
+    assert not called
